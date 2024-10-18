@@ -61,7 +61,7 @@ export class TacSdk {
         return await userJettonWallet.getJettonBalance();
     };
 
-    private async getJettonBase64Payload(jettonAmount: number, tonFromAddress: string, proxyMsg: EvmProxyMsg): Promise<string> {
+    private getJettonBase64Payload(jettonAmount: number, tonFromAddress: string, proxyMsg: EvmProxyMsg): string {
         const timestamp = Math.floor(+new Date() / 1000);
         const base64Parameters = Buffer.from(proxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
         const randAppend = Math.round(Math.random()*1000);
@@ -88,8 +88,6 @@ export class TacSdk {
             .storeMaybeRef(l2Data).endCell();
 
         return Base64.encode(payload.toBoc());
-
-
     };
 
     async sendJettonWithProxyMsg(params: JettonProxyMsgParameters) {
