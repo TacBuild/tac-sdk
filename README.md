@@ -36,7 +36,7 @@ To use this library you need HTTP API endpoint, you can use one of the public en
 - Testnet: https://testnet.toncenter.com/api/v2/jsonRPC
 
 ```typescript
-import {sendJettonWithProxyMsg, JettonProxyMsgParameters} from "tac-sdk";
+import {TacSdk} from "tac-sdk";
 import {TonConnectUI} from "@tonconnect/ui";
 import {ethers} from "ethers";
 
@@ -58,9 +58,9 @@ const encodedParameters = abi.encode(
     ]
 ); //example
 
-const params: JettonProxyMsgParameters = {
+const params = {
     fromAddress: "tonUserAddress",
-    jettonAmount: 100,
+    jettonAmount: 100, //example
     proxyMsg: {
         evmTargetAddress: "evmTargetAddress",
         methodName: 'exchange(address,uint256,uint256,uint256,uint256)', //example
@@ -70,7 +70,11 @@ const params: JettonProxyMsgParameters = {
     tonConnect: tonConnectUI
 };
 
-await sendJettonWithProxyMsg(params);
+const tacSdk = new TacSdk({
+      network: CHAIN.TESTNET //default: MAINNET
+});
+
+await tacSdk.sendJettonWithProxyMsg(params);
 
 ```
 
