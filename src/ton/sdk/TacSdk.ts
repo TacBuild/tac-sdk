@@ -1,4 +1,4 @@
-import {Address, beginCell, toNano, TonClient4, TonClient4Parameters} from "@ton/ton";
+import {Address, beginCell, toNano, TonClient, TonClientParameters} from "@ton/ton";
 import {Base64} from '@tonconnect/protocol';
 import {CHAIN, SendTransactionRequest, TonConnectUI} from "@tonconnect/ui";
 import {JettonMaster} from "../jetton/JettonMaster";
@@ -14,7 +14,7 @@ export type TacSdkParameters = {
     /**
      * TonClient Parameters
      */
-    tonClientParameters?: TonClient4Parameters;
+    tonClientParameters?: TonClientParameters;
 
     /**
      * TON CHAIN
@@ -39,7 +39,7 @@ export type EvmProxyMsg = {
 
 export class TacSdk {
 
-    readonly tonClient: TonClient4;
+    readonly tonClient: TonClient;
     readonly network: CHAIN;
 
     constructor(parameters: TacSdkParameters) {
@@ -47,7 +47,7 @@ export class TacSdk {
         const tonClientParameters = parameters.tonClientParameters ?? {
             endpoint: parameters.network == CHAIN.TESTNET ? TESTNET_TONCENTER_URL_ENDPOINT : MAINNET_TONCENTER_URL_ENDPOINT
         };
-        this.tonClient = new TonClient4(tonClientParameters);
+        this.tonClient = new TonClient(tonClientParameters);
     }
     async getUserJettonWalletAddress(userAddress: string, tokenAddress: string): Promise<string>{
         const jettonMaster = this.tonClient.open(new JettonMaster(Address.parse(tokenAddress)));
