@@ -6,8 +6,8 @@ import {JettonWallet} from "../jetton/JettonWallet";
 
 const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2"
 const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2"
-const TESTNET_TAC_JETTON_PROXY_ADDRESS = " EQAqOlIzUWuVhXDmHQyt-Ek3FnR6kH_EM0dJB_kdUp2JRmd9"
-const MAINNET_TAC_JETTON_PROXY_ADDRESS = " EQAqOlIzUWuVhXDmHQyt-Ek3FnR6kH_EM0dJB_kdUp2JRmd9"
+const TESTNET_TAC_JETTON_PROXY_ADDRESS = "EQAqOlIzUWuVhXDmHQyt-Ek3FnR6kH_EM0dJB_kdUp2JRmd9"
+const MAINNET_TAC_JETTON_PROXY_ADDRESS = "EQAqOlIzUWuVhXDmHQyt-Ek3FnR6kH_EM0dJB_kdUp2JRmd9"
 
 
 export type TacSdkParameters = {
