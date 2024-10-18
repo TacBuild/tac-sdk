@@ -1,7 +1,7 @@
 {
   "name": "tac-sdk",
   "version": "0.0.1",
-  "repository": "https://github.com/ton-org/ton.git",
+  "repository": "https://gitlab.com/ton-app-chain/l2/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
   "main": "dist/index.js",
@@ -9,12 +9,12 @@
     "dist"
   ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rm -rf dist && tsc --declaration",
+    "test": "jest --verbose --runInBand",
+    "release": "yarn build && yarn release-it --npm.yarn1"
   },
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
-    "@ton/core": "^0.59.0",
-    "@ton/ton": "^15.1.0",
     "@tonconnect/ui": "^2.0.9",
     "bn.js": "^5.2.1",
     "ethers": "^6.13.4"
@@ -22,6 +22,20 @@
   "keywords": [],
   "description": "",
   "devDependencies": {
-    "@types/bn.js": "^5.1.6"
+    "@types/bn.js": "^5.1.6",
+    "@release-it/keep-a-changelog": "^5.0.0",
+    "@ton/core": "^0.59.0",
+    "@ton/ton": "^15.1.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "release-it": {
+    "plugins": {
+      "@release-it/keep-a-changelog": {
+        "filename": "CHANGELOG.md"
+      }
+    }
   }
 }

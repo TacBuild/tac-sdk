@@ -1,6 +1,5 @@
 import {Address, beginCell, toNano, TonClient4, TonClient4Parameters} from "@ton/ton";
 import {Base64} from '@tonconnect/protocol';
-import {ethers} from "ethers";
 import {CHAIN, SendTransactionRequest, TonConnectUI} from "@tonconnect/ui";
 import {JettonMaster} from "../jetton/JettonMaster";
 import {JettonWallet} from "../jetton/JettonWallet";
@@ -28,7 +27,14 @@ export type JettonProxyMsgParameters = {
     fromAddress: string,
     tokenAddress: string,
     jettonAmount: string,
+    proxyMsg: EvmProxyMsg,
     tonAmount?: number
+}
+
+export type EvmProxyMsg = {
+    evmTargetAddress: string,
+    methodName: string
+    encodedParameters: string,
 }
 
 export class TacSdk {
@@ -55,26 +61,15 @@ export class TacSdk {
         return await userJettonWallet.getJettonBalance();
     };
 
-    private async getJettonBase64Payload(jettonAmount: string, tonFromAddress: string, evmTargetAddress: string): Promise<string> {
+    private async getJettonBase64Payload(jettonAmount: string, tonFromAddress: string, proxyMsg: EvmProxyMsg): Promise<string> {
         const timestamp = Math.floor(+new Date() / 1000);
-        const abi = new ethers.AbiCoder();
-        const encodedParameters = abi.encode(
-            ['address', 'uint256', 'uint256', 'uint256', 'uint256'],
-            [
-                config.ethersContractAddress,
-                swapKeys[0],
-                swapKeys[1],
-                Number(toNano(amount)),
-                0
-            ]
-        );
-        const base64Parameters = Buffer.from(encodedParameters.split('0x')[1], 'hex').toString('base64');
+        const base64Parameters = Buffer.from(proxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
         const randAppend = Math.round(Math.random()*1000);
 
         const json = JSON.stringify({
             query_id: timestamp + randAppend,
-            target: evmTargetAddress,
-            methodName: 'exchange(address,uint256,uint256,uint256,uint256)',
+            target: proxyMsg.evmTargetAddress,
+            methodName: proxyMsg.methodName,
             arguments: base64Parameters,
             caller: Address.parse(tonFromAddress).toString(),
         });
@@ -107,7 +102,7 @@ export class TacSdk {
                 {
                     address: jettonAddress,
                     amount: toNano(params.tonAmount?.toFixed(9) ?? "0.2").toString(),
-                    payload: this.getJettonBase64Payload(params.jettonAmount, params.fromAddress).toString()
+                    payload: this.getJettonBase64Payload(params.jettonAmount, params.fromAddress, params.proxyMsg).toString()
                 }
             ],
             network: this.network
