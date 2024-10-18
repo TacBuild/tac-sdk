@@ -103,7 +103,7 @@ export class TacSdk {
             messages: [
                 {
                     address: jettonAddress,
-                    amount: toNano(params.tonAmount?.toFixed(9) ?? "0.2").toString(),
+                    amount: toNano(params.tonAmount?.toFixed(9) ?? "0.35").toString(),
                     payload: this.getJettonBase64Payload(params.jettonAmount, params.fromAddress, params.proxyMsg).toString()
                 }
             ],
