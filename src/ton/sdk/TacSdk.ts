@@ -26,7 +26,7 @@ export type JettonProxyMsgParameters = {
     tonConnect: TonConnectUI,
     fromAddress: string,
     tokenAddress: string,
-    jettonAmount: string,
+    jettonAmount: number,
     proxyMsg: EvmProxyMsg,
     tonAmount?: number
 }
@@ -61,7 +61,7 @@ export class TacSdk {
         return await userJettonWallet.getJettonBalance();
     };
 
-    private async getJettonBase64Payload(jettonAmount: string, tonFromAddress: string, proxyMsg: EvmProxyMsg): Promise<string> {
+    private async getJettonBase64Payload(jettonAmount: number, tonFromAddress: string, proxyMsg: EvmProxyMsg): Promise<string> {
         const timestamp = Math.floor(+new Date() / 1000);
         const base64Parameters = Buffer.from(proxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
         const randAppend = Math.round(Math.random()*1000);
@@ -80,7 +80,7 @@ export class TacSdk {
         const payload = beginCell()
             .storeUint(0xF8A7EA5, 32)
             .storeUint(0, 64) // timestamp + randAppend
-            .storeCoins(toNano(jettonAmount))
+            .storeCoins(toNano(jettonAmount.toFixed(9)))
             .storeAddress(Address.parse(this.network == CHAIN.TESTNET ? TESTNET_TAC_JETTON_PROXY_ADDRESS : MAINNET_TAC_JETTON_PROXY_ADDRESS))
             .storeAddress(Address.parse(tonFromAddress))
             .storeBit(false)
@@ -88,6 +88,8 @@ export class TacSdk {
             .storeMaybeRef(l2Data).endCell();
 
         return Base64.encode(payload.toBoc());
+
+
     };
 
     async sendJettonWithProxyMsg(params: JettonProxyMsgParameters) {
