@@ -50,20 +50,20 @@ const abi = new ethers.AbiCoder();
 const encodedParameters = abi.encode(
     ['address', 'uint256', 'uint256', 'uint256', 'uint256'],
     [
-        config.ethersContractAddress,
-        swapKeys[0],
-        swapKeys[1],
-        Number(toNano(amount)),
-        0
+        "ethersContractAddress",
+        "value1",
+        "value2",
+        "value3",
+        "value4"
     ]
-);
+); //example
 
 const params: JettonProxyMsgParameters = {
     fromAddress: "tonUserAddress",
     jettonAmount: 100,
     proxyMsg: {
         evmTargetAddress: "evmTargetAddress",
-        methodName: 'exchange(address,uint256,uint256,uint256,uint256)',
+        methodName: 'exchange(address,uint256,uint256,uint256,uint256)', //example
         encodedParameters: encodedParameters,
     },
     tokenAddress: "tonTokenAddress",
