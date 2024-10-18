@@ -1,7 +1,7 @@
 {
   "name": "tac-sdk",
   "version": "0.0.1",
-  "repository": "https://github.com/ton-org/ton.git",
+  "repository": "https://gitlab.com/ton-app-chain/l2/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
   "main": "dist/index.js",
