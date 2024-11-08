@@ -7,8 +7,8 @@ import axios from 'axios';
 
 const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2"
 const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2"
-const MAINNET_TAC_JETTON_PROXY_ADDRESS = "EQAqOlIzUWuVhXDmHQyt-Ek3FnR6kH_EM0dJB_kdUp2JRmd9"
-const TESTNET_TAC_JETTON_PROXY_ADDRESS = "EQBcB0XZEv-T_9tYnbJc-DoYqAFz71k5KUkZTLX1etwfuMIB"
+const TESTNET_TAC_JETTON_PROXY_ADDRESS = "EQAqOlIzUWuVhXDmHQyt-Ek3FnR6kH_EM0dJB_kdUp2JRmd9"
+const MAINNET_TAC_JETTON_PROXY_ADDRESS = "EQBcB0XZEv-T_9tYnbJc-DoYqAFz71k5KUkZTLX1etwfuMIB"
 
 export type TacSdkParameters = {
     /**
@@ -66,26 +66,32 @@ export class TacSdk {
         const base64Parameters = Buffer.from(proxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
         const randAppend = Math.round(Math.random()*1000);
         const query_id = timestamp + randAppend;
+        const sharded_id = timestamp + Math.round(Math.random()*1000);;
+
         const json = JSON.stringify({
-            query_id: query_id,
-            target: proxyMsg.evmTargetAddress,
-            methodName: proxyMsg.methodName,
-            arguments: base64Parameters,
-            caller: Address.parse(tonFromAddress).toString(),
+            evm_call: {
+                target: proxyMsg.evmTargetAddress,
+                method_name: proxyMsg.methodName,
+                arguments: base64Parameters,
+            },  
+            sharded_id: String(sharded_id),
+            shard_count: 1,
         });
 
         const l2Data = beginCell().storeStringTail(json).endCell();
         const forwardAmount = '0.2';
 
-        const payload = beginCell()
-            .storeUint(0xF8A7EA5, 32)
-            .storeUint(query_id, 64)
-            .storeCoins(toNano(jettonAmount.toFixed(9)))
-            .storeAddress(Address.parse(this.network == CHAIN.TESTNET ? TESTNET_TAC_JETTON_PROXY_ADDRESS : MAINNET_TAC_JETTON_PROXY_ADDRESS))
-            .storeAddress(Address.parse(tonFromAddress))
-            .storeBit(false)
-            .storeCoins(toNano(forwardAmount))
-            .storeMaybeRef(l2Data).endCell();
+        const payload = beginCell().
+            storeUint(0xF8A7EA5, 32).
+            storeUint(query_id, 64).
+            storeCoins(toNano(jettonAmount.toFixed(9))).
+            storeAddress(Address.parse(this.network == CHAIN.TESTNET ? TESTNET_TAC_JETTON_PROXY_ADDRESS : MAINNET_TAC_JETTON_PROXY_ADDRESS)).
+            storeAddress(Address.parse(tonFromAddress)).
+            storeBit(false).
+            storeCoins(toNano(forwardAmount)).
+            storeMaybeRef(l2Data).
+            endCell();
+
 
         return {
             payload: Base64.encode(payload.toBoc()).toString(), 
@@ -93,8 +99,8 @@ export class TacSdk {
             timestamp: timestamp
         };
     };
-        
-    async sendJettonWithProxyMsg(params: JettonProxyMsgParameters): Promise<{caller: string; query_id: number, timestamp: number}> {
+            
+    async sendJettonWithProxyMsg(params: JettonProxyMsgParameters): Promise<{boc: string, caller: string; query_id: number, timestamp: number}> {
         if (params.tonAmount && params.tonAmount <= 0.2){
             throw Error("Amount of TON cannot be less than 0.2")
         }
@@ -116,6 +122,7 @@ export class TacSdk {
         console.log('*****Sending transaction: ', transaction);
         const boc = await params.tonConnect.sendTransaction(transaction);
         return {
+            boc: boc.boc,
             caller: params.fromAddress, 
             query_id: query_id, 
             timestamp: timestamp
@@ -125,7 +132,7 @@ export class TacSdk {
     async getOperationId(queryId: string, caller: string, timestamp: number) {
         try {
             const response = await axios.get(`http://localhost:8080/operationId`, {
-                params: { queryId, caller, timestamp }
+                params: { queryId, caller, timestamp, shardCount: 1 }
             });
             return response.data.response || "";
         } catch (error) {
