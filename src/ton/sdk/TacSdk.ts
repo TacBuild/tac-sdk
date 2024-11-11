@@ -15,8 +15,8 @@ import { SenderAbstraction } from "../sender_abstaction/SenderAbstraction"
 // import structs
 import { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, TransferMessage, ShardTransaction } from "../structs/Struct"
 
-const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2"
-const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2"
+const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2/jsonRPC"
+const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2/jsonRPC"
 const TON_SETTINGS_ADDRESS = "EQA4-dfeqBq6Rkf096Cbrdf9EC0Mtio-QdpM0nRnf_CBUcMH"
 const PUBLIC_LITE_SEQUENCER_IPs = ["localhost"]
 const PUBLIC_LITE_SEQUENCER_PORTs = ["8080"]
@@ -87,7 +87,7 @@ export class TacSdk {
         const query_id = timestamp + randAppend;
         const sharded_id = String(timestamp + Math.round(Math.random()*1000));
         const jettonProxyAddress = await this.getJettonProxyAddress();
-
+        
         const transactionLinker : TransactionLinker = {
             caller: jettons[0].fromAddress,
             query_id,

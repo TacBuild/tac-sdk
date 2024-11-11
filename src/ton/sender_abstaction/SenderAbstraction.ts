@@ -4,7 +4,8 @@ import { mnemonicToWalletKey } from "ton-crypto";
 import { ShardTransaction } from "../structs/Struct"
 
 export interface SenderAbstraction {
-    sendTransaction(shardTransaction: ShardTransaction, chain: number, tonClient: TonClient) : Promise<void>;
+    sendTransaction(shardTransaction: ShardTransaction, chain: number | undefined, tonClient: TonClient | undefined) : Promise<void>;
+    getSenderAddress(chain: number | undefined, tonClient: TonClient | undefined) : Promise<string>; 
 }
 
 export class TonConnectSender implements SenderAbstraction {
@@ -14,7 +15,11 @@ export class TonConnectSender implements SenderAbstraction {
         this.tonConnect = tonConnect;
     }
 
-    async sendTransaction(shardTransaction: ShardTransaction, chain: number, tonClient: TonClient) {
+    async getSenderAddress(): Promise<string> {
+        return Promise.resolve(this.tonConnect.account?.address?.toString() || '');
+    }
+    
+    async sendTransaction(shardTransaction: ShardTransaction, chain: number) {
         const messages = [];
         for (const message of shardTransaction.messages) {
             messages.push({
@@ -34,7 +39,7 @@ export class TonConnectSender implements SenderAbstraction {
     }
 }
 
-class RawSender implements SenderAbstraction {
+export class RawSender implements SenderAbstraction {
     readonly mnemonic: string;
 
     constructor(mnemonic: string) {
@@ -49,6 +54,17 @@ class RawSender implements SenderAbstraction {
         };
     }
 
+    async getSenderAddress(chain: number): Promise<string> {
+        const { publicKey } = await this.deriveWalletKeys();
+
+        const wallet = WalletContractV3R2.create({
+            workchain: chain,
+            publicKey: publicKey,
+        });
+
+        return Promise.resolve(wallet.address.toString());
+    }
+
     async sendTransaction(shardTransaction: ShardTransaction, chain: number, tonClient: TonClient) {
         const { publicKey, secretKey } = await this.deriveWalletKeys();
 
@@ -58,8 +74,11 @@ class RawSender implements SenderAbstraction {
         });
 
         const walletContract = tonClient.open(wallet);
-
+        console.log("pass1");
+        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+        await sleep(5000);
         const seqno = await walletContract.getSeqno();
+        console.log("pass2");
 
         const messages : MessageRelaxed[] = []
         for (const message of shardTransaction.messages) {
@@ -73,11 +92,14 @@ class RawSender implements SenderAbstraction {
 
         let sendMode = SendMode.PAY_GAS_SEPARATELY;
 
+        console.log("pass3");
+        await sleep(5000);
         await walletContract.sendTransfer({
             seqno: seqno,
             secretKey: secretKey,
             messages,
             sendMode,
         });
+        console.log("pass4");
     }
 }
