@@ -2,7 +2,8 @@ import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 import { TacSdk } from '../src/ton/sdk/TacSdk';
 import { RawSender } from '../src/ton/sender_abstaction/SenderAbstraction';
-import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams } from "../src/ton/structs/Struct";
+import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLinker } from "../src/ton/structs/Struct";
+import { getOperationId, getStatusTransaction } from "../src/ton/sdk/TransactionStatus"
 import 'dotenv/config';
 
 const swapUniswapRawSender = async (amountIn: number, amountOutMin: number, tokenAddress: string) => {
@@ -51,10 +52,60 @@ const swapUniswapRawSender = async (amountIn: number, amountOutMin: number, toke
   return await tacSdk.sendTransaction(jettons, evmProxyMsg, sender);
 };
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const TERMINETED_STATUS = "TVMInMessageExecuted";
+
+async function startTracking(transactionLinker: TransactionLinker) {
+  console.log("Start tracking transaction");
+  console.log("caller: ", transactionLinker.caller);
+  console.log("queryId: ", transactionLinker.query_id);
+  console.log("shardCount: ", transactionLinker.shard_count);
+  console.log("timestamp: ", transactionLinker.timestamp);
+  var operationId = "";
+  var current_status = "";
+  var iteration = 0;
+  var ok = true;
+  while (true) {
+    ++iteration;
+    if (iteration >= 120) {
+      ok = false;
+      break;
+    }
+    console.log();
+    if (current_status == TERMINETED_STATUS) {
+      break;
+    }
+    if (operationId == "") {
+      console.log("request operationId");
+      try {
+        operationId = await getOperationId(transactionLinker);
+      } catch {
+        console.log("get operationId error");
+      }
+    } else {
+      try {
+        current_status = await getStatusTransaction(operationId);
+      } catch {
+        console.log("get status error");
+      }
+      console.log("operationId: ", operationId);
+      console.log("status: ", current_status);
+      console.log("time: ", Math.floor(+new Date()/1000));
+    }
+    await sleep(5000);
+  }
+  if (!ok) {
+    console.log("Finished with error");
+  } else {
+    console.log("Tracking successfully finished");
+  }
+}
+
 async function main() {
   try {
     const result = await swapUniswapRawSender(1, 0, process.env.TVM_TKA_ADDRESS || '');
     console.log('Transaction successful:', result);
+    await startTracking(result.transactionLinker);
   } catch (error) {
     console.error('Error during transaction:', error);
   }

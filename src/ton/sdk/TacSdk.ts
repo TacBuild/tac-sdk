@@ -1,9 +1,8 @@
-import {Address, beginCell, Cell, toNano, TonClient, TonClientParameters} from "@ton/ton";
-import axios from 'axios';
+import { Address, beginCell, Cell, toNano, TonClient } from "@ton/ton";
 
 // jetton imports
-import {JettonMaster} from "../jetton/JettonMaster";
-import {JettonWallet} from "../jetton/JettonWallet";
+import { JettonMaster } from "../jetton/JettonMaster";
+import { JettonWallet } from "../jetton/JettonWallet";
 
 // ton settings 
 import { Settings } from "../settings/Settings";
@@ -17,8 +16,6 @@ import { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyM
 const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2/jsonRPC"
 const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2/jsonRPC"
 const TON_SETTINGS_ADDRESS = "EQA4-dfeqBq6Rkf096Cbrdf9EC0Mtio-QdpM0nRnf_CBUcMH"
-const PUBLIC_LITE_SEQUENCER_IPs = ["localhost"]
-const PUBLIC_LITE_SEQUENCER_PORTs = ["8080"]
 
 export class TacSdk {
 
@@ -125,33 +122,4 @@ export class TacSdk {
             transactionLinker,
         };
     };
-
-    async getOperationId(queryId: string, caller: string, timestamp: number) {
-        const lite_sequencer_ip = PUBLIC_LITE_SEQUENCER_IPs[0]; 
-        const lite_sequencer_port = PUBLIC_LITE_SEQUENCER_PORTs[0];
-        try {
-            const response = await axios.get(`http://${lite_sequencer_ip}:${lite_sequencer_port}/operationId`, {
-                params: { queryId, caller, timestamp, shardCount: 1 }
-            });
-            return response.data.response || "";
-        } catch (error) {
-            console.error("Error fetching operation ID:", error);
-            throw new Error("Failed to fetch operation ID");
-        }
-    }
-
-    async getStatusTransaction(operationId: string) {
-        const lite_sequencer_ip = PUBLIC_LITE_SEQUENCER_IPs[0]; 
-        const lite_sequencer_port = PUBLIC_LITE_SEQUENCER_PORTs[0];
-
-        try {
-            const response = await axios.get(`http://${lite_sequencer_ip}:${lite_sequencer_port}/status`, {
-                params: { operationId }
-            });
-            return response.data.response || "";
-        } catch (error) {
-            console.error("Error fetching operation ID:", error);
-            throw new Error("Failed to fetch operation ID");
-        }
-    }
 }
