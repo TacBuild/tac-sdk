@@ -1,7 +1,8 @@
 import {CHAIN, SendTransactionRequest, TonConnectUI} from "@tonconnect/ui";
-import {SendMode, internal, MessageRelaxed, TonClient, WalletContractV3R2 } from "@ton/ton";
+import { internal, MessageRelaxed, TonClient, WalletContractV3R2 } from "@ton/ton";
 import { mnemonicToWalletKey } from "ton-crypto"; 
 import { ShardTransaction } from "../structs/Struct"
+import {Base64} from '@tonconnect/protocol';
 
 export interface SenderAbstraction {
     sendTransaction(shardTransaction: ShardTransaction, chain: number | undefined, tonClient: TonClient | undefined) : Promise<void>;
@@ -25,7 +26,7 @@ export class TonConnectSender implements SenderAbstraction {
             messages.push({
                 address: message.address,
                 amount: message.value,
-                payload: message.payload,
+                payload: Base64.encode(message.payload).toString(),
             });
         }
 
@@ -74,32 +75,27 @@ export class RawSender implements SenderAbstraction {
         });
 
         const walletContract = tonClient.open(wallet);
-        console.log("pass1");
         const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
         await sleep(5000);
         const seqno = await walletContract.getSeqno();
-        console.log("pass2");
 
         const messages : MessageRelaxed[] = []
         for (const message of shardTransaction.messages) {
+            console.log(message.value);
+            console.log(message.address);
             messages.push(internal({
                 to: message.address,
                 value: message.value,
                 bounce: true,
-                body: message.payload.toString(),
+                body: message.payload,
             }));
         }
 
-        let sendMode = SendMode.PAY_GAS_SEPARATELY;
-
-        console.log("pass3");
         await sleep(5000);
         await walletContract.sendTransfer({
             seqno: seqno,
             secretKey: secretKey,
             messages,
-            sendMode,
         });
-        console.log("pass4");
     }
 }

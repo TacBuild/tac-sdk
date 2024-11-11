@@ -36,7 +36,7 @@ export type TransactionLinker = {
 export type TransferMessage = {
     address: string,
     value: string,
-    payload: string,
+    payload: Cell,
 }
 
 export type ShardTransaction = {

@@ -2,7 +2,6 @@ import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 import { TacSdk } from '../src/ton/sdk/TacSdk';
 import { RawSender } from '../src/ton/sender_abstaction/SenderAbstraction';
-import { TONCENTER_URL_ENDPOINT } from "../utils/ton-utils";
 import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams } from "../src/ton/structs/Struct";
 import 'dotenv/config';
 

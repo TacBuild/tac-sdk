@@ -1,5 +1,4 @@
 import {Address, beginCell, Cell, toNano, TonClient, TonClientParameters} from "@ton/ton";
-import {Base64} from '@tonconnect/protocol';
 import axios from 'axios';
 
 // jetton imports
@@ -51,7 +50,7 @@ export class TacSdk {
         return await userJettonWallet.getJettonBalance();
     };
 
-    private getTVMPayload(transactionLinker : TransactionLinker, jettonProxyAddress: string, jettonData: JettonTransferData, evmProxyMsg: EvmProxyMsg): string {
+    private getTVMPayload(transactionLinker : TransactionLinker, jettonProxyAddress: string, jettonData: JettonTransferData, evmProxyMsg: EvmProxyMsg): Cell {
         const evmArguments = Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
 
         const json = JSON.stringify({
@@ -78,7 +77,7 @@ export class TacSdk {
             storeMaybeRef(l2Data).
             endCell();
 
-        return Base64.encode(payload).toString();
+        return payload;
     };
 
     async sendTransaction(jettons: JettonTransferData[], evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction): Promise<{transactionLinker: TransactionLinker}> {
@@ -109,7 +108,7 @@ export class TacSdk {
     
             messages.push({
                 address: jettonAddress,
-                value: toNano(jetton.tonAmount?.toFixed(9) ?? "0.35").toString(),
+                value: (jetton.tonAmount ?? "0.35").toString(),
                 payload: payload,
             });
         }
