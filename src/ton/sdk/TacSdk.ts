@@ -4,11 +4,11 @@ import {CHAIN, SendTransactionRequest, TonConnectUI} from "@tonconnect/ui";
 import {JettonMaster} from "../jetton/JettonMaster";
 import {JettonWallet} from "../jetton/JettonWallet";
 import axios from 'axios';
+import { Settings } from "../settings/Settings";
 
 const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2"
 const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2"
-const TESTNET_TAC_JETTON_PROXY_ADDRESS = "EQAqOlIzUWuVhXDmHQyt-Ek3FnR6kH_EM0dJB_kdUp2JRmd9"
-const MAINNET_TAC_JETTON_PROXY_ADDRESS = "EQBcB0XZEv-T_9tYnbJc-DoYqAFz71k5KUkZTLX1etwfuMIB"
+const TON_SETTINGS_ADDRESS = "EQA4-dfeqBq6Rkf096Cbrdf9EC0Mtio-QdpM0nRnf_CBUcMH"
 
 export type TacSdkParameters = {
     /**
@@ -49,6 +49,12 @@ export class TacSdk {
         };
         this.tonClient = new TonClient(tonClientParameters);
     }
+
+    async getJettonProxyAddress(): Promise<string> {
+        const settings = this.tonClient.open(new Settings(Address.parse(TON_SETTINGS_ADDRESS)));
+        return await settings.getAddressSetting("JettonProxyAddress");
+    }
+
     async getUserJettonWalletAddress(userAddress: string, tokenAddress: string): Promise<string>{
         const jettonMaster = this.tonClient.open(new JettonMaster(Address.parse(tokenAddress)));
         return await jettonMaster.getWalletAddress(userAddress);
@@ -61,7 +67,7 @@ export class TacSdk {
         return await userJettonWallet.getJettonBalance();
     };
 
-    private getJettonBase64Payload(jettonAmount: number, tonFromAddress: string, proxyMsg: EvmProxyMsg): {payload: string; query_id: number, timestamp: number} {
+    private getJettonBase64Payload(jettonAmount: number, jettonProxyAddress: string, tonFromAddress: string, proxyMsg: EvmProxyMsg): {payload: string; query_id: number, timestamp: number} {
         const timestamp = Math.floor(+new Date() / 1000);
         const base64Parameters = Buffer.from(proxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
         const randAppend = Math.round(Math.random()*1000);
@@ -85,7 +91,7 @@ export class TacSdk {
             storeUint(0xF8A7EA5, 32).
             storeUint(query_id, 64).
             storeCoins(toNano(jettonAmount.toFixed(9))).
-            storeAddress(Address.parse(this.network == CHAIN.TESTNET ? TESTNET_TAC_JETTON_PROXY_ADDRESS : MAINNET_TAC_JETTON_PROXY_ADDRESS)).
+            storeAddress(Address.parse(jettonProxyAddress)).
             storeAddress(Address.parse(tonFromAddress)).
             storeBit(false).
             storeCoins(toNano(forwardAmount)).
@@ -106,7 +112,8 @@ export class TacSdk {
         }
 
         const jettonAddress = await this.getUserJettonWalletAddress(params.fromAddress, params.tokenAddress);
-        const {payload, query_id, timestamp} = this.getJettonBase64Payload(params.jettonAmount, params.fromAddress, params.proxyMsg)
+        const jettonProxyAddress = await this.getJettonProxyAddress();
+        const {payload, query_id, timestamp} = this.getJettonBase64Payload(params.jettonAmount, jettonProxyAddress, params.fromAddress, params.proxyMsg)
         const transaction: SendTransactionRequest = {
             validUntil: +new Date() + 15 * 60 * 1000,
             messages: [
