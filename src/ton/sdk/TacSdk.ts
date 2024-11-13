@@ -81,7 +81,7 @@ export class TacSdk {
         return payload;
     };
 
-    async sendTransaction(jettons: JettonTransferData[], evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction): Promise<{transactionLinker: TransactionLinker}> {
+    async sendShardJettonTransferTransaction(jettons: JettonTransferData[], evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction): Promise<{transactionLinker: TransactionLinker}> {
         const timestamp = Math.floor(+new Date() / 1000);
         const randAppend = Math.round(Math.random()*1000);
         const queryId = timestamp + randAppend;

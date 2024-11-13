@@ -57,7 +57,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
     })
   }
   
-  return await tacSdk.sendTransaction(jettons, evmProxyMsg, sender);
+  return await tacSdk.sendShardJettonTransferTransaction(jettons, evmProxyMsg, sender);
 };
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
