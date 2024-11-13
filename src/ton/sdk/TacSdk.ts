@@ -8,22 +8,25 @@ import { JettonWallet } from "../jetton/JettonWallet";
 import { Settings } from "../settings/Settings";
 
 // sender abstraction(tonconnect or mnemonic V3R2)
-import { SenderAbstraction } from "../sender_abstaction/SenderAbstraction"
+import { SenderAbstraction } from "../sender_abstraction/SenderAbstraction"
 
 // import structs
 import { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, TransferMessage, ShardTransaction } from "../structs/Struct"
 
 const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2/jsonRPC"
 const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2/jsonRPC"
-const TON_SETTINGS_ADDRESS = "EQA4-dfeqBq6Rkf096Cbrdf9EC0Mtio-QdpM0nRnf_CBUcMH"
+const TON_SETTINGS_ADDRESS = "EQBhNuV_2qqdRoYb8S_u0CWLmt0uG18azs4sJ9f01S-13Jj9"
 
 export class TacSdk {
 
     readonly tonClient: TonClient;
     readonly network: number;
+    readonly delay: number;
 
     constructor(tonClientParams: TacSDKTonClientParams) {
         this.network = tonClientParams.network ?? 1;
+        this.delay = tonClientParams.delay ?? 0;
+
         const tonClientParameters = tonClientParams.tonClientParameters ?? {
             endpoint: tonClientParams.network == 0 ? TESTNET_TONCENTER_URL_ENDPOINT : MAINNET_TONCENTER_URL_ENDPOINT
         };
@@ -117,7 +120,7 @@ export class TacSdk {
         };
 
         console.log('*****Sending transaction: ', transaction);
-        const boc = await sender.sendTransaction(transaction, this.network, this.tonClient);
+        const boc = await sender.sendTransaction(transaction, this.delay, this.network, this.tonClient);
         return { 
             transactionLinker,
         };

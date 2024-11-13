@@ -1,7 +1,7 @@
 import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 import { TacSdk } from '../src/ton/sdk/TacSdk';
-import { RawSender } from '../src/ton/sender_abstaction/SenderAbstraction';
+import { RawSender } from '../src/ton/sender_abstraction/SenderAbstraction';
 import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLinker } from "../src/ton/structs/Struct";
 import { getOperationId, getStatusTransaction } from "../src/ton/sdk/TransactionStatus"
 import 'dotenv/config';
@@ -10,6 +10,7 @@ const swapUniswapRawSender = async (amountIn: number, amountOutMin: number, toke
   // create TacSdk
   const tonClientParams : TacSDKTonClientParams = {
     network: 0,
+    delay: 5,
   };
   const tacSdk = new TacSdk(tonClientParams);
 
@@ -53,7 +54,7 @@ const swapUniswapRawSender = async (amountIn: number, amountOutMin: number, toke
 };
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-const TERMINETED_STATUS = "TVMInMessageExecuted";
+const TERMINETED_STATUS = "TVMMerkleMessageExecuted";
 
 async function startTracking(transactionLinker: TransactionLinker) {
   console.log("Start tracking transaction");

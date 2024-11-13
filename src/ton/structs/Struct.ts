@@ -10,6 +10,11 @@ export type TacSDKTonClientParams = {
      * TON CHAIN
      */
     network?: number;
+
+    /**
+     * Delay in request to TONClient
+     */
+    delay?: number;
 }
 
 export type JettonTransferData = {

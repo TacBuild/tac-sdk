@@ -4,8 +4,10 @@ import { mnemonicToWalletKey } from "ton-crypto";
 import { ShardTransaction } from "../structs/Struct"
 import {Base64} from '@tonconnect/protocol';
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export interface SenderAbstraction {
-    sendTransaction(shardTransaction: ShardTransaction, chain: number | undefined, tonClient: TonClient | undefined) : Promise<void>;
+    sendTransaction(shardTransaction: ShardTransaction, delay: number, chain: number | undefined, tonClient: TonClient | undefined) : Promise<void>;
     getSenderAddress(chain: number | undefined, tonClient: TonClient | undefined) : Promise<string>; 
 }
 
@@ -20,7 +22,7 @@ export class TonConnectSender implements SenderAbstraction {
         return Promise.resolve(this.tonConnect.account?.address?.toString() || '');
     }
     
-    async sendTransaction(shardTransaction: ShardTransaction, chain: number) {
+    async sendTransaction(shardTransaction: ShardTransaction, delay: number, chain: number) {
         const messages = [];
         for (const message of shardTransaction.messages) {
             messages.push({
@@ -66,7 +68,7 @@ export class RawSender implements SenderAbstraction {
         return Promise.resolve(wallet.address.toString());
     }
 
-    async sendTransaction(shardTransaction: ShardTransaction, chain: number, tonClient: TonClient) {
+    async sendTransaction(shardTransaction: ShardTransaction, delay: number, chain: number, tonClient: TonClient) {
         const { publicKey, secretKey } = await this.deriveWalletKeys();
 
         const wallet = WalletContractV3R2.create({
@@ -75,14 +77,11 @@ export class RawSender implements SenderAbstraction {
         });
 
         const walletContract = tonClient.open(wallet);
-        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-        await sleep(5000);
+        await sleep(delay*1000);
         const seqno = await walletContract.getSeqno();
 
         const messages : MessageRelaxed[] = []
         for (const message of shardTransaction.messages) {
-            console.log(message.value);
-            console.log(message.address);
             messages.push(internal({
                 to: message.address,
                 value: message.value,
@@ -91,7 +90,7 @@ export class RawSender implements SenderAbstraction {
             }));
         }
 
-        await sleep(5000);
+        await sleep(delay*1000);
         await walletContract.sendTransfer({
             seqno: seqno,
             secretKey: secretKey,
