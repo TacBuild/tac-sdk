@@ -11,7 +11,7 @@ import { Settings } from "../settings/Settings";
 import { SenderAbstraction } from "../sender_abstraction/SenderAbstraction"
 
 // import structs
-import { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, TransferMessage, ShardTransaction } from "../structs/Struct"
+import { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, TransferMessage, ShardTransaction, Network, OpCode } from "../structs/Struct"
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2/jsonRPC"
@@ -21,15 +21,15 @@ const TON_SETTINGS_ADDRESS = "EQBhNuV_2qqdRoYb8S_u0CWLmt0uG18azs4sJ9f01S-13Jj9"
 export class TacSdk {
 
     readonly tonClient: TonClient;
-    readonly network: number;
+    readonly network: Network;
     readonly delay: number;
 
-    constructor(tonClientParams: TacSDKTonClientParams) {
-        this.network = tonClientParams.network ?? 1;
-        this.delay = tonClientParams.delay ?? 0;
+    constructor(TacSDKParams: TacSDKTonClientParams) {
+        this.network = TacSDKParams.network ?? Network.Mainnet;
+        this.delay = TacSDKParams.delay ?? 0;
 
-        const tonClientParameters = tonClientParams.tonClientParameters ?? {
-            endpoint: tonClientParams.network == 0 ? TESTNET_TONCENTER_URL_ENDPOINT : MAINNET_TONCENTER_URL_ENDPOINT
+        const tonClientParameters = TacSDKParams.tonClientParameters ?? {
+            endpoint: this.network == Network.Testnet ? TESTNET_TONCENTER_URL_ENDPOINT : MAINNET_TONCENTER_URL_ENDPOINT
         };
         this.tonClient = new TonClient(tonClientParameters);
     }
@@ -51,7 +51,7 @@ export class TacSdk {
         return await userJettonWallet.getJettonBalance();
     };
 
-    private getTVMPayload(transactionLinker : TransactionLinker, jettonProxyAddress: string, jettonData: JettonTransferData, evmProxyMsg: EvmProxyMsg): Cell {
+    private getJettonTransferPayload(transactionLinker : TransactionLinker, jettonProxyAddress: string, jettonData: JettonTransferData, evmProxyMsg: EvmProxyMsg): Cell {
         const evmArguments = Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
 
         const json = JSON.stringify({
@@ -60,16 +60,16 @@ export class TacSdk {
                 method_name: evmProxyMsg.methodName,
                 arguments: evmArguments,
             },  
-            sharded_id: transactionLinker.sharded_id,
-            shard_count: transactionLinker.shard_count,
+            shardedId: transactionLinker.shardedId,
+            shardCount: transactionLinker.shardCount,
         });
 
         const l2Data = beginCell().storeStringTail(json).endCell();
         const forwardAmount = '0.2';
 
         const payload = beginCell().
-            storeUint(0xF8A7EA5, 32).
-            storeUint(transactionLinker.query_id, 64).
+            storeUint(OpCode.JettonTransfer, 32).
+            storeUint(transactionLinker.queryId, 64).
             storeCoins(toNano(jettonData.jettonAmount.toFixed(9))).
             storeAddress(Address.parse(jettonProxyAddress)).
             storeAddress(Address.parse(jettonData.fromAddress)).
@@ -84,15 +84,15 @@ export class TacSdk {
     async sendTransaction(jettons: JettonTransferData[], evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction): Promise<{transactionLinker: TransactionLinker}> {
         const timestamp = Math.floor(+new Date() / 1000);
         const randAppend = Math.round(Math.random()*1000);
-        const query_id = timestamp + randAppend;
-        const sharded_id = String(timestamp + Math.round(Math.random()*1000));
+        const queryId = timestamp + randAppend;
+        const shardedId = String(timestamp + Math.round(Math.random()*1000));
         const jettonProxyAddress = await this.getJettonProxyAddress();
         
         const transactionLinker : TransactionLinker = {
             caller: jettons[0].fromAddress,
-            query_id,
-            shard_count: jettons.length,
-            sharded_id,
+            queryId,
+            shardCount: jettons.length,
+            shardedId,
             timestamp: timestamp,
         }
 
@@ -102,7 +102,7 @@ export class TacSdk {
         for (const jetton of jettons) {
             await sleep(this.delay*1000);
             const jettonAddress = await this.getUserJettonWalletAddress(jetton.fromAddress, jetton.tokenAddress);
-            const payload = this.getTVMPayload(
+            const payload = this.getJettonTransferPayload(
                 transactionLinker,
                 jettonProxyAddress,
                 jetton,
@@ -123,7 +123,7 @@ export class TacSdk {
         };
 
         console.log('*****Sending transaction: ', transaction);
-        const boc = await sender.sendTransaction(transaction, this.delay, this.network, this.tonClient);
+        const boc = await sender.sendShardJettonTransferTransaction(transaction, this.delay, this.network, this.tonClient);
         return { 
             transactionLinker,
         };

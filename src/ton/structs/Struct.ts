@@ -1,5 +1,14 @@
 import {TonClientParameters, Cell} from "@ton/ton";
 
+export const enum Network {
+    Testnet = 'testnet',
+    Mainnet = 'mainnet'
+}
+
+export const enum OpCode {
+    JettonTransfer = 0xF8A7EA5,
+}
+
 export type TacSDKTonClientParams = {
     /**
      * TonClient Parameters
@@ -9,7 +18,7 @@ export type TacSDKTonClientParams = {
     /**
      * TON CHAIN
      */
-    network?: number;
+    network?: Network;
 
     /**
      * Delay in request to TONClient
@@ -32,9 +41,9 @@ export type EvmProxyMsg = {
 
 export type TransactionLinker = {
     caller: string,
-    query_id: number,
-    shard_count: number,
-    sharded_id: string,
+    queryId: number,
+    shardCount: number,
+    shardedId: string,
     timestamp: number,
 }
 
@@ -47,5 +56,5 @@ export type TransferMessage = {
 export type ShardTransaction = {
     validUntil: number,
     messages: TransferMessage[],
-    network: number,
+    network: Network,
 }

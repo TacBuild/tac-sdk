@@ -2,14 +2,14 @@ import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 import { TacSdk } from '../src/ton/sdk/TacSdk';
 import { RawSender } from '../src/ton/sender_abstraction/SenderAbstraction';
-import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLinker } from "../src/ton/structs/Struct";
+import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLinker, Network } from "../src/ton/structs/Struct";
 import { getOperationId, getStatusTransaction } from "../src/ton/sdk/TransactionStatus"
 import 'dotenv/config';
 
 const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, tokenAddress: string) => {
   // create TacSdk
   const tonClientParams : TacSDKTonClientParams = {
-    network: 0,
+    network: Network.Testnet,
     delay: 5,
   };
   const tacSdk = new TacSdk(tonClientParams);
@@ -50,7 +50,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
   const jettons: JettonTransferData[] = []
   for (const amount of amountsIn) {
     jettons.push({
-      fromAddress: await sender.getSenderAddress(0),
+      fromAddress: await sender.getSenderAddress(Network.Testnet),
       tokenAddress: tokenAddress,
       jettonAmount: amount,
       tonAmount: 0.35,
@@ -66,8 +66,8 @@ const TERMINETED_STATUS = "TVMMerkleMessageExecuted";
 async function startTracking(transactionLinker: TransactionLinker) {
   console.log("Start tracking transaction");
   console.log("caller: ", transactionLinker.caller);
-  console.log("queryId: ", transactionLinker.query_id);
-  console.log("shardCount: ", transactionLinker.shard_count);
+  console.log("queryId: ", transactionLinker.queryId);
+  console.log("shardCount: ", transactionLinker.shardCount);
   console.log("timestamp: ", transactionLinker.timestamp);
   var operationId = "";
   var current_status = "";

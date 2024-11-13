@@ -1,14 +1,14 @@
-import {CHAIN, SendTransactionRequest, TonConnectUI} from "@tonconnect/ui";
+import { CHAIN, SendTransactionRequest, TonConnectUI } from "@tonconnect/ui";
 import { internal, MessageRelaxed, TonClient, WalletContractV3R2 } from "@ton/ton";
 import { mnemonicToWalletKey } from "ton-crypto"; 
-import { ShardTransaction } from "../structs/Struct"
-import {Base64} from '@tonconnect/protocol';
+import { ShardTransaction, Network } from "../structs/Struct"
+import { Base64 } from '@tonconnect/protocol';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export interface SenderAbstraction {
-    sendTransaction(shardTransaction: ShardTransaction, delay: number, chain: number | undefined, tonClient: TonClient | undefined) : Promise<void>;
-    getSenderAddress(chain: number | undefined, tonClient: TonClient | undefined) : Promise<string>; 
+    sendShardJettonTransferTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network | undefined, tonClient: TonClient | undefined) : Promise<void>;
+    getSenderAddress(chain: Network | undefined, tonClient: TonClient | undefined) : Promise<string>; 
 }
 
 export class TonConnectSender implements SenderAbstraction {
@@ -22,7 +22,7 @@ export class TonConnectSender implements SenderAbstraction {
         return Promise.resolve(this.tonConnect.account?.address?.toString() || '');
     }
     
-    async sendTransaction(shardTransaction: ShardTransaction, delay: number, chain: number) {
+    async sendShardJettonTransferTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network) {
         const messages = [];
         for (const message of shardTransaction.messages) {
             messages.push({
@@ -35,7 +35,7 @@ export class TonConnectSender implements SenderAbstraction {
         const transaction: SendTransactionRequest = {
             validUntil: shardTransaction.validUntil,
             messages,
-            network: chain == 0 ? CHAIN.TESTNET : CHAIN.MAINNET,
+            network: chain == Network.Testnet ? CHAIN.TESTNET : CHAIN.MAINNET,
         }; 
 
         await this.tonConnect.sendTransaction(transaction);
@@ -57,22 +57,22 @@ export class RawSender implements SenderAbstraction {
         };
     }
 
-    async getSenderAddress(chain: number): Promise<string> {
+    async getSenderAddress(chain: Network): Promise<string> {
         const { publicKey } = await this.deriveWalletKeys();
 
         const wallet = WalletContractV3R2.create({
-            workchain: chain,
+            workchain: chain == Network.Testnet ? 0 : 1,
             publicKey: publicKey,
         });
 
         return Promise.resolve(wallet.address.toString());
     }
 
-    async sendTransaction(shardTransaction: ShardTransaction, delay: number, chain: number, tonClient: TonClient) {
+    async sendShardJettonTransferTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network, tonClient: TonClient) {
         const { publicKey, secretKey } = await this.deriveWalletKeys();
 
         const wallet = WalletContractV3R2.create({
-            workchain: chain,
+            workchain: chain == Network.Testnet ? 0 : 1,
             publicKey: publicKey,
         });
 
