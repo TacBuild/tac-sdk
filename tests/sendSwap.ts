@@ -6,7 +6,7 @@ import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLink
 import { getOperationId, getStatusTransaction } from "../src/ton/sdk/TransactionStatus"
 import 'dotenv/config';
 
-const swapUniswapRawSender = async (amountIn: number, amountOutMin: number, tokenAddress: string) => {
+const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, tokenAddress: string) => {
   // create TacSdk
   const tonClientParams : TacSDKTonClientParams = {
     network: 0,
@@ -18,6 +18,11 @@ const swapUniswapRawSender = async (amountIn: number, amountOutMin: number, toke
   const EVM_TKA_ADDRESS = process.env.EVM_TKA_ADDRESS || '';
   const EVM_TKB_ADDRESS = process.env.EVM_TKB_ADDRESS || ''; 
   const UNISWAPV2_PROXY_ADDRESS = process.env.UNISWAPV2_PROXY_ADDRESS || '';
+
+  var amountIn = 0;
+  for (const amount of amountsIn) {
+    amountIn += amount;
+  }
 
   const abi = new ethers.AbiCoder();
   const encodedParameters = abi.encode(
@@ -43,12 +48,14 @@ const swapUniswapRawSender = async (amountIn: number, amountOutMin: number, toke
 
   // create JettonTransferData
   const jettons: JettonTransferData[] = []
-  jettons.push({
-    fromAddress: await sender.getSenderAddress(0),
-    tokenAddress: tokenAddress,
-    jettonAmount: amountIn,
-    tonAmount: 0.35,
-  })
+  for (const amount of amountsIn) {
+    jettons.push({
+      fromAddress: await sender.getSenderAddress(0),
+      tokenAddress: tokenAddress,
+      jettonAmount: amount,
+      tonAmount: 0.35,
+    })
+  }
   
   return await tacSdk.sendTransaction(jettons, evmProxyMsg, sender);
 };
@@ -104,7 +111,7 @@ async function startTracking(transactionLinker: TransactionLinker) {
 
 async function main() {
   try {
-    const result = await swapUniswapRawSender(1, 0, process.env.TVM_TKA_ADDRESS || '');
+    const result = await swapUniswapRawSender([1, 1], 0, process.env.TVM_TKA_ADDRESS || '');
     console.log('Transaction successful:', result);
     await startTracking(result.transactionLinker);
   } catch (error) {

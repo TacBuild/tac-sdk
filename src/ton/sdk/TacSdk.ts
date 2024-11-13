@@ -12,6 +12,7 @@ import { SenderAbstraction } from "../sender_abstraction/SenderAbstraction"
 
 // import structs
 import { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, TransferMessage, ShardTransaction } from "../structs/Struct"
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2/jsonRPC"
 const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2/jsonRPC"
@@ -95,9 +96,11 @@ export class TacSdk {
             timestamp: timestamp,
         }
 
+
         const messages : TransferMessage[] = [];
 
         for (const jetton of jettons) {
+            await sleep(this.delay*1000);
             const jettonAddress = await this.getUserJettonWalletAddress(jetton.fromAddress, jetton.tokenAddress);
             const payload = this.getTVMPayload(
                 transactionLinker,
