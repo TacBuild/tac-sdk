@@ -16,7 +16,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2/jsonRPC"
 const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2/jsonRPC"
-const TON_SETTINGS_ADDRESS = "EQBhNuV_2qqdRoYb8S_u0CWLmt0uG18azs4sJ9f01S-13Jj9"
+const TON_SETTINGS_ADDRESS = "EQA4c4YONqc9nfoadZ5L5uRfnCM8KW5FRVKOYTXXFjxihnms"
 
 export class TacSdk {
 
@@ -75,6 +75,7 @@ export class TacSdk {
             storeAddress(Address.parse(jettonData.fromAddress)).
             storeBit(false).
             storeCoins(toNano(forwardAmount)).
+            storeCoins(0).
             storeMaybeRef(l2Data).
             endCell();
 
