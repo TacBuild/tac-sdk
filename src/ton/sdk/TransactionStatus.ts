@@ -1,39 +1,52 @@
 import axios from 'axios';
 import { TransactionLinker } from "../structs/Struct"
 
-const PUBLIC_LITE_SEQUENCER_IPs = ["localhost"]
-const PUBLIC_LITE_SEQUENCER_PORTs = ["8080"]
+const PUBLIC_LITE_SEQUENCER_ENDPOINTS = ["localhost:8080"]
 
-export async function getOperationId(transactionLinker: TransactionLinker) {
-    const lite_sequencer_ip = PUBLIC_LITE_SEQUENCER_IPs[0]; 
-    const lite_sequencer_port = PUBLIC_LITE_SEQUENCER_PORTs[0];
-    try {
-        const response = await axios.get(`http://${lite_sequencer_ip}:${lite_sequencer_port}/operationId`, {
-            params: { 
-                queryId: transactionLinker.query_id, 
-                caller: transactionLinker.caller, 
-                shardCount: transactionLinker.shard_count,
-                timestamp: transactionLinker.timestamp,
+export async function getOperationId(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string) {
+    const endpoints = customLiteSequencerEndpoint 
+    ? [customLiteSequencerEndpoint]
+    : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+
+    for (const endpoint of endpoints) {
+        try {
+            const response = await axios.get(`http://${endpoint}/operationId`, {
+                params: { 
+                    queryId: transactionLinker.queryId, 
+                    caller: transactionLinker.caller, 
+                    shardCount: transactionLinker.shardCount,
+                    timestamp: transactionLinker.timestamp,
+                }
+            });
+            return response.data.response || "";
+        } catch (error) {
+            console.error(`Failed to get OperationId with ${endpoint}:`, error);
+            if (customLiteSequencerEndpoint) {
+                throw new Error(`Failed to get OperationId with custom endpoint`);
             }
-        });
-        return response.data.response || "";
-    } catch (error) {
-        console.error("Error fetching operation ID:", error);
-        throw new Error("Failed to fetch operation ID");
+        }
     }
+    throw new Error("Failed to fetch OperationId");
 }
 
-export async function getStatusTransaction(operationId: string) {
-    const lite_sequencer_ip = PUBLIC_LITE_SEQUENCER_IPs[0]; 
-    const lite_sequencer_port = PUBLIC_LITE_SEQUENCER_PORTs[0];
+export async function getStatusTransaction(operationId: string, customLiteSequencerEndpoint?: string) {
+    const endpoints = customLiteSequencerEndpoint 
+    ? [customLiteSequencerEndpoint]
+    : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
 
-    try {
-        const response = await axios.get(`http://${lite_sequencer_ip}:${lite_sequencer_port}/status`, {
-            params: { operationId }
-        });
-        return response.data.response || "";
-    } catch (error) {
-        console.error("Error fetching operation ID:", error);
-        throw new Error("Failed to fetch operation ID");
+    for (const endpoint of endpoints) {
+        try {
+            const response = await axios.get(`http://${endpoint}/operationId`, {
+                params: { operationId }
+            });
+            return response.data.response || "";
+        } catch (error) {
+            console.error(`Error fetching status transaction with ${endpoint}:`, error);
+
+            if (customLiteSequencerEndpoint) {
+                throw new Error(`Failed to get status transaction with custom endpoint`);
+            }
+        }
     }
+    throw new Error("Failed to fetch status transaction");
 }
