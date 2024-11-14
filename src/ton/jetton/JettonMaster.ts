@@ -1,6 +1,8 @@
-import {Address, beginCell, Cell, Contract, ContractProvider} from "@ton/core";
-import {fromNano} from "@ton/ton";
-import {JettonExtendedMetadata, readJettonMetadata} from "./ContentUtils";
+import { Address, beginCell, Cell } from "@ton/core";
+import type { Contract, ContractProvider } from "@ton/core";
+import { fromNano } from "@ton/ton";
+import { readJettonMetadata } from "./ContentUtils";
+import type { JettonExtendedMetadata } from "./ContentUtils";
 
 export type JettonMasterData = {
     totalSupply: number;

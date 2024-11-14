@@ -2,12 +2,16 @@ import {
     Address,
     beginCell,
     Cell,
-    Contract,
     contractAddress,
-    ContractProvider, fromNano,
-    Sender,
+    fromNano,
     SendMode,
     toNano
+} from "@ton/core";
+
+import type {
+    Contract,
+    ContractProvider,
+    Sender
 } from "@ton/core";
 
 export type JettonWalletData = {

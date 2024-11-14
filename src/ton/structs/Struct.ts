@@ -1,4 +1,5 @@
-import {TonClientParameters, Cell} from "@ton/ton";
+import { Cell } from "@ton/ton";
+import type { TonClientParameters } from "@ton/ton";
 
 export const enum Network {
     Testnet = 'testnet',

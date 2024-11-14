@@ -1,7 +1,10 @@
-import { CHAIN, SendTransactionRequest, TonConnectUI } from "@tonconnect/ui";
-import { internal, MessageRelaxed, TonClient, WalletContractV3R2 } from "@ton/ton";
+import { CHAIN, TonConnectUI } from "@tonconnect/ui";
+import type { SendTransactionRequest } from "@tonconnect/ui"; 
+import { internal, TonClient, WalletContractV3R2 } from "@ton/ton";
+import type { MessageRelaxed } from "@ton/ton";
 import { mnemonicToWalletKey } from "ton-crypto"; 
-import { ShardTransaction, Network } from "../structs/Struct"
+import { Network } from "../structs/Struct";
+import type { ShardTransaction } from "../structs/Struct";
 import { Base64 } from '@tonconnect/protocol';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

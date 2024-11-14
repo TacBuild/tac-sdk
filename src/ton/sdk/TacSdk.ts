@@ -8,10 +8,12 @@ import { JettonWallet } from "../jetton/JettonWallet";
 import { Settings } from "../settings/Settings";
 
 // sender abstraction(tonconnect or mnemonic V3R2)
-import { SenderAbstraction } from "../sender_abstraction/SenderAbstraction"
+import type { SenderAbstraction } from "../sender_abstraction/SenderAbstraction"
 
 // import structs
-import { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, TransferMessage, ShardTransaction, Network, OpCode } from "../structs/Struct"
+import type { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, TransferMessage, ShardTransaction } from "../structs/Struct"
+import { Network, OpCode } from "../structs/Struct"
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2/jsonRPC"

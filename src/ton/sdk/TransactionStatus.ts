@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { TransactionLinker } from "../structs/Struct"
+import type { TransactionLinker } from "../structs/Struct"
 
 const PUBLIC_LITE_SEQUENCER_ENDPOINTS = ["localhost:8080"]
 

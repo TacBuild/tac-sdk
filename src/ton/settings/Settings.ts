@@ -1,5 +1,5 @@
-import {Address, beginCell, Cell, Contract, ContractProvider} from "@ton/core";
-import {fromNano} from "@ton/ton";
+import { Address } from "@ton/core";
+import type { Contract, ContractProvider } from "@ton/core";
 import { createHash } from 'crypto';
 import { ethers } from 'ethers';
 
