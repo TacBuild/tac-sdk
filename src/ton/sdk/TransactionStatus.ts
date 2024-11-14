@@ -30,14 +30,16 @@ export async function getOperationId(transactionLinker: TransactionLinker, custo
 }
 
 export async function getStatusTransaction(operationId: string, customLiteSequencerEndpoint?: string) {
+  // TODO fix in sequencer to decoded url params(encodeURIComponent)
+  operationId = operationId.replace(/\+/g, " ");
   const endpoints = customLiteSequencerEndpoint
     ? [customLiteSequencerEndpoint]
     : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
 
   for (const endpoint of endpoints) {
     try {
-      const response = await axios.get(`http://${endpoint}/operationId`, {
-        params: { operationId }
+      const response = await axios.get(`http://${endpoint}/status`, {
+        params: { operationId: operationId }
       });
       return response.data.response || '';
     } catch (error) {

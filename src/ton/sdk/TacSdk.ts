@@ -61,8 +61,8 @@ export class TacSdk {
         method_name: evmProxyMsg.methodName,
         arguments: evmArguments
       },
-      shardedId: transactionLinker.shardedId,
-      shardCount: transactionLinker.shardCount
+      sharded_id: transactionLinker.shardedId,
+      shard_count: transactionLinker.shardCount
     });
 
     const l2Data = beginCell().storeStringTail(json).endCell();
