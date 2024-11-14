@@ -50,7 +50,7 @@ export type TransactionLinker = {
 
 export type TransferMessage = {
     address: string,
-    value: string,
+    value: number,
     payload: Cell,
 }
 

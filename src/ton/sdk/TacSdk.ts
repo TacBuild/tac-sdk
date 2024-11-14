@@ -112,7 +112,7 @@ export class TacSdk {
 
       messages.push({
         address: jettonAddress,
-        value: (jetton.tonAmount ?? '0.35').toString(),
+        value: jetton.tonAmount ?? 0.35,
         payload
       });
     }

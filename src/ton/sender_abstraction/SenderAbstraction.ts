@@ -1,6 +1,6 @@
 import { CHAIN, TonConnectUI } from '@tonconnect/ui';
 import type { SendTransactionRequest } from '@tonconnect/ui';
-import { internal, TonClient, WalletContractV3R2 } from '@ton/ton';
+import { toNano, internal, TonClient, WalletContractV3R2 } from '@ton/ton';
 import type { MessageRelaxed } from '@ton/ton';
 import { mnemonicToWalletKey } from 'ton-crypto';
 import { Base64 } from '@tonconnect/protocol';
@@ -30,8 +30,8 @@ export class TonConnectSender implements SenderAbstraction {
     for (const message of shardTransaction.messages) {
       messages.push({
         address: message.address,
-        amount: message.value,
-        payload: Base64.encode(message.payload).toString()
+        amount: toNano(message.value.toFixed(9)).toString(),
+        payload: Base64.encode(message.payload.toBoc()).toString()
       });
     }
 
@@ -87,7 +87,7 @@ export class RawSender implements SenderAbstraction {
     for (const message of shardTransaction.messages) {
       messages.push(internal({
         to: message.address,
-        value: message.value,
+        value: message.value.toString(),
         bounce: true,
         body: message.payload
       }));
