@@ -74,6 +74,7 @@ import { TacSdk } from "tac-sdk";
 import { TonConnectUI } from "@tonconnect/ui";
 import { ethers } from "ethers";
 
+// Create EVM payload for DappProxy
 const abi = new ethers.AbiCoder();
 const encodedParameters = abi.encode(
   ['uint256', 'uint256', 'address[]', 'address'],
@@ -84,9 +85,8 @@ const encodedParameters = abi.encode(
     proxyDapp,
   ]
 );
-
 const evmProxyMsg: EvmProxyMsg = {
-  evmTargetAddress: config.swapPayloadJsonTarget,
+  evmTargetAddress: DappProxyAddress,
   methodName: 'addLiquidity(uint256,uint256,address[],address)',
   encodedParameters
 };
