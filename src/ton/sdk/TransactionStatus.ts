@@ -3,9 +3,9 @@ import type { TransactionLinker } from '../structs/Struct';
 import { SimplifiedStatuses } from '../structs/Struct';
 const PUBLIC_LITE_SEQUENCER_ENDPOINTS = ['http://localhost:8080'];
 
-export async function getOperationId(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string) {
+export async function getOperationId(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string[]) {
   const endpoints = customLiteSequencerEndpoint
-    ? [customLiteSequencerEndpoint]
+    ? customLiteSequencerEndpoint
     : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
 
   for (const endpoint of endpoints) {
@@ -29,11 +29,11 @@ export async function getOperationId(transactionLinker: TransactionLinker, custo
   throw new Error('Failed to fetch OperationId');
 }
 
-export async function getStatusTransaction(operationId: string, customLiteSequencerEndpoint?: string) {
+export async function getStatusTransaction(operationId: string, customLiteSequencerEndpoint?: string[]) {
   // TODO fix in sequencer to decoded url params(encodeURIComponent)
   operationId = operationId.replace(/\+/g, " ");
   const endpoints = customLiteSequencerEndpoint
-    ? [customLiteSequencerEndpoint]
+    ? customLiteSequencerEndpoint
     : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
 
   for (const endpoint of endpoints) {
@@ -55,7 +55,7 @@ export async function getStatusTransaction(operationId: string, customLiteSequen
 
 const TERMINETED_STATUS = "TVMMerkleMessageExecuted";
 
-export async function getSimpifiedTransactionStatus(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string) {
+export async function getSimpifiedTransactionStatus(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string[]) {
   const operationId = await getOperationId(transactionLinker, customLiteSequencerEndpoint)
   if (operationId == "") {
     return SimplifiedStatuses.OperationIdNotFound;
@@ -65,6 +65,6 @@ export async function getSimpifiedTransactionStatus(transactionLinker: Transacti
   if (status == TERMINETED_STATUS) {
     return SimplifiedStatuses.Successful;
   } 
-  
+
   return SimplifiedStatuses.Pending;
 }
