@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { TransactionLinker } from '../structs/Struct';
-
-const PUBLIC_LITE_SEQUENCER_ENDPOINTS = ['localhost:8080'];
+import { SimplifiedStatuses } from '../structs/Struct';
+const PUBLIC_LITE_SEQUENCER_ENDPOINTS = ['http://localhost:8080'];
 
 export async function getOperationId(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string) {
   const endpoints = customLiteSequencerEndpoint
@@ -10,7 +10,7 @@ export async function getOperationId(transactionLinker: TransactionLinker, custo
 
   for (const endpoint of endpoints) {
     try {
-      const response = await axios.get(`http://${endpoint}/operationId`, {
+      const response = await axios.get(`${endpoint}/operationId`, {
         params: {
           queryId: transactionLinker.queryId,
           caller: transactionLinker.caller,
@@ -38,7 +38,7 @@ export async function getStatusTransaction(operationId: string, customLiteSequen
 
   for (const endpoint of endpoints) {
     try {
-      const response = await axios.get(`http://${endpoint}/status`, {
+      const response = await axios.get(`${endpoint}/status`, {
         params: { operationId: operationId }
       });
       return response.data.response || '';
@@ -51,4 +51,20 @@ export async function getStatusTransaction(operationId: string, customLiteSequen
     }
   }
   throw new Error('Failed to fetch status transaction');
+}
+
+const TERMINETED_STATUS = "TVMMerkleMessageExecuted";
+
+export async function getSimpifiedTransactionStatus(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string) {
+  const operationId = await getOperationId(transactionLinker, customLiteSequencerEndpoint)
+  if (operationId == "") {
+    return SimplifiedStatuses.OperationIdNotFound;
+  }
+
+  const status = await getStatusTransaction(operationId, customLiteSequencerEndpoint);
+  if (status == TERMINETED_STATUS) {
+    return SimplifiedStatuses.Successful;
+  } 
+  
+  return SimplifiedStatuses.Pending;
 }

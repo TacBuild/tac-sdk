@@ -28,7 +28,7 @@ export class TacSdk {
   constructor(TacSDKParams: TacSDKTonClientParams) {
     this.network = TacSDKParams.network ?? Network.Mainnet;
     this.delay = TacSDKParams.delay ?? 0;
-
+    
     const tonClientParameters = TacSDKParams.tonClientParameters ?? {
       endpoint: this.network == Network.Testnet ? TESTNET_TONCENTER_URL_ENDPOINT : MAINNET_TONCENTER_URL_ENDPOINT
     };

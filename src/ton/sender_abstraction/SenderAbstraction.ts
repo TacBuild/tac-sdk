@@ -40,6 +40,7 @@ export class TonConnectSender implements SenderAbstraction {
       messages,
       network: chain == Network.Testnet ? CHAIN.TESTNET : CHAIN.MAINNET
     };
+    
     await sleep(delay * 1000);
     await this.tonConnect.sendTransaction(transaction);
   }

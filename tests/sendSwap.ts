@@ -6,6 +6,10 @@ import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLink
 import { getOperationId, getStatusTransaction } from "../src/ton/sdk/TransactionStatus"
 import 'dotenv/config';
 
+const EVM_TKA_ADDRESS = '0x7346896431955ad3bD9Fc23C8E3f0447eE1a52Cf';
+const EVM_TKB_ADDRESS = '0x392D1cCB04d25fCBcA7D4fc0E429Dbc1F9fEe73F'; 
+const UNISWAPV2_PROXY_ADDRESS = '0x2D478BffCEbF652e1Cb7e32Db9C674E10e873e57';
+
 const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, tokenAddress: string) => {
   // create TacSdk
   const tonClientParams : TacSDKTonClientParams = {
@@ -14,16 +18,12 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
   };
   const tacSdk = new TacSdk(tonClientParams);
 
-  // create evm proxy msg
-  const EVM_TKA_ADDRESS = process.env.EVM_TKA_ADDRESS || '';
-  const EVM_TKB_ADDRESS = process.env.EVM_TKB_ADDRESS || ''; 
-  const UNISWAPV2_PROXY_ADDRESS = process.env.UNISWAPV2_PROXY_ADDRESS || '';
-
   var amountIn = 0;
   for (const amount of amountsIn) {
     amountIn += amount;
   }
 
+  // create evm proxy msg
   const abi = new ethers.AbiCoder();
   const encodedParameters = abi.encode(
     ['uint256', 'uint256', 'address[]', 'address', 'uint256'],
@@ -43,7 +43,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
   }  
 
   // create sender abstraction
-  const mnemonic = process.env.TVM_MNEMONICS || '';
+  const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
   const sender = new RawSender(mnemonic);
 
   // create JettonTransferData

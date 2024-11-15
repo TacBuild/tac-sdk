@@ -6,6 +6,13 @@ export const enum Network {
     Mainnet = 'mainnet'
 }
 
+export const enum SimplifiedStatuses {
+    Pending,
+    Failed,
+    Successful,
+    OperationIdNotFound,
+}
+
 export const enum OpCode {
     JettonTransfer = 0xF8A7EA5,
 }
