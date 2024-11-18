@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { TransactionLinker } from '../structs/Struct';
 import { SimplifiedStatuses } from '../structs/Struct';
-const PUBLIC_LITE_SEQUENCER_ENDPOINTS = ['http://localhost:8080'];
+const PUBLIC_LITE_SEQUENCER_ENDPOINTS = ['https://turin.data.tac.build'];
 
 export async function getOperationId(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string[]) {
   const endpoints = customLiteSequencerEndpoint
@@ -30,8 +30,6 @@ export async function getOperationId(transactionLinker: TransactionLinker, custo
 }
 
 export async function getStatusTransaction(operationId: string, customLiteSequencerEndpoint?: string[]) {
-  // TODO fix in sequencer to decoded url params(encodeURIComponent)
-  operationId = operationId.replace(/\+/g, " ");
   const endpoints = customLiteSequencerEndpoint
     ? customLiteSequencerEndpoint
     : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
