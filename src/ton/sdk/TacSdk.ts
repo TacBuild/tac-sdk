@@ -1,118 +1,132 @@
-import {Address, beginCell, toNano, TonClient, TonClientParameters} from "@ton/ton";
-import {Base64} from '@tonconnect/protocol';
-import {CHAIN, SendTransactionRequest, TonConnectUI} from "@tonconnect/ui";
-import {JettonMaster} from "../jetton/JettonMaster";
-import {JettonWallet} from "../jetton/JettonWallet";
+import { Address, beginCell, Cell, toNano, TonClient } from '@ton/ton';
 
-const TESTNET_TONCENTER_URL_ENDPOINT = "https://testnet.toncenter.com/api/v2"
-const MAINNET_TONCENTER_URL_ENDPOINT = "https://toncenter.com/api/v2"
-const TESTNET_TAC_JETTON_PROXY_ADDRESS = "EQBcB0XZEv-T_9tYnbJc-DoYqAFz71k5KUkZTLX1etwfuMIB"
-const MAINNET_TAC_JETTON_PROXY_ADDRESS = "EQAqOlIzUWuVhXDmHQyt-Ek3FnR6kH_EM0dJB_kdUp2JRmd9"
+// jetton imports
+import { JettonMaster } from '../jetton/JettonMaster';
+import { JettonWallet } from '../jetton/JettonWallet';
 
+// ton settings
+import { Settings } from '../settings/Settings';
 
-export type TacSdkParameters = {
-    /**
-     * TonClient Parameters
-     */
-    tonClientParameters?: TonClientParameters;
+// sender abstraction(tonconnect or mnemonic V3R2)
+import type { SenderAbstraction } from '../sender_abstraction/SenderAbstraction';
 
-    /**
-     * TON CHAIN
-     */
-    network?: CHAIN;
-}
+// import structs
+import type { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, TransferMessage, ShardTransaction } from '../structs/Struct';
+import { Network, OpCode } from '../structs/Struct';
 
-export type JettonProxyMsgParameters = {
-    tonConnect: TonConnectUI,
-    fromAddress: string,
-    tokenAddress: string,
-    jettonAmount: number,
-    proxyMsg: EvmProxyMsg,
-    tonAmount?: number
-}
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export type EvmProxyMsg = {
-    evmTargetAddress: string,
-    methodName: string
-    encodedParameters: string,
-}
+const TESTNET_TONCENTER_URL_ENDPOINT = 'https://testnet.toncenter.com/api/v2/jsonRPC';
+const MAINNET_TONCENTER_URL_ENDPOINT = 'https://toncenter.com/api/v2/jsonRPC';
+const TON_SETTINGS_ADDRESS = 'EQCWHoWp-GNyXUm9Ak0jtE7kG4iBhvEGXi7ICEV_WM1QCLfd';
 
 export class TacSdk {
+  readonly tonClient: TonClient;
+  readonly network: Network;
+  readonly delay: number;
 
-    readonly tonClient: TonClient;
-    readonly network: CHAIN;
+  constructor(TacSDKParams: TacSDKTonClientParams) {
+    this.network = TacSDKParams.network ?? Network.Mainnet;
+    this.delay = TacSDKParams.delay ?? 0;
+    
+    const tonClientParameters = TacSDKParams.tonClientParameters ?? {
+      endpoint: this.network == Network.Testnet ? TESTNET_TONCENTER_URL_ENDPOINT : MAINNET_TONCENTER_URL_ENDPOINT
+    };
+    this.tonClient = new TonClient(tonClientParameters);
+  }
 
-    constructor(parameters: TacSdkParameters) {
-        this.network = parameters.network ?? CHAIN.MAINNET;
-        const tonClientParameters = parameters.tonClientParameters ?? {
-            endpoint: parameters.network == CHAIN.TESTNET ? TESTNET_TONCENTER_URL_ENDPOINT : MAINNET_TONCENTER_URL_ENDPOINT
-        };
-        this.tonClient = new TonClient(tonClientParameters);
+  async getJettonProxyAddress(): Promise<string> {
+    const settings = this.tonClient.open(new Settings(Address.parse(TON_SETTINGS_ADDRESS)));
+    return await settings.getAddressSetting('JettonProxyAddress');
+  }
+
+  async getUserJettonWalletAddress(userAddress: string, tokenAddress: string): Promise<string> {
+    const jettonMaster = this.tonClient.open(new JettonMaster(Address.parse(tokenAddress)));
+    return await jettonMaster.getWalletAddress(userAddress);
+  };
+
+  async getUserJettonBalance(userAddress: string, tokenAddress: string): Promise<number> {
+    const jettonMaster = this.tonClient.open(new JettonMaster(Address.parse(tokenAddress)));
+    const userJettonWalletAddress = await jettonMaster.getWalletAddress(userAddress);
+    const userJettonWallet = this.tonClient.open(new JettonWallet(Address.parse(userJettonWalletAddress)));
+    return await userJettonWallet.getJettonBalance();
+  };
+
+  private getJettonTransferPayload(transactionLinker : TransactionLinker, jettonProxyAddress: string, jettonData: JettonTransferData, evmProxyMsg: EvmProxyMsg): Cell {
+    const evmArguments = Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
+
+    const json = JSON.stringify({
+      evm_call: {
+        target: evmProxyMsg.evmTargetAddress,
+        method_name: evmProxyMsg.methodName,
+        arguments: evmArguments
+      },
+      sharded_id: transactionLinker.shardedId,
+      shard_count: transactionLinker.shardCount
+    });
+
+    const l2Data = beginCell().storeStringTail(json).endCell();
+    const forwardAmount = '0.2';
+
+    const payload = beginCell()
+      .storeUint(OpCode.JettonTransfer, 32)
+      .storeUint(transactionLinker.queryId, 64)
+      .storeCoins(toNano(jettonData.jettonAmount.toFixed(9)))
+      .storeAddress(Address.parse(jettonProxyAddress))
+      .storeAddress(Address.parse(jettonData.fromAddress))
+      .storeBit(false)
+      .storeCoins(toNano(forwardAmount))
+      .storeCoins(0)
+      .storeMaybeRef(l2Data)
+      .endCell();
+
+    return payload;
+  };
+
+  async sendShardJettonTransferTransaction(jettons: JettonTransferData[], evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction): Promise<{transactionLinker: TransactionLinker}> {
+    const timestamp = Math.floor(+new Date() / 1000);
+    const randAppend = Math.round(Math.random() * 1000);
+    const queryId = timestamp + randAppend;
+    const shardedId = String(timestamp + Math.round(Math.random() * 1000));
+    const jettonProxyAddress = await this.getJettonProxyAddress();
+
+    const transactionLinker : TransactionLinker = {
+      caller: jettons[0].fromAddress,
+      queryId,
+      shardCount: jettons.length,
+      shardedId,
+      timestamp
+    };
+
+    const messages : TransferMessage[] = [];
+
+    for (const jetton of jettons) {
+      await sleep(this.delay * 1000);
+      const jettonAddress = await this.getUserJettonWalletAddress(jetton.fromAddress, jetton.tokenAddress);
+      const payload = this.getJettonTransferPayload(
+        transactionLinker,
+        jettonProxyAddress,
+        jetton,
+        evmProxyMsg
+      );
+
+      messages.push({
+        address: jettonAddress,
+        value: jetton.tonAmount ?? 0.35,
+        payload
+      });
     }
-    async getUserJettonWalletAddress(userAddress: string, tokenAddress: string): Promise<string>{
-        const jettonMaster = this.tonClient.open(new JettonMaster(Address.parse(tokenAddress)));
-        return await jettonMaster.getWalletAddress(userAddress);
+
+    const transaction: ShardTransaction = {
+      validUntil: +new Date() + 15 * 60 * 1000,
+      messages,
+      network: this.network
     };
 
-    async getUserJettonBalance(userAddress: string, tokenAddress: string): Promise<number> {
-        const jettonMaster = this.tonClient.open(new JettonMaster(Address.parse(tokenAddress)));
-        const userJettonWalletAddress = await jettonMaster.getWalletAddress(userAddress);
-        const userJettonWallet = this.tonClient.open(new JettonWallet(Address.parse(userJettonWalletAddress)))
-        return await userJettonWallet.getJettonBalance();
+    console.log('*****Sending transaction: ', transaction);
+    const boc = await sender.sendShardJettonTransferTransaction(transaction, this.delay, this.network, this.tonClient);
+    return {
+      transactionLinker
     };
-
-    private getJettonBase64Payload(jettonAmount: number, tonFromAddress: string, proxyMsg: EvmProxyMsg): string {
-        const timestamp = Math.floor(+new Date() / 1000);
-        const base64Parameters = Buffer.from(proxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
-        const randAppend = Math.round(Math.random()*1000);
-
-        const json = JSON.stringify({
-            query_id: timestamp + randAppend,
-            target: proxyMsg.evmTargetAddress,
-            methodName: proxyMsg.methodName,
-            arguments: base64Parameters,
-            caller: Address.parse(tonFromAddress).toString(),
-        });
-
-        const l2Data = beginCell().storeStringTail(json).endCell();
-        const forwardAmount = '0.2';
-
-        const payload = beginCell()
-            .storeUint(0xF8A7EA5, 32)
-            .storeUint(0, 64) // timestamp + randAppend
-            .storeCoins(toNano(jettonAmount.toFixed(9)))
-            .storeAddress(Address.parse(this.network == CHAIN.TESTNET ? TESTNET_TAC_JETTON_PROXY_ADDRESS : MAINNET_TAC_JETTON_PROXY_ADDRESS))
-            .storeAddress(Address.parse(tonFromAddress))
-            .storeBit(false)
-            .storeCoins(toNano(forwardAmount))
-            .storeMaybeRef(l2Data).endCell();
-
-        return Base64.encode(payload.toBoc());
-    };
-
-    async sendJettonWithProxyMsg(params: JettonProxyMsgParameters) {
-        if (params.tonAmount && params.tonAmount <= 0.2){
-            throw Error("Amount of TON cannot be less than 0.2")
-        }
-
-        const jettonAddress = await this.getUserJettonWalletAddress(params.fromAddress, params.tokenAddress);
-        const transaction: SendTransactionRequest = {
-            validUntil: +new Date() + 15 * 60 * 1000,
-            messages: [
-                {
-                    address: jettonAddress,
-                    amount: toNano(params.tonAmount?.toFixed(9) ?? "0.35").toString(),
-                    payload: this.getJettonBase64Payload(params.jettonAmount, params.fromAddress, params.proxyMsg).toString()
-                }
-            ],
-            network: this.network
-        };
-
-        console.log('*****Sending transaction: ', transaction);
-        return await params.tonConnect.sendTransaction(transaction);
-    };
+  };
 }
-
-
-
-
