@@ -91,7 +91,7 @@ export class TacSdk {
     const jettonProxyAddress = await this.getJettonProxyAddress();
 
     const transactionLinker : TransactionLinker = {
-      caller: jettons[0].fromAddress,
+      caller: Address.normalize(jettons[0].fromAddress),
       queryId,
       shardCount: jettons.length,
       shardedId,
