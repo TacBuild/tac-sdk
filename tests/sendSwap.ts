@@ -2,8 +2,8 @@ import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 import { TacSdk } from '../src/ton/sdk/TacSdk';
 import { RawSender } from '../src/ton/sender_abstraction/SenderAbstraction';
-import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLinker, Network } from "../src/ton/structs/Struct";
-import { TransactionStatus } from "../src/ton/sdk/TransactionStatus"
+import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLinker, Network } from '../src/ton/structs/Struct';
+import { TransactionStatus } from '../src/ton/sdk/TransactionStatus'
 import 'dotenv/config';
 
 const EVM_TKA_ADDRESS = '0x59470DE4Ac9EdbEee5fb0e40b6d5164d84A2F11B';
@@ -69,14 +69,14 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 async function startTracking(transactionLinker: TransactionLinker) {
   const tracker = new TransactionStatus();
 
-  console.log("Start tracking transaction");
-  console.log("caller: ", transactionLinker.caller);
-  console.log("queryId: ", transactionLinker.queryId);
-  console.log("shardCount: ", transactionLinker.shardCount);
-  console.log("timestamp: ", transactionLinker.timestamp);
+  console.log('Start tracking transaction');
+  console.log('caller: ', transactionLinker.caller);
+  console.log('queryId: ', transactionLinker.queryId);
+  console.log('shardCount: ', transactionLinker.shardCount);
+  console.log('timestamp: ', transactionLinker.timestamp);
 
-  var operationId = "";
-  var current_status = "";
+  var operationId = '';
+  var current_status = '';
   var iteration = 0; // number of iterations
   var ok = true; // finished successfully
 
@@ -94,35 +94,35 @@ async function startTracking(transactionLinker: TransactionLinker) {
       break;
     }
 
-    if (operationId == "") {
-      console.log("request operationId");
+    if (operationId == '') {
+      console.log('request operationId');
       
       try {
         operationId = await tracker.getOperationId(transactionLinker);
       } catch {
-        console.log("get operationId error");
+        console.log('get operationId error');
       }
     } else {
-      console.log("request transactionStatus");
+      console.log('request transactionStatus');
 
       try {
         const new_status = await tracker.getStatusTransaction(operationId);
         current_status = new_status;
       } catch {
-        console.log("get status error");
+        console.log('get status error');
       }
 
-      console.log("operationId: ", operationId);
-      console.log("status: ", current_status);
-      console.log("time: ", Math.floor(+new Date()/1000));
+      console.log('operationId:', operationId);
+      console.log('status: ', current_status);
+      console.log('time: ', Math.floor(+new Date()/1000));
     }
     await sleep(10 * 1000);
   }
 
   if (!ok) {
-    console.log("Finished with error");
+    console.log('Finished with error');
   } else {
-    console.log("Tracking successfully finished");
+    console.log('Tracking successfully finished');
   }
 }
 

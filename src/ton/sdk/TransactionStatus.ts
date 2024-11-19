@@ -4,7 +4,7 @@ import { SimplifiedStatuses } from '../structs/Struct';
 
 export class TransactionStatus {
   readonly PUBLIC_LITE_SEQUENCER_ENDPOINTS = ['https://turin.data.tac.build'];
-  readonly TERMINETED_STATUS = "TVMMerkleMessageExecuted";
+  readonly TERMINETED_STATUS = 'TVMMerkleMessageExecuted';
 
   readonly CustomLiteSequencerEndpoints: string[] | undefined;
 
