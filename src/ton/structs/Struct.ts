@@ -1,19 +1,19 @@
 import { Cell } from '@ton/ton';
 import type { TonClientParameters } from '@ton/ton';
 
-export const enum Network {
+export enum Network {
     Testnet = 'testnet',
     Mainnet = 'mainnet'
 }
 
-export const enum SimplifiedStatuses {
+export enum SimplifiedStatuses {
     Pending,
     Failed,
     Successful,
     OperationIdNotFound,
 }
 
-export const enum OpCode {
+export enum OpCode {
     JettonTransfer = 0xF8A7EA5,
 }
 
