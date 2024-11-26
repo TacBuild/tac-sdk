@@ -52,7 +52,7 @@ export class JettonWallet implements Contract {
   }
 
   static burnMessage(
-    jettonAmount: bigint,
+    jettonAmount: number | bigint,
     receiverAddress?: Address,
     forwardPayload?: Cell | null,
     queryId: number = 0
@@ -60,14 +60,14 @@ export class JettonWallet implements Contract {
     const body = beginCell()
       .storeUint(JettonWalletOpCodes.burn, 32)
       .storeUint(queryId, 64)
-      .storeCoins(toNano(jettonAmount.toString()));
+      .storeCoins(toNano(jettonAmount));
 
     if (receiverAddress) {
       body.storeAddress(receiverAddress);
     }
 
     if (forwardPayload) {
-      body.storeRef(forwardPayload);
+      body.storeMaybeRef(forwardPayload);
     }
 
     return body.endCell();
@@ -78,29 +78,23 @@ export class JettonWallet implements Contract {
     via: Sender,
     value: bigint,
     opts: {
-            queryId?: number;
-            jettonAmount: number;
-            receiverAddress?: string,
-            forwardPayload?: Cell | null
-        }
+      queryId?: number;
+      jettonAmount: number | bigint;
+      receiverAddress?: Address;
+      forwardPayload?: Cell | null;
+    }
   ) {
-    const body = beginCell()
-      .storeUint(JettonWalletOpCodes.burn, 32)
-      .storeUint(opts.queryId || 0, 64)
-      .storeCoins(toNano(opts.jettonAmount.toString()));
-
-    if (opts.receiverAddress) {
-      body.storeAddress(Address.parse(opts.receiverAddress));
-    }
-
-    if (opts.forwardPayload) {
-      body.storeMaybeRef(opts.forwardPayload);
-    }
+    const body = JettonWallet.burnMessage(
+      opts.jettonAmount,
+      opts.receiverAddress,
+      opts.forwardPayload,
+      opts.queryId
+    );
 
     await provider.internal(via, {
       value,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
-      body: body.endCell()
+      body: body,
     });
   }
 

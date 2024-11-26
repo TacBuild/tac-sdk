@@ -41,6 +41,14 @@ export type JettonTransferData = {
     tonAmount?: number
 }
 
+export type JettonBurnData = {
+    fromAddress: string,
+    tokenAddress: string,
+    jettonAmount: number,
+    notificationReceieverAddress: string,
+    tonAmount?: number
+}
+
 export type EvmProxyMsg = {
     evmTargetAddress: string,
     methodName: string
@@ -55,7 +63,7 @@ export type TransactionLinker = {
     timestamp: number,
 }
 
-export type TransferMessage = {
+export type ShardMessage = {
     address: string,
     value: number,
     payload: Cell,
@@ -63,6 +71,6 @@ export type TransferMessage = {
 
 export type ShardTransaction = {
     validUntil: number,
-    messages: TransferMessage[],
+    messages: ShardMessage[],
     network: Network,
 }

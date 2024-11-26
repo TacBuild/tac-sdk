@@ -11,7 +11,7 @@ import { Settings } from '../settings/Settings';
 import type { SenderAbstraction } from '../sender_abstraction/SenderAbstraction';
 
 // import structs
-import type { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, TransferMessage, ShardTransaction } from '../structs/Struct';
+import type { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, ShardMessage, ShardTransaction, JettonBurnData } from '../structs/Struct';
 import { Network, OpCode } from '../structs/Struct';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -83,6 +83,30 @@ export class TacSdk {
     return payload;
   };
 
+  private getJettonBurnPayload(transactionLinker : TransactionLinker, jettonData: JettonBurnData, evmProxyMsg: EvmProxyMsg) {
+    const evmArguments = Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
+
+    const json = JSON.stringify({
+      evm_call: {
+        target: evmProxyMsg.evmTargetAddress,
+        method_name: evmProxyMsg.methodName,
+        arguments: evmArguments
+      },
+      sharded_id: transactionLinker.shardedId,
+      shard_count: transactionLinker.shardCount
+    });
+
+    const customPayload = beginCell()
+      .storeCoins(jettonData.tonAmount || 0)
+      .storeMaybeRef(
+        beginCell().storeStringTail(json).endCell()
+      ).endCell();
+
+    const payload = JettonWallet.burnMessage(jettonData.jettonAmount, Address.parse(jettonData.notificationReceieverAddress), customPayload);
+
+    return payload;
+  }
+
   async sendShardJettonTransferTransaction(jettons: JettonTransferData[], evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction): Promise<{transactionLinker: TransactionLinker}> {
     const timestamp = Math.floor(+new Date() / 1000);
     const randAppend = Math.round(Math.random() * 1000);
@@ -98,7 +122,7 @@ export class TacSdk {
       timestamp
     };
 
-    const messages : TransferMessage[] = [];
+    const messages : ShardMessage[] = [];
 
     for (const jetton of jettons) {
       await sleep(this.delay * 1000);
@@ -124,9 +148,54 @@ export class TacSdk {
     };
 
     console.log('*****Sending transaction: ', transaction);
-    const boc = await sender.sendShardJettonTransferTransaction(transaction, this.delay, this.network, this.tonClient);
+    const boc = await sender.sendShardTransaction(transaction, this.delay, this.network, this.tonClient);
     return {
       transactionLinker
     };
   };
+
+  async sendShardJettonBurnTransaction(jettons: JettonBurnData[], evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction): Promise<{transactionLinker: TransactionLinker}> {
+    const timestamp = Math.floor(+new Date() / 1000);
+    const randAppend = Math.round(Math.random() * 1000);
+    const queryId = timestamp + randAppend;
+    const shardedId = String(timestamp + Math.round(Math.random() * 1000));
+
+    const transactionLinker : TransactionLinker = {
+      caller: Address.normalize(jettons[0].fromAddress),
+      queryId,
+      shardCount: jettons.length,
+      shardedId,
+      timestamp
+    };
+
+    const messages : ShardMessage[] = [];
+
+    for (const jetton of jettons) {
+      await sleep(this.delay * 1000);
+      const jettonAddress = await this.getUserJettonWalletAddress(jetton.fromAddress, jetton.tokenAddress);
+      const payload = this.getJettonBurnPayload(
+        transactionLinker,
+        jetton,
+        evmProxyMsg
+      );
+
+      messages.push({
+        address: jettonAddress,
+        value: jetton.tonAmount ?? 0.35,
+        payload
+      });
+    }
+
+    const transaction: ShardTransaction = {
+      validUntil: +new Date() + 15 * 60 * 1000,
+      messages,
+      network: this.network
+    };
+
+    console.log('*****Sending transaction: ', transaction);
+    const boc = await sender.sendShardTransaction(transaction, this.delay, this.network, this.tonClient);
+    return {
+      transactionLinker
+    };
+  }
 }
