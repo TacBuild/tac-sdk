@@ -34,24 +34,22 @@ export type TacSDKTonClientParams = {
     delay?: number;
 }
 
-export type JettonTransferData = {
+export type JettonOpGeneralData = {
     fromAddress: string,
     tokenAddress: string,
-    jettonAmount: number,
+    jettonAmount: number;
     tonAmount?: number
 }
 
-export type JettonBurnData = {
-    fromAddress: string,
-    tokenAddress: string,
-    jettonAmount: number,
+export type JettonTransferData = JettonOpGeneralData;
+
+export type JettonBurnData = JettonOpGeneralData & {
     notificationReceieverAddress: string,
-    tonAmount?: number
 }
 
 export type EvmProxyMsg = {
     evmTargetAddress: string,
-    methodName: string
+    methodName: string,
     encodedParameters: string,
 }
 
