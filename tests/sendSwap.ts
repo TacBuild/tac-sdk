@@ -2,7 +2,7 @@ import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 import { TacSdk } from '../src/ton/sdk/TacSdk';
 import { RawSender } from '../src/ton/sender_abstraction/SenderAbstraction';
-import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLinker, Network } from '../src/ton/structs/Struct';
+import { EvmProxyMsg, JettonTransferData, TacSDKTonClientParams, TransactionLinker, Network, JettonOpGeneralData } from '../src/ton/structs/Struct';
 import { TransactionStatus } from '../src/ton/sdk/TransactionStatus'
 import 'dotenv/config';
 
@@ -51,7 +51,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
   const sender = new RawSender(mnemonic);
 
   // create JettonTransferData (transfer jetton in TVM to swap)
-  const jettons: JettonTransferData[] = []
+  const jettons: JettonOpGeneralData[] = []
   for (const amount of amountsIn) {
     jettons.push({
       fromAddress: await sender.getSenderAddress(Network.Testnet),
@@ -61,7 +61,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
     })
   }
   
-  return await tacSdk.sendShardJettonTransferTransaction(jettons, evmProxyMsg, sender);
+  return await tacSdk.sendCrossChainJettonTransaction(jettons, evmProxyMsg, sender);
 };
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

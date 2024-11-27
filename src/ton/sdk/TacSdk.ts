@@ -115,7 +115,7 @@ export class TacSdk {
     });
 
     const customPayload = beginCell()
-      .storeCoins(jettonData.tonAmount || 0)
+      .storeCoins(toNano(jettonData.tonAmount || 0))
       .storeMaybeRef(
         beginCell().storeStringTail(json).endCell()
       ).endCell();
@@ -229,20 +229,25 @@ export class TacSdk {
   private async detectOpType(jetton: JettonOpGeneralData, cclAddress: Address): Promise<JettonOpType> {
     const protocolJettonMinterCode = await this.getJettonMinterCode();
     if (!protocolJettonMinterCode) throw new Error('unexpected empty jetton minter code. Make sure the settings contract is valid.');
+    await sleep(this.delay * 1000);
 
     const { code: givenMinterCodeBOC } = await this.tonClient.getContractState(address(jetton.tokenAddress));
     if (!givenMinterCodeBOC) throw new Error('unexpected empty contract code of given jetton.');
     const givenMinterCode = Cell.fromBoc(givenMinterCodeBOC)[0];
+    await sleep(this.delay * 1000);
 
     if (!protocolJettonMinterCode.equals(givenMinterCode)) return JettonOpType.Transfer;
 
     const givenMinter = this.tonClient.open(new JettonMaster(address(jetton.tokenAddress)));
+    await sleep(this.delay * 1000);
 
     const protocolJettonWalletCode = await this.getJettonWalletCode();
     if (!protocolJettonWalletCode) throw new Error('unexpected empty jetton wallet code. Make sure the settings contract is valid.');
+    await sleep(this.delay * 1000);
     
     const l2Address = await givenMinter.getL2Address();
     if (!l2Address) return JettonOpType.Transfer;
+    await sleep(this.delay * 1000);
 
     const expectedMinterAddress = await this.calculateContractAddress(
       protocolJettonMinterCode,
@@ -278,8 +283,10 @@ export class TacSdk {
     for (const jetton of jettons) {
       await sleep(this.delay * 1000);
       const cclAddress = await this.getCrossChainLayerAddress();
+      await sleep(this.delay * 1000);
+
       const opType = await this.detectOpType(jetton, address(cclAddress));
-      console.log(`***** Jetton ${jetton.tokenAddress} require ${opType} operation`);
+      console.log(`***** Jetton ${jetton.tokenAddress} requires ${opType} operation`);
 
       let payload: Cell
       switch (opType) {
@@ -296,6 +303,7 @@ export class TacSdk {
       }
 
       const jettonWalletAddress = await this.getUserJettonWalletAddress(jetton.fromAddress, jetton.tokenAddress);
+      await sleep(this.delay * 1000);
 
       messages.push({
         address: jettonWalletAddress,
