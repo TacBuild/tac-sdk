@@ -154,6 +154,101 @@ const sender = new RawSender(mnemonic);
 ```
 ---
 
+## Tracking transaction
+The `TransactionStatus` class is designed to track the status of cross-chain transactions by interacting with public or custom Lite Sequencer endpoints. It provides methods to fetch and interpret transaction statuses, enabling smooth monitoring of transaction lifecycles.
+
+---
+
+### Purpose
+
+This class facilitates tracking cross-chain transaction statuses by:
+1. Fetching the `operationId` for a transaction using the `transactionLinker` returned from `sendCrossChainJettonTransaction` function in `TacSDK`.
+2. Retrieving the current status of a transaction using the `operationId`.
+3. Returning a simplified status for easier transaction monitoring.
+
+---
+
+To track a transaction, follow these steps:
+
+---
+
+### 1. Get the `operationId`
+
+Use the `getOperationId(transactionLinker)` method with the `transactionLinker` structure returned from `sendCrossChainJettonTransaction` after sending transaction.
+
+> **Note:** An empty response string indicates that validators have not yet received your messages. Continue retrying until you receive a non-empty `operationId`.
+
+- **Parameters**:
+  - `transactionLinker`: A `TransactionLinker` object containing transaction linkers.
+
+- **Returns**:
+  - A string representing the `operationId`.
+
+- **Usage**:
+  ```typescript
+  const tracker = new TransactionStatus();
+  const operationId = await tracker.getOperationId(transactionLinker);
+  console.log('Operation ID:', operationId);
+  ```
+
+---
+
+### 2. Check the Transaction Status
+
+Use the `getStatusTransaction(operationId)` method to fetch the transaction status.
+
+#### **Method: `getStatusTransaction(operationId: string): Promise<string>`**
+
+Retrieves the current status of a transaction using its `operationId`.
+
+- **Parameters**:
+  - `operationId`: The identifier obtained from `getOperationId`.
+
+- **Returns**:
+  - A string representing the transaction's status, such as:
+    - `EVMMerkleMessageCollected`: Validator has collected all events for a single sharded message.
+    - `EVMMerkleRootSet`: The EVM message has been added to the Merkle tree.
+    - `EVMMerkleMessageExecuted`: The collected message has been executed on the EVM side.
+    - `TVMMerkleMessageCollected`: After EVM execution, a return message event is generated for TVM execution.
+    - `TVMMerkleRootSet`: The TVM message has been added to the Merkle tree.
+    - `TVMMerkleMessageExecuted`: The transaction is fully executed across TVM and EVM.
+  (error requests will be processed in future version)
+- **Usage**:
+  ```typescript
+  const tracker = new TransactionStatus();
+  const status = await tracker.getStatusTransaction(operationId);
+  console.log('Transaction Status:', status);
+  ```
+
+## 3. Use Simplified Status 
+
+Use the `getSimpifiedTransactionStatus(transactionLinker)` method for an easy-to-interpret status.
+
+---
+
+### Method: `getSimpifiedTransactionStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses>`
+
+Fetches a simplified transaction status using the `transactionLinker`.
+
+- **Parameters**:
+  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function .
+
+- **Returns**:
+  - A simplified status from the `SimplifiedStatuses` enum:
+    - **`Pending`**: The transaction is still in progress.
+    - **`Successful`**: The transaction has successfully completed.
+    - **`OperationIdNotFound`**: The operation ID could not be found.
+    - **`Failed`**: The transaction failed.
+
+---
+
+### **Usage**
+Here operationId will be always requested internally(not optimal).
+```typescript
+const tracker = new TransactionStatus();
+const simplifiedStatus = await tracker.getSimpifiedTransactionStatus(transactionLinker);
+console.log('Simplified Status:', simplifiedStatus);
+
 ## Structures Description
 
 ### `Network (Enum)`
