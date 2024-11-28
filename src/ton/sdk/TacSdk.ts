@@ -239,7 +239,6 @@ export class TacSdk {
     if (!protocolJettonMinterCode.equals(givenMinterCode)) return JettonOpType.Transfer;
 
     const givenMinter = this.tonClient.open(new JettonMaster(address(jetton.tokenAddress)));
-    await sleep(this.delay * 1000);
 
     const protocolJettonWalletCode = await this.getJettonWalletCode();
     if (!protocolJettonWalletCode) throw new Error('unexpected empty jetton wallet code. Make sure the settings contract is valid.');
@@ -307,7 +306,7 @@ export class TacSdk {
 
       messages.push({
         address: jettonWalletAddress,
-        value: jetton.tonAmount ?? 0.35,
+        value: Number(((jetton.tonAmount || 0) + 0.35).toFixed(9)),
         payload
       });
     }

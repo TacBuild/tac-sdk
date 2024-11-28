@@ -92,7 +92,7 @@ const evmProxyMsg: EvmProxyMsg = {
 };
 
 // Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
-const jettons: JettonTransferData[] = [
+const jettons: JettonOpGeneralData[] = [
   {
     fromAddress: "tonUserAddress",
     tokenAddress: TVMtokenAAddress,
@@ -119,9 +119,9 @@ const tonConnectUI = new TonConnectUI({
 const sender = new TonConnectSender(tonConnect);
 // const sender = new RawSender("24 word mnemonic");
 
-return await tacSdk.sendShardJettonTransferTransaction(jettons, evmProxyMsg, sender);
+return await tacSdk.sendCrossChainJettonTransaction(jettons, evmProxyMsg, sender);
 ```
-For a detailed example, see `test/sendSwap.ts`, which demonstrates swapping tokens on Uniswap and tracking the transaction status.
+For a detailed example, see `test/sendSwap.ts` or `test/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
 
 ## License
 
