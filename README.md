@@ -62,6 +62,105 @@ Currently, there are no explicit error statuses. If an issue occurs, the transac
 npm install tac-sdk
 ```
 
+## Structures Description
+
+### `Network (Enum)`
+Represents the blockchain network type you want to use.
+```typescript
+export enum Network {
+    Testnet = 'testnet',
+    Mainnet = 'mainnet'
+}
+```
+
+- **`Testnet`**: Represents the testnet ton network.
+- **`Mainnet`**: Represents the mainnet ton network.
+
+### `TacSDKTonClientParams (Type)`
+```typescript
+export type TacSDKTonClientParams = {
+    tonClientParameters?: TonClientParameters;
+    network?: Network;
+    delay?: number;
+}
+```
+
+Parameters for the TON SDK client.
+- **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
+- **`network`** *(optional)*: Specifies the blockchain network (`Network` type). Default - *Network.testnet*.
+- **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0*, but with default *tonClientParameters* better use *5*.
+
+### `EvmProxyMsg (Type)`
+Represents a proxy message to a TAC.
+- **`evmTargetAddress`**: Target address on the EVM network.
+- **`methodName`**: Method name to be called on the target contract.
+- **`encodedParameters`**: Parameters for the method, encoded as a string.
+
+This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the cross-chain transaction.
+
+### `JettonTransferData (Type)`
+Type alias for `JettonOperationGeneralData`.
+
+This structure is used to specify the details of the Jettons you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your cross-chain transaction.
+
+### `JettonOperationGeneralData (Type) internal`
+Represents general data for Jetton operations.
+- **`fromAddress`**: Sender's address.
+- **`tokenAddress`**: TVM jetton's address.
+- **`jettonAmount`**: Amount of Jetton to be transferred.
+- **`tonAmount`** *(optional)*: Additional TON amount.
+
+### `TransactionLinker (Type)`
+Links a transaction to its query and shard.
+- **`caller`**: Address of the transaction initiator.
+- **`queryId`**: Identifier for the query.
+- **`shardCount`**: Number of shards involved.
+- **`shardedId`**: Identifier for the shard.
+- **`timestamp`**: Timestamp of the transaction.
+
+This structure is designed to help track the entire execution path of a transaction across all levels. By using it, you can identify the `operationId` and subsequently monitor the transaction status through a public API. This is particularly useful for ensuring visibility and transparency in the transaction lifecycle, allowing you to verify its progress and outcome.
+
+### `SimplifiedStatuses (Enum)`
+```typescript
+export enum SimplifiedStatuses {
+    Pending,
+    Failed,
+    Successful,
+    OperationIdNotFound,
+}
+```
+Represents the simplified transaction statuses.
+- **`Pending`**: The transaction in progress.
+- **`Failed`**: The transaction has failed.
+- **`Successful`**: The transaction was executed successfully.
+- **`OperationIdNotFound`**: The operation ID was not found.
+
+### `JettonOpType (Enum) internal`
+```typescript
+enum JettonOpType {
+  Burn = 'Burn',
+  Transfer = 'Transfer'
+}
+```
+- **`Burn`**: If the Jetton was wrapped (i.e., originally a token from EVM), then to bridge such Jettons, they will be burned on the TVM side and unlocked on the EVM side.
+- **`Transafer`**: If the Jetton originated from TVM, they should be transferred to the TVM smart contract (i.e., locked on TVM side).
+
+### `JettonBurnData (Type) internal`
+Extends `JettonOperationGeneralData` with additional fields for burn operations.
+- **`notificationReceiverAddress`**: Address to send burn notification(CrossChainLayer s-c address on TVM).
+
+### `ShardMessage (Type) internal`
+Represents a message within a shard.
+- **`address`**: Address of the message recipient.
+- **`value`**: Value (in tokens) sent with the message.
+- **`payload`**: Encoded payload (payload of bridging jettons, burn or lock).
+
+### `ShardTransaction (Type) internal`
+Represents a transaction within a shard.
+- **`validUntil`**: Validity timestamp for the transaction.
+- **`messages`**: Array of messages (`ShardMessage` type, bridging multiple tokens).
+- **`network`**: Blockchain network (\texttt{Network} type).
+
 ## Usage
 
 To use this library you need HTTP API endpoint, public endpoints will be used by default:
