@@ -63,12 +63,74 @@ npm install tac-sdk
 ```
 
 ## Functionality description
+The `TacSdk` class is designed for performing cross-chain operations, particularly bridging Jetton tokens for interaction with the TAC.
 
+---
+
+### Creating an Instance of `TacSdk`
+
+To use the `TacSdk` class, initialize it with the required parameters encapsulated in the `TacSDKTonClientParams` object:
+
+```typescript
+import { TacSdk } from 'tac-sdk';
+import { Network } from 'tac-sdk';
+
+const tonClientParams: TacSDKTonClientParams = {
+  network: Network.Testnet,
+  delay: 3,
+}; // you can also customize TON client here
+const tacSdk = new TacSdk(tonClientParams);
+```
+### Function: `sendCrossChainJettonTransaction`
+
+This function facilitates cross-chain transactions by bridging Jetton tokens for interaction with TAC. It handles the required logic for burning or transferring jettons based on the Jetton type(wrapped by our s-c CrossChainLayer or not).
+
+---
+
+#### **Purpose**
+
+The `sendCrossChainJettonTransaction` method is the core functionality of the `TacSdk` class, enabling the bridging of tokens to execute cross-chain operations seamlessly.
+
+---
+
+#### **Parameters**
+
+- **`jettons`**: An array of `JettonOperationGeneralData` objects, each specifying the Jetton details:
+  - **`fromAddress`**: Address of the sender.
+  - **`tokenAddress`**: Address of the Jetton token.
+  - **`jettonAmount`**: Amount of Jettons to transfer.
+  - **`tonAmount`** *(optional)*: Additional TON amount for the transaction.
+
+- **`evmProxyMsg`**: An `EvmProxyMsg` object defining the EVM-specific logic:
+  - **`evmTargetAddress`**: Target address on the EVM network.
+  - **`methodName`**: Method name to execute on the target contract.
+  - **`encodedParameters`**: Encoded parameters for the EVM method.
+
+- **`sender`**: A `SenderAbstraction` object, such as:
+  - **`TonConnectSender`**: For TonConnect integration.
+  - **`RawSender`**: For raw wallet transactions using a mnemonic.
+
+---
+
+#### **Returns**
+
+- **`Promise<{transactionLinker: TransactionLinker}>`**:
+  - A `TransactionLinker` object for tracking the transaction status during cross chain.
+
+---
+
+#### **Functionality**
+
+1. Determines whether each Jetton requires a **burn** or **transfer** operation based on its type.
+2. Prepares shard messages and encodes the necessary payloads.
+3. Bridges Jettons by sending shard transactions to the appropriate smart contracts.
+4. Incorporates EVM logic into the payload for interaction with the TAC.
 
 ## Sending Transactions: Two Approaches
 
 The SDK provides two approaches for sending transactions: using **TonConnect** or a **raw wallet via mnemonic**. Below is an explanation of both options.
 
+Look at example below or in tests folder(better in tests folder) 
 ---
 
 ### 1. Using TonConnect
