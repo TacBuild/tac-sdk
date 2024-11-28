@@ -37,7 +37,7 @@ Due to the specific architecture of TVM, it’s not possible to send multiple to
 
 ## How to Track the Status of a Transaction
 
-To track a transaction, you first need to obtain its `operationId`. The `operationId` can be retrieved using the `transactionLinker` structure, which is generated within the SDK and returned by the `sendShardJettonTransferTransaction` function. Once you have the `transactionLinker`, call `getOperationId(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string)`.
+To track a transaction, you first need to obtain its `operationId`. The `operationId` can be retrieved using the `transactionLinker` structure, which is generated within the SDK and returned by the `sendShardTransaction` function. Once you have the `transactionLinker`, call `getOperationId(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string)`.
 
 > **Note:** An empty response string indicates that validators have not yet received your messages. Continue making requests until you receive a non-empty `operationId`.
 
