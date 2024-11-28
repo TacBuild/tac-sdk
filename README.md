@@ -220,7 +220,7 @@ Retrieves the current status of a transaction using its `operationId`.
   console.log('Transaction Status:', status);
   ```
 
-## 3. Use Simplified Status (instrad 1 and 2 steps)
+## 3. Use Simplified Status (instead of 1 and 2 steps)
 
 Use the `getSimpifiedTransactionStatus(transactionLinker)` method for an easy-to-interpret status.
 
