@@ -445,32 +445,32 @@ const evmProxyMsg: EvmProxyMsg = {
 };
 
 // Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
-const jettons: JettonTransferData[] = [
+const jettons: JettonOperationGeneralData[] = [
   {
     fromAddress: "tonUserAddress",
     tokenAddress: TVMtokenAAddress,
     jettonAmount: tokenAAmount,
+    tonAmount: 0.4,
   },
   {
     fromAddress: "tonUserAddress",
     tokenAddress: TVMtokenBAddress,
     jettonAmount: tokenBAmount,
+    tonAmount: 0.4,
   }
 ];
 
 const tacSdk = new TacSdk({
-  tonClientParameters: {
-    endpoint: TONCENTER_URL_ENDPOINT
-  },
   network: Network.Testnet,
+  delay: 3,
 });
 
 // Send transaction via tonConnect or mnemonic
-const tonConnectUI = new TonConnectUI({
-  manifestUrl: config.tonconnectManifestUrl as string
-});
-const sender = new TonConnectSender(tonConnect);
-// const sender = new RawSender("24 word mnemonic");
+// const tonConnectUI = new TonConnectUI({
+//   manifestUrl: config.tonconnectManifestUrl as string
+// });
+// const sender = new TonConnectSender(tonConnect);
+const sender = new RawSender("24 word mnemonic");
 
 return await tacSdk.sendShardJettonTransferTransaction(jettons, evmProxyMsg, sender);
 ```
