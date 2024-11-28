@@ -299,6 +299,7 @@ export class TacSdk {
         case JettonOpType.Transfer:
           const jettonProxyAddress = await this.getJettonProxyAddress();
           payload = this.getJettonTransferPayload(transactionLinker, jettonProxyAddress, jetton, evmProxyMsg);
+          break;
       }
 
       const jettonWalletAddress = await this.getUserJettonWalletAddress(jetton.fromAddress, jetton.tokenAddress);
