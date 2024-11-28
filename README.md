@@ -472,7 +472,7 @@ const tacSdk = new TacSdk({
 // const sender = new TonConnectSender(tonConnect);
 const sender = new RawSender("24 word mnemonic");
 
-return await tacSdk.sendShardJettonTransferTransaction(jettons, evmProxyMsg, sender);
+return await tacSdk.sendCrossChainJettonTransaction(jettons, evmProxyMsg, sender);
 ```
 For a detailed example, see `test/sendSwap.ts`, which demonstrates swapping tokens on Uniswap and tracking the transaction status.
 
