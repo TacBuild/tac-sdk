@@ -220,7 +220,7 @@ Retrieves the current status of a transaction using its `operationId`.
   console.log('Transaction Status:', status);
   ```
 
-## 3. Use Simplified Status 
+## 3. Use Simplified Status (instrad 1 and 2 steps)
 
 Use the `getSimpifiedTransactionStatus(transactionLinker)` method for an easy-to-interpret status.
 
@@ -243,11 +243,29 @@ Fetches a simplified transaction status using the `transactionLinker`.
 ---
 
 ### **Usage**
-Here operationId will be always requested internally(not optimal).
+Here operationId will be always requested(not optimal).
 ```typescript
 const tracker = new TransactionStatus();
 const simplifiedStatus = await tracker.getSimpifiedTransactionStatus(transactionLinker);
 console.log('Simplified Status:', simplifiedStatus);
+```
+
+## Compute EVM Address Function (TODO - Will Be Added Soon)
+
+This function will compute the EVM paired address for a TVM token. 
+
+### Purpose
+
+The ability to compute the EVM address is crucial, in `evmProxyMsg` you almost always requires the token addresses on the EVM network as parameters. By precomputing the corresponding EVM addresses for TVM tokens, users can ensure that the transaction parameters are correctly configured before executing cross-chain operations.
+
+### Importance
+
+For example, when adding liquidity, you need to specify the addresses of the tokens on the EVM network that you intend to add. Without the ability to compute these addresses in advance, configuring the transaction would be error-prone and could lead to failures. This function will bridge this gap, making the process seamless and reliable.
+
+
+
+
+
 
 ## Structures Description
 
