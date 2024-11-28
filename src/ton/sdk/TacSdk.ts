@@ -188,8 +188,10 @@ export class TacSdk {
 
     const messages : ShardMessage[] = [];
 
+    const jettonProxyAddress = await this.getJettonProxyAddress();
+    await sleep(this.delay * 1000);
+
     for (const jetton of jettons) {
-      await sleep(this.delay * 1000);
       const cclAddress = await this.getCrossChainLayerAddress();
       await sleep(this.delay * 1000);
 
@@ -206,7 +208,6 @@ export class TacSdk {
           );
           break;
         case JettonOpType.Transfer:
-          const jettonProxyAddress = await this.getJettonProxyAddress();
           payload = this.getJettonTransferPayload(transactionLinker, jettonProxyAddress, jetton, evmProxyMsg);
           break;
       }
