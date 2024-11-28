@@ -34,16 +34,16 @@ export type TacSDKTonClientParams = {
     delay?: number;
 }
 
-export type JettonOpGeneralData = {
+export type JettonOperationGeneralData = {
     fromAddress: string,
     tokenAddress: string,
     jettonAmount: number,
     tonAmount?: number,
 }
 
-export type JettonTransferData = JettonOpGeneralData;
+export type JettonTransferData = JettonOperationGeneralData;
 
-export type JettonBurnData = JettonOpGeneralData & {
+export type JettonBurnData = JettonOperationGeneralData & {
     notificationReceieverAddress: string,
 }
 

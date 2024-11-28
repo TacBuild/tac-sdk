@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 import { TacSdk } from "../src/ton/sdk/TacSdk";
 import {
   EvmProxyMsg,
-  JettonOpGeneralData,
+  JettonOperationGeneralData,
   Network,
   TacSDKTonClientParams,
 } from "../src/ton/structs/Struct";
@@ -56,7 +56,7 @@ async function main() {
 
   const sender = new RawSender(TVM_MNEMONICS);
 
-  const jettons: JettonOpGeneralData[] = [];
+  const jettons: JettonOperationGeneralData[] = [];
   jettons.push({
     fromAddress: await sender.getSenderAddress(Network.Testnet),
     tokenAddress: TVM_LP_ADDRESS,

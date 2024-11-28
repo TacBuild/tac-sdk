@@ -11,7 +11,7 @@ import { Settings } from '../settings/Settings';
 import type { SenderAbstraction } from '../sender_abstraction/SenderAbstraction';
 
 // import structs
-import type { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, ShardMessage, ShardTransaction, JettonBurnData, JettonOpGeneralData } from '../structs/Struct';
+import type { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, ShardMessage, ShardTransaction, JettonBurnData, JettonOperationGeneralData } from '../structs/Struct';
 import { Network, OpCode } from '../structs/Struct';
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -227,7 +227,7 @@ export class TacSdk {
     return new Address(0, stateInit.hash());
   }
 
-  private async detectOpType(jetton: JettonOpGeneralData, cclAddress: Address): Promise<JettonOpType> {
+  private async detectOpType(jetton: JettonOperationGeneralData, cclAddress: Address): Promise<JettonOpType> {
     const protocolJettonMinterCode = await this.getJettonMinterCode();
     if (!protocolJettonMinterCode) throw new Error('unexpected empty jetton minter code. Make sure the settings contract is valid.');
     await sleep(this.delay * 1000);
@@ -264,7 +264,7 @@ export class TacSdk {
     return JettonOpType.Burn;
   }
 
-  async sendCrossChainJettonTransaction(jettons: JettonOpGeneralData[],  evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction): Promise<{transactionLinker: TransactionLinker}> {
+  async sendCrossChainJettonTransaction(jettons: JettonOperationGeneralData[],  evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction): Promise<{transactionLinker: TransactionLinker}> {
     const timestamp = Math.floor(+new Date() / 1000);
     const randAppend = Math.round(Math.random() * 1000);
     const queryId = timestamp + randAppend;
