@@ -37,11 +37,11 @@ Due to the specific architecture of TVM, it’s not possible to send multiple to
 
 ## How to Track the Status of a Transaction
 
-To track a transaction, you first need to obtain its `operationId`. The `operationId` can be retrieved using the `transactionLinker` structure, which is generated within the SDK and returned by the `sendShardJettonTransferTransaction` function. Once you have the `transactionLinker`, call `getOperationId(transactionLinker: TransactionLinker, customLiteSequencerEndpoint?: string)`.
+To track a transaction, you first need to obtain its `operationId`. The `operationId` can be retrieved using the `transactionLinker` structure, which is generated within the SDK and returned by the `sendCrossChainJettonTransaction` function. Once you have the `transactionLinker`, call `TransactionStatus.getOperationId(transactionLinker: TransactionLinker)`.
 
 > **Note:** An empty response string indicates that validators have not yet received your messages. Continue making requests until you receive a non-empty `operationId`.
 
-After obtaining the `operationId`, you can check the transaction’s status by using `getStatusTransaction(operationId: string, customLiteSequencerEndpoint?: string)`. The following statuses may be returned:
+After obtaining the `operationId`, you can check the transaction’s status by using `TransactionStatus.getStatusTransaction(operationId: string)`. The following statuses may be returned:
 
 1. **EVMMerkleMessageCollected:** The validator has collected all events for a single sharded message. For simple transfers (e.g., a token swap), this status indicates that the message is fully gathered.
 2. **EVMMerkleRootSet:** The EVM message has been added to the Merkle tree, and subsequent roots will reflect this addition.
@@ -474,7 +474,7 @@ const sender = new RawSender("24 word mnemonic");
 
 return await tacSdk.sendCrossChainJettonTransaction(jettons, evmProxyMsg, sender);
 ```
-For a detailed example, see `test/sendSwap.ts`, which demonstrates swapping tokens on Uniswap and tracking the transaction status.
+For a detailed example, see `test/sendSwap.ts` or `test/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
 
 ## License
 
