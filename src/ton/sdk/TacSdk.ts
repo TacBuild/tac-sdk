@@ -66,6 +66,7 @@ export class TacSdk {
   async getUserJettonBalance(userAddress: string, tokenAddress: string): Promise<number> {
     const jettonMaster = this.tonClient.open(new JettonMaster(Address.parse(tokenAddress)));
     const userJettonWalletAddress = await jettonMaster.getWalletAddress(userAddress);
+    await sleep(this.delay * 1000);
     const userJettonWallet = this.tonClient.open(new JettonWallet(Address.parse(userJettonWalletAddress)));
     return await userJettonWallet.getJettonBalance();
   };
@@ -84,7 +85,7 @@ export class TacSdk {
     });
 
     const l2Data = beginCell().storeStringTail(json).endCell();
-    const forwardAmount = '0.2';
+    const forwardAmount = 0.2;
 
     const payload = beginCell()
       .storeUint(OpCode.JettonTransfer, 32)
@@ -93,7 +94,7 @@ export class TacSdk {
       .storeAddress(Address.parse(jettonProxyAddress))
       .storeAddress(Address.parse(jettonData.fromAddress))
       .storeBit(false)
-      .storeCoins(toNano(forwardAmount))
+      .storeCoins(toNano(forwardAmount.toFixed(9)))
       .storeCoins(0)
       .storeMaybeRef(l2Data)
       .endCell();
@@ -115,7 +116,7 @@ export class TacSdk {
     });
 
     const customPayload = beginCell()
-      .storeCoins(toNano(jettonData.tonAmount || 0))
+      .storeCoins(toNano(jettonData.tonAmount?.toFixed(9) || 0))
       .storeMaybeRef(
         beginCell().storeStringTail(json).endCell()
       ).endCell();

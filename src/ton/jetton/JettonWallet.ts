@@ -28,7 +28,7 @@ export enum JettonWalletOpCodes {
 
 export function jettonWalletConfigToCell(config: JettonWalletData): Cell {
   return beginCell()
-    .storeCoins(toNano(config.balance))
+    .storeCoins(toNano(config.balance.toFixed(9)))
     .storeAddress(Address.parse(config.ownerAddress))
     .storeAddress(Address.parse(config.jettonMasterAddress))
     .endCell();
@@ -52,7 +52,7 @@ export class JettonWallet implements Contract {
   }
 
   static burnMessage(
-    jettonAmount: number | bigint,
+    jettonAmount: number,
     receiverAddress?: Address,
     forwardPayload?: Cell | null,
     queryId: number = 0
@@ -60,7 +60,7 @@ export class JettonWallet implements Contract {
     const body = beginCell()
       .storeUint(JettonWalletOpCodes.burn, 32)
       .storeUint(queryId, 64)
-      .storeCoins(toNano(jettonAmount));
+      .storeCoins(toNano(jettonAmount.toFixed(9)));
 
     if (receiverAddress) {
       body.storeAddress(receiverAddress);
@@ -79,7 +79,7 @@ export class JettonWallet implements Contract {
     value: bigint,
     opts: {
       queryId?: number;
-      jettonAmount: number | bigint;
+      jettonAmount: number;
       receiverAddress?: Address;
       forwardPayload?: Cell | null;
     }
@@ -139,11 +139,11 @@ export class JettonWallet implements Contract {
       body: beginCell()
         .storeUint(JettonWalletOpCodes.transfer, 32)
         .storeUint(opts.queryId || 0, 64)
-        .storeCoins(toNano(opts.jettonAmount.toString()))
+        .storeCoins(toNano(opts.jettonAmount.toFixed(9)))
         .storeAddress(Address.parse(opts.toOwnerAddress))
         .storeAddress(opts.responseAddress ? Address.parse(opts.responseAddress) : null)
         .storeMaybeRef(opts.customPayload)
-        .storeCoins(toNano(opts.forwardTonAmount?.toString() || 0))
+        .storeCoins(toNano(opts.forwardTonAmount?.toFixed(9) || 0))
         .storeMaybeRef(opts.forwardPayload)
         .endCell()
     });

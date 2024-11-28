@@ -37,8 +37,8 @@ export type TacSDKTonClientParams = {
 export type JettonOpGeneralData = {
     fromAddress: string,
     tokenAddress: string,
-    jettonAmount: number;
-    tonAmount?: number
+    jettonAmount: number,
+    tonAmount?: number,
 }
 
 export type JettonTransferData = JettonOpGeneralData;
