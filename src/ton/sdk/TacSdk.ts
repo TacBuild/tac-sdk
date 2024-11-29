@@ -13,6 +13,9 @@ import type { SenderAbstraction } from '../sender_abstraction/SenderAbstraction'
 // import structs
 import type { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, ShardMessage, ShardTransaction, JettonBurnData, JettonOperationGeneralData } from '../structs/Struct';
 import { Network, OpCode, JettonOpType } from '../structs/Struct';
+import { ethers } from 'ethers';
+import ITokenUtils from '../../abi/ITokenUtils.json';
+
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -21,6 +24,9 @@ const DEFAULT_DELAY = 3;
 const TESTNET_TONCENTER_URL_ENDPOINT = 'https://testnet.toncenter.com/api/v2/jsonRPC';
 const MAINNET_TONCENTER_URL_ENDPOINT = 'https://toncenter.com/api/v2/jsonRPC';
 const TON_SETTINGS_ADDRESS = 'EQCWHoWp-GNyXUm9Ak0jtE7kG4iBhvEGXi7ICEV_WM1QCLfd';
+const TAC_RPC_ENDPOINT = 'https://newyork-inap-72-251-230-233.ankr.com/tac_tacd_testnet_full_rpc_1';
+const TAC_TOKENUTILS_ADDRESS = '0x6838517aa554353ab83887F131d0bF7046bAE214';
+const TAC_SETTINGS_ADDRESS = '0xfb5Aac4a7780f59a52aaB68b4b01Ff20ec34C6a2';
 
 export class TacSdk {
   readonly tonClient: TonClient;
@@ -233,5 +239,16 @@ export class TacSdk {
     return {
       transactionLinker
     };
+  }
+
+  async calculateEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
+    const tokenUtilsContract = new ethers.Contract(TAC_TOKENUTILS_ADDRESS, ITokenUtils.abi, ethers.getDefaultProvider(TAC_RPC_ENDPOINT));
+
+    const tokenL2Address = await tokenUtilsContract.computeAddress(
+        tvmTokenAddress,
+        TAC_SETTINGS_ADDRESS,
+    );
+
+    return tokenL2Address;
   }
 }

@@ -84,3 +84,5 @@ async function main() {
     console.error('Error during transaction:', error);
   }
 }
+
+main();
