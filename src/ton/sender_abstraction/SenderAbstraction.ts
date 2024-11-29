@@ -10,7 +10,7 @@ import type { ShardTransaction } from '../structs/Struct';
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export interface SenderAbstraction {
-    sendShardJettonTransferTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network | undefined, tonClient: TonClient | undefined) : Promise<void>;
+    sendShardTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network | undefined, tonClient: TonClient | undefined) : Promise<void>;
     getSenderAddress(chain: Network | undefined, tonClient: TonClient | undefined) : Promise<string>;
 }
 
@@ -25,7 +25,7 @@ export class TonConnectSender implements SenderAbstraction {
     return Promise.resolve(this.tonConnect.account?.address?.toString() || '');
   }
 
-  async sendShardJettonTransferTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network) {
+  async sendShardTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network) {
     const messages = [];
     for (const message of shardTransaction.messages) {
       messages.push({
@@ -72,7 +72,7 @@ export class RawSender implements SenderAbstraction {
     return Promise.resolve(wallet.address.toString());
   }
 
-  async sendShardJettonTransferTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network, tonClient: TonClient) {
+  async sendShardTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network, tonClient: TonClient) {
     const { publicKey, secretKey } = await this.deriveWalletKeys();
 
     const wallet = WalletContractV3R2.create({

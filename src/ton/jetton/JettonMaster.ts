@@ -43,4 +43,9 @@ export class JettonMaster implements Contract {
       jettonWalletCode
     };
   }
+
+  async getL2Address(provider: ContractProvider): Promise<string | null> {
+    const result = await provider.get('get_l2_token_address', []);
+    return result.stack.readStringOpt();
+  }
 }
