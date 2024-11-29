@@ -118,6 +118,34 @@ The `sendCrossChainJettonTransaction` method is the core functionality of the `T
   - A `TransactionLinker` object for tracking the transaction status during cross chain.
 
 ---
+### Function: `calculateEVMTokenAddress`
+
+This function will compute the EVM paired address for a TVM token. 
+---
+
+#### **Purpose**
+
+The ability to compute the EVM address is crucial, in evmProxyMsg you almost always requires the token addresses on the EVM network as parameters. By precomputing the corresponding EVM addresses for TVM tokens, users can ensure that the transaction parameters are correctly configured before executing cross-chain operations.
+
+---
+
+### Importance
+
+For example, when adding liquidity, you need to specify the addresses of the tokens on the EVM network that you intend to add. Without the ability to compute these addresses in advance, configuring the transaction would be error-prone and could lead to failures. This function will bridge this gap, making the process seamless and reliable.
+
+#### **Parameters**
+
+- **`tvmTokenAddress(string)`**: The address of the token on the TON blockchain (TVM format).
+
+---
+
+#### **Returns**
+
+- **`Promise<string>`**:
+  - A promise that resolves to the computed EVM token address as a string.
+
+---
+
 
 #### **Functionality**
 
@@ -250,23 +278,6 @@ const simplifiedStatus = await tracker.getSimpifiedTransactionStatus(transaction
 console.log('Simplified Status:', simplifiedStatus);
 ```
 
-## Compute EVM Address Function (TODO - Will Be Added Soon)
-
-This function will compute the EVM paired address for a TVM token. 
-
-### Purpose
-
-The ability to compute the EVM address is crucial, in `evmProxyMsg` you almost always requires the token addresses on the EVM network as parameters. By precomputing the corresponding EVM addresses for TVM tokens, users can ensure that the transaction parameters are correctly configured before executing cross-chain operations.
-
-### Importance
-
-For example, when adding liquidity, you need to specify the addresses of the tokens on the EVM network that you intend to add. Without the ability to compute these addresses in advance, configuring the transaction would be error-prone and could lead to failures. This function will bridge this gap, making the process seamless and reliable.
-
-
-
-
-
-
 ## Structures Description
 
 ### `Network (Enum)`
@@ -285,14 +296,14 @@ export enum Network {
 ```typescript
 export type TacSDKTonClientParams = {
     tonClientParameters?: TonClientParameters;
-    network?: Network;
+    network: Network;
     delay?: number;
 }
 ```
 
 Parameters for the TON SDK client.
 - **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
-- **`network`** *(optional)*: Specifies the blockchain network (`Network` type). Default - *Network.testnet*.
+- **`network`**: Specifies the blockchain network (`Network` type).
 - **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0* for custom tonClientParameters, but with empty *tonClientParameters* delay would be set to *3*.
 This structure is used to create the TON client, which you will utilize for sending transactions. It allows you to specify the network (Testnet or Mainnet), configure client parameters, and set a delay for request execution. Proper configuration ensures smooth and efficient interaction with the TON blockchain during operations.
 
