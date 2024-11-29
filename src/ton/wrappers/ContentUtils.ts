@@ -194,6 +194,6 @@ export async function readJettonMetadata(contentCell: Cell): Promise<JettonExten
         metadata
       };
     default:
-      throw new Error('Unexpected jetton metadata content prefix');
+      throw new Error('Unexpected wrappers metadata content prefix');
   }
 }

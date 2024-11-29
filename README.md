@@ -91,7 +91,7 @@ const evmProxyMsg: EvmProxyMsg = {
   encodedParameters
 };
 
-// Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
+// Create wrappers transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
 const jettons: JettonOpGeneralData[] = [
   {
     fromAddress: "tonUserAddress",
