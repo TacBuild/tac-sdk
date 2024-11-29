@@ -12,18 +12,15 @@ import type { SenderAbstraction } from '../sender_abstraction/SenderAbstraction'
 
 // import structs
 import type { TacSDKTonClientParams, TransactionLinker, JettonTransferData, EvmProxyMsg, ShardMessage, ShardTransaction, JettonBurnData, JettonOperationGeneralData } from '../structs/Struct';
-import { Network, OpCode } from '../structs/Struct';
+import { Network, OpCode, JettonOpType } from '../structs/Struct';
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const DEFAULT_DELAY = 3;
 
 const TESTNET_TONCENTER_URL_ENDPOINT = 'https://testnet.toncenter.com/api/v2/jsonRPC';
 const MAINNET_TONCENTER_URL_ENDPOINT = 'https://toncenter.com/api/v2/jsonRPC';
 const TON_SETTINGS_ADDRESS = 'EQCWHoWp-GNyXUm9Ak0jtE7kG4iBhvEGXi7ICEV_WM1QCLfd';
-
-enum JettonOpType {
-  Burn = 'Burn',
-  Transfer = 'Transfer'
-}
 
 export class TacSdk {
   readonly tonClient: TonClient;
@@ -32,8 +29,10 @@ export class TacSdk {
   readonly settings: OpenedContract<Settings>;
 
   constructor(TacSDKParams: TacSDKTonClientParams) {
-    this.network = TacSDKParams.network ?? Network.Mainnet;
-    this.delay = TacSDKParams.delay ?? 0;
+    this.network = TacSDKParams.network;
+    this.delay = TacSDKParams.tonClientParameters
+      ? TacSDKParams.delay ?? 0
+      : DEFAULT_DELAY;
     
     const tonClientParameters = TacSDKParams.tonClientParameters ?? {
       endpoint: this.network == Network.Testnet ? TESTNET_TONCENTER_URL_ENDPOINT : MAINNET_TONCENTER_URL_ENDPOINT
@@ -67,6 +66,7 @@ export class TacSdk {
     const jettonMaster = this.tonClient.open(new JettonMaster(Address.parse(tokenAddress)));
     const userJettonWalletAddress = await jettonMaster.getWalletAddress(userAddress);
     await sleep(this.delay * 1000);
+
     const userJettonWallet = this.tonClient.open(new JettonWallet(Address.parse(userJettonWalletAddress)));
     return await userJettonWallet.getJettonBalance();
   };

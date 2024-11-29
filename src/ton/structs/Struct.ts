@@ -26,7 +26,7 @@ export type TacSDKTonClientParams = {
     /**
      * TON CHAIN
      */
-    network?: Network;
+    network: Network;
 
     /**
      * Delay in request to TONClient
@@ -71,4 +71,9 @@ export type ShardTransaction = {
     validUntil: number,
     messages: ShardMessage[],
     network: Network,
+}
+
+export enum JettonOpType {
+    Burn = 'Burn',
+    Transfer = 'Transfer'
 }
