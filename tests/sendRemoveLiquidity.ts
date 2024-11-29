@@ -7,6 +7,7 @@ import {
   TacSDKTonClientParams,
 } from "../src/ton/structs/Struct";
 import { RawSender } from "../src/ton/sender_abstraction/SenderAbstraction";
+import { startTracking } from "../src/ton/sdk/TxTracker";
 
 const UNISWAPV2_PROXY_ADDRESS = "";
 
@@ -16,7 +17,7 @@ const EVM_TKB_ADDRESS = "";
 
 const TVM_MNEMONICS = "";
 
-async function main() {
+async function removeLiquidity() {
   const tonClientParams: TacSDKTonClientParams = {
     network: Network.Testnet,
     delay: 3,
@@ -61,7 +62,7 @@ async function main() {
     fromAddress: await sender.getSenderAddress(Network.Testnet),
     tokenAddress: TVM_LP_ADDRESS,
     jettonAmount: amountLP,
-    tonAmount: 0.4,
+    tonAmount: 0.1,
   });
 
   return await tacSdk.sendCrossChainJettonTransaction(
@@ -69,6 +70,19 @@ async function main() {
     evmProxyMsg,
     sender
   );
+}
+
+async function main() {
+  try {
+    // send transaction
+    const result = await removeLiquidity();
+    console.log('Transaction successful:', result);
+
+    // start tracking transaction status
+    await startTracking(result.transactionLinker);
+  } catch (error) {
+    console.error('Error during transaction:', error);
+  }
 }
 
 main();
