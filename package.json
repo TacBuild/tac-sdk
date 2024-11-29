@@ -1,6 +1,6 @@
 {
   "name": "tac-sdk",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "repository": "https://github.com/TacBuild/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
@@ -27,7 +27,8 @@
     "@release-it/keep-a-changelog": "^5.0.0",
     "@ton/core": "^0.59.0",
     "@ton/ton": "^15.1.0",
-    "@types/bn.js": "^5.1.6"
+    "@types/bn.js": "^5.1.6",
+    "ts-node": "^10.9.2"
   },
   "publishConfig": {
     "access": "public",

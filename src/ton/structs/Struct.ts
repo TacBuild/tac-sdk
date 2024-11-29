@@ -26,7 +26,7 @@ export type TacSDKTonClientParams = {
     /**
      * TON CHAIN
      */
-    network?: Network;
+    network: Network;
 
     /**
      * Delay in request to TONClient
@@ -34,16 +34,22 @@ export type TacSDKTonClientParams = {
     delay?: number;
 }
 
-export type JettonTransferData = {
+export type JettonOperationGeneralData = {
     fromAddress: string,
     tokenAddress: string,
     jettonAmount: number,
-    tonAmount?: number
+    tonAmount?: number,
+}
+
+export type JettonTransferData = JettonOperationGeneralData;
+
+export type JettonBurnData = JettonOperationGeneralData & {
+    notificationReceieverAddress: string,
 }
 
 export type EvmProxyMsg = {
     evmTargetAddress: string,
-    methodName: string
+    methodName: string,
     encodedParameters: string,
 }
 
@@ -55,7 +61,7 @@ export type TransactionLinker = {
     timestamp: number,
 }
 
-export type TransferMessage = {
+export type ShardMessage = {
     address: string,
     value: number,
     payload: Cell,
@@ -63,6 +69,11 @@ export type TransferMessage = {
 
 export type ShardTransaction = {
     validUntil: number,
-    messages: TransferMessage[],
+    messages: ShardMessage[],
     network: Network,
+}
+
+export enum JettonOpType {
+    Burn = 'Burn',
+    Transfer = 'Transfer'
 }

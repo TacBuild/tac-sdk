@@ -1,5 +1,5 @@
 import { Address } from '@ton/core';
-import type { Contract, ContractProvider } from '@ton/core';
+import type { Cell, Contract, ContractProvider } from '@ton/core';
 import { ethers } from 'ethers';
 
 export class Settings implements Contract {
@@ -28,5 +28,16 @@ export class Settings implements Contract {
     }
     const address = cell ? cell.beginParse().loadAddress().toString() : '';
     return address;
+  }
+
+  async getCellSetting(provider: ContractProvider, setting: string): Promise<Cell | null> {
+    const key = this.getKeyFromString(setting);
+    const { stack } = await provider.get('get', [{ type: 'int', value: key }]);
+    const cell = stack.readCellOpt();
+    const found = stack.readBoolean();
+    if (!found) {
+      return null;
+    }
+    return cell;
   }
 }
