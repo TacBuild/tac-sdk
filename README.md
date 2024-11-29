@@ -293,7 +293,7 @@ export type TacSDKTonClientParams = {
 Parameters for the TON SDK client.
 - **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
 - **`network`** *(optional)*: Specifies the blockchain network (`Network` type). Default - *Network.testnet*.
-- **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0*, but with default *tonClientParameters* better use *5*.
+- **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0* for custom tonClientParameters, but with empty *tonClientParameters* delay would be set to *3*.
 This structure is used to create the TON client, which you will utilize for sending transactions. It allows you to specify the network (Testnet or Mainnet), configure client parameters, and set a delay for request execution. Proper configuration ensures smooth and efficient interaction with the TON blockchain during operations.
 
 ### `EvmProxyMsg (Type)`
@@ -465,11 +465,11 @@ const tacSdk = new TacSdk({
   delay: 3,
 });
 
-// Send transaction via tonConnect or mnemonic
-// const tonConnectUI = new TonConnectUI({
-//   manifestUrl: config.tonconnectManifestUrl as string
-// });
-// const sender = new TonConnectSender(tonConnect);
+Send transaction via tonConnect or mnemonic
+const tonConnectUI = new TonConnectUI({
+  manifestUrl: config.tonconnectManifestUrl as string
+});
+const sender = new TonConnectSender(tonConnect);
 const sender = new RawSender("24 word mnemonic");
 
 return await tacSdk.sendCrossChainJettonTransaction(jettons, evmProxyMsg, sender);
