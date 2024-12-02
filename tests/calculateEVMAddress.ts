@@ -8,7 +8,13 @@ async function main() {
   };
   const tacSdk = new TacSdk(tonClientParams);
 
-  console.log(await tacSdk.calculateEVMTokenAddress('EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1'));
+  const tvmTokenAddress = "EQBVRbJQ4ihedlSI10NzufGfrxGES_rwnRg3ynKsHd-zOPLM";
+
+  const evmTokenAddress = await tacSdk.calculateEVMTokenAddress(
+    tvmTokenAddress
+  );
+
+  console.log(evmTokenAddress);
 }
 
 main();
