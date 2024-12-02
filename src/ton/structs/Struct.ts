@@ -1,5 +1,5 @@
-import { Cell } from '@ton/ton';
-import type { TonClientParameters } from '@ton/ton';
+import {Cell} from '@ton/ton';
+import type {TonClientParameters} from '@ton/ton';
 
 export enum Network {
     Testnet = 'testnet',
@@ -11,10 +11,6 @@ export enum SimplifiedStatuses {
     Failed,
     Successful,
     OperationIdNotFound,
-}
-
-export enum OpCode {
-    JettonTransfer = 0xF8A7EA5,
 }
 
 export type TacSDKTonClientParams = {
@@ -44,7 +40,7 @@ export type JettonOperationGeneralData = {
 export type JettonTransferData = JettonOperationGeneralData;
 
 export type JettonBurnData = JettonOperationGeneralData & {
-    notificationReceieverAddress: string,
+    notificationReceiverAddress: string,
 }
 
 export type EvmProxyMsg = {
@@ -55,7 +51,6 @@ export type EvmProxyMsg = {
 
 export type TransactionLinker = {
     caller: string,
-    queryId: number,
     shardCount: number,
     shardedId: string,
     timestamp: number,
