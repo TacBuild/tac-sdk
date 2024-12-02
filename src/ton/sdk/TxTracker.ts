@@ -1,6 +1,7 @@
 import {TransactionLinker} from "../structs/Struct";
 import {TransactionStatus} from "./TransactionStatus";
 import {sleep} from "./Utils";
+import {MAX_ITERATION_COUNT} from "./Consts";
 
 export async function startTracking(transactionLinker: TransactionLinker) {
     const tracker = new TransactionStatus();
@@ -19,7 +20,7 @@ export async function startTracking(transactionLinker: TransactionLinker) {
     while (true) {
 
         ++iteration;
-        if (iteration >= 120) {
+        if (iteration >= MAX_ITERATION_COUNT) {
             ok = false;
             break;
         }

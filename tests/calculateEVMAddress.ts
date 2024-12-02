@@ -1,12 +1,13 @@
-import { TacSdk } from "../src/ton/sdk/TacSdk";
-import { Network, TacSDKTonClientParams } from "../src/ton/structs/Struct";
+import { TacSdk } from "../src";
+import { Network, TacSDKTonClientParams } from "../src";
 
 async function main() {
   const tonClientParams: TacSDKTonClientParams = {
     network: Network.Testnet,
-    delay: 3,
+    delay: 1,
   };
   const tacSdk = new TacSdk(tonClientParams);
+  await tacSdk.init();
 
   const tvmTokenAddress = "EQBVRbJQ4ihedlSI10NzufGfrxGES_rwnRg3ynKsHd-zOPLM";
 

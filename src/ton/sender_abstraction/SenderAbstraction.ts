@@ -8,7 +8,7 @@ import {sleep} from "../sdk/Utils";
 export interface SenderAbstraction {
     sendShardTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network | undefined, tonClient: TonClient | undefined): Promise<void>;
 
-    getSenderAddress(chain: Network | undefined, tonClient: TonClient | undefined): Promise<string>;
+    getSenderAddress(): Promise<string>;
 }
 
 export class TonConnectSender implements SenderAbstraction {
@@ -58,11 +58,11 @@ export class RawSender implements SenderAbstraction {
         };
     }
 
-    async getSenderAddress(chain: Network): Promise<string> {
+    async getSenderAddress(): Promise<string> {
         const {publicKey} = await this.deriveWalletKeys();
 
         const wallet = WalletContractV3R2.create({
-            workchain: chain == Network.Testnet ? 0 : 1,
+            workchain: 0,
             publicKey
         });
 
@@ -73,7 +73,7 @@ export class RawSender implements SenderAbstraction {
         const {publicKey, secretKey} = await this.deriveWalletKeys();
 
         const wallet = WalletContractV3R2.create({
-            workchain: chain == Network.Testnet ? 0 : 1,
+            workchain: 0,
             publicKey
         });
 

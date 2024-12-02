@@ -69,7 +69,7 @@ The `TacSdk` class is designed for performing cross-chain operations, particular
 
 ### Creating an Instance of `TacSdk`
 
-To use the `TacSdk` class, initialize it with the required parameters encapsulated in the `TacSDKTonClientParams` object:
+To use the `TacSdk` class, initialize it with the required parameters encapsulated in the `TacSDKTonClientParams` object and then initialize it:
 
 ```typescript
 import { TacSdk } from 'tac-sdk';
@@ -80,26 +80,21 @@ const tonClientParams: TacSDKTonClientParams = {
   delay: 3,
 }; // you can also customize TON client here
 const tacSdk = new TacSdk(tonClientParams);
+await tacSdk.init();
 ```
-### Function: `sendCrossChainJettonTransaction`
+### Function: `sendCrossChainTransaction`
 
-This function facilitates cross-chain transactions by bridging Jetton tokens for interaction with TAC. It handles the required logic for burning or transferring jettons based on the Jetton type(wrapped by our s-c CrossChainLayer or not).
+This function facilitates cross-chain transactions by bridging data and assets for interaction with TAC. Works with TON native coin transfer and/or it handles the required logic for burning or transferring jettons based on the Jetton type(wrapped by our s-c CrossChainLayer or not).
 
 ---
 
 #### **Purpose**
 
-The `sendCrossChainJettonTransaction` method is the core functionality of the `TacSdk` class, enabling the bridging of tokens to execute cross-chain operations seamlessly.
+The `sendCrossChainTransaction` method is the core functionality of the `TacSdk` class, enabling the bridging of assets (or just data) to execute cross-chain operations seamlessly.
 
 ---
 
 #### **Parameters**
-
-- **`jettons`**: An array of `JettonOperationGeneralData` objects, each specifying the Jetton details:
-  - **`fromAddress`**: Address of the sender.
-  - **`tokenAddress`**: Address of the Jetton token.
-  - **`jettonAmount`**: Amount of Jettons to transfer.
-  - **`tonAmount`** *(optional)*: Additional TON amount for the transaction.
 
 - **`evmProxyMsg`**: An `EvmProxyMsg` object defining the EVM-specific logic:
   - **`evmTargetAddress`**: Target address on the EVM network.
@@ -109,12 +104,16 @@ The `sendCrossChainJettonTransaction` method is the core functionality of the `T
 - **`sender`**: A `SenderAbstraction` object, such as:
   - **`TonConnectSender`**: For TonConnect integration.
   - **`RawSender`**: For raw wallet transactions using a mnemonic.
+  
+- **`assets`** *(optional)*: An array of `AssetOperationGeneralData` objects, each specifying the Assets details:
+  - **`address`**: Address of the Asset.
+  - **`amount`**: Amount of Assets to transfer.
 
 ---
 
 #### **Returns**
 
-- **`Promise<{transactionLinker: TransactionLinker}>`**:
+- **`Promise<TransactionLinker>`**:
   - A `TransactionLinker` object for tracking the transaction status during cross chain.
 
 ---
@@ -185,7 +184,7 @@ The `TransactionStatus` class is designed to track the status of cross-chain tra
 ### Purpose
 
 This class facilitates tracking cross-chain transaction statuses by:
-1. Fetching the `operationId` for a transaction using the `transactionLinker` returned from `sendCrossChainJettonTransaction` function in `TacSDK`.
+1. Fetching the `operationId` for a transaction using the `transactionLinker` returned from `sendCrossChainTransaction` function in `TacSDK`.
 2. Retrieving the current status of a transaction using the `operationId`.
 3. Returning a simplified status for easier transaction monitoring.
 
@@ -290,17 +289,19 @@ export enum Network {
 ### `TacSDKTonClientParams (Type)`
 ```typescript
 export type TacSDKTonClientParams = {
-    tonClientParameters?: TonClientParameters;
     network: Network;
+    tonClientParameters?: TonClientParameters;
     delay?: number;
+    settingsAddress?: string;
 }
 ```
 
 Parameters for the TON SDK client.
-- **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
 - **`network`**: Specifies the blockchain network (`Network` type).
+- **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
 - **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0* for custom tonClientParameters, but with empty *tonClientParameters* delay would be set to *3*.
 This structure is used to create the TON client, which you will utilize for sending transactions. It allows you to specify the network (Testnet or Mainnet), configure client parameters, and set a delay for request execution. Proper configuration ensures smooth and efficient interaction with the TON blockchain during operations.
+- **`settingsAddress`**: TAC protocol contract address. Needed to retrieve protocol data. Set for tests only
 
 ### `EvmProxyMsg (Type)`
 ```typescript
@@ -323,29 +324,30 @@ export type JettonTransferData = JettonOperationGeneralData;
 ```
 Type alias for `JettonOperationGeneralData`.
 
-This structure is used to specify the details of the Jettons you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your cross-chain transaction.
+This structure is used to specify the details of the Assets you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your cross-chain transaction.
 
-### `JettonOperationGeneralData (Type) internal`
+### `JettonOperationGeneralData and AssetOperationGeneralData (Type) internal`
 ```typescript
-export type JettonOperationGeneralData = {
-    fromAddress: string,
-    tokenAddress: string,
-    jettonAmount: number,
-    tonAmount?: number,
+export type JettonOperationGeneralData = AssetOperationGeneralData & {
+  address: string
+}
+
+export type AssetOperationGeneralData = {
+  amount: number
+  address?: string
 }
 ```
 
-Represents general data for Jetton operations.
-- **`fromAddress`**: Sender's address.
-- **`tokenAddress`**: TVM jetton's address.
-- **`jettonAmount`**: Amount of Jetton to be transferred.
-- **`tonAmount`** *(optional)*: Additional TON amount.
+Represents general data for Asset operations.
+- **`address`**: TVM asset's address.
+- **`amount`**: Amount of Assets to be transferred.
+
+> **Note:** If you need to transfer a native TON coin, do not specify address.
 
 ### `TransactionLinker (Type)`
 ```typescript
 export type TransactionLinker = {
     caller: string,
-    queryId: number,
     shardCount: number,
     shardedId: string,
     timestamp: number,
@@ -353,7 +355,6 @@ export type TransactionLinker = {
 ```
 Linker to track cross-chain transaction.
 - **`caller`**: Address of the transaction initiator.
-- **`queryId`**: Identifier for the query.
 - **`shardCount`**: Number of shards involved.
 - **`shardedId`**: Identifier for the shard.
 - **`timestamp`**: Timestamp of the transaction.
@@ -375,15 +376,15 @@ Represents the simplified transaction statuses.
 - **`Successful`**: The transaction was executed successfully.
 - **`OperationIdNotFound`**: The operation ID was not found.
 
-### `JettonOpType (Enum) internal`
+### `AssetOpType (Enum) internal`
 ```typescript
-enum JettonOpType {
-  Burn = 'Burn',
-  Transfer = 'Transfer'
+export enum AssetOpType {
+  JettonBurn = 'JettonBurn',
+  JettonTransfer = 'JettonTransfer'
 }
 ```
-- **`Burn`**: If the Jetton was wrapped (i.e., originally a token from EVM), then to bridge such Jettons, they will be burned on the TVM side and unlocked on the EVM side.
-- **`Transafer`**: If the Jetton originated from TVM, they should be transferred to the TVM smart contract (i.e., locked on TVM side).
+- **`JettonBurn`**: If the Jetton was wrapped (i.e., originally a token from EVM), then to bridge such Jettons, they will be burned on the TVM side and unlocked on the EVM side.
+- **`JettonTransfer`**: If the Jetton originated from TVM, they should be transferred to the TVM smart contract (i.e., locked on TVM side).
 
 ### `JettonBurnData (Type) internal`
 ```typescript
@@ -451,18 +452,14 @@ const evmProxyMsg: EvmProxyMsg = {
 };
 
 // Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
-const jettons: JettonOperationGeneralData[] = [
+const assets: AssetOperationGeneralData[] = [
   {
-    fromAddress: "tonUserAddress",
-    tokenAddress: TVMtokenAAddress,
-    jettonAmount: tokenAAmount,
-    tonAmount: 0.4,
+    address: TVMtokenAAddress,
+    amount: tokenAAmount
   },
   {
-    fromAddress: "tonUserAddress",
-    tokenAddress: TVMtokenBAddress,
-    jettonAmount: tokenBAmount,
-    tonAmount: 0.4,
+    address: TVMtokenBAddress,
+    amount: tokenBAmount
   }
 ];
 
@@ -470,15 +467,16 @@ const tacSdk = new TacSdk({
   network: Network.Testnet,
   delay: 3,
 });
+await tacSdk.init();
 
-Send transaction via tonConnect or mnemonic
+//Send transaction via tonConnect or mnemonic
 const tonConnectUI = new TonConnectUI({
   manifestUrl: config.tonconnectManifestUrl as string
 });
 const sender = new TonConnectSender(tonConnect);
-const sender = new RawSender("24 word mnemonic");
+// or const sender = new RawSender("24 word mnemonic");
 
-return await tacSdk.sendCrossChainJettonTransaction(jettons, evmProxyMsg, sender);
+return await tacSdk.sendCrossChainJettonTransaction(evmProxyMsg, sender, assets);
 ```
 For a detailed example, see `test/sendSwap.ts` or `test/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
 

@@ -2,7 +2,7 @@ import {ethers} from "ethers";
 import {TacSdk} from "../src";
 import {
     EvmProxyMsg,
-    JettonOperationGeneralData,
+    AssetOperationGeneralData,
     Network,
     TacSDKTonClientParams,
 } from "../src/ton/structs/Struct";
@@ -23,6 +23,7 @@ async function removeLiquidity() {
         delay: 3,
     };
     const tacSdk = new TacSdk(tonClientParams);
+    await tacSdk.init();
 
     const amountLP = 1;
 
@@ -57,18 +58,16 @@ async function removeLiquidity() {
 
     const sender = new RawSender(TVM_MNEMONICS);
 
-    const jettons: JettonOperationGeneralData[] = [];
+    const jettons: AssetOperationGeneralData[] = [];
     jettons.push({
-        fromAddress: await sender.getSenderAddress(Network.Testnet),
-        tokenAddress: TVM_LP_ADDRESS,
-        jettonAmount: amountLP,
-        tonAmount: 0.1,
+        address: TVM_LP_ADDRESS,
+        amount: amountLP
     });
 
-    return await tacSdk.sendCrossChainJettonTransaction(
-        jettons,
+    return await tacSdk.sendCrossChainTransaction(
         evmProxyMsg,
-        sender
+        sender,
+        jettons,
     );
 }
 

@@ -1,4 +1,4 @@
-import type {EvmProxyMsg, TransactionLinker} from "../structs/Struct";
+import type {EvmProxyMsg, JettonOperationGeneralData, TransactionLinker} from "../structs/Struct";
 import {Address, beginCell, Cell, storeStateInit} from "@ton/ton";
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,4 +28,22 @@ export function buildEvmArgumentsCell(transactionLinker: TransactionLinker, evmP
     });
 
     return beginCell().storeStringTail(json).endCell();
+}
+
+export function generateTransactionLinker(caller: string, shardCount: number): TransactionLinker {
+    const timestamp = Math.floor(+new Date() / 1000);
+    const shardedId = String(timestamp + Math.round(Math.random() * 1000));
+
+    return {
+        caller: Address.normalize(caller),
+        shardCount,
+        shardedId,
+        timestamp
+    };
+}
+
+export function validateTVMAddress(address: string): void {
+    if (!Address.isAddress(address)) {
+        throw new Error('invalid tvm address');
+    }
 }

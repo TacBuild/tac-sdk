@@ -2,13 +2,11 @@ import {toNano} from '@ton/ton';
 import {ethers} from 'ethers';
 import {startTracking} from '../src/ton/sdk/TxTracker';
 import {RawSender, TacSdk} from '../src';
-import {EvmProxyMsg, TacSDKTonClientParams, Network, JettonOperationGeneralData} from '../src/ton/structs/Struct';
+import {EvmProxyMsg, TacSDKTonClientParams, Network, AssetOperationGeneralData} from '../src/ton/structs/Struct';
 import 'dotenv/config';
 
-const EVM_TKA_ADDRESS = '0x59470DE4Ac9EdbEee5fb0e40b6d5164d84A2F11B';
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 
-const EVM_TKB_ADDRESS = '0xC21055458a009fe2e95eBe37A8894A0a703c3835';
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
 const UNISWAPV2_PROXY_ADDRESS = '0xd47Cf3c26312B645B5e7a910fCE30B46CFf6a8f8';
@@ -20,11 +18,15 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
         delay: 5,
     };
     const tacSdk = new TacSdk(tonClientParams);
+    await tacSdk.init();
 
     var amountIn = 0;
     for (const amount of amountsIn) {
         amountIn += amount;
     }
+
+    const EVM_TKA_ADDRESS = await tacSdk.calculateEVMTokenAddress(TVM_TKA_ADDRESS);
+    const EVM_TKB_ADDRESS = await tacSdk.calculateEVMTokenAddress(TVM_TKB_ADDRESS);
 
     // create evm proxy msg
     const abi = new ethers.AbiCoder();
@@ -50,17 +52,15 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
     const sender = new RawSender(mnemonic);
 
     // create JettonTransferData (transfer jetton in TVM to swap)
-    const jettons: JettonOperationGeneralData[] = []
+    const assets: AssetOperationGeneralData[] = []
     for (const amount of amountsIn) {
-        jettons.push({
-            fromAddress: await sender.getSenderAddress(Network.Testnet),
-            tokenAddress: tokenAddress,
-            jettonAmount: amount,
-            tonAmount: 0.35,
+        assets.push({
+            address: tokenAddress,
+            amount: amount
         })
     }
 
-    return await tacSdk.sendCrossChainJettonTransaction(jettons, evmProxyMsg, sender);
+    return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
 };
 
 async function main() {

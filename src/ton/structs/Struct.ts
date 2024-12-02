@@ -15,26 +15,34 @@ export enum SimplifiedStatuses {
 
 export type TacSDKTonClientParams = {
     /**
-     * TonClient Parameters
-     */
-    tonClientParameters?: TonClientParameters;
-
-    /**
      * TON CHAIN
      */
     network: Network;
 
     /**
+     * TonClient Parameters
+     */
+    tonClientParameters?: TonClientParameters;
+
+    /**
      * Delay in request to TONClient
      */
     delay?: number;
+
+    /**
+     * Custom address of tvm settings contract. Use only for tests.
+     */
+    settingsAddress?: string;
 }
 
-export type JettonOperationGeneralData = {
-    fromAddress: string,
-    tokenAddress: string,
-    jettonAmount: number,
-    tonAmount?: number,
+
+export type AssetOperationGeneralData = {
+    amount: number
+    address?: string
+}
+
+export type JettonOperationGeneralData = AssetOperationGeneralData & {
+    address: string
 }
 
 export type JettonTransferData = JettonOperationGeneralData;
@@ -68,7 +76,7 @@ export type ShardTransaction = {
     network: Network,
 }
 
-export enum JettonOpType {
-    Burn = 'Burn',
-    Transfer = 'Transfer'
+export enum AssetOpType {
+    JettonBurn = 'JettonBurn',
+    JettonTransfer = 'JettonTransfer'
 }
