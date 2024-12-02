@@ -242,11 +242,33 @@ export class TacSdk {
   }
 
   async calculateEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
-    const tokenUtilsContract = new ethers.Contract(TAC_TOKENUTILS_ADDRESS, ITokenUtils.abi, ethers.getDefaultProvider(TAC_RPC_ENDPOINT));
+    const protocolJettonMinterCode = await this.getJettonMinterCode();
+    await sleep(this.delay * 1000);
+
+    const { code: givenMinterCodeBOC } = await this.tonClient.getContractState(address(tvmTokenAddress));
+    if (
+      givenMinterCodeBOC &&
+      protocolJettonMinterCode?.equals(Cell.fromBoc(givenMinterCodeBOC)[0])
+    ) {
+      const givenMinter = this.tonClient.open(
+        new JettonMaster(address(tvmTokenAddress))
+      );
+      const tokenL2Address = await givenMinter.getL2Address();
+      await sleep(this.delay * 1000);
+      if (tokenL2Address) {
+        return tokenL2Address;
+      }
+    }
+
+    const tokenUtilsContract = new ethers.Contract(
+      TAC_TOKENUTILS_ADDRESS,
+      ITokenUtils.abi,
+      ethers.getDefaultProvider(TAC_RPC_ENDPOINT)
+    );
 
     const tokenL2Address = await tokenUtilsContract.computeAddress(
-        tvmTokenAddress,
-        TAC_SETTINGS_ADDRESS,
+      tvmTokenAddress,
+      TAC_SETTINGS_ADDRESS
     );
 
     return tokenL2Address;
