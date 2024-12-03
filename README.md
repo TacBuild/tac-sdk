@@ -253,7 +253,8 @@ Use the `getSimpifiedTransactionStatus(transactionLinker)` method for an easy-to
 Fetches a simplified transaction status using the `transactionLinker`.
 
 - **Parameters**:
-  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function .
+  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function.
+  - `isBridgeOperation` *(optional)*: If your operation should only execute on EVM side without returning to TVM set `isBridgeOperation` to **true**. TAC protocol can just bridge the assets.
 
 - **Returns**:
   - A simplified status from the `SimplifiedStatuses` enum:

@@ -5,6 +5,7 @@ import {PUBLIC_LITE_SEQUENCER_ENDPOINTS} from "./Consts";
 
 export class TransactionStatus {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
+    readonly BRIDGE_TERMINATED_STATUS = 'EVMMerkleMessageExecuted';
 
     readonly CustomLiteSequencerEndpoints: string[] | undefined;
 
@@ -53,14 +54,15 @@ export class TransactionStatus {
         throw new Error('Failed to fetch status transaction');
     }
 
-    async getSimplifiedTransactionStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
+    async getSimplifiedTransactionStatus(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<SimplifiedStatuses> {
         const operationId = await this.getOperationId(transactionLinker)
         if (operationId == "") {
             return SimplifiedStatuses.OperationIdNotFound;
         }
 
         const status = await this.getStatusTransaction(operationId);
-        if (status == this.TERMINATED_STATUS) {
+        const finalStatus = isBridgeOperation ? this.BRIDGE_TERMINATED_STATUS : this.TERMINATED_STATUS;
+        if (status == finalStatus) {
             return SimplifiedStatuses.Successful;
         }
 

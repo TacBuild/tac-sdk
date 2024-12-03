@@ -3,7 +3,7 @@ import {TransactionStatus} from "./TransactionStatus";
 import {sleep} from "./Utils";
 import {MAX_ITERATION_COUNT} from "./Consts";
 
-export async function startTracking(transactionLinker: TransactionLinker) {
+export async function startTracking(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false) {
     const tracker = new TransactionStatus();
 
     console.log('Start tracking transaction');
@@ -26,8 +26,8 @@ export async function startTracking(transactionLinker: TransactionLinker) {
         }
 
         console.log();
-
-        if (currentStatus == tracker.TERMINATED_STATUS) {
+        const finalStatus = isBridgeOperation ? tracker.BRIDGE_TERMINATED_STATUS : tracker.TERMINATED_STATUS;
+        if (currentStatus == finalStatus) {
             break;
         }
 

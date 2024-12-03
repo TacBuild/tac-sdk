@@ -16,9 +16,7 @@ const bridgeDataSawSender = async () => {
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(
         ['uint256'],
-        [
-            123456789,
-        ]
+        [12345]
     );
     // create evm proxy msg
     const evmProxyMsg: EvmProxyMsg = {
@@ -41,7 +39,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result);
+        await startTracking(result, true);
     } catch (error) {
         console.error('Error during transaction:', error);
     }

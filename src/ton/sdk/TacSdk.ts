@@ -164,14 +164,14 @@ export class TacSdk {
         return AssetOpType.JettonBurn;
     }
 
-    private prepareJettons(assets: AssetOperationGeneralData[]): {
+    private prepareJettons(assets?: AssetOperationGeneralData[]): {
         jettons: JettonOperationGeneralData[],
         crossChainTonAmount: number,
     } {
         const uniqueAssetsMap: Map<string, number> = new Map();
         let crossChainTonAmount = 0;
 
-        assets.forEach(asset => {
+        assets?.forEach(asset => {
             if (asset.amount <= 0) return;
 
             if (asset.address) {
@@ -194,18 +194,18 @@ export class TacSdk {
     }
 
     private async prepareMessages(caller: string, l2Data: Cell, assets?: AssetOperationGeneralData[]): Promise<ShardMessage[]> {
-        if (!assets) {
+        const preparedData = this.prepareJettons(assets);
+        let crossChainTonAmount = preparedData.crossChainTonAmount;
+
+        if ((preparedData.jettons.length == 0)){
             return [{
                 address: this.crossChainLayerAddress,
-                value: TRANSACTION_TON_AMOUNT,
-                payload: this.getTonTransferPayload(caller, l2Data)
+                value: Number((crossChainTonAmount + TRANSACTION_TON_AMOUNT).toFixed(9)),
+                payload: this.getTonTransferPayload(caller, l2Data, crossChainTonAmount)
             }]
         }
 
         let messages: ShardMessage[] = [];
-        const preparedData = this.prepareJettons(assets);
-        let crossChainTonAmount = preparedData.crossChainTonAmount;
-
         for (const jetton of preparedData.jettons) {
             const opType = await this.detectJettonOpType(jetton);
             console.log(`***** Jetton ${jetton.amount} requires ${opType} operation`);

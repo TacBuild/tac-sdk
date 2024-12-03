@@ -42,7 +42,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result);
+        await startTracking(result, true);
     } catch (error) {
         console.error('Error during transaction:', error);
     }
