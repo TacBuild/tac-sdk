@@ -98,8 +98,8 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 - **`evmProxyMsg`**: An `EvmProxyMsg` object defining the EVM-specific logic:
   - **`evmTargetAddress`**: Target address on the EVM network.
-  - **`methodName`**: Method name to execute on the target contract.
-  - **`encodedParameters`**: Encoded parameters for the EVM method.
+  - **`methodName`** *(optional)*: Method name to execute on the target contract.
+  - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method.
 
 - **`sender`**: A `SenderAbstraction` object, such as:
   - **`TonConnectSender`**: For TonConnect integration.

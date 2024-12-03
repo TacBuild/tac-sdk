@@ -53,8 +53,8 @@ export type JettonBurnData = JettonOperationGeneralData & {
 
 export type EvmProxyMsg = {
     evmTargetAddress: string,
-    methodName: string,
-    encodedParameters: string,
+    methodName?: string,
+    encodedParameters?: string,
 }
 
 export type TransactionLinker = {

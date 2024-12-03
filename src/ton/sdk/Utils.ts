@@ -15,12 +15,12 @@ export async function calculateContractAddress(code: Cell, data: Cell): Promise<
 }
 
 export function buildEvmArgumentsCell(transactionLinker: TransactionLinker, evmProxyMsg: EvmProxyMsg): Cell {
-    const evmArguments = Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64');
+    const evmArguments = evmProxyMsg.encodedParameters ? Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64') : null;
 
     const json = JSON.stringify({
         evm_call: {
             target: evmProxyMsg.evmTargetAddress,
-            method_name: evmProxyMsg.methodName,
+            method_name: evmProxyMsg.methodName ?? "",
             arguments: evmArguments
         },
         sharded_id: transactionLinker.shardedId,

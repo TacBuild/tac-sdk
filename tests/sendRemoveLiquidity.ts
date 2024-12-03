@@ -1,13 +1,10 @@
 import {ethers} from "ethers";
-import {TacSdk} from "../src";
 import {
     EvmProxyMsg,
     AssetOperationGeneralData,
     Network,
-    TacSDKTonClientParams,
-} from "../src/ton/structs/Struct";
-import {RawSender} from "../src";
-import {startTracking} from "../src/ton/sdk/TxTracker";
+    TacSDKTonClientParams, TacSdk, RawSender, startTracking,
+} from "../src";
 
 const UNISWAPV2_PROXY_ADDRESS = "";
 

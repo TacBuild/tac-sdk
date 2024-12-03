@@ -1,8 +1,14 @@
 import {toNano} from '@ton/ton';
 import {ethers} from 'ethers';
-import {startTracking} from '../src/ton/sdk/TxTracker';
-import {RawSender, TacSdk} from '../src';
-import {EvmProxyMsg, TacSDKTonClientParams, Network, AssetOperationGeneralData} from '../src/ton/structs/Struct';
+import {
+    RawSender,
+    TacSdk,
+    TacSDKTonClientParams,
+    Network,
+    EvmProxyMsg,
+    AssetOperationGeneralData,
+    startTracking
+} from '../src';
 import 'dotenv/config';
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';

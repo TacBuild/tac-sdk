@@ -259,6 +259,9 @@ export class TacSdk {
         if (!this.isInited) {
             throw new Error('TacSdk not initialized. Call init() first.');
         }
+
+        validateTVMAddress(tvmTokenAddress);
+
         const {code: givenMinterCodeBOC} = await this.tonClient.getContractState(address(tvmTokenAddress));
         if (givenMinterCodeBOC && this.jettonMinterCode.equals(Cell.fromBoc(givenMinterCodeBOC)[0])) {
             const givenMinter = this.tonClient.open(new JettonMaster(address(tvmTokenAddress)));
