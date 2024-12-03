@@ -35,7 +35,7 @@ Due to the specific architecture of TVM, it’s not possible to send multiple to
 
 ## How to Track the Status of a Transaction
 
-To track a transaction, you first need to obtain its `operationId`. The `operationId` can be retrieved using the `transactionLinker` structure, which is generated within the SDK and returned by the `sendCrossChainJettonTransaction` function. Once you have the `transactionLinker`, call `TransactionStatus.getOperationId(transactionLinker: TransactionLinker)`.
+To track a transaction, you first need to obtain its `operationId`. The `operationId` can be retrieved using the `transactionLinker` structure, which is generated within the SDK and returned by the `sendCrossChainTransaction` function. Once you have the `transactionLinker`, call `TransactionStatus.getOperationId(transactionLinker: TransactionLinker)`.
 
 > **Note:** An empty response string indicates that validators have not yet received your messages. Continue making requests until you receive a non-empty `operationId`.
 
@@ -195,7 +195,7 @@ To track a transaction, follow these steps:
 
 ### 1. Get the `operationId`
 
-Use the `getOperationId(transactionLinker)` method with the `transactionLinker` structure returned from `sendCrossChainJettonTransaction` after sending transaction.
+Use the `getOperationId(transactionLinker)` method with the `transactionLinker` structure returned from `sendCrossChainTransaction` after sending transaction.
 
 > **Note:** An empty response string indicates that validators have not yet received your messages. Continue retrying until you receive a non-empty `operationId`.
 
@@ -257,7 +257,7 @@ Use the `getSimpifiedTransactionStatus(transactionLinker)` method for an easy-to
 Fetches a simplified transaction status using the `transactionLinker`.
 
 #### **Parameters**:
-  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function.
+  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainTransaction` function.
   - `isBridgeOperation` *(optional)*: If your operation should only execute on EVM side without returning to TVM set `isBridgeOperation` to **true**. TAC protocol can just bridge the assets.
 
 #### **Returns**:
@@ -289,7 +289,7 @@ Track the execution of crosschain operation with `startTracking` method
 ### Method: `async startTracking(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<void>`
 
 #### **Parameters**:
-  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function.
+  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainTransaction` function.
   - `isBridgeOperation` *(optional)*: If your operation should only execute on EVM side without returning to TVM set `isBridgeOperation` to **true**. TAC protocol can just bridge the assets.
 
 #### **Returns**:
@@ -500,7 +500,7 @@ const tonConnectUI = new TonConnectUI({
 const sender = new TonConnectSender(tonConnect);
 // or const sender = new RawSender("24 word mnemonic");
 
-return await tacSdk.sendCrossChainJettonTransaction(evmProxyMsg, sender, assets);
+return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
 ```
 For a detailed example, see `test/sendSwap.ts` or `test/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
 
