@@ -285,6 +285,7 @@ console.log('Simplified Status:', simplifiedStatus);
 Track the execution of crosschain operation with `startTracking` method
 
 ---
+
 ### Method: `async startTracking(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<void>`
 
 #### **Parameters**:
@@ -294,6 +295,7 @@ Track the execution of crosschain operation with `startTracking` method
 #### **Returns**:
 - void:
   - Will stop requesting status once the final status of crosschain operation has been reached.
+
 ---
 
 #### **Usage**
