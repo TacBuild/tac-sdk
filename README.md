@@ -18,8 +18,6 @@ This SDK allows EVM developers to perform cross-chain transactions without needi
 
 Using these inputs, the SDK builds a TON transaction payload and enables further signature processing through TON-Connect or directly via mnemonic.
 
-In future updates, the SDK will automatically calculate TON jetton addresses based on corresponding EVM tokens.
-
 ## Features
 
 **TON:**
@@ -69,7 +67,7 @@ The `TacSdk` class is designed for performing cross-chain operations, particular
 
 ### Creating an Instance of `TacSdk`
 
-To use the `TacSdk` class, initialize it with the required parameters encapsulated in the `TacSDKTonClientParams` object:
+To use the `TacSdk` class, initialize it with the required parameters encapsulated in the `TacSDKTonClientParams` object and then initialize it:
 
 ```typescript
 import { TacSdk } from 'tac-sdk';
@@ -80,47 +78,47 @@ const tonClientParams: TacSDKTonClientParams = {
   delay: 3,
 }; // you can also customize TON client here
 const tacSdk = new TacSdk(tonClientParams);
+await tacSdk.init();
 ```
-### Function: `sendCrossChainJettonTransaction`
+### Function: `sendCrossChainTransaction`
 
-This function facilitates cross-chain transactions by bridging Jetton tokens for interaction with TAC. It handles the required logic for burning or transferring jettons based on the Jetton type(wrapped by our s-c CrossChainLayer or not).
+This function facilitates cross-chain transactions by bridging data and assets for interaction with TAC. Works with TON native coin transfer and/or it handles the required logic for burning or transferring jettons based on the Jetton type(wrapped by our s-c CrossChainLayer or not).
 
 ---
 
 #### **Purpose**
 
-The `sendCrossChainJettonTransaction` method is the core functionality of the `TacSdk` class, enabling the bridging of tokens to execute cross-chain operations seamlessly.
+The `sendCrossChainTransaction` method is the core functionality of the `TacSdk` class, enabling the bridging of assets (or just data) to execute cross-chain operations seamlessly.
 
 ---
 
 #### **Parameters**
 
-- **`jettons`**: An array of `JettonOperationGeneralData` objects, each specifying the Jetton details:
-  - **`fromAddress`**: Address of the sender.
-  - **`tokenAddress`**: Address of the Jetton token.
-  - **`jettonAmount`**: Amount of Jettons to transfer.
-  - **`tonAmount`** *(optional)*: Additional TON amount for the transaction.
-
 - **`evmProxyMsg`**: An `EvmProxyMsg` object defining the EVM-specific logic:
   - **`evmTargetAddress`**: Target address on the EVM network.
-  - **`methodName`**: Method name to execute on the target contract.
-  - **`encodedParameters`**: Encoded parameters for the EVM method.
+  - **`methodName`** *(optional)*: Method name to execute on the target contract.
+  - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method.
 
 - **`sender`**: A `SenderAbstraction` object, such as:
   - **`TonConnectSender`**: For TonConnect integration.
   - **`RawSender`**: For raw wallet transactions using a mnemonic.
+  
+- **`assets`** *(optional)*: An array of `AssetBridgingData` objects, each specifying the Assets details:
+  - **`address`** *(optional)*: Address of the Asset.
+  - **`amount`**: Amount of Assets to transfer.
 
+> **Note:** If you don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 ---
 
 #### **Returns**
 
-- **`Promise<{transactionLinker: TransactionLinker}>`**:
+- **`Promise<TransactionLinker>`**:
   - A `TransactionLinker` object for tracking the transaction status during cross chain.
 
 ---
-### Function: `calculateEVMTokenAddress`
+### Function: `getEVMTokenAddress`
 ---
-This function will compute the EVM paired address for a TVM token. 
+This function will get the EVM paired address for a TVM token. 
 
 #### **Purpose**
 
@@ -185,7 +183,7 @@ The `TransactionStatus` class is designed to track the status of cross-chain tra
 ### Purpose
 
 This class facilitates tracking cross-chain transaction statuses by:
-1. Fetching the `operationId` for a transaction using the `transactionLinker` returned from `sendCrossChainJettonTransaction` function in `TacSDK`.
+1. Fetching the `operationId` for a transaction using the `transactionLinker` returned from `sendCrossChainTransaction` function in `TacSDK`.
 2. Retrieving the current status of a transaction using the `operationId`.
 3. Returning a simplified status for easier transaction monitoring.
 
@@ -201,13 +199,17 @@ Use the `getOperationId(transactionLinker)` method with the `transactionLinker` 
 
 > **Note:** An empty response string indicates that validators have not yet received your messages. Continue retrying until you receive a non-empty `operationId`.
 
-- **Parameters**:
+
+#### **Method: `getOperationId(transactionLinker: TransactionLinker): Promise<string>`**
+
+#### **Parameters**:
   - `transactionLinker`: A `TransactionLinker` object containing transaction linkers.
 
-- **Returns**:
+#### **Returns**:
+- **`Promise<string>`**: 
   - A string representing the `operationId`.
 
-- **Usage**:
+#### **Usage**:
   ```typescript
   const tracker = new TransactionStatus();
   const operationId = await tracker.getOperationId(transactionLinker);
@@ -224,10 +226,11 @@ Use the `getStatusTransaction(operationId)` method to fetch the transaction stat
 
 Retrieves the current status of a transaction using its `operationId`.
 
-- **Parameters**:
+#### **Parameters**:
   - `operationId`: The identifier obtained from `getOperationId`.
 
-- **Returns**:
+#### **Returns**:
+- **`Promise<string>`**:
   - A string representing the transaction's status, such as:
     - `EVMMerkleMessageCollected`: Validator has collected all events for a single sharded message.
     - `EVMMerkleRootSet`: The EVM message has been added to the Merkle tree.
@@ -236,7 +239,7 @@ Retrieves the current status of a transaction using its `operationId`.
     - `TVMMerkleRootSet`: The TVM message has been added to the Merkle tree.
     - `TVMMerkleMessageExecuted`: The transaction is fully executed across TVM and EVM.
   (error requests will be processed in future version)
-- **Usage**:
+#### **Usage**:
   ```typescript
   const tracker = new TransactionStatus();
   const status = await tracker.getStatusTransaction(operationId);
@@ -249,14 +252,16 @@ Use the `getSimpifiedTransactionStatus(transactionLinker)` method for an easy-to
 
 ---
 
-### Method: `getSimpifiedTransactionStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses>`
+### Method: `getSimplifiedTransactionStatus(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<SimplifiedStatuses>`
 
 Fetches a simplified transaction status using the `transactionLinker`.
 
-- **Parameters**:
-  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function .
+#### **Parameters**:
+  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function.
+  - `isBridgeOperation` *(optional)*: If your operation should only execute on EVM side without returning to TVM set `isBridgeOperation` to **true**. TAC protocol can just bridge the assets.
 
-- **Returns**:
+#### **Returns**:
+- **`Promise<SimplifiedStatuses>`**:
   - A simplified status from the `SimplifiedStatuses` enum:
     - **`Pending`**: The transaction is still in progress.
     - **`Successful`**: The transaction has successfully completed.
@@ -265,13 +270,40 @@ Fetches a simplified transaction status using the `transactionLinker`.
 
 ---
 
-### **Usage**
+#### **Usage**
 Here operationId will be always requested(not optimal).
 ```typescript
 const tracker = new TransactionStatus();
 const simplifiedStatus = await tracker.getSimpifiedTransactionStatus(transactionLinker);
 console.log('Simplified Status:', simplifiedStatus);
 ```
+
+## startTracking
+
+---
+
+Track the execution of crosschain operation with `startTracking` method
+
+---
+
+### Method: `async startTracking(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<void>`
+
+#### **Parameters**:
+  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function.
+  - `isBridgeOperation` *(optional)*: If your operation should only execute on EVM side without returning to TVM set `isBridgeOperation` to **true**. TAC protocol can just bridge the assets.
+
+#### **Returns**:
+- void:
+  - Will stop requesting status once the final status of crosschain operation has been reached.
+
+---
+
+#### **Usage**
+Here operationId will be always requested(not optimal).
+```typescript
+await startTracking(transactionLinker);
+```
+---
 
 ## Structures Description
 
@@ -290,62 +322,56 @@ export enum Network {
 ### `TacSDKTonClientParams (Type)`
 ```typescript
 export type TacSDKTonClientParams = {
-    tonClientParameters?: TonClientParameters;
     network: Network;
+    tonClientParameters?: TonClientParameters;
     delay?: number;
+    settingsAddress?: string;
 }
 ```
 
 Parameters for the TON SDK client.
-- **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
 - **`network`**: Specifies the blockchain network (`Network` type).
+- **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
 - **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0* for custom tonClientParameters, but with empty *tonClientParameters* delay would be set to *3*.
 This structure is used to create the TON client, which you will utilize for sending transactions. It allows you to specify the network (Testnet or Mainnet), configure client parameters, and set a delay for request execution. Proper configuration ensures smooth and efficient interaction with the TON blockchain during operations.
+- **`settingsAddress`** : TAC protocol contract address. Needed to retrieve protocol data. Set for tests only
 
 ### `EvmProxyMsg (Type)`
 ```typescript
 export type EvmProxyMsg = {
     evmTargetAddress: string,
-    methodName: string,
-    encodedParameters: string,
+    methodName?: string,
+    encodedParameters?: string,
 }
 ```
 Represents a proxy message to a TAC.
 - **`evmTargetAddress`**: Target address on the EVM network.
-- **`methodName`**: Method name to be called on the target contract.
-- **`encodedParameters`**: Parameters for the method, encoded as a string.
+- **`methodName`** *(optional)*: Method name to be called on the target contract.
+- **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the cross-chain transaction.
 
-### `JettonTransferData (Type)`
-```typescript
-export type JettonTransferData = JettonOperationGeneralData;
-```
-Type alias for `JettonOperationGeneralData`.
+### `AssetBridgingData (Type)`
 
-This structure is used to specify the details of the Jettons you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your cross-chain transaction.
+This structure is used to specify the details of the Assets you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your cross-chain transaction.
 
-### `JettonOperationGeneralData (Type) internal`
 ```typescript
-export type JettonOperationGeneralData = {
-    fromAddress: string,
-    tokenAddress: string,
-    jettonAmount: number,
-    tonAmount?: number,
+export type AssetBridgingData = {
+  amount: number
+  address?: string
 }
 ```
 
-Represents general data for Jetton operations.
-- **`fromAddress`**: Sender's address.
-- **`tokenAddress`**: TVM jetton's address.
-- **`jettonAmount`**: Amount of Jetton to be transferred.
-- **`tonAmount`** *(optional)*: Additional TON amount.
+Represents general data for Asset operations.
+- **`amount`**: Amount of Assets to be transferred.
+- **`address`** *(optional)*: TVM asset's address.
+
+> **Note:** If you need to transfer a native TON coin, do not specify address.
 
 ### `TransactionLinker (Type)`
 ```typescript
 export type TransactionLinker = {
     caller: string,
-    queryId: number,
     shardCount: number,
     shardedId: string,
     timestamp: number,
@@ -353,7 +379,6 @@ export type TransactionLinker = {
 ```
 Linker to track cross-chain transaction.
 - **`caller`**: Address of the transaction initiator.
-- **`queryId`**: Identifier for the query.
 - **`shardCount`**: Number of shards involved.
 - **`shardedId`**: Identifier for the shard.
 - **`timestamp`**: Timestamp of the transaction.
@@ -375,23 +400,23 @@ Represents the simplified transaction statuses.
 - **`Successful`**: The transaction was executed successfully.
 - **`OperationIdNotFound`**: The operation ID was not found.
 
-### `JettonOpType (Enum) internal`
+### `AssetOpType (Enum) internal`
 ```typescript
-enum JettonOpType {
-  Burn = 'Burn',
-  Transfer = 'Transfer'
+export enum AssetOpType {
+  JettonBurn = 'JettonBurn',
+  JettonTransfer = 'JettonTransfer'
 }
 ```
-- **`Burn`**: If the Jetton was wrapped (i.e., originally a token from EVM), then to bridge such Jettons, they will be burned on the TVM side and unlocked on the EVM side.
-- **`Transafer`**: If the Jetton originated from TVM, they should be transferred to the TVM smart contract (i.e., locked on TVM side).
+- **`JettonBurn`**: If the Jetton was wrapped (i.e., originally a token from EVM), then to bridge such Jettons, they will be burned on the TVM side and unlocked on the EVM side.
+- **`JettonTransfer`**: If the Jetton originated from TVM, they should be transferred to the TVM smart contract (i.e., locked on TVM side).
 
 ### `JettonBurnData (Type) internal`
 ```typescript
-export type JettonBurnData = JettonOperationGeneralData & {
+export type JettonBurnData = JettonBridgingData & {
     notificationReceieverAddress: string,
 }
 ```
-Extends `JettonOperationGeneralData` with additional fields for burn operations.
+Extends `JettonBridgingData` with additional fields for burn operations.
 - **`notificationReceiverAddress`**: Address to send burn notification(CrossChainLayer s-c address on TVM).
 
 ### `ShardMessage (Type) internal`
@@ -419,7 +444,7 @@ export type ShardTransaction = {
 Represents a collected shard messages(for example, for adding liquidity there will be two shard messages: bridging TokenA, bridging TokenB).
 - **`validUntil`**: Validity timestamp for the transaction.
 - **`messages`**: Array of messages (`ShardMessage` type, bridging multiple tokens).
-- **`network`**: Blockchain network (\texttt{Network} type).
+- **`network`**: Blockchain network (`Network` type).
 
 ## Usage
 
@@ -451,18 +476,14 @@ const evmProxyMsg: EvmProxyMsg = {
 };
 
 // Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
-const jettons: JettonOperationGeneralData[] = [
+const assets: AssetBridgingData[] = [
   {
-    fromAddress: "tonUserAddress",
-    tokenAddress: TVMtokenAAddress,
-    jettonAmount: tokenAAmount,
-    tonAmount: 0.4,
+    address: TVMtokenAAddress,
+    amount: tokenAAmount
   },
   {
-    fromAddress: "tonUserAddress",
-    tokenAddress: TVMtokenBAddress,
-    jettonAmount: tokenBAmount,
-    tonAmount: 0.4,
+    address: TVMtokenBAddress,
+    amount: tokenBAmount
   }
 ];
 
@@ -470,15 +491,16 @@ const tacSdk = new TacSdk({
   network: Network.Testnet,
   delay: 3,
 });
+await tacSdk.init();
 
-Send transaction via tonConnect or mnemonic
+//Send transaction via tonConnect or mnemonic
 const tonConnectUI = new TonConnectUI({
   manifestUrl: config.tonconnectManifestUrl as string
 });
 const sender = new TonConnectSender(tonConnect);
-const sender = new RawSender("24 word mnemonic");
+// or const sender = new RawSender("24 word mnemonic");
 
-return await tacSdk.sendCrossChainJettonTransaction(jettons, evmProxyMsg, sender);
+return await tacSdk.sendCrossChainJettonTransaction(evmProxyMsg, sender, assets);
 ```
 For a detailed example, see `test/sendSwap.ts` or `test/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
 
