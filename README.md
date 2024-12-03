@@ -104,9 +104,10 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - **`RawSender`**: For raw wallet transactions using a mnemonic.
   
 - **`assets`** *(optional)*: An array of `AssetBridgingData` objects, each specifying the Assets details:
-  - **`address`**: Address of the Asset.
+  - **`address`** *(optional)*: Address of the Asset.
   - **`amount`**: Amount of Assets to transfer.
 
+> **Note:** If you don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 ---
 
 #### **Returns**
@@ -198,13 +199,17 @@ Use the `getOperationId(transactionLinker)` method with the `transactionLinker` 
 
 > **Note:** An empty response string indicates that validators have not yet received your messages. Continue retrying until you receive a non-empty `operationId`.
 
-- **Parameters**:
+
+#### **Method: `getOperationId(transactionLinker: TransactionLinker): Promise<string>`**
+
+#### **Parameters**:
   - `transactionLinker`: A `TransactionLinker` object containing transaction linkers.
 
-- **Returns**:
+#### **Returns**:
+- **`Promise<string>`**: 
   - A string representing the `operationId`.
 
-- **Usage**:
+#### **Usage**:
   ```typescript
   const tracker = new TransactionStatus();
   const operationId = await tracker.getOperationId(transactionLinker);
@@ -221,10 +226,11 @@ Use the `getStatusTransaction(operationId)` method to fetch the transaction stat
 
 Retrieves the current status of a transaction using its `operationId`.
 
-- **Parameters**:
+#### **Parameters**:
   - `operationId`: The identifier obtained from `getOperationId`.
 
-- **Returns**:
+#### **Returns**:
+- **`Promise<string>`**:
   - A string representing the transaction's status, such as:
     - `EVMMerkleMessageCollected`: Validator has collected all events for a single sharded message.
     - `EVMMerkleRootSet`: The EVM message has been added to the Merkle tree.
@@ -233,7 +239,7 @@ Retrieves the current status of a transaction using its `operationId`.
     - `TVMMerkleRootSet`: The TVM message has been added to the Merkle tree.
     - `TVMMerkleMessageExecuted`: The transaction is fully executed across TVM and EVM.
   (error requests will be processed in future version)
-- **Usage**:
+#### **Usage**:
   ```typescript
   const tracker = new TransactionStatus();
   const status = await tracker.getStatusTransaction(operationId);
@@ -246,15 +252,16 @@ Use the `getSimpifiedTransactionStatus(transactionLinker)` method for an easy-to
 
 ---
 
-### Method: `getSimpifiedTransactionStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses>`
+### Method: `getSimplifiedTransactionStatus(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<SimplifiedStatuses>`
 
 Fetches a simplified transaction status using the `transactionLinker`.
 
-- **Parameters**:
+#### **Parameters**:
   - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function.
   - `isBridgeOperation` *(optional)*: If your operation should only execute on EVM side without returning to TVM set `isBridgeOperation` to **true**. TAC protocol can just bridge the assets.
 
-- **Returns**:
+#### **Returns**:
+- **`Promise<SimplifiedStatuses>`**:
   - A simplified status from the `SimplifiedStatuses` enum:
     - **`Pending`**: The transaction is still in progress.
     - **`Successful`**: The transaction has successfully completed.
@@ -263,13 +270,35 @@ Fetches a simplified transaction status using the `transactionLinker`.
 
 ---
 
-### **Usage**
+#### **Usage**
 Here operationId will be always requested(not optimal).
 ```typescript
 const tracker = new TransactionStatus();
 const simplifiedStatus = await tracker.getSimpifiedTransactionStatus(transactionLinker);
 console.log('Simplified Status:', simplifiedStatus);
 ```
+
+## startTracking
+---
+Track the execution of crosschain operation with `startTracking` method
+---
+### Method: `async startTracking(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<void>`
+
+#### **Parameters**:
+  - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainJettonTransaction` function.
+  - `isBridgeOperation` *(optional)*: If your operation should only execute on EVM side without returning to TVM set `isBridgeOperation` to **true**. TAC protocol can just bridge the assets.
+
+#### **Returns**:
+- void:
+  - Will stop requesting status once the final status of crosschain operation has been reached.
+---
+
+#### **Usage**
+Here operationId will be always requested(not optimal).
+```typescript
+await startTracking(transactionLinker);
+```
+---
 
 ## Structures Description
 
@@ -300,7 +329,7 @@ Parameters for the TON SDK client.
 - **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
 - **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0* for custom tonClientParameters, but with empty *tonClientParameters* delay would be set to *3*.
 This structure is used to create the TON client, which you will utilize for sending transactions. It allows you to specify the network (Testnet or Mainnet), configure client parameters, and set a delay for request execution. Proper configuration ensures smooth and efficient interaction with the TON blockchain during operations.
-- **`settingsAddress`**: TAC protocol contract address. Needed to retrieve protocol data. Set for tests only
+- **`settingsAddress`** : TAC protocol contract address. Needed to retrieve protocol data. Set for tests only
 
 ### `EvmProxyMsg (Type)`
 ```typescript
@@ -410,7 +439,7 @@ export type ShardTransaction = {
 Represents a collected shard messages(for example, for adding liquidity there will be two shard messages: bridging TokenA, bridging TokenB).
 - **`validUntil`**: Validity timestamp for the transaction.
 - **`messages`**: Array of messages (`ShardMessage` type, bridging multiple tokens).
-- **`network`**: Blockchain network (\texttt{Network} type).
+- **`network`**: Blockchain network (`Network` type).
 
 ## Usage
 

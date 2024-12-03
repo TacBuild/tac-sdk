@@ -3,7 +3,7 @@ import {TransactionStatus} from "./TransactionStatus";
 import {sleep} from "./Utils";
 import {MAX_ITERATION_COUNT} from "./Consts";
 
-export async function startTracking(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false) {
+export async function startTracking(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<void> {
     const tracker = new TransactionStatus();
 
     console.log('Start tracking transaction');

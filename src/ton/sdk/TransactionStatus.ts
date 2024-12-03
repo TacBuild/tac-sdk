@@ -13,7 +13,7 @@ export class TransactionStatus {
         this.CustomLiteSequencerEndpoints = customLiteSequencerEndpoints;
     }
 
-    async getOperationId(transactionLinker: TransactionLinker) {
+    async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
         const endpoints = this.CustomLiteSequencerEndpoints
             ? this.CustomLiteSequencerEndpoints
             : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
@@ -36,7 +36,7 @@ export class TransactionStatus {
         throw new Error('Failed to fetch OperationId');
     }
 
-    async getStatusTransaction(operationId: string) {
+    async getStatusTransaction(operationId: string): Promise<string> {
         const endpoints = this.CustomLiteSequencerEndpoints
             ? this.CustomLiteSequencerEndpoints
             : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
