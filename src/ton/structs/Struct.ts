@@ -80,3 +80,8 @@ export enum AssetOpType {
     JettonBurn = 'JettonBurn',
     JettonTransfer = 'JettonTransfer'
 }
+
+export type RandomNumberByTimestamp = {
+    timestamp: number,
+    randomNumber: number
+}

@@ -1,12 +1,19 @@
-import type {EvmProxyMsg, JettonOperationGeneralData, TransactionLinker} from "../structs/Struct";
+import {EvmProxyMsg, JettonOperationGeneralData, RandomNumberByTimestamp, TransactionLinker} from "../structs/Struct";
 import {Address, beginCell, Cell, storeStateInit} from "@ton/ton";
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export function generateQueryId(): number {
+export function generateRandomNumber(interval: number): number {
+    return Math.round(Math.random() * interval);
+}
+
+export function generateRandomNumberByTimestamp(): RandomNumberByTimestamp {
     const timestamp = Math.floor(+new Date() / 1000);
-    const randAppend = Math.round(Math.random() * 1000);
-    return timestamp + randAppend;
+
+     return {
+         timestamp,
+         randomNumber: timestamp + generateRandomNumber(1000)
+     }
 }
 
 export async function calculateContractAddress(code: Cell, data: Cell): Promise<Address> {
@@ -31,14 +38,13 @@ export function buildEvmArgumentsCell(transactionLinker: TransactionLinker, evmP
 }
 
 export function generateTransactionLinker(caller: string, shardCount: number): TransactionLinker {
-    const timestamp = Math.floor(+new Date() / 1000);
-    const shardedId = String(timestamp + Math.round(Math.random() * 1000));
+    const random = generateRandomNumberByTimestamp()
 
     return {
         caller: Address.normalize(caller),
         shardCount,
-        shardedId,
-        timestamp
+        shardedId: String(random.randomNumber),
+        timestamp: random.timestamp,
     };
 }
 

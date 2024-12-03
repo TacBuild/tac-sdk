@@ -28,7 +28,7 @@ import ITokenUtils from '../../abi/ITokenUtils.json';
 import {
     buildEvmArgumentsCell,
     calculateContractAddress,
-    generateQueryId,
+    generateQueryId, generateRandomNumberByTimestamp,
     generateTransactionLinker,
     sleep, validateTVMAddress
 } from "./Utils";
@@ -108,18 +108,18 @@ export class TacSdk {
     };
 
     private getJettonTransferPayload(jettonData: JettonTransferData, responseAddress: string, l2Data: Cell, crossChainTonAmount?: number): Cell {
-        const queryId = generateQueryId();
+        const queryId = generateRandomNumberByTimestamp().randomNumber;
         const forwardAmount = 0.2;
         return JettonWallet.transferMessage(jettonData.amount, this.jettonProxyAddress, responseAddress, forwardAmount, crossChainTonAmount, l2Data, queryId);
     };
 
     private getJettonBurnPayload(jettonData: JettonBurnData, l2Data: Cell, crossChainTonAmount?: number): Cell {
-        const queryId = generateQueryId();
+        const queryId = generateRandomNumberByTimestamp().randomNumber;
         return JettonWallet.burnMessage(jettonData.amount, jettonData.notificationReceiverAddress, crossChainTonAmount, l2Data, queryId);
     }
 
     private getTonTransferPayload(responseAddress: string, l2Data: Cell, crossChainTonAmount?: number): Cell {
-        const queryId = generateQueryId();
+        const queryId = generateRandomNumberByTimestamp().randomNumber;
         return beginCell()
             .storeUint(CCL_L1_MSG_TO_L2_OP_CODE, 32)
             .storeUint(queryId, 64)
