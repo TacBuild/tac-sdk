@@ -280,7 +280,9 @@ console.log('Simplified Status:', simplifiedStatus);
 
 ## startTracking
 ---
+
 Track the execution of crosschain operation with `startTracking` method
+
 ---
 ### Method: `async startTracking(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<void>`
 
