@@ -13,7 +13,7 @@ export function generateRandomNumberByTimestamp(): RandomNumberByTimestamp {
      return {
          timestamp,
          randomNumber: timestamp + generateRandomNumber(1000)
-     }
+     };
 }
 
 export async function calculateContractAddress(code: Cell, data: Cell): Promise<Address> {
@@ -38,7 +38,7 @@ export function buildEvmArgumentsCell(transactionLinker: TransactionLinker, evmP
 }
 
 export function generateTransactionLinker(caller: string, shardCount: number): TransactionLinker {
-    const random = generateRandomNumberByTimestamp()
+    const random = generateRandomNumberByTimestamp();
 
     return {
         caller: Address.normalize(caller),
