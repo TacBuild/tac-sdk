@@ -26,14 +26,14 @@ import {
 import {ethers} from 'ethers';
 import ITokenUtils from '../../abi/ITokenUtils.json';
 import {
-    buildEvmArgumentsCell,
+    buildEvmDataCell,
     calculateContractAddress,
-    generateQueryId, generateRandomNumberByTimestamp,
+    generateRandomNumberByTimestamp,
     generateTransactionLinker,
     sleep, validateTVMAddress
 } from "./Utils";
 import {
-    CCL_L1_MSG_TO_L2_OP_CODE,
+    CCL_L1_MSG_TO_L2_OP_CODE, JETTON_TRANSFER_FORWARD_TON_AMOUNT,
     MAINNET_TONCENTER_URL_ENDPOINT,
     TAC_RPC_ENDPOINT,
     TAC_SETTINGS_ADDRESS,
@@ -107,30 +107,29 @@ export class TacSdk {
         return await userJettonWallet.getJettonBalance();
     };
 
-    private getJettonTransferPayload(jettonData: JettonTransferData, responseAddress: string, l2Data: Cell, crossChainTonAmount?: number): Cell {
+    private getJettonTransferPayload(jettonData: JettonTransferData, responseAddress: string, evmData: Cell, crossChainTonAmount: number): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
-        const forwardAmount = 0.2;
-        return JettonWallet.transferMessage(jettonData.amount, this.jettonProxyAddress, responseAddress, forwardAmount, crossChainTonAmount, l2Data, queryId);
+        return JettonWallet.transferMessage(jettonData.amount, this.jettonProxyAddress, responseAddress, JETTON_TRANSFER_FORWARD_TON_AMOUNT, crossChainTonAmount, evmData, queryId);
     };
 
-    private getJettonBurnPayload(jettonData: JettonBurnData, l2Data: Cell, crossChainTonAmount?: number): Cell {
+    private getJettonBurnPayload(jettonData: JettonBurnData, evmData: Cell, crossChainTonAmount: number): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
-        return JettonWallet.burnMessage(jettonData.amount, jettonData.notificationReceiverAddress, crossChainTonAmount, l2Data, queryId);
+        return JettonWallet.burnMessage(jettonData.amount, jettonData.notificationReceiverAddress, crossChainTonAmount, evmData, queryId);
     }
 
-    private getTonTransferPayload(responseAddress: string, l2Data: Cell, crossChainTonAmount?: number): Cell {
+    private getTonTransferPayload(responseAddress: string, evmData: Cell, crossChainTonAmount: number): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
         return beginCell()
             .storeUint(CCL_L1_MSG_TO_L2_OP_CODE, 32)
             .storeUint(queryId, 64)
             .storeUint(TON_TRANSFER_OP_TYPE, 32)
-            .storeCoins(toNano(crossChainTonAmount?.toFixed(9) ?? 0))
+            .storeCoins(toNano(crossChainTonAmount.toFixed(9)))
             .storeAddress(Address.parse(responseAddress))
-            .storeMaybeRef(l2Data)
+            .storeMaybeRef(evmData)
             .endCell()
     }
 
-    private async detectJettonOpType(asset: JettonOperationGeneralData): Promise<AssetOpType> {
+    private async getJettonOpType(asset: JettonOperationGeneralData): Promise<AssetOpType> {
         const {code: givenMinterCodeBOC} = await this.tonClient.getContractState(address(asset.address));
         if (!givenMinterCodeBOC) {
             throw new Error('unexpected empty contract code of given jetton.');
@@ -144,7 +143,6 @@ export class TacSdk {
 
         const givenMinter = this.tonClient.open(new JettonMaster(address(asset.address)));
         const l2Address = await givenMinter.getL2Address();
-        await sleep(this.delay * 1000);
 
         const expectedMinterAddress = await calculateContractAddress(
             this.jettonMinterCode,
@@ -164,7 +162,7 @@ export class TacSdk {
         return AssetOpType.JettonBurn;
     }
 
-    private prepareJettons(assets?: AssetOperationGeneralData[]): {
+    private aggregateJettons(assets?: AssetOperationGeneralData[]): {
         jettons: JettonOperationGeneralData[],
         crossChainTonAmount: number,
     } {
@@ -193,33 +191,40 @@ export class TacSdk {
         };
     }
 
-    private async prepareMessages(caller: string, l2Data: Cell, assets?: AssetOperationGeneralData[]): Promise<ShardMessage[]> {
-        const preparedData = this.prepareJettons(assets);
-        let crossChainTonAmount = preparedData.crossChainTonAmount;
+    private async generatePayload(jetton: JettonOperationGeneralData, caller: string, evmData: Cell, crossChainTonAmount: number) {
+        const opType = await this.getJettonOpType(jetton);
+        await sleep(this.delay * 1000);
+        console.log(`***** Jetton ${jetton.amount} requires ${opType} operation`);
 
-        if ((preparedData.jettons.length == 0)){
+        let payload: Cell;
+        switch (opType) {
+            case AssetOpType.JettonBurn:
+                payload = this.getJettonBurnPayload({notificationReceiverAddress: this.crossChainLayerAddress, ...jetton}, evmData, crossChainTonAmount);
+                break;
+            case AssetOpType.JettonTransfer:
+                payload = this.getJettonTransferPayload(jetton, caller, evmData, crossChainTonAmount);
+                break;
+        }
+
+        return payload;
+    }
+
+    private async generateCrossChainMessages(caller: string, evmData: Cell, assets?: AssetOperationGeneralData[]): Promise<ShardMessage[]> {
+        const aggregatedData = this.aggregateJettons(assets);
+        let crossChainTonAmount = aggregatedData.crossChainTonAmount;
+
+        if ((aggregatedData.jettons.length == 0)){
             return [{
                 address: this.crossChainLayerAddress,
                 value: Number((crossChainTonAmount + TRANSACTION_TON_AMOUNT).toFixed(9)),
-                payload: this.getTonTransferPayload(caller, l2Data, crossChainTonAmount)
+                payload: this.getTonTransferPayload(caller, evmData, crossChainTonAmount)
             }]
         }
 
         let messages: ShardMessage[] = [];
-        for (const jetton of preparedData.jettons) {
-            const opType = await this.detectJettonOpType(jetton);
-            console.log(`***** Jetton ${jetton.amount} requires ${opType} operation`);
+        for (const jetton of aggregatedData.jettons) {
 
-            let payload: Cell;
-            switch (opType) {
-                case AssetOpType.JettonBurn:
-                    payload = this.getJettonBurnPayload({notificationReceiverAddress: this.crossChainLayerAddress, ...jetton}, l2Data, crossChainTonAmount);
-                    break;
-                case AssetOpType.JettonTransfer:
-                    payload = this.getJettonTransferPayload(jetton, caller, l2Data, crossChainTonAmount);
-                    break;
-            }
-
+            const payload = await this.generatePayload(jetton, caller, evmData, crossChainTonAmount);
             const jettonWalletAddress = await this.getUserJettonWalletAddress(caller, jetton.address);
             await sleep(this.delay * 1000);
 
@@ -237,13 +242,13 @@ export class TacSdk {
 
     async sendCrossChainTransaction(evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction, assets?: AssetOperationGeneralData[]): Promise<TransactionLinker> {
         if (!this.isInited) {
-            throw new Error('TacSdk not initialized. Call init() first.');
+            await this.init();
         }
         const caller = await sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, assets?.length ?? 1)
-        const l2Data = buildEvmArgumentsCell(transactionLinker, evmProxyMsg);
+        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
 
-        const messages = await this.prepareMessages(caller, l2Data, assets);
+        const messages = await this.generateCrossChainMessages(caller, evmData, assets);
         const transaction: ShardTransaction = {
             validUntil: +new Date() + 15 * 60 * 1000,
             messages,
@@ -255,9 +260,9 @@ export class TacSdk {
         return transactionLinker;
     }
 
-    async calculateEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
+    async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
         if (!this.isInited) {
-            throw new Error('TacSdk not initialized. Call init() first.');
+            await this.init();
         }
 
         validateTVMAddress(tvmTokenAddress);

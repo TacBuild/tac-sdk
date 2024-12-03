@@ -31,8 +31,8 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
         amountIn += amount;
     }
 
-    const EVM_TKA_ADDRESS = await tacSdk.calculateEVMTokenAddress(TVM_TKA_ADDRESS);
-    const EVM_TKB_ADDRESS = await tacSdk.calculateEVMTokenAddress(TVM_TKB_ADDRESS);
+    const EVM_TKA_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKA_ADDRESS);
+    const EVM_TKB_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKB_ADDRESS);
 
     // create evm proxy msg
     const abi = new ethers.AbiCoder();

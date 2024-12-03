@@ -18,8 +18,6 @@ This SDK allows EVM developers to perform cross-chain transactions without needi
 
 Using these inputs, the SDK builds a TON transaction payload and enables further signature processing through TON-Connect or directly via mnemonic.
 
-In future updates, the SDK will automatically calculate TON jetton addresses based on corresponding EVM tokens.
-
 ## Features
 
 **TON:**
@@ -117,9 +115,9 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - A `TransactionLinker` object for tracking the transaction status during cross chain.
 
 ---
-### Function: `calculateEVMTokenAddress`
+### Function: `getEVMTokenAddress`
 ---
-This function will compute the EVM paired address for a TVM token. 
+This function will get the EVM paired address for a TVM token. 
 
 #### **Purpose**
 

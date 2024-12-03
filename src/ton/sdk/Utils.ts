@@ -21,7 +21,7 @@ export async function calculateContractAddress(code: Cell, data: Cell): Promise<
     return new Address(0, stateInit.hash());
 }
 
-export function buildEvmArgumentsCell(transactionLinker: TransactionLinker, evmProxyMsg: EvmProxyMsg): Cell {
+export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyMsg: EvmProxyMsg): Cell {
     const evmArguments = evmProxyMsg.encodedParameters ? Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64') : null;
 
     const json = JSON.stringify({

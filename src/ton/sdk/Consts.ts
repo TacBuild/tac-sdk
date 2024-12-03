@@ -11,5 +11,6 @@ export const CCL_L1_MSG_TO_L2_OP_CODE = 0x6c582059;
 export const TON_TRANSFER_OP_TYPE = 0x4ad67cd3;
 
 export const TRANSACTION_TON_AMOUNT = 0.35;
+export const JETTON_TRANSFER_FORWARD_TON_AMOUNT = 0.2;
 
 export const MAX_ITERATION_COUNT = 120;

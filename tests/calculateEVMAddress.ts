@@ -11,7 +11,7 @@ async function main() {
 
   const tvmTokenAddress = "EQBVRbJQ4ihedlSI10NzufGfrxGES_rwnRg3ynKsHd-zOPLM";
 
-  const evmTokenAddress = await tacSdk.calculateEVMTokenAddress(
+  const evmTokenAddress = await tacSdk.getEVMTokenAddress(
     tvmTokenAddress
   );
 
