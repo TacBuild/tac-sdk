@@ -12,10 +12,10 @@ import type {SenderAbstraction} from '../sender_abstraction/SenderAbstraction';
 
 // import structs
 import {
-    AssetOperationGeneralData,
+    AssetBridgingData,
     AssetOpType,
-    EvmProxyMsg,
-    JettonBurnData, JettonOperationGeneralData,
+    EvmProxyMsg, JettonBridgingData,
+    JettonBurnData,
     JettonTransferData,
     Network,
     ShardMessage,
@@ -129,7 +129,7 @@ export class TacSdk {
             .endCell()
     }
 
-    private async getJettonOpType(asset: JettonOperationGeneralData): Promise<AssetOpType> {
+    private async getJettonOpType(asset: JettonBridgingData): Promise<AssetOpType> {
         const {code: givenMinterCodeBOC} = await this.tonClient.getContractState(address(asset.address));
         if (!givenMinterCodeBOC) {
             throw new Error('unexpected empty contract code of given jetton.');
@@ -162,8 +162,8 @@ export class TacSdk {
         return AssetOpType.JettonBurn;
     }
 
-    private aggregateJettons(assets?: AssetOperationGeneralData[]): {
-        jettons: JettonOperationGeneralData[],
+    private aggregateJettons(assets?: AssetBridgingData[]): {
+        jettons: JettonBridgingData[],
         crossChainTonAmount: number,
     } {
         const uniqueAssetsMap: Map<string, number> = new Map();
@@ -180,7 +180,7 @@ export class TacSdk {
             }
         });
 
-        const jettons: JettonOperationGeneralData[] = Array.from(uniqueAssetsMap.entries()).map(([address, amount]) => ({
+        const jettons: JettonBridgingData[] = Array.from(uniqueAssetsMap.entries()).map(([address, amount]) => ({
             address,
             amount
         }));
@@ -191,7 +191,7 @@ export class TacSdk {
         };
     }
 
-    private async generatePayload(jetton: JettonOperationGeneralData, caller: string, evmData: Cell, crossChainTonAmount: number) {
+    private async generatePayload(jetton: JettonBridgingData, caller: string, evmData: Cell, crossChainTonAmount: number) {
         const opType = await this.getJettonOpType(jetton);
         await sleep(this.delay * 1000);
         console.log(`***** Jetton ${jetton.amount} requires ${opType} operation`);
@@ -209,7 +209,7 @@ export class TacSdk {
         return payload;
     }
 
-    private async generateCrossChainMessages(caller: string, evmData: Cell, assets?: AssetOperationGeneralData[]): Promise<ShardMessage[]> {
+    private async generateCrossChainMessages(caller: string, evmData: Cell, assets?: AssetBridgingData[]): Promise<ShardMessage[]> {
         const aggregatedData = this.aggregateJettons(assets);
         let crossChainTonAmount = aggregatedData.crossChainTonAmount;
 
@@ -240,7 +240,7 @@ export class TacSdk {
         return messages;
     }
 
-    async sendCrossChainTransaction(evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction, assets?: AssetOperationGeneralData[]): Promise<TransactionLinker> {
+    async sendCrossChainTransaction(evmProxyMsg: EvmProxyMsg, sender: SenderAbstraction, assets?: AssetBridgingData[]): Promise<TransactionLinker> {
         if (!this.isInited) {
             await this.init();
         }

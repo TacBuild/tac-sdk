@@ -103,7 +103,7 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - **`TonConnectSender`**: For TonConnect integration.
   - **`RawSender`**: For raw wallet transactions using a mnemonic.
   
-- **`assets`** *(optional)*: An array of `AssetOperationGeneralData` objects, each specifying the Assets details:
+- **`assets`** *(optional)*: An array of `AssetBridgingData` objects, each specifying the Assets details:
   - **`address`**: Address of the Asset.
   - **`amount`**: Amount of Assets to transfer.
 
@@ -317,29 +317,20 @@ Represents a proxy message to a TAC.
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the cross-chain transaction.
 
-### `JettonTransferData (Type)`
-```typescript
-export type JettonTransferData = JettonOperationGeneralData;
-```
-Type alias for `JettonOperationGeneralData`.
+### `AssetBridgingData (Type)`
 
 This structure is used to specify the details of the Assets you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your cross-chain transaction.
 
-### `JettonOperationGeneralData and AssetOperationGeneralData (Type) internal`
 ```typescript
-export type JettonOperationGeneralData = AssetOperationGeneralData & {
-  address: string
-}
-
-export type AssetOperationGeneralData = {
+export type AssetBridgingData = {
   amount: number
   address?: string
 }
 ```
 
 Represents general data for Asset operations.
-- **`address`**: TVM asset's address.
 - **`amount`**: Amount of Assets to be transferred.
+- **`address`** *(optional)*: TVM asset's address.
 
 > **Note:** If you need to transfer a native TON coin, do not specify address.
 
@@ -387,11 +378,11 @@ export enum AssetOpType {
 
 ### `JettonBurnData (Type) internal`
 ```typescript
-export type JettonBurnData = JettonOperationGeneralData & {
+export type JettonBurnData = JettonBridgingData & {
     notificationReceieverAddress: string,
 }
 ```
-Extends `JettonOperationGeneralData` with additional fields for burn operations.
+Extends `JettonBridgingData` with additional fields for burn operations.
 - **`notificationReceiverAddress`**: Address to send burn notification(CrossChainLayer s-c address on TVM).
 
 ### `ShardMessage (Type) internal`
@@ -451,7 +442,7 @@ const evmProxyMsg: EvmProxyMsg = {
 };
 
 // Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
-const assets: AssetOperationGeneralData[] = [
+const assets: AssetBridgingData[] = [
   {
     address: TVMtokenAAddress,
     amount: tokenAAmount

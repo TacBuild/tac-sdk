@@ -1,7 +1,7 @@
 import {ethers} from "ethers";
 import {
     EvmProxyMsg,
-    AssetOperationGeneralData,
+    AssetBridgingData,
     Network,
     TacSDKTonClientParams, TacSdk, RawSender, startTracking,
 } from "../src";
@@ -55,7 +55,7 @@ async function removeLiquidity() {
 
     const sender = new RawSender(TVM_MNEMONICS);
 
-    const jettons: AssetOperationGeneralData[] = [];
+    const jettons: AssetBridgingData[] = [];
     jettons.push({
         address: TVM_LP_ADDRESS,
         amount: amountLP

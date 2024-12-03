@@ -36,18 +36,18 @@ export type TacSDKTonClientParams = {
 }
 
 
-export type AssetOperationGeneralData = {
+export type AssetBridgingData = {
     amount: number
     address?: string
 }
 
-export type JettonOperationGeneralData = AssetOperationGeneralData & {
+export type JettonBridgingData = AssetBridgingData & {
     address: string
 }
 
-export type JettonTransferData = JettonOperationGeneralData;
+export type JettonTransferData = JettonBridgingData;
 
-export type JettonBurnData = JettonOperationGeneralData & {
+export type JettonBurnData = JettonBridgingData & {
     notificationReceiverAddress: string,
 }
 

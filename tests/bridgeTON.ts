@@ -4,7 +4,7 @@ import {
     TacSdk,
     TacSDKTonClientParams,
     Network,
-    AssetOperationGeneralData,
+    AssetBridgingData,
     startTracking
 } from '../src';
 import 'dotenv/config';
@@ -28,7 +28,7 @@ const bridgeTonSawSender = async (amount: number) => {
     const sender = new RawSender(mnemonic);
 
     // create JettonTransferData (transfer jetton in TVM to swap)
-    const assets: AssetOperationGeneralData[] = [{
+    const assets: AssetBridgingData[] = [{
         amount: amount
     }]
 

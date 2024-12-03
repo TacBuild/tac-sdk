@@ -6,7 +6,7 @@ import {
     TacSDKTonClientParams,
     Network,
     EvmProxyMsg,
-    AssetOperationGeneralData,
+    AssetBridgingData,
     startTracking
 } from '../src';
 import 'dotenv/config';
@@ -58,7 +58,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
     const sender = new RawSender(mnemonic);
 
     // create JettonTransferData (transfer jetton in TVM to swap)
-    const assets: AssetOperationGeneralData[] = []
+    const assets: AssetBridgingData[] = []
     for (const amount of amountsIn) {
         assets.push({
             address: tokenAddress,

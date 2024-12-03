@@ -10,8 +10,8 @@ export type {
     TransactionLinker,
     ShardMessage,
     ShardTransaction,
-    AssetOperationGeneralData,
-    JettonOperationGeneralData,
+    AssetBridgingData,
+    JettonBridgingData,
     JettonBurnData
 } from './ton/structs/Struct';
 export {Network, SimplifiedStatuses} from './ton/structs/Struct';
