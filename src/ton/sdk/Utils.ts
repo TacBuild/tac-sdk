@@ -1,4 +1,4 @@
-import {EvmProxyMsg, JettonOperationGeneralData, RandomNumberByTimestamp, TransactionLinker} from "../structs/Struct";
+import {EvmProxyMsg, RandomNumberByTimestamp, TransactionLinker} from "../structs/Struct";
 import {Address, beginCell, Cell, storeStateInit} from "@ton/ton";
 
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
