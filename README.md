@@ -308,14 +308,14 @@ This structure is used to create the TON client, which you will utilize for send
 ```typescript
 export type EvmProxyMsg = {
     evmTargetAddress: string,
-    methodName: string,
-    encodedParameters: string,
+    methodName?: string,
+    encodedParameters?: string,
 }
 ```
 Represents a proxy message to a TAC.
 - **`evmTargetAddress`**: Target address on the EVM network.
-- **`methodName`**: Method name to be called on the target contract.
-- **`encodedParameters`**: Parameters for the method, encoded as a string.
+- **`methodName`** *(optional)*: Method name to be called on the target contract.
+- **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the cross-chain transaction.
 
