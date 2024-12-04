@@ -160,20 +160,40 @@ The `TonConnectSender` class enables sending transactions via the TonConnect.
 - **Example dirty, better look at uniswap example**:
 ```typescript
 tonConnect: TonConnectUI
-const sender = new TonConnectSender(tonConnect);
+const sender = await SenderFactory.getSender({
+    tonConnect,
+});
 ```
 ---
 
 ### 2. Using a Raw Wallet via Mnemonic
 
-The `RawSender` class allows direct interaction with the blockchain using a raw wallet created from a mnemonic phrase. This method currently supports **V3R2 wallets**, with plans to add support for other wallet types in the future.
+The `RawSender` class allows direct interaction with the blockchain using a raw wallet created from a mnemonic phrase.
 
 - **Example**:
 ```typescript
+const walletVersion = 'v4';
 const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
-const sender = new RawSender(mnemonic);
+const sender = await SenderFactory.getSender({
+    version: walletVersion,
+    mnemonic,
+});
 ```
 ---
+
+- **Supported wallet versions**:
+```
+export type WalletVersion =
+    | "v1r1"
+    | "v1r2"
+    | "v1r3"
+    | "v2r1"
+    | "v2r2"
+    | "v3r1"
+    | "v3r2"
+    | "v4"
+    | "v5r1";
+```
 
 ## Tracking transaction
 The `TransactionStatus` class is designed to track the status of cross-chain transactions by interacting with public or custom Lite Sequencer endpoints. It provides methods to fetch and interpret transaction statuses, enabling smooth monitoring of transaction lifecycles.
@@ -495,10 +515,11 @@ await tacSdk.init();
 
 //Send transaction via tonConnect or mnemonic
 const tonConnectUI = new TonConnectUI({
-  manifestUrl: config.tonconnectManifestUrl as string
+    manifestUrl: config.tonconnectManifestUrl as string
 });
-const sender = new TonConnectSender(tonConnect);
-// or const sender = new RawSender("24 word mnemonic");
+const sender = await SenderFactory.getSender({
+    tonConnect: tonConnectUI,
+});
 
 return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
 ```

@@ -1,13 +1,14 @@
 import {toNano} from '@ton/ton';
 import {ethers} from 'ethers';
 import {
-    RawSender,
+    SenderFactory,
     TacSdk,
     TacSDKTonClientParams,
     Network,
     EvmProxyMsg,
     AssetBridgingData,
-    startTracking
+    startTracking,
+    WalletVersion
 } from '../src';
 import 'dotenv/config';
 
@@ -16,6 +17,9 @@ const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
 const UNISWAPV2_PROXY_ADDRESS = '0xd47Cf3c26312B645B5e7a910fCE30B46CFf6a8f8';
+
+const WALLET_VERSION = 'v4';
+const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
 
 const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, tokenAddress: string) => {
     // create TacSdk
@@ -54,8 +58,10 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
     }
 
     // create sender abstraction
-    const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
-    const sender = new RawSender(mnemonic);
+    const sender = await SenderFactory.getSender({
+        version: WALLET_VERSION,
+        mnemonic,
+      });
 
     // create JettonTransferData (transfer jetton in TVM to swap)
     const assets: AssetBridgingData[] = []

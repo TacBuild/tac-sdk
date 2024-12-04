@@ -15,4 +15,4 @@ export type {
     JettonBurnData
 } from './ton/structs/Struct';
 export {Network, SimplifiedStatuses} from './ton/structs/Struct';
-export {SenderAbstraction, TonConnectSender, RawSender} from './ton/sender_abstraction/SenderAbstraction';
+export * from './ton/sender';

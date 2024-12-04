@@ -3,7 +3,11 @@ import {
     EvmProxyMsg,
     AssetBridgingData,
     Network,
-    TacSDKTonClientParams, TacSdk, RawSender, startTracking,
+    TacSDKTonClientParams,
+    TacSdk,
+    SenderFactory,
+    startTracking,
+    WalletVersion,
 } from "../src";
 
 const UNISWAPV2_PROXY_ADDRESS = "";
@@ -12,6 +16,7 @@ const TVM_LP_ADDRESS = "";
 const EVM_TKA_ADDRESS = "";
 const EVM_TKB_ADDRESS = "";
 
+const WALLET_VERSION = "v4";
 const TVM_MNEMONICS = "";
 
 async function removeLiquidity() {
@@ -53,7 +58,10 @@ async function removeLiquidity() {
         encodedParameters,
     };
 
-    const sender = new RawSender(TVM_MNEMONICS);
+    const sender = await SenderFactory.getSender({
+      version: WALLET_VERSION,
+      mnemonic: TVM_MNEMONICS,
+    });
 
     const jettons: AssetBridgingData[] = [];
     jettons.push({

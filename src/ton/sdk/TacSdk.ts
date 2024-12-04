@@ -8,7 +8,7 @@ import {JettonWallet} from '../wrappers/JettonWallet';
 import {Settings} from '../wrappers/Settings';
 
 // sender abstraction(tonconnect or mnemonic V3R2)
-import type {SenderAbstraction} from '../sender_abstraction/SenderAbstraction';
+import type {SenderAbstraction} from '../sender/SenderAbstraction';
 
 // import structs
 import {
@@ -143,6 +143,7 @@ export class TacSdk {
 
         const givenMinter = this.tonClient.open(new JettonMaster(address(asset.address)));
         const l2Address = await givenMinter.getL2Address();
+        await sleep(this.delay * 1000);
 
         const expectedMinterAddress = await calculateContractAddress(
             this.jettonMinterCode,
@@ -244,7 +245,7 @@ export class TacSdk {
         if (!this.isInited) {
             await this.init();
         }
-        const caller = await sender.getSenderAddress();
+        const caller = sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, assets?.length ?? 1)
         const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
 
