@@ -49,6 +49,6 @@ export class JettonMaster implements Contract {
 
     async getL2Address(provider: ContractProvider): Promise<string> {
         const result = await provider.get('get_l2_token_address', []);
-        return result.stack.readAddress().toString();
+        return result.stack.readAddressOpt()?.toString() || '';
     }
 }

@@ -1,13 +1,15 @@
 import {
     EvmProxyMsg,
-    RawSender,
     TacSdk,
     TacSDKTonClientParams,
     Network,
     AssetBridgingData,
-    startTracking
+    startTracking,
+    SenderFactory,
 } from '../src';
 import 'dotenv/config';
+
+const WALLET_VERSION = "v4";
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
@@ -25,8 +27,11 @@ const bridgeTonSawSender = async (amount: number) => {
 
     // create sender abstraction
     const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
-    const sender = new RawSender(mnemonic);
-
+    const sender = await SenderFactory.getSender({
+        version: WALLET_VERSION,
+        mnemonic,
+    });
+    
     // create JettonTransferData (transfer jetton in TVM to swap)
     const assets: AssetBridgingData[] = [{
         amount: amount

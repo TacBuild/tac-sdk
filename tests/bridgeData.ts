@@ -1,10 +1,12 @@
 import {startTracking} from '../src';
-import {RawSender, TacSdk} from '../src';
+import {SenderFactory, TacSdk} from '../src';
 import {EvmProxyMsg, TacSDKTonClientParams, Network} from '../src';
 import 'dotenv/config';
 import {ethers} from "ethers";
 
-const bridgeDataSawSender = async () => {
+const WALLET_VERSION = "v4";
+
+const bridgeDataRawSender = async () => {
     // create TacSdk
     const tonClientParams: TacSDKTonClientParams = {
         network: Network.Testnet,
@@ -27,7 +29,10 @@ const bridgeDataSawSender = async () => {
 
     // create sender abstraction
     const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
-    const sender = new RawSender(mnemonic);
+    const sender = await SenderFactory.getSender({
+        version: WALLET_VERSION,
+        mnemonic,
+      });
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender);
 };
@@ -35,7 +40,7 @@ const bridgeDataSawSender = async () => {
 async function main() {
     try {
         // send transaction
-        const result = await bridgeDataSawSender();
+        const result = await bridgeDataRawSender();
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
