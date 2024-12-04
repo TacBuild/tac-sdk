@@ -49,7 +49,7 @@ export function generateTransactionLinker(caller: string, shardCount: number): T
 }
 
 export function validateTVMAddress(address: string): void {
-    if (!Address.isAddress(address)) {
+    if (!Address.isAddress(Address.parse((address)))) {
         throw new Error('invalid tvm address');
     }
 }
