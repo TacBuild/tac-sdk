@@ -1,8 +1,8 @@
-import {Address, beginCell, Cell} from '@ton/core';
-import type {Contract, ContractProvider} from '@ton/core';
-import {fromNano} from '@ton/ton';
-import {readJettonMetadata} from './ContentUtils';
-import type {JettonExtendedMetadata} from './ContentUtils';
+import { Address, beginCell, Cell } from '@ton/core';
+import type { Contract, ContractProvider } from '@ton/core';
+import { fromNano } from '@ton/ton';
+import { readJettonMetadata } from './ContentUtils';
+import type { JettonExtendedMetadata } from './ContentUtils';
 
 export type JettonMasterData = {
     totalSupply: number;
@@ -10,7 +10,7 @@ export type JettonMasterData = {
     adminAddress: string;
     content: JettonExtendedMetadata;
     jettonWalletCode: Cell;
-}
+};
 
 export class JettonMaster implements Contract {
     static create(address: Address) {
@@ -24,10 +24,12 @@ export class JettonMaster implements Contract {
     }
 
     async getWalletAddress(provider: ContractProvider, owner: string) {
-        const res = await provider.get('get_wallet_address', [{
-            type: 'slice',
-            cell: beginCell().storeAddress(Address.parse(owner)).endCell()
-        }]);
+        const res = await provider.get('get_wallet_address', [
+            {
+                type: 'slice',
+                cell: beginCell().storeAddress(Address.parse(owner)).endCell(),
+            },
+        ]);
         return res.stack.readAddress().toString();
     }
 
@@ -43,7 +45,7 @@ export class JettonMaster implements Contract {
             mintable,
             adminAddress,
             content,
-            jettonWalletCode
+            jettonWalletCode,
         };
     }
 

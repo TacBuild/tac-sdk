@@ -1,7 +1,7 @@
 // noinspection TypeScriptValidateTypes
 
-import {beginCell, Builder, Cell, Dictionary, Slice} from '@ton/core';
-import {Sha256} from '@aws-crypto/sha256-js';
+import { beginCell, Builder, Cell, Dictionary, Slice } from '@ton/core';
+import { Sha256 } from '@aws-crypto/sha256-js';
 import axios from 'axios';
 import BN from 'bn.js';
 
@@ -24,14 +24,11 @@ export type JettonExtendedMetadata = {
     persistenceType: persistenceType;
     metadata: { [s in JettonMetaDataKeys]?: string };
     isJettonDeployerFaultyOnChainData?: boolean;
-    contentUri?: any;
-}
+    contentUri?: string;
+};
 
 export function buildJettonOffChainMetadata(contentUri: string) {
-    return beginCell()
-        .storeInt(OFFCHAIN_CONTENT_PREFIX, 8)
-        .storeBuffer(Buffer.from(contentUri, 'ascii'))
-        .endCell();
+    return beginCell().storeInt(OFFCHAIN_CONTENT_PREFIX, 8).storeBuffer(Buffer.from(contentUri, 'ascii')).endCell();
 }
 
 export type JettonMetaDataKeys = 'uri' | 'name' | 'description' | 'image' | 'symbol' | 'image_data' | 'decimals';
@@ -45,7 +42,7 @@ const jettonOnChainMetadataSpec: {
     image: 'ascii',
     image_data: 'ascii',
     symbol: 'utf8',
-    decimals: 'utf8'
+    decimals: 'utf8',
 };
 
 const sha256 = (str: string) => {
@@ -84,7 +81,10 @@ export function buildJettonOnchainMetadata(data: JettonMetadata) {
         dict.set(sha256(k), storeSnakeContent(bufferToStore, true));
     });
 
-    return beginCell().storeInt(ONCHAIN_CONTENT_PREFIX, 8).storeDict(dict, Dictionary.Keys.Buffer(32), Dictionary.Values.Cell()).endCell();
+    return beginCell()
+        .storeInt(ONCHAIN_CONTENT_PREFIX, 8)
+        .storeDict(dict, Dictionary.Keys.Buffer(32), Dictionary.Values.Cell())
+        .endCell();
 }
 
 function readSnakeContent(slice: Slice, isFirst: boolean): Buffer {
@@ -125,7 +125,7 @@ function parseJettonOnchainMetadata(contentSlice: Slice): {
 
     const dict = new Map<bigint, Buffer>();
 
-    cellDict.values().forEach((item, index, _) => {
+    cellDict.values().forEach((item, index) => {
         dict.set(cellDict.keys()[index], readSnakeContent(item.beginParse(), true));
     });
 
@@ -142,14 +142,14 @@ function parseJettonOnchainMetadata(contentSlice: Slice): {
 
     return {
         metadata: res,
-        isJettonDeployerFaultyOnChainData
+        isJettonDeployerFaultyOnChainData,
     };
 }
 
 async function parseJettonOffchainMetadata(contentSlice: Slice): Promise<{
     metadata: { [s in JettonMetaDataKeys]?: string };
     isIpfs: boolean | null;
-    contentUri: string
+    contentUri: string;
 }> {
     const remainingBits = contentSlice.remainingBits;
 
@@ -167,12 +167,13 @@ async function parseJettonOffchainMetadata(contentSlice: Slice): Promise<{
     try {
         metadata = (await axios.get(jsonURI)).data;
         isIpfs = /(^|\/)ipfs[.:]/.test(jsonURI);
-    } catch (e) {
+    } catch {
+        // nothing
     }
     return {
         metadata,
         isIpfs,
-        contentUri: jsonURI
+        contentUri: jsonURI,
     };
 }
 
@@ -184,7 +185,7 @@ export async function readJettonMetadata(contentCell: Cell): Promise<JettonExten
             contentUri: undefined,
             isJettonDeployerFaultyOnChainData: false,
             metadata: {},
-            persistenceType: 'none'
+            persistenceType: 'none',
         };
     }
     const contentSlice = contentCell.beginParse();
@@ -192,15 +193,16 @@ export async function readJettonMetadata(contentCell: Cell): Promise<JettonExten
         case ONCHAIN_CONTENT_PREFIX:
             return {
                 persistenceType: 'onchain',
-                ...parseJettonOnchainMetadata(contentSlice)
+                ...parseJettonOnchainMetadata(contentSlice),
             };
-        case OFFCHAIN_CONTENT_PREFIX:
-            const {metadata, isIpfs, contentUri} = await parseJettonOffchainMetadata(contentSlice);
+        case OFFCHAIN_CONTENT_PREFIX: {
+            const { metadata, isIpfs, contentUri } = await parseJettonOffchainMetadata(contentSlice);
             return {
                 persistenceType: isIpfs ? 'offchain_ipfs' : 'offchain_private_domain',
                 contentUri,
-                metadata
+                metadata,
             };
+        }
         default:
             throw new Error('Unexpected wrappers metadata content prefix');
     }

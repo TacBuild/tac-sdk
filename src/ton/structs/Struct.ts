@@ -1,9 +1,9 @@
-import {Cell} from '@ton/ton';
-import type {TonClientParameters} from '@ton/ton';
+import { Cell } from '@ton/ton';
+import type { TonClientParameters } from '@ton/ton';
 
 export enum Network {
     Testnet = 'testnet',
-    Mainnet = 'mainnet'
+    Mainnet = 'mainnet',
 }
 
 export enum SimplifiedStatuses {
@@ -33,55 +33,54 @@ export type TacSDKTonClientParams = {
      * Custom address of tvm settings contract. Use only for tests.
      */
     settingsAddress?: string;
-}
-
+};
 
 export type AssetBridgingData = {
-    amount: number
-    address?: string
-}
+    amount: number;
+    address?: string;
+};
 
 export type JettonBridgingData = AssetBridgingData & {
-    address: string
-}
+    address: string;
+};
 
 export type JettonTransferData = JettonBridgingData;
 
 export type JettonBurnData = JettonBridgingData & {
-    notificationReceiverAddress: string,
-}
+    notificationReceiverAddress: string;
+};
 
 export type EvmProxyMsg = {
-    evmTargetAddress: string,
-    methodName?: string,
-    encodedParameters?: string,
-}
+    evmTargetAddress: string;
+    methodName?: string;
+    encodedParameters?: string;
+};
 
 export type TransactionLinker = {
-    caller: string,
-    shardCount: number,
-    shardedId: string,
-    timestamp: number,
-}
+    caller: string;
+    shardCount: number;
+    shardedId: string;
+    timestamp: number;
+};
 
 export type ShardMessage = {
-    address: string,
-    value: number,
-    payload: Cell,
-}
+    address: string;
+    value: number;
+    payload: Cell;
+};
 
 export type ShardTransaction = {
-    validUntil: number,
-    messages: ShardMessage[],
-    network: Network,
-}
+    validUntil: number;
+    messages: ShardMessage[];
+    network: Network;
+};
 
 export enum AssetOpType {
     JettonBurn = 'JettonBurn',
-    JettonTransfer = 'JettonTransfer'
+    JettonTransfer = 'JettonTransfer',
 }
 
 export type RandomNumberByTimestamp = {
-    timestamp: number,
-    randomNumber: number
-}
+    timestamp: number;
+    randomNumber: number;
+};

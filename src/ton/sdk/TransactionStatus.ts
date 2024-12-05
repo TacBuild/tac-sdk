@@ -1,7 +1,7 @@
 import axios from 'axios';
-import type {TransactionLinker} from '../structs/Struct';
-import {SimplifiedStatuses} from '../structs/Struct';
-import {PUBLIC_LITE_SEQUENCER_ENDPOINTS} from "./Consts";
+import type { TransactionLinker } from '../structs/Struct';
+import { SimplifiedStatuses } from '../structs/Struct';
+import { PUBLIC_LITE_SEQUENCER_ENDPOINTS } from './Consts';
 
 export class TransactionStatus {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
@@ -25,8 +25,8 @@ export class TransactionStatus {
                         shardedId: transactionLinker.shardedId,
                         caller: transactionLinker.caller,
                         shardCount: transactionLinker.shardCount,
-                        timestamp: transactionLinker.timestamp
-                    }
+                        timestamp: transactionLinker.timestamp,
+                    },
                 });
                 return response.data.response || '';
             } catch (error) {
@@ -44,7 +44,7 @@ export class TransactionStatus {
         for (const endpoint of endpoints) {
             try {
                 const response = await axios.get(`${endpoint}/status`, {
-                    params: {operationId: operationId}
+                    params: { operationId: operationId },
                 });
                 return response.data.response || '';
             } catch (error) {
@@ -54,9 +54,12 @@ export class TransactionStatus {
         throw new Error('Failed to fetch status transaction');
     }
 
-    async getSimplifiedTransactionStatus(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<SimplifiedStatuses> {
-        const operationId = await this.getOperationId(transactionLinker)
-        if (operationId == "") {
+    async getSimplifiedTransactionStatus(
+        transactionLinker: TransactionLinker,
+        isBridgeOperation: boolean = false,
+    ): Promise<SimplifiedStatuses> {
+        const operationId = await this.getOperationId(transactionLinker);
+        if (operationId == '') {
             return SimplifiedStatuses.OperationIdNotFound;
         }
 
@@ -67,5 +70,5 @@ export class TransactionStatus {
         }
 
         return SimplifiedStatuses.Pending;
-    };
+    }
 }

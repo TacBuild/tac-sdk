@@ -1,29 +1,17 @@
-import {
-    Address,
-    beginCell,
-    Cell,
-    contractAddress,
-    fromNano,
-    SendMode,
-    toNano
-} from '@ton/core';
+import { Address, beginCell, Cell, contractAddress, fromNano, SendMode, toNano } from '@ton/core';
 
-import type {
-    Contract,
-    ContractProvider,
-    Sender
-} from '@ton/core';
+import type { Contract, ContractProvider, Sender } from '@ton/core';
 
 export type JettonWalletData = {
     balance: number;
     ownerAddress: string;
     jettonMasterAddress: string;
     jettonWalletCode: Cell;
-}
+};
 
 export enum JettonWalletOpCodes {
-    burn = 0x595F07BC,
-    transfer = 0xF8A7EA5,
+    burn = 0x595f07bc,
+    transfer = 0xf8a7ea5,
 }
 
 export function jettonWalletConfigToCell(config: JettonWalletData): Cell {
@@ -37,9 +25,8 @@ export function jettonWalletConfigToCell(config: JettonWalletData): Cell {
 export class JettonWallet implements Contract {
     constructor(
         readonly address: Address,
-        readonly init?: { code: Cell, data: Cell }
-    ) {
-    }
+        readonly init?: { code: Cell; data: Cell },
+    ) {}
 
     static createFromAddress(address: Address) {
         return new JettonWallet(address);
@@ -47,7 +34,7 @@ export class JettonWallet implements Contract {
 
     static createFromConfig(config: JettonWalletData, code: Cell, workchain = 0) {
         const data = jettonWalletConfigToCell(config);
-        const init = {code, data};
+        const init = { code, data };
         return new JettonWallet(contractAddress(workchain, init), init);
     }
 
@@ -56,9 +43,9 @@ export class JettonWallet implements Contract {
         receiverAddress?: string,
         crossChainTonAmount?: number,
         crossChainPayload?: Cell | null,
-        queryId?: number
+        queryId?: number,
     ) {
-        let body = beginCell()
+        const body = beginCell()
             .storeUint(JettonWalletOpCodes.burn, 32)
             .storeUint(queryId || 0, 64)
             .storeCoins(toNano(jettonAmount.toFixed(9)))
@@ -69,10 +56,10 @@ export class JettonWallet implements Contract {
                 beginCell()
                     .storeCoins(toNano(crossChainTonAmount?.toFixed(9) ?? 0))
                     .storeMaybeRef(crossChainPayload)
-                    .endCell()
+                    .endCell(),
             );
         } else {
-            body.storeMaybeRef(null)
+            body.storeMaybeRef(null);
         }
 
         return body.endCell();
@@ -88,14 +75,14 @@ export class JettonWallet implements Contract {
             receiverAddress?: string;
             crossChainTonAmount?: number;
             crossChainPayload?: Cell | null;
-        }
+        },
     ) {
         const body = JettonWallet.burnMessage(
             opts.jettonAmount,
             opts.receiverAddress,
             opts.crossChainTonAmount,
             opts.crossChainPayload,
-            opts.queryId
+            opts.queryId,
         );
 
         await provider.internal(via, {
@@ -112,7 +99,7 @@ export class JettonWallet implements Contract {
         forwardTonAmount?: number,
         crossChainTonAmount?: number,
         crossChainPayload?: Cell | null,
-        queryId?: number
+        queryId?: number,
     ) {
         return beginCell()
             .storeUint(JettonWalletOpCodes.transfer, 32)
@@ -139,7 +126,7 @@ export class JettonWallet implements Contract {
             customPayload?: Cell | null;
             forwardTonAmount?: number;
             forwardPayload?: Cell | null;
-        }
+        },
     ) {
         await provider.internal(via, {
             value,
@@ -153,7 +140,7 @@ export class JettonWallet implements Contract {
                 .storeMaybeRef(opts.customPayload)
                 .storeCoins(toNano(opts.forwardTonAmount?.toFixed(9) || 0))
                 .storeMaybeRef(opts.forwardPayload)
-                .endCell()
+                .endCell(),
         });
     }
 
@@ -163,7 +150,7 @@ export class JettonWallet implements Contract {
             balance: Number(fromNano(result.stack.readBigNumber())),
             ownerAddress: result.stack.readAddress().toString(),
             jettonMasterAddress: result.stack.readAddress().toString(),
-            jettonWalletCode: result.stack.readCell()
+            jettonWalletCode: result.stack.readCell(),
         };
     }
 

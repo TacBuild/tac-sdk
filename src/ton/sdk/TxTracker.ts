@@ -1,9 +1,12 @@
-import {TransactionLinker} from "../structs/Struct";
-import {TransactionStatus} from "./TransactionStatus";
-import {sleep} from "./Utils";
-import {MAX_ITERATION_COUNT} from "./Consts";
+import { TransactionLinker } from '../structs/Struct';
+import { TransactionStatus } from './TransactionStatus';
+import { sleep } from './Utils';
+import { MAX_ITERATION_COUNT } from './Consts';
 
-export async function startTracking(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<void> {
+export async function startTracking(
+    transactionLinker: TransactionLinker,
+    isBridgeOperation: boolean = false,
+): Promise<void> {
     const tracker = new TransactionStatus();
 
     console.log('Start tracking transaction');
@@ -12,13 +15,12 @@ export async function startTracking(transactionLinker: TransactionLinker, isBrid
     console.log('shardCount: ', transactionLinker.shardCount);
     console.log('timestamp: ', transactionLinker.timestamp);
 
-    var operationId = '';
-    var currentStatus = '';
-    var iteration = 0; // number of iterations
-    var ok = true; // finished successfully
+    let operationId = '';
+    let currentStatus = '';
+    let iteration = 0; // number of iterations
+    let ok = true; // finished successfully
 
     while (true) {
-
         ++iteration;
         if (iteration >= MAX_ITERATION_COUNT) {
             ok = false;
