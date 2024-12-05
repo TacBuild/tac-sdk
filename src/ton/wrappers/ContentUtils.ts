@@ -28,20 +28,10 @@ export type JettonExtendedMetadata = {
 };
 
 export function buildJettonOffChainMetadata(contentUri: string) {
-  return beginCell()
-    .storeInt(OFFCHAIN_CONTENT_PREFIX, 8)
-    .storeBuffer(Buffer.from(contentUri, 'ascii'))
-    .endCell();
+  return beginCell().storeInt(OFFCHAIN_CONTENT_PREFIX, 8).storeBuffer(Buffer.from(contentUri, 'ascii')).endCell();
 }
 
-export type JettonMetaDataKeys =
-  | 'uri'
-  | 'name'
-  | 'description'
-  | 'image'
-  | 'symbol'
-  | 'image_data'
-  | 'decimals';
+export type JettonMetaDataKeys = 'uri' | 'name' | 'description' | 'image' | 'symbol' | 'image_data' | 'decimals';
 
 const jettonOnChainMetadataSpec: {
   [key in JettonMetaDataKeys]: 'utf8' | 'ascii' | undefined;
@@ -86,10 +76,7 @@ export function buildJettonOnchainMetadata(data: JettonMetadata) {
       return;
     }
 
-    const bufferToStore = Buffer.from(
-      v,
-      jettonOnChainMetadataSpec[k as JettonMetaDataKeys],
-    );
+    const bufferToStore = Buffer.from(v, jettonOnChainMetadataSpec[k as JettonMetaDataKeys]);
 
     dict.set(sha256(k), storeSnakeContent(bufferToStore, true));
   });
@@ -117,10 +104,7 @@ function readSnakeContent(slice: Slice, isFirst: boolean): Buffer {
 
   if (slice.remainingRefs != 0) {
     const newCell = slice.loadRef();
-    remainingBytes = Buffer.concat([
-      remainingBytes,
-      readSnakeContent(newCell.beginParse(), false),
-    ]);
+    remainingBytes = Buffer.concat([remainingBytes, readSnakeContent(newCell.beginParse(), false)]);
   }
   return remainingBytes;
 }
@@ -137,10 +121,7 @@ function parseJettonOnchainMetadata(contentSlice: Slice): {
 
   const isJettonDeployerFaultyOnChainData = false;
 
-  const cellDict = contentSlice.loadDict(
-    Dictionary.Keys.BigUint(256),
-    Dictionary.Values.Cell(),
-  );
+  const cellDict = contentSlice.loadDict(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
 
   const dict = new Map<bigint, Buffer>();
 
@@ -196,15 +177,9 @@ async function parseJettonOffchainMetadata(contentSlice: Slice): Promise<{
   };
 }
 
-export type persistenceType =
-  | 'none'
-  | 'onchain'
-  | 'offchain_private_domain'
-  | 'offchain_ipfs';
+export type persistenceType = 'none' | 'onchain' | 'offchain_private_domain' | 'offchain_ipfs';
 
-export async function readJettonMetadata(
-  contentCell: Cell,
-): Promise<JettonExtendedMetadata> {
+export async function readJettonMetadata(contentCell: Cell): Promise<JettonExtendedMetadata> {
   if (contentCell.bits.length <= 0) {
     return {
       contentUri: undefined,
@@ -221,8 +196,7 @@ export async function readJettonMetadata(
         ...parseJettonOnchainMetadata(contentSlice),
       };
     case OFFCHAIN_CONTENT_PREFIX: {
-      const { metadata, isIpfs, contentUri } =
-        await parseJettonOffchainMetadata(contentSlice);
+      const { metadata, isIpfs, contentUri } = await parseJettonOffchainMetadata(contentSlice);
       return {
         persistenceType: isIpfs ? 'offchain_ipfs' : 'offchain_private_domain',
         contentUri,

@@ -28,9 +28,7 @@ export async function startTracking(
     }
 
     console.log();
-    const finalStatus = isBridgeOperation
-      ? tracker.BRIDGE_TERMINATED_STATUS
-      : tracker.TERMINATED_STATUS;
+    const finalStatus = isBridgeOperation ? tracker.BRIDGE_TERMINATED_STATUS : tracker.TERMINATED_STATUS;
     if (currentStatus == finalStatus) {
       break;
     }

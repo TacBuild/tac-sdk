@@ -1,12 +1,4 @@
-import {
-  Address,
-  beginCell,
-  Cell,
-  contractAddress,
-  fromNano,
-  SendMode,
-  toNano,
-} from '@ton/core';
+import { Address, beginCell, Cell, contractAddress, fromNano, SendMode, toNano } from '@ton/core';
 
 import type { Contract, ContractProvider, Sender } from '@ton/core';
 
@@ -144,9 +136,7 @@ export class JettonWallet implements Contract {
         .storeUint(opts.queryId || 0, 64)
         .storeCoins(toNano(opts.jettonAmount.toFixed(9)))
         .storeAddress(Address.parse(opts.toOwnerAddress))
-        .storeAddress(
-          opts.responseAddress ? Address.parse(opts.responseAddress) : null,
-        )
+        .storeAddress(opts.responseAddress ? Address.parse(opts.responseAddress) : null)
         .storeMaybeRef(opts.customPayload)
         .storeCoins(toNano(opts.forwardTonAmount?.toFixed(9) || 0))
         .storeMaybeRef(opts.forwardPayload)

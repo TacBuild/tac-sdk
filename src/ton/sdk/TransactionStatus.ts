@@ -48,10 +48,7 @@ export class TransactionStatus {
         });
         return response.data.response || '';
       } catch (error) {
-        console.error(
-          `Error fetching status transaction with ${endpoint}:`,
-          error,
-        );
+        console.error(`Error fetching status transaction with ${endpoint}:`, error);
       }
     }
     throw new Error('Failed to fetch status transaction');
@@ -67,9 +64,7 @@ export class TransactionStatus {
     }
 
     const status = await this.getStatusTransaction(operationId);
-    const finalStatus = isBridgeOperation
-      ? this.BRIDGE_TERMINATED_STATUS
-      : this.TERMINATED_STATUS;
+    const finalStatus = isBridgeOperation ? this.BRIDGE_TERMINATED_STATUS : this.TERMINATED_STATUS;
     if (status == finalStatus) {
       return SimplifiedStatuses.Successful;
     }

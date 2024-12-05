@@ -14,12 +14,7 @@ export class RawSender implements SenderAbstraction {
     return this.wallet.address.toString();
   }
 
-  async sendShardTransaction(
-    shardTransaction: ShardTransaction,
-    delay: number,
-    _chain: Network,
-    tonClient: TonClient,
-  ) {
+  async sendShardTransaction(shardTransaction: ShardTransaction, delay: number, _chain: Network, tonClient: TonClient) {
     const walletContract = tonClient.open(this.wallet);
     await sleep(delay * 1000);
     const seqno = await walletContract.getSeqno();

@@ -1,15 +1,9 @@
 import { TonClient } from '@ton/ton';
-import type {
-  Contract,
-  ContractProvider,
-  MessageRelaxed,
-  SendMode,
-} from '@ton/ton';
+import type { Contract, ContractProvider, MessageRelaxed, SendMode } from '@ton/ton';
 import { Network } from '../structs/Struct';
 import type { ShardTransaction } from '../structs/Struct';
 
-export const sleep = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface WalletInstance extends Contract {
   getSeqno(provider: ContractProvider): Promise<number>;

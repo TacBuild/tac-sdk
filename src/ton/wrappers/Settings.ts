@@ -29,18 +29,13 @@ export class Settings implements Contract {
     return cell ? cell.beginParse().loadAddress().toString() : '';
   }
 
-  async getCellSetting(
-    provider: ContractProvider,
-    setting: string,
-  ): Promise<Cell> {
+  async getCellSetting(provider: ContractProvider, setting: string): Promise<Cell> {
     const key = this.getKeyFromString(setting);
     const { stack } = await provider.get('get', [{ type: 'int', value: key }]);
     const cell = stack.readCellOpt();
     const found = stack.readBoolean();
     if (!found || cell == null) {
-      throw new Error(
-        `unexpected empty ${setting}. Make sure the settings contract is valid.`,
-      );
+      throw new Error(`unexpected empty ${setting}. Make sure the settings contract is valid.`);
     }
     return cell;
   }

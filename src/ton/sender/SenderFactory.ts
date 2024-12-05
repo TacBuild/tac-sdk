@@ -15,16 +15,7 @@ import { RawSender } from './RawSender';
 import { TonConnectUI } from '@tonconnect/ui';
 import { TonConnectSender } from './TonConnectSender';
 
-export type WalletVersion =
-  | 'v1r1'
-  | 'v1r2'
-  | 'v1r3'
-  | 'v2r1'
-  | 'v2r2'
-  | 'v3r1'
-  | 'v3r2'
-  | 'v4'
-  | 'v5r1';
+export type WalletVersion = 'v1r1' | 'v1r2' | 'v1r3' | 'v2r1' | 'v2r2' | 'v3r1' | 'v3r2' | 'v4' | 'v5r1';
 
 const wallets = {
   v1r1: WalletContractV1R1,
