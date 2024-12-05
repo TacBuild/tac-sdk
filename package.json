@@ -5,13 +5,17 @@
   "author": "TAC. <developers@tac>",
   "license": "MIT",
   "main": "dist/index.js",
+  "type": "module",
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "rm -rf dist && tsc --declaration",
     "test": "jest --verbose --runInBand",
-    "release": "yarn build && yarn release-it --npm.yarn1"
+    "release": "yarn build && yarn release-it --npm.yarn1",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "prettier": "prettier --ignore-path .gitignore --write \"./src/**/*.+(js|ts|json)\""
   },
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
@@ -24,11 +28,17 @@
   "keywords": [],
   "description": "",
   "devDependencies": {
+    "@eslint/js": "^9.16.0",
     "@release-it/keep-a-changelog": "^5.0.0",
     "@ton/core": "^0.59.0",
     "@ton/ton": "^15.1.0",
     "@types/bn.js": "^5.1.6",
-    "ts-node": "^10.9.2"
+    "eslint": "^9.16.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.17.0"
   },
   "publishConfig": {
     "access": "public",

@@ -1,10 +1,10 @@
-import { CHAIN, TonConnectUI } from "@tonconnect/ui";
-import type { SendTransactionRequest } from "@tonconnect/ui";
-import { toNano } from "@ton/ton";
-import { Base64 } from "@tonconnect/protocol";
-import { Network } from "../structs/Struct";
-import type { ShardTransaction } from "../structs/Struct";
-import { SenderAbstraction, sleep } from "./SenderAbstraction";
+import { CHAIN, TonConnectUI } from '@tonconnect/ui';
+import type { SendTransactionRequest } from '@tonconnect/ui';
+import { toNano } from '@ton/ton';
+import { Base64 } from '@tonconnect/protocol';
+import { Network } from '../structs/Struct';
+import type { ShardTransaction } from '../structs/Struct';
+import { SenderAbstraction, sleep } from './SenderAbstraction';
 
 export class TonConnectSender implements SenderAbstraction {
   readonly tonConnect: TonConnectUI;
@@ -14,13 +14,13 @@ export class TonConnectSender implements SenderAbstraction {
   }
 
   getSenderAddress(): string {
-    return this.tonConnect.account?.address?.toString() || "";
+    return this.tonConnect.account?.address?.toString() || '';
   }
 
   async sendShardTransaction(
     shardTransaction: ShardTransaction,
     delay: number,
-    chain: Network
+    chain: Network,
   ) {
     const messages = [];
     for (const message of shardTransaction.messages) {

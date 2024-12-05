@@ -8,7 +8,6 @@ import {
     EvmProxyMsg,
     AssetBridgingData,
     startTracking,
-    WalletVersion
 } from '../src';
 import 'dotenv/config';
 
@@ -30,7 +29,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
     const tacSdk = new TacSdk(tonClientParams);
     await tacSdk.init();
 
-    var amountIn = 0;
+    let amountIn = 0;
     for (const amount of amountsIn) {
         amountIn += amount;
     }

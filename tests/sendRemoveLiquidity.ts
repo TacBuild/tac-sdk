@@ -7,7 +7,6 @@ import {
     TacSdk,
     SenderFactory,
     startTracking,
-    WalletVersion,
 } from "../src";
 
 const UNISWAPV2_PROXY_ADDRESS = "";
