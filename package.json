@@ -48,6 +48,9 @@
       "@release-it/keep-a-changelog": {
         "filename": "CHANGELOG.md"
       }
+    },
+    "npm": {
+      "publish": false
     }
   }
 }
