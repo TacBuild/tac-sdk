@@ -1,4 +1,4 @@
-import { Address, beginCell, Cell } from '@ton/core';
+import { Address, beginCell, Cell, contractAddress } from '@ton/core';
 import type { Contract, ContractProvider } from '@ton/core';
 import { fromNano } from '@ton/ton';
 import { readJettonMetadata } from './ContentUtils';
@@ -51,6 +51,24 @@ export class JettonMaster implements Contract {
 
     async getL2Address(provider: ContractProvider): Promise<string> {
         const result = await provider.get('get_l2_token_address', []);
-        return result.stack.readAddressOpt()?.toString() || '';
+        return result.stack.readString();
+    }
+
+    static calculateAddress(
+        evmAddress: string,
+        cclAddress: Address,
+        code: Cell,
+        walletCode: Cell,
+        workchain = 0,
+    ): string {
+        const data = beginCell()
+            .storeCoins(0)
+            .storeAddress(cclAddress)
+            .storeRef(beginCell().endCell())
+            .storeRef(walletCode)
+            .storeStringTail(evmAddress)
+            .endCell();
+
+        return contractAddress(workchain, { data, code }).toString();
     }
 }

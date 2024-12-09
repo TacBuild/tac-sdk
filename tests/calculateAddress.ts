@@ -1,3 +1,4 @@
+import { address } from "@ton/core";
 import { TacSdk } from "../src";
 import { Network, TacSDKTonClientParams } from "../src";
 
@@ -11,11 +12,22 @@ async function main() {
 
   const tvmTokenAddress = "EQBVRbJQ4ihedlSI10NzufGfrxGES_rwnRg3ynKsHd-zOPLM";
 
+  // Calculate EVM Token based on TVM Token
   const evmTokenAddress = await tacSdk.getEVMTokenAddress(
     tvmTokenAddress
   );
 
   console.log(evmTokenAddress);
+
+  // Calculate TVM Token based on EVM Token
+  const tvmTokenAddressCalculated = await tacSdk.getTVMTokenAddress(
+    evmTokenAddress
+  );
+
+  console.log(tvmTokenAddressCalculated);
+
+  // Making sure that initial and final addresses are equal
+  console.log(`Addresses equal: ${address(tvmTokenAddress).equals(address(tvmTokenAddressCalculated))}`);
 }
 
 main();

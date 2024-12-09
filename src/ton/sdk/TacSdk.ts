@@ -26,12 +26,14 @@ import {
 } from '../structs/Struct';
 import { ethers } from 'ethers';
 import ITokenUtils from '../../abi/ITokenUtils.json';
+import CrossChainLayerToken from '../../abi/CrossChainLayerToken.json';
 import {
     buildEvmDataCell,
     calculateContractAddress,
     generateRandomNumberByTimestamp,
     generateTransactionLinker,
     sleep,
+    validateEVMAddress,
     validateTVMAddress,
 } from './Utils';
 import {
@@ -323,5 +325,29 @@ export class TacSdk {
         );
 
         return await tokenUtilsContract.computeAddress(tvmTokenAddress, TAC_SETTINGS_ADDRESS);
+    }
+
+    async getTVMTokenAddress(evmTokenAddress: string): Promise<string> {
+        if (!this.isInited) {
+            await this.init();
+        }
+
+        validateEVMAddress(evmTokenAddress);
+
+        const provider = ethers.getDefaultProvider(TAC_RPC_ENDPOINT);
+        const bytecode = await provider.getCode(evmTokenAddress);
+
+        if (bytecode.includes(ethers.id('getInfo()').slice(2, 10))) { // 
+            const contract = new ethers.Contract(evmTokenAddress, CrossChainLayerToken.abi, provider);
+            const info = await contract.getInfo.staticCall();
+            return info.l1Address;
+        }
+
+        return JettonMaster.calculateAddress(
+            evmTokenAddress,
+            address(this.crossChainLayerAddress),
+            this.jettonMinterCode,
+            this.jettonWalletCode,
+        );
     }
 }
