@@ -1,5 +1,15 @@
 import { Cell } from '@ton/ton';
-import type { TonClientParameters } from '@ton/ton';
+import type { Address, Contract, OpenedContract, TonClientParameters } from '@ton/ton';
+import { SandboxContract } from '@ton/sandbox';
+
+export interface ContractOpener {
+    open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
+    getContractState(address: Address): Promise<{
+        balance: bigint;
+        state: 'active' | 'uninitialized' | 'frozen';
+        code: Buffer | null;
+    }>;
+}
 
 export enum Network {
     Testnet = 'testnet',
@@ -14,6 +24,11 @@ export enum SimplifiedStatuses {
 }
 
 export type TacSDKTonClientParams = {
+    /**
+     * Provider to use instead of TonClient
+     */
+    contractOpener?: ContractOpener;
+
     /**
      * TON CHAIN
      */

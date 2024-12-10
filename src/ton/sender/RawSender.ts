@@ -1,7 +1,7 @@
 import { internal, TonClient } from '@ton/ton';
 import { MessageRelaxed, SendMode } from '@ton/ton';
 import { Network } from '../structs/Struct';
-import type { ShardTransaction } from '../structs/Struct';
+import type { ContractOpener, ShardTransaction } from '../structs/Struct';
 import { SenderAbstraction, sleep, WalletInstance } from './SenderAbstraction';
 
 export class RawSender implements SenderAbstraction {
@@ -18,9 +18,9 @@ export class RawSender implements SenderAbstraction {
         shardTransaction: ShardTransaction,
         delay: number,
         _chain: Network,
-        tonClient: TonClient,
+        contractOpener: ContractOpener,
     ) {
-        const walletContract = tonClient.open(this.wallet);
+        const walletContract = contractOpener.open(this.wallet);
         await sleep(delay * 1000);
         const seqno = await walletContract.getSeqno();
 
