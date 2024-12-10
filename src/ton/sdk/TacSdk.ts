@@ -7,7 +7,6 @@ import { JettonWallet } from '../wrappers/JettonWallet';
 // ton settings
 import { Settings } from '../wrappers/Settings';
 
-// sender abstraction(tonconnect or mnemonic V3R2)
 import type { SenderAbstraction } from '../sender/SenderAbstraction';
 
 // import structs
