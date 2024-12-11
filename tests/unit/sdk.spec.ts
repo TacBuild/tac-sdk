@@ -3,7 +3,7 @@ import * as Contracts from '../build';
 import { Blockchain, SandboxContract, toSandboxContract, TreasuryContract } from '@ton/sandbox';
 import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
 
-import { CrossChainLayer } from '../wrappers/CrossChainLayer';
+import { CrossChainLayer, CrossChainLayerOpCodes } from '../wrappers/CrossChainLayer';
 import { JettonProxy } from '../wrappers/JettonProxy';
 import { JettonMinter } from '../wrappers/JettonMinter';
 import { Settings } from '../wrappers/Settings';
@@ -215,7 +215,14 @@ describe('TacSDK', () => {
 
         await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
 
-        await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets);
+        const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets);
+
+        expect((sendTransactionResult as any).transactions).toHaveTransaction({
+            from: address(rawSender.getSenderAddress()),
+            to: crossChainLayer.address,
+            success: true,
+            op: CrossChainLayerOpCodes.anyone_l1MsgToL2,
+        });
 
         expect((await crossChainLayer.getFullData()).feeSupply).toBe(feeSupply);
     });

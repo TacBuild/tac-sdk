@@ -25,6 +25,6 @@ export interface SenderAbstraction {
         delay: number,
         chain?: Network,
         contractOpener?: ContractOpener,
-    ): Promise<void>;
+    ): Promise<unknown>;
     getSenderAddress(): string;
 }

@@ -37,7 +37,7 @@ export class RawSender implements SenderAbstraction {
         }
 
         await sleep(delay * 1000);
-        await walletContract.sendTransfer({
+        return await walletContract.sendTransfer({
             seqno,
             secretKey: this.secretKey,
             messages,

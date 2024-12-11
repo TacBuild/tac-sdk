@@ -307,8 +307,13 @@ export class TacSdk {
         };
 
         console.log('*****Sending transaction: ', transaction);
-        await sender.sendShardTransaction(transaction, this.delay, this.network, this.contractOpener);
-        return transactionLinker;
+        const sendTransactionResult = await sender.sendShardTransaction(
+            transaction,
+            this.delay,
+            this.network,
+            this.contractOpener,
+        );
+        return { sendTransactionResult, ...transactionLinker };
     }
 
     async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {

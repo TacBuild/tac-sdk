@@ -76,6 +76,7 @@ export type TransactionLinker = {
     shardCount: number;
     shardedId: string;
     timestamp: number;
+    sendTransactionResult?: unknown;
 };
 
 export type ShardMessage = {
