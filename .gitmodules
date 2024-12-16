@@ -1,0 +1,3 @@
+[submodule "l1_tvm_ton"]
+	path = l1_tvm_ton
+	url = https://gitlab.com/ton-app-chain/tac/smart-contracts/l1_tvm_ton

@@ -6,19 +6,26 @@ import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
 import { EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
-import * as Contracts from '../build';
-import { CrossChainLayer, CrossChainLayerOpCodes } from '../wrappers/CrossChainLayer';
-import { JettonMinter } from '../wrappers/JettonMinter';
-import { JettonProxy } from '../wrappers/JettonProxy';
-import { Settings } from '../wrappers/Settings';
+
+import CrossChainLayerCompiled from '../../l1_tvm_ton/build/CrossChainLayer.compiled.json';
+import ExecutorCompiled from '../../l1_tvm_ton/build/Executor.compiled.json';
+import JettonMinterCompiled from '../../l1_tvm_ton/build/JettonMinter.compiled.json';
+import JettonWalletCompiled from '../../l1_tvm_ton/build/JettonWallet.compiled.json';
+import JettonProxyCompiled from '../../l1_tvm_ton/build/JettonProxy.compiled.json';
+import SettingsCompiled from '../../l1_tvm_ton/build/Settings.compiled.json';
+
+import { CrossChainLayer, CrossChainLayerOpCodes } from '../../l1_tvm_ton/wrappers/CrossChainLayer';
+import { JettonMinter } from '../../l1_tvm_ton/wrappers/JettonMinter';
+import { JettonProxy } from '../../l1_tvm_ton/wrappers/JettonProxy';
+import { Settings } from '../../l1_tvm_ton/wrappers/Settings';
 
 describe('TacSDK', () => {
-    const CrossChainLayerCode = Cell.fromHex(Contracts.CrossChainLayerHex);
-    const ExecutorCode = Cell.fromHex(Contracts.ExecutorHex);
-    const JettonMinterCode = Cell.fromHex(Contracts.JettonMinterHex);
-    const JettonWalletCode = Cell.fromHex(Contracts.JettonWalletHex);
-    const JettonProxyCode = Cell.fromHex(Contracts.JettonProxyHex);
-    const SettingsCode = Cell.fromHex(Contracts.SettingsHex);
+    const CrossChainLayerCode = Cell.fromHex(CrossChainLayerCompiled.hex);
+    const ExecutorCode = Cell.fromHex(ExecutorCompiled.hex);
+    const JettonMinterCode = Cell.fromHex(JettonMinterCompiled.hex);
+    const JettonWalletCode = Cell.fromHex(JettonWalletCompiled.hex);
+    const JettonProxyCode = Cell.fromHex(JettonProxyCompiled.hex);
+    const SettingsCode = Cell.fromHex(SettingsCompiled.hex);
 
     let blockchain: Blockchain;
     let initialState: BlockchainSnapshot;
@@ -102,14 +109,20 @@ describe('TacSDK', () => {
         );
         const deployResult = await settings.sendDeploy(admin.getSender(), toNano(0.05));
         expect(deployResult.transactions).toHaveTransaction({
+            from: admin.address,
             to: settings.address,
             deploy: true,
             success: true,
         });
 
-        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+        const res = await settings.sendSetValue(admin.getSender(), toNano(0.1), {
             key: getKeyFromString('JettonProxyAddress'),
             value: beginCell().storeAddress(jettonProxy.address).endCell(),
+        });
+        expect(res.transactions).toHaveTransaction({
+            from: admin.address,
+            to: settings.address,
+            success: true,
         });
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
             key: getKeyFromString('CrossChainLayerAddress'),
@@ -182,6 +195,7 @@ describe('TacSDK', () => {
             settingsAddress: settings.address.toString(),
             tonClientParameters: { endpoint: '' },
         });
+
         initialState = blockchain.snapshot();
     });
 
