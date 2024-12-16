@@ -1,3 +1,5 @@
+import { fromNano } from '@ton/core';
+import { Maybe } from '@ton/core/dist/utils/maybe';
 import {
     Address,
     beginCell,
@@ -9,9 +11,8 @@ import {
     SendMode,
     toNano,
 } from '@ton/ton';
-import { Maybe } from '@ton/core/dist/utils/maybe';
+
 import { CrossChainLayerOpCodes, OperationType } from './CrossChainLayer';
-import { fromNano } from '@ton/core';
 
 export const JettonMinterOpCodes = {
     Mint: 0xd7b9c06e,

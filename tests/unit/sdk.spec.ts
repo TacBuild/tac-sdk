@@ -1,19 +1,16 @@
-import * as Contracts from '../build';
-
-import { Blockchain, SandboxContract, toSandboxContract, TreasuryContract } from '@ton/sandbox';
-import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
-
-import { CrossChainLayer, CrossChainLayerOpCodes } from '../wrappers/CrossChainLayer';
-import { JettonProxy } from '../wrappers/JettonProxy';
-import { JettonMinter } from '../wrappers/JettonMinter';
-import { Settings } from '../wrappers/Settings';
-
-import { ethers } from 'ethers';
-
 import '@ton/test-utils';
 
-import { EvmProxyMsg, Network, SenderFactory, TacSdk } from '../../src';
+import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
+import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
+import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
+
+import { EvmProxyMsg, Network, SenderFactory, TacSdk } from '../../src';
+import * as Contracts from '../build';
+import { CrossChainLayer, CrossChainLayerOpCodes } from '../wrappers/CrossChainLayer';
+import { JettonMinter } from '../wrappers/JettonMinter';
+import { JettonProxy } from '../wrappers/JettonProxy';
+import { Settings } from '../wrappers/Settings';
 
 describe('TacSDK', () => {
     const CrossChainLayerCode = Cell.fromHex(Contracts.CrossChainLayerHex);

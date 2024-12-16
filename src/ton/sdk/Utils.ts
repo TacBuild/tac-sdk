@@ -1,6 +1,7 @@
-import { isAddress } from 'ethers';
-import { EvmProxyMsg, RandomNumberByTimestamp, TransactionLinker } from '../structs/Struct';
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
+import { isAddress } from 'ethers';
+
+import { EvmProxyMsg, RandomNumberByTimestamp, TransactionLinker } from '../structs/Struct';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

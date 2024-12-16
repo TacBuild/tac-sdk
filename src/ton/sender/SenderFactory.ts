@@ -9,10 +9,11 @@ import {
     WalletContractV4,
     WalletContractV5R1,
 } from '@ton/ton';
-import { SenderAbstraction } from './SenderAbstraction';
-import { mnemonicToWalletKey } from 'ton-crypto';
-import { RawSender } from './RawSender';
 import { TonConnectUI } from '@tonconnect/ui';
+import { mnemonicToWalletKey } from 'ton-crypto';
+
+import { RawSender } from './RawSender';
+import { SenderAbstraction } from './SenderAbstraction';
 import { TonConnectSender } from './TonConnectSender';
 
 export type WalletVersion = 'v1r1' | 'v1r2' | 'v1r3' | 'v2r1' | 'v2r2' | 'v3r1' | 'v3r2' | 'v4' | 'v5r1';

@@ -1,6 +1,6 @@
-import { Cell } from '@ton/ton';
-import type { Address, Contract, OpenedContract, TonClientParameters } from '@ton/ton';
 import { SandboxContract } from '@ton/sandbox';
+import type { Address, Contract, OpenedContract, TonClientParameters } from '@ton/ton';
+import { Cell } from '@ton/ton';
 
 export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;

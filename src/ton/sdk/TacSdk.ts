@@ -1,14 +1,9 @@
-import { address, Address, beginCell, Cell, toNano, TonClient } from '@ton/ton';
+import { Address, address, beginCell, Cell, toNano, TonClient } from '@ton/ton';
+import { ethers } from 'ethers';
 
-// jetton imports
-import { JettonMaster } from '../wrappers/JettonMaster';
-import { JettonWallet } from '../wrappers/JettonWallet';
-
-// ton settings
-import { Settings } from '../wrappers/Settings';
-
+import CrossChainLayerToken from '../../abi/CrossChainLayerToken.json';
+import ITokenUtils from '../../abi/ITokenUtils.json';
 import type { SenderAbstraction } from '../sender/SenderAbstraction';
-
 // import structs
 import {
     AssetBridgingData,
@@ -24,18 +19,11 @@ import {
     TacSDKTonClientParams,
     TransactionLinker,
 } from '../structs/Struct';
-import { ethers } from 'ethers';
-import ITokenUtils from '../../abi/ITokenUtils.json';
-import CrossChainLayerToken from '../../abi/CrossChainLayerToken.json';
-import {
-    buildEvmDataCell,
-    calculateContractAddress,
-    generateRandomNumberByTimestamp,
-    generateTransactionLinker,
-    sleep,
-    validateEVMAddress,
-    validateTVMAddress,
-} from './Utils';
+// jetton imports
+import { JettonMaster } from '../wrappers/JettonMaster';
+import { JettonWallet } from '../wrappers/JettonWallet';
+// ton settings
+import { Settings } from '../wrappers/Settings';
 import {
     CCL_L1_MSG_TO_L2_OP_CODE,
     JETTON_TRANSFER_FORWARD_TON_AMOUNT,
@@ -48,6 +36,15 @@ import {
     TON_TRANSFER_OP_TYPE,
     TRANSACTION_TON_AMOUNT,
 } from './Consts';
+import {
+    buildEvmDataCell,
+    calculateContractAddress,
+    generateRandomNumberByTimestamp,
+    generateTransactionLinker,
+    sleep,
+    validateEVMAddress,
+    validateTVMAddress,
+} from './Utils';
 
 const DEFAULT_DELAY = 3;
 

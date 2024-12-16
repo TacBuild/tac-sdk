@@ -1,8 +1,10 @@
+import 'dotenv/config';
+
+import {ethers} from "ethers";
+
 import {startTracking} from '../src';
 import {SenderFactory, TacSdk} from '../src';
-import {EvmProxyMsg, TacSDKTonClientParams, Network} from '../src';
-import 'dotenv/config';
-import {ethers} from "ethers";
+import {EvmProxyMsg, Network,TacSDKTonClientParams} from '../src';
 
 const WALLET_VERSION = "v4";
 

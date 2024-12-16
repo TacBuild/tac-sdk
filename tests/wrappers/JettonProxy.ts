@@ -10,6 +10,7 @@ import {
     Slice,
     toNano,
 } from '@ton/core';
+
 import { OperationType } from './CrossChainLayer';
 
 export type JettonProxyConfig = {

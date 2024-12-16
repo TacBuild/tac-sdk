@@ -1,9 +1,10 @@
-import { CHAIN, TonConnectUI } from '@tonconnect/ui';
-import type { SendTransactionRequest } from '@tonconnect/ui';
 import { toNano } from '@ton/ton';
 import { Base64 } from '@tonconnect/protocol';
-import { Network } from '../structs/Struct';
+import type { SendTransactionRequest } from '@tonconnect/ui';
+import { CHAIN, TonConnectUI } from '@tonconnect/ui';
+
 import type { ShardTransaction } from '../structs/Struct';
+import { Network } from '../structs/Struct';
 import { SenderAbstraction, sleep } from './SenderAbstraction';
 
 export class TonConnectSender implements SenderAbstraction {

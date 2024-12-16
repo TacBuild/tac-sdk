@@ -1,13 +1,14 @@
+import 'dotenv/config';
+
 import {
+    AssetBridgingData,
     EvmProxyMsg,
+    Network,
+    SenderFactory,
+    startTracking,
     TacSdk,
     TacSDKTonClientParams,
-    Network,
-    AssetBridgingData,
-    startTracking,
-    SenderFactory,
 } from '../src';
-import 'dotenv/config';
 
 const WALLET_VERSION = "v4";
 

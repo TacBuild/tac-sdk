@@ -10,6 +10,7 @@ import {
     SendMode,
     toNano,
 } from '@ton/core';
+
 import { StorageStats } from './gasUtils';
 
 export type JettonWalletConfig = {
@@ -107,7 +108,7 @@ export class JettonWallet implements Contract {
             crossChainPayload?: Cell | null;
         },
     ) {
-        let body = beginCell()
+        const body = beginCell()
             .storeUint(JettonWalletOpCodes.Burn, 32)
             .storeUint(opts.queryId || 0, 64)
             .storeCoins(toNano(opts.jettonAmount.toFixed(9)))
@@ -240,11 +241,11 @@ export class JettonWallet implements Contract {
     }
 
     async getJettonBalance(provider: ContractProvider) {
-        let state = await provider.getState();
+        const state = await provider.getState();
         if (state.state.type !== 'active') {
             return 0n;
         }
-        let res = await provider.get('get_wallet_data', []);
+        const res = await provider.get('get_wallet_data', []);
         return Number(fromNano(res.stack.readBigNumber()));
     }
 }
