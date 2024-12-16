@@ -5,7 +5,7 @@ import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } fro
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
-import { EvmProxyMsg, Network, SenderFactory, TacSdk } from '../../src';
+import { EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
 import * as Contracts from '../build';
 import { CrossChainLayer, CrossChainLayerOpCodes } from '../wrappers/CrossChainLayer';
 import { JettonMinter } from '../wrappers/JettonMinter';
@@ -42,6 +42,8 @@ describe('TacSDK', () => {
 
     // JETTON MINTER
     let jettonMinter: SandboxContract<JettonMinter>;
+
+    const evmTargetRandomAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 
     const deployCCL = async () => {
         crossChainLayer = blockchain.openContract(
@@ -153,8 +155,8 @@ describe('TacSDK', () => {
         admin = await blockchain.treasury('admin');
         user = await blockchain.treasury('user');
         sequencerMultisig = await blockchain.treasury('sequencerMultisig');
-        feeAmount = 0;
-        feeSupply = 0.1;
+        feeAmount = 0.1;
+        feeSupply = 0;
         merkleRoot = 0n;
         epoch = 0;
 
@@ -191,19 +193,19 @@ describe('TacSDK', () => {
         // check happens in beforeEach clause
     });
 
-    it('getUserJettonWalletAddress', async () => {
+    it('should get valid user jetton wallet address', async () => {
         const addr = await sdk.getUserJettonWalletAddress(user.address.toString(), jettonMinter.address.toString());
         expect((await jettonMinter.getWalletAddress(user.address)).toString()).toBe(addr);
     });
 
-    it('getUserJettonWalletAddress', async () => {
+    it('should get uset jetton balance', async () => {
         const balance = await sdk.getUserJettonBalance(user.address.toString(), jettonMinter.address.toString());
         expect(balance).toBe(0);
     });
 
-    it('sendCrossChainTransaction', async () => {
+    it('should send cross chain message to CCL', async () => {
         const evmProxyMsg: EvmProxyMsg = {
-            evmTargetAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+            evmTargetAddress: evmTargetRandomAddress,
         };
 
         const assets = [
@@ -214,19 +216,23 @@ describe('TacSDK', () => {
 
         const mnemonic: string[] = await mnemonicNew(24, '');
 
-        const rawSender = await SenderFactory.getSender({ version: 'v4', mnemonic: mnemonic.join(' ') });
+        let fee = 0;
+        for (const version of Object.keys(wallets)) {
+            const rawSender = await SenderFactory.getSender({
+                version: version as WalletVersion,
+                mnemonic: mnemonic.join(' '),
+            });
 
-        await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
-
-        const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets);
-
-        expect((sendTransactionResult as any).transactions).toHaveTransaction({
-            from: address(rawSender.getSenderAddress()),
-            to: crossChainLayer.address,
-            success: true,
-            op: CrossChainLayerOpCodes.anyone_l1MsgToL2,
-        });
-
-        expect((await crossChainLayer.getFullData()).feeSupply).toBe(feeSupply);
+            await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
+            const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets);
+            expect((sendTransactionResult as any).transactions).toHaveTransaction({
+                from: address(rawSender.getSenderAddress()),
+                to: crossChainLayer.address,
+                success: true,
+                op: CrossChainLayerOpCodes.anyone_l1MsgToL2,
+            });
+            fee += feeAmount;
+            expect((await crossChainLayer.getFullData()).feeSupply).toBe(+fee.toFixed(1));
+        }
     });
 });

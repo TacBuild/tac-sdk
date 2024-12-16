@@ -16,12 +16,9 @@ import { RawSender } from './RawSender';
 import { SenderAbstraction } from './SenderAbstraction';
 import { TonConnectSender } from './TonConnectSender';
 
-export type WalletVersion = 'v1r1' | 'v1r2' | 'v1r3' | 'v2r1' | 'v2r2' | 'v3r1' | 'v3r2' | 'v4' | 'v5r1';
+export type WalletVersion = 'v2r1' | 'v2r2' | 'v3r1' | 'v3r2' | 'v4' | 'v5r1';
 
-const wallets = {
-    v1r1: WalletContractV1R1,
-    v1r2: WalletContractV1R2,
-    v1r3: WalletContractV1R3,
+export const wallets = {
     v2r1: WalletContractV2R1,
     v2r2: WalletContractV2R2,
     v3r1: WalletContractV3R1,
