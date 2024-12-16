@@ -1,7 +1,7 @@
 import '@ton/test-utils';
 
 import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
-import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
+import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
@@ -21,6 +21,7 @@ describe('TacSDK', () => {
     const SettingsCode = Cell.fromHex(Contracts.SettingsHex);
 
     let blockchain: Blockchain;
+    let initialState: BlockchainSnapshot;
     let sdk: TacSdk;
 
     // CCL
@@ -146,7 +147,7 @@ describe('TacSDK', () => {
         });
     };
 
-    beforeEach(async () => {
+    beforeAll(async () => {
         blockchain = await Blockchain.create();
 
         admin = await blockchain.treasury('admin');
@@ -179,6 +180,11 @@ describe('TacSDK', () => {
             settingsAddress: settings.address.toString(),
             tonClientParameters: { endpoint: '' },
         });
+        initialState = blockchain.snapshot();
+    });
+
+    afterEach(async () => {
+        await blockchain.loadFrom(initialState);
     });
 
     it('everything should be deployed', () => {
