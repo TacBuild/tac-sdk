@@ -221,6 +221,7 @@ describe('TacSDK', () => {
             evmTargetAddress: evmTargetRandomAddress,
         };
 
+        // sending TON
         const assets = [
             {
                 amount: 2,

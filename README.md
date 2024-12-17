@@ -139,6 +139,27 @@ For example, when adding liquidity, you need to specify the addresses of the tok
 
 ---
 
+---
+### Function: `getTVMTokenAddress`
+---
+This function gets the TVM paired address for a EVM token. 
+
+#### **Purpose**
+
+This function provides the address of the wrapper for any EVM token at a specific address.
+
+#### **Parameters**
+
+- **`evmTokenAddress(string)`**: The address of the token on the TAC blockchain (EVM format).
+
+---
+
+#### **Returns**
+
+- **`Promise<string>`**:
+  - A promise that resolves to the computed TVM token address as a string.
+
+---
 
 #### **Functionality**
 
@@ -184,9 +205,6 @@ const sender = await SenderFactory.getSender({
 - **Supported wallet versions**:
 ```
 export type WalletVersion =
-    | "v1r1"
-    | "v1r2"
-    | "v1r3"
     | "v2r1"
     | "v2r2"
     | "v3r1"
