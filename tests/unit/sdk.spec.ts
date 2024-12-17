@@ -210,7 +210,7 @@ describe('TacSDK', () => {
         expect((await jettonMinter.getWalletAddress(user.address)).toString()).toBe(addr);
     });
 
-    it('should get uset jetton balance', async () => {
+    it('should get set jetton balance', async () => {
         const balance = await sdk.getUserJettonBalance(user.address.toString(), jettonMinter.address.toString());
         expect(balance).toBe(0);
     });

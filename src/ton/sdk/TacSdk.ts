@@ -61,6 +61,7 @@ export class TacSdk {
     private jettonWalletCode!: Cell;
 
     private contractOpener: ContractOpener;
+    private TACProvider: ethers.AbstractProvider;
 
     constructor(TacSDKParams: TacSDKTonClientParams) {
         this.network = TacSDKParams.network;
@@ -80,6 +81,8 @@ export class TacSdk {
 
             this.contractOpener = new TonClient(tonClientParameters);
         }
+
+        this.TACProvider = ethers.getDefaultProvider(TAC_RPC_ENDPOINT);
     }
 
     async init(): Promise<void> {
@@ -330,7 +333,7 @@ export class TacSdk {
         const tokenUtilsContract = new ethers.Contract(
             TAC_TOKENUTILS_ADDRESS,
             ITokenUtils.abi,
-            ethers.getDefaultProvider(TAC_RPC_ENDPOINT),
+            this.TACProvider,
         );
 
         return await tokenUtilsContract.computeAddress(tvmTokenAddress, TAC_SETTINGS_ADDRESS);
@@ -343,11 +346,10 @@ export class TacSdk {
 
         validateEVMAddress(evmTokenAddress);
 
-        const provider = ethers.getDefaultProvider(TAC_RPC_ENDPOINT);
-        const bytecode = await provider.getCode(evmTokenAddress);
+        const bytecode = await this.TACProvider.getCode(evmTokenAddress);
 
         if (bytecode.includes(ethers.id('getInfo()').slice(2, 10))) {
-            const contract = new ethers.Contract(evmTokenAddress, CrossChainLayerToken.abi, provider);
+            const contract = new ethers.Contract(evmTokenAddress, CrossChainLayerToken.abi, this.TACProvider);
             const info = await contract.getInfo.staticCall();
             return info.l1Address;
         }
