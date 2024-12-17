@@ -25,7 +25,7 @@ export enum SimplifiedStatuses {
 
 export type TacSDKTonClientParams = {
     /**
-     * Provider to use instead of TonClient
+     * Provider to use instead of @ton/ton TonClient
      */
     contractOpener?: ContractOpener;
 
