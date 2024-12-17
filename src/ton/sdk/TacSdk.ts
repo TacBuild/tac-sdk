@@ -330,11 +330,7 @@ export class TacSdk {
             return await givenMinter.getL2Address();
         }
 
-        const tokenUtilsContract = new ethers.Contract(
-            TAC_TOKENUTILS_ADDRESS,
-            ITokenUtils.abi,
-            this.TACProvider,
-        );
+        const tokenUtilsContract = new ethers.Contract(TAC_TOKENUTILS_ADDRESS, ITokenUtils.abi, this.TACProvider);
 
         return await tokenUtilsContract.computeAddress(tvmTokenAddress, TAC_SETTINGS_ADDRESS);
     }
@@ -354,11 +350,13 @@ export class TacSdk {
             return info.l1Address;
         }
 
-        return JettonMaster.calculateAddress(
+        const jettonMaster = JettonMaster.createFromConfig({
             evmTokenAddress,
-            address(this.crossChainLayerAddress),
-            this.jettonMinterCode,
-            this.jettonWalletCode,
-        );
+            crossChainLayerAddress: address(this.crossChainLayerAddress),
+            code: this.jettonMinterCode,
+            walletCode: this.jettonWalletCode,
+        });
+
+        return jettonMaster.address.toString();
     }
 }
