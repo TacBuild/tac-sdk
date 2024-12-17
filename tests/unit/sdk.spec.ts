@@ -115,14 +115,9 @@ describe('TacSDK', () => {
             success: true,
         });
 
-        const res = await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
             key: getKeyFromString('JettonProxyAddress'),
             value: beginCell().storeAddress(jettonProxy.address).endCell(),
-        });
-        expect(res.transactions).toHaveTransaction({
-            from: admin.address,
-            to: settings.address,
-            success: true,
         });
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
             key: getKeyFromString('CrossChainLayerAddress'),
@@ -203,8 +198,11 @@ describe('TacSDK', () => {
         await blockchain.loadFrom(initialState);
     });
 
-    it('everything should be deployed', () => {
-        // check happens in beforeEach clause
+    it('everything should be deployed', async () => {
+        expect((await blockchain.getContract(settings.address)).accountState!.type).toBe('active');
+        expect((await blockchain.getContract(jettonMinter.address)).accountState!.type).toBe('active');
+        expect((await blockchain.getContract(jettonProxy.address)).accountState!.type).toBe('active');
+        expect((await blockchain.getContract(crossChainLayer.address)).accountState!.type).toBe('active');
     });
 
     it('should get valid user jetton wallet address', async () => {
