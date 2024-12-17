@@ -215,7 +215,8 @@ describe('TacSDK', () => {
         expect(balance).toBe(0);
     });
 
-    it('should send cross chain message to CCL', async () => {
+    it.each(Object.keys(wallets) as WalletVersion[])('should send cross chain message to CCL from wallet %s', async (version) => {
+        
         const evmProxyMsg: EvmProxyMsg = {
             evmTargetAddress: evmTargetRandomAddress,
         };
@@ -229,22 +230,20 @@ describe('TacSDK', () => {
         const mnemonic: string[] = await mnemonicNew(24, '');
 
         let fee = 0;
-        for (const version of Object.keys(wallets)) {
-            const rawSender = await SenderFactory.getSender({
-                version: version as WalletVersion,
-                mnemonic: mnemonic.join(' '),
-            });
+        const rawSender = await SenderFactory.getSender({
+            version,
+            mnemonic: mnemonic.join(' '),
+        });
 
-            await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
-            const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets);
-            expect((sendTransactionResult as any).transactions).toHaveTransaction({
-                from: address(rawSender.getSenderAddress()),
-                to: crossChainLayer.address,
-                success: true,
-                op: CrossChainLayerOpCodes.anyone_l1MsgToL2,
-            });
-            fee += feeAmount;
-            expect((await crossChainLayer.getFullData()).feeSupply).toBe(+fee.toFixed(1));
-        }
+        await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
+        const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets);
+        expect((sendTransactionResult as any).transactions).toHaveTransaction({
+            from: address(rawSender.getSenderAddress()),
+            to: crossChainLayer.address,
+            success: true,
+            op: CrossChainLayerOpCodes.anyone_l1MsgToL2,
+        });
+        fee += feeAmount;
+        expect((await crossChainLayer.getFullData()).feeSupply).toBe(+fee.toFixed(1));
     });
 });
