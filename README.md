@@ -387,8 +387,8 @@ Parameters for the TON SDK client.
 - **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
 - **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0* for custom tonClientParameters, but with empty *tonClientParameters* delay would be set to *3*.
 This structure is used to create the TON client, which you will utilize for sending transactions. It allows you to specify the network (Testnet or Mainnet), configure client parameters, and set a delay for request execution. Proper configuration ensures smooth and efficient interaction with the TON blockchain during operations.
-- **`settingsAddress`** : TAC protocol contract address. Needed to retrieve protocol data. Set for tests only
-- **`contractOpener`**: Client for TON chain to be used instead of @ton/ton TonClient. Used for smart contract interaction.
+- **`settingsAddress`** *(optional)*: TAC protocol contract address. Needed to retrieve protocol data. Set for tests only
+- **`contractOpener`** *(optional)*: Client for TON chain to be used instead of @ton/ton TonClient. Used for smart contract interaction.
 
 ### `EvmProxyMsg (Type)`
 ```typescript
@@ -437,7 +437,7 @@ Linker to track cross-chain transaction.
 - **`shardCount`**: Number of shards involved.
 - **`shardedId`**: Identifier for the shard.
 - **`timestamp`**: Timestamp of the transaction.
-- **`sendTransactionResult`**: Result of sending transaction. Default TonClient does NOT fill this field.
+- **`sendTransactionResult`** *(optional)*: Result of sending transaction. May be used to check result of sending transaction. Default TonClient does NOT fill this field. However, in unit tests @ton/sandbox set transaction result object to this field.
 
 This structure is designed to help track the entire execution path of a transaction across all levels. By using it, you can identify the `operationId` and subsequently monitor the transaction status through a public API. This is particularly useful for ensuring visibility and transparency in the transaction lifecycle, allowing you to verify its progress and outcome.
 

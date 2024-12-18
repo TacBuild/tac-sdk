@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - Method to get TVM address based on EVM address:
     
-    ```js
+    ```typescript
     async getTVMTokenAddress(evmTokenAddress: string): Promise<string> 
     ```
 
