@@ -1,8 +1,6 @@
 import { Address, address, beginCell, Cell, toNano, TonClient } from '@ton/ton';
-import { ethers } from 'ethers';
+import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
-import CrossChainLayerToken from '../../abi/CrossChainLayerToken.json';
-import ITokenUtils from '../../abi/ITokenUtils.json';
 import type { SenderAbstraction } from '../sender/SenderAbstraction';
 // import structs
 import {
@@ -25,15 +23,10 @@ import { JettonWallet } from '../wrappers/JettonWallet';
 // ton settings
 import { Settings } from '../wrappers/Settings';
 import {
-    CCL_L1_MSG_TO_L2_OP_CODE,
     JETTON_TRANSFER_FORWARD_TON_AMOUNT,
     MAINNET_TONCENTER_URL_ENDPOINT,
     TAC_RPC_ENDPOINT,
-    TAC_SETTINGS_ADDRESS,
-    TAC_TOKENUTILS_ADDRESS,
     TESTNET_TONCENTER_URL_ENDPOINT,
-    TON_SETTINGS_ADDRESS,
-    TON_TRANSFER_OP_TYPE,
     TRANSACTION_TON_AMOUNT,
 } from './Consts';
 import {
@@ -45,12 +38,14 @@ import {
     validateEVMAddress,
     validateTVMAddress,
 } from './Utils';
+import { testnet, mainnet } from '@tonappchain/artifacts';
 
 const DEFAULT_DELAY = 3;
 
 export class TacSdk {
     readonly network: Network;
     readonly delay: number;
+    readonly artifacts;
     readonly settingsAddress: string;
 
     private isInited: boolean = false;
@@ -62,14 +57,17 @@ export class TacSdk {
 
     private contractOpener: ContractOpener;
     private TACProvider: ethers.AbstractProvider;
+    private TACSettings: ethers.Contract;
+    private TACTokenUtils!: ethers.Contract;
 
     constructor(TacSDKParams: TacSDKTonClientParams) {
         this.network = TacSDKParams.network;
+        this.artifacts = this.network === Network.Testnet ? testnet : mainnet;
         this.delay = TacSDKParams.tonClientParameters ? (TacSDKParams.delay ?? 0) : DEFAULT_DELAY;
 
         this.settingsAddress = TacSDKParams.tonClientParameters
-            ? (TacSDKParams.settingsAddress ?? TON_SETTINGS_ADDRESS)
-            : TON_SETTINGS_ADDRESS;
+            ? (TacSDKParams.settingsAddress ?? this.artifacts.ton.addresses.TON_SETTINGS_ADDRESS)
+            : this.artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
 
         if (TacSDKParams.contractOpener) {
             this.contractOpener = TacSDKParams.contractOpener;
@@ -83,9 +81,23 @@ export class TacSdk {
         }
 
         this.TACProvider = ethers.getDefaultProvider(TAC_RPC_ENDPOINT);
+        this.TACSettings = new ethers.Contract(
+            this.artifacts.tac.addresses.TAC_SETTINGS_ADDRESS,
+            this.artifacts.tac.abi.Settings.abi,
+            this.TACProvider,
+        );
     }
 
     async init(): Promise<void> {
+        const tokenUtilsAddress: string = await this.TACSettings.getAddressSetting(
+            keccak256(toUtf8Bytes('TokenUtilsAddress')),
+        );
+        this.TACTokenUtils = new ethers.Contract(
+            tokenUtilsAddress,
+            this.artifacts.tac.abi.ITokenUtils.abi,
+            this.TACProvider,
+        );
+
         const settings = this.contractOpener.open(new Settings(Address.parse(this.settingsAddress)));
 
         this.jettonProxyAddress = await settings.getAddressSetting('JettonProxyAddress');
@@ -149,9 +161,9 @@ export class TacSdk {
     private getTonTransferPayload(responseAddress: string, evmData: Cell, crossChainTonAmount: number): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
         return beginCell()
-            .storeUint(CCL_L1_MSG_TO_L2_OP_CODE, 32)
+            .storeUint(this.artifacts.ton.wrappers.CrossChainLayerOpCodes.anyone_l1MsgToL2, 32)
             .storeUint(queryId, 64)
-            .storeUint(TON_TRANSFER_OP_TYPE, 32)
+            .storeUint(this.artifacts.ton.wrappers.OperationType.tonTransfer, 32)
             .storeCoins(toNano(crossChainTonAmount.toFixed(9)))
             .storeAddress(Address.parse(responseAddress))
             .storeMaybeRef(evmData)
@@ -330,9 +342,10 @@ export class TacSdk {
             return await givenMinter.getL2Address();
         }
 
-        const tokenUtilsContract = new ethers.Contract(TAC_TOKENUTILS_ADDRESS, ITokenUtils.abi, this.TACProvider);
-
-        return await tokenUtilsContract.computeAddress(tvmTokenAddress, TAC_SETTINGS_ADDRESS);
+        return await this.TACTokenUtils.computeAddress(
+            tvmTokenAddress,
+            this.artifacts.tac.addresses.TAC_SETTINGS_ADDRESS,
+        );
     }
 
     async getTVMTokenAddress(evmTokenAddress: string): Promise<string> {
@@ -345,7 +358,11 @@ export class TacSdk {
         const bytecode = await this.TACProvider.getCode(evmTokenAddress);
 
         if (bytecode.includes(ethers.id('getInfo()').slice(2, 10))) {
-            const contract = new ethers.Contract(evmTokenAddress, CrossChainLayerToken.abi, this.TACProvider);
+            const contract = new ethers.Contract(
+                evmTokenAddress,
+                this.artifacts.tac.abi.CrossChainLayerToken.abi,
+                this.TACProvider,
+            );
             const info = await contract.getInfo.staticCall();
             return info.l1Address;
         }

@@ -11,7 +11,7 @@ async function main() {
   const tacSdk = new TacSdk(tonClientParams);
   await tacSdk.init();
 
-  const tvmTokenAddress = "EQBVRbJQ4ihedlSI10NzufGfrxGES_rwnRg3ynKsHd-zOPLM";
+  const tvmTokenAddress = "EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK";
 
   // Calculate EVM Token based on TVM Token
   const evmTokenAddress = await tacSdk.getEVMTokenAddress(
