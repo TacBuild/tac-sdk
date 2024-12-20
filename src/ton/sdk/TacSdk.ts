@@ -25,7 +25,6 @@ import { Settings } from '../wrappers/Settings';
 import {
     JETTON_TRANSFER_FORWARD_TON_AMOUNT,
     MAINNET_TONCENTER_URL_ENDPOINT,
-    NATIVE_TAC_ADDRESS,
     NATIVE_TON_ADDRESS,
     TAC_RPC_ENDPOINT,
     TESTNET_TONCENTER_URL_ENDPOINT,
@@ -47,7 +46,7 @@ const DEFAULT_DELAY = 3;
 export class TacSdk {
     readonly network: Network;
     readonly delay: number;
-    readonly artifacts;
+    readonly artifacts: typeof testnet | typeof mainnet;
     readonly settingsAddress: string;
 
     private isInited: boolean = false;
@@ -85,7 +84,7 @@ export class TacSdk {
         this.TACProvider = ethers.getDefaultProvider(TAC_RPC_ENDPOINT);
         this.TACSettings = new ethers.Contract(
             this.artifacts.tac.addresses.TAC_SETTINGS_ADDRESS,
-            this.artifacts.tac.abi.Settings.abi,
+            this.artifacts.tac.compilationArtifacts.Settings.abi,
             this.TACProvider,
         );
     }
@@ -96,7 +95,7 @@ export class TacSdk {
         );
         this.TACTokenUtils = new ethers.Contract(
             tokenUtilsAddress,
-            this.artifacts.tac.abi.ITokenUtils.abi,
+            this.artifacts.tac.compilationArtifacts.ITokenUtils.abi,
             this.TACProvider,
         );
 
@@ -352,7 +351,7 @@ export class TacSdk {
         );
     }
 
-    async getTVMTokenAddress(evmTokenAddress: string | typeof NATIVE_TAC_ADDRESS): Promise<string> {
+    async getTVMTokenAddress(evmTokenAddress: string): Promise<string> {
         if (!this.isInited) {
             await this.init();
         }
@@ -364,7 +363,7 @@ export class TacSdk {
         if (bytecode.includes(ethers.id('getInfo()').slice(2, 10))) {
             const contract = new ethers.Contract(
                 evmTokenAddress,
-                this.artifacts.tac.abi.CrossChainLayerToken.abi,
+                this.artifacts.tac.compilationArtifacts.CrossChainLayerToken.abi,
                 this.TACProvider,
             );
             const info = await contract.getInfo.staticCall();

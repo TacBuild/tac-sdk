@@ -9,4 +9,3 @@ export const JETTON_TRANSFER_FORWARD_TON_AMOUNT = 0.2;
 export const MAX_ITERATION_COUNT = 120;
 
 export const NATIVE_TON_ADDRESS = 'NONE'; // Used to calculate address of TON Coin on TAC Chain
-export const NATIVE_TAC_ADDRESS = '0x1AC0000000000000000000000000000000000000'; // Used to calculate address of TAC Coin on TON Chain

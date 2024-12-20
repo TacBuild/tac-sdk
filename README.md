@@ -151,7 +151,7 @@ For example, when adding liquidity, you need to specify the addresses of the tok
 
 #### **Parameters**
 
-- **`tvmTokenAddress(string | typeof NATIVE_TON_ADDRESS)`**: The address of the token on the TON blockchain (TVM format), including support for native TON using NATIVE_TON_ADDRESS constant.
+- **`tvmTokenAddress(string | typeof NATIVE_TON_ADDRESS)`**: The address of the token on the TON blockchain (TVM format), including support for native TON via passing string 'NONE'(the string represents *typeof NATIVE_TON_ADDRESS*).
 
 ---
 
@@ -171,7 +171,7 @@ This function provides the address of the wrapper for any EVM token at a specifi
 
 #### **Parameters**
 
-- **`evmTokenAddress(string | typeof NATIVE_TAC_ADDRESS)`**: The address of the token on the TAC blockchain (EVM format), including support for native TAC using NATIVE_TAC_ADDRESS constant.
+- **`evmTokenAddress(string)`**: The address of the token on the TAC blockchain (EVM format), including support for native TAC.
 
 ---
 

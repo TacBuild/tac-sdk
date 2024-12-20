@@ -16,4 +16,4 @@ export type {
 export { Network, SimplifiedStatuses } from './ton/structs/Struct';
 export type { JettonWalletData } from './ton/wrappers/JettonWallet';
 export { JettonWallet, JettonWalletOpCodes } from './ton/wrappers/JettonWallet';
-export { NATIVE_TAC_ADDRESS, NATIVE_TON_ADDRESS } from './ton/sdk/Consts';
+export { NATIVE_TON_ADDRESS } from './ton/sdk/Consts';
