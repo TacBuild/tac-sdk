@@ -25,6 +25,8 @@ import { Settings } from '../wrappers/Settings';
 import {
     JETTON_TRANSFER_FORWARD_TON_AMOUNT,
     MAINNET_TONCENTER_URL_ENDPOINT,
+    NATIVE_TAC_ADDRESS,
+    NATIVE_TON_ADDRESS,
     TAC_RPC_ENDPOINT,
     TESTNET_TONCENTER_URL_ENDPOINT,
     TRANSACTION_TON_AMOUNT,
@@ -328,18 +330,20 @@ export class TacSdk {
         return { sendTransactionResult, ...transactionLinker };
     }
 
-    async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
+    async getEVMTokenAddress(tvmTokenAddress: string | typeof NATIVE_TON_ADDRESS): Promise<string> {
         if (!this.isInited) {
             await this.init();
         }
 
-        validateTVMAddress(tvmTokenAddress);
+        if (tvmTokenAddress !== NATIVE_TON_ADDRESS) {
+            validateTVMAddress(tvmTokenAddress);
 
-        const { code: givenMinterCodeBOC } = await this.contractOpener.getContractState(address(tvmTokenAddress));
-        if (givenMinterCodeBOC && this.jettonMinterCode.equals(Cell.fromBoc(givenMinterCodeBOC)[0])) {
-            const givenMinter = this.contractOpener.open(new JettonMaster(address(tvmTokenAddress)));
-            await sleep(this.delay * 1000);
-            return await givenMinter.getL2Address();
+            const { code: givenMinterCodeBOC } = await this.contractOpener.getContractState(address(tvmTokenAddress));
+            if (givenMinterCodeBOC && this.jettonMinterCode.equals(Cell.fromBoc(givenMinterCodeBOC)[0])) {
+                const givenMinter = this.contractOpener.open(new JettonMaster(address(tvmTokenAddress)));
+                await sleep(this.delay * 1000);
+                return await givenMinter.getL2Address();
+            }
         }
 
         return await this.TACTokenUtils.computeAddress(
@@ -348,7 +352,7 @@ export class TacSdk {
         );
     }
 
-    async getTVMTokenAddress(evmTokenAddress: string): Promise<string> {
+    async getTVMTokenAddress(evmTokenAddress: string | typeof NATIVE_TAC_ADDRESS): Promise<string> {
         if (!this.isInited) {
             await this.init();
         }
