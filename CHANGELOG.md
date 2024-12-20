@@ -18,23 +18,19 @@ All notable changes to this project will be documented in this file.
 
 - SDK uses @tonappchain/artifacts
 
-- Extended signature of getEVMTokenAddress method to support calculation for native tokens:
+- Added get methods for native token addresses:
 
     ```typescript
-    // ton/sdk/Consts.ts
-    export const NATIVE_TON_ADDRESS = 'NONE'; // Used to calculate address of TON Coin on TAC Chain
+        get nativeTONAddress() {
+            return 'NONE';
+        }
 
-    // ton/sdk/TacSdk.ts
-    import { NATIVE_TON_ADDRESS } from './Consts';
-
-    async getEVMTokenAddress(tvmTokenAddress: string | typeof NATIVE_TON_ADDRESS): Promise<string>
+        get nativeTACAddress(): Promise<string> {
+            return this.TACCrossChainLayer.NATIVE_TOKEN_ADDRESS.staticCall();
+        }
     ```
 
-- Added exported constants to support update specified above:
-
-    ```typescript
-    export const NATIVE_TON_ADDRESS = 'NONE'; // Used to calculate address of TON Coin on TAC Chain
-    ```
+- Added support for native token address calculation in *getEVMTokenAddress* and *getTVMTokenAddress* methods.
 
 ### Removed
 

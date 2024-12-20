@@ -25,7 +25,6 @@ import { Settings } from '../wrappers/Settings';
 import {
     JETTON_TRANSFER_FORWARD_TON_AMOUNT,
     MAINNET_TONCENTER_URL_ENDPOINT,
-    NATIVE_TON_ADDRESS,
     TAC_RPC_ENDPOINT,
     TESTNET_TONCENTER_URL_ENDPOINT,
     TRANSACTION_TON_AMOUNT,
@@ -60,6 +59,7 @@ export class TacSdk {
     private TACProvider: ethers.AbstractProvider;
     private TACSettings: ethers.Contract;
     private TACTokenUtils!: ethers.Contract;
+    private TACCrossChainLayer!: ethers.Contract;
 
     constructor(TacSDKParams: TacSDKTonClientParams) {
         this.network = TacSDKParams.network;
@@ -90,6 +90,15 @@ export class TacSdk {
     }
 
     async init(): Promise<void> {
+        const cclAddress: string = await this.TACSettings.getAddressSetting(
+            keccak256(toUtf8Bytes('CrossChainLayerAddress')),
+        );
+        this.TACCrossChainLayer = new ethers.Contract(
+            cclAddress,
+            this.artifacts.tac.compilationArtifacts.CrossChainLayer.abi,
+            this.TACProvider
+        );
+
         const tokenUtilsAddress: string = await this.TACSettings.getAddressSetting(
             keccak256(toUtf8Bytes('TokenUtilsAddress')),
         );
@@ -114,6 +123,14 @@ export class TacSdk {
         await sleep(this.delay * 1000);
 
         this.isInited = true;
+    }
+
+    get nativeTONAddress() {
+       return 'NONE';
+    }
+
+    get nativeTACAddress(): Promise<string> {
+        return this.TACCrossChainLayer.NATIVE_TOKEN_ADDRESS.staticCall();
     }
 
     async getUserJettonWalletAddress(userAddress: string, tokenAddress: string): Promise<string> {
@@ -329,12 +346,12 @@ export class TacSdk {
         return { sendTransactionResult, ...transactionLinker };
     }
 
-    async getEVMTokenAddress(tvmTokenAddress: string | typeof NATIVE_TON_ADDRESS): Promise<string> {
+    async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
         if (!this.isInited) {
             await this.init();
         }
 
-        if (tvmTokenAddress !== NATIVE_TON_ADDRESS) {
+        if (tvmTokenAddress !== this.nativeTONAddress) {
             validateTVMAddress(tvmTokenAddress);
 
             const { code: givenMinterCodeBOC } = await this.contractOpener.getContractState(address(tvmTokenAddress));

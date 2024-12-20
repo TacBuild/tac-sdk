@@ -139,6 +139,36 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 4. Incorporates EVM logic into the payload for interaction with the TAC.
 
 ---
+
+### Getter: `nativeTONAddress`
+---
+This getter returns address(better to say "indicator") of native TON Coin.
+
+#### **Purpose**
+
+The indicator should only be used in *getEVMTokenAddress* to calculate address of TON wrapper on TAC Chain.
+
+#### **Returns**
+
+- **`string`**:
+  - A string that indicates the native TON Coin.
+
+---
+### Getter: `nativeTACAddress`
+---
+This getter returns address of TAC Coin on TAC Chain.
+
+#### **Purpose**
+
+The address could be used in *getTVMTokenAddress* to calculate address of TAC wrapper on TON Chain.
+
+#### **Returns**
+
+- **`Promise<string>`**:
+  - A promise that resolves to the computed EVM token address as a string.
+
+---
+
 ### Function: `getEVMTokenAddress`
 ---
 This function will get the EVM paired address for a TVM token. 
@@ -151,7 +181,7 @@ For example, when adding liquidity, you need to specify the addresses of the tok
 
 #### **Parameters**
 
-- **`tvmTokenAddress(string | typeof NATIVE_TON_ADDRESS)`**: The address of the token on the TON blockchain (TVM format), including support for native TON via passing string 'NONE'(the string represents *typeof NATIVE_TON_ADDRESS*).
+- **`tvmTokenAddress(string)`**: The address of the token on the TON blockchain (TVM format), including support for native TON. Address of native TON can be retreieved using *nativeTONAddress* getter in TacSDK.
 
 ---
 
@@ -171,7 +201,7 @@ This function provides the address of the wrapper for any EVM token at a specifi
 
 #### **Parameters**
 
-- **`evmTokenAddress(string)`**: The address of the token on the TAC blockchain (EVM format), including support for native TAC.
+- **`evmTokenAddress(string)`**: The address of the token on the TAC blockchain (EVM format), including support for native TAC. Address of native TAC can be retreieved using *nativeTACAddress* getter in TacSDK.
 
 ---
 

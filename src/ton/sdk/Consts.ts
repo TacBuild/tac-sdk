@@ -7,5 +7,3 @@ export const TRANSACTION_TON_AMOUNT = 0.35;
 export const JETTON_TRANSFER_FORWARD_TON_AMOUNT = 0.2;
 
 export const MAX_ITERATION_COUNT = 120;
-
-export const NATIVE_TON_ADDRESS = 'NONE'; // Used to calculate address of TON Coin on TAC Chain
