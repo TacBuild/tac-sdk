@@ -8,9 +8,6 @@
   "files": [
     "dist"
   ],
-  "workspaces": [
-    "l1_tvm_ton"
-  ],
   "scripts": {
     "build": "rm -rf dist && tsc --declaration",
     "test": "jest --verbose --runInBand",
