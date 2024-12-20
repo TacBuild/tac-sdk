@@ -125,7 +125,7 @@ export class TacSdk {
         this.isInited = true;
     }
 
-    get nativeTONAddress() {
+    get nativeTONAddress(): string {
        return 'NONE';
     }
 
