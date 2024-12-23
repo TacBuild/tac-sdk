@@ -284,9 +284,11 @@ export class TacSdk {
     private async generateCrossChainMessages(
         caller: string,
         evmData: Cell,
-        assets?: AssetBridgingData[],
+        aggregatedData: {
+            jettons: JettonBridgingData[];
+            crossChainTonAmount: number;
+        },
     ): Promise<ShardMessage[]> {
-        const aggregatedData = this.aggregateJettons(assets);
         let crossChainTonAmount = aggregatedData.crossChainTonAmount;
 
         if (aggregatedData.jettons.length == 0) {
@@ -325,11 +327,14 @@ export class TacSdk {
         if (!this.isInited) {
             await this.init();
         }
+        const aggregatedData = this.aggregateJettons(assets);
+        const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
+
         const caller = sender.getSenderAddress();
-        const transactionLinker = generateTransactionLinker(caller, assets?.length ?? 1);
+        const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
         const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
 
-        const messages = await this.generateCrossChainMessages(caller, evmData, assets);
+        const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData);
         const transaction: ShardTransaction = {
             validUntil: +new Date() + 15 * 60 * 1000,
             messages,
