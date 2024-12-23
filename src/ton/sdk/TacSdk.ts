@@ -363,7 +363,9 @@ export class TacSdk {
             if (givenMinterCodeBOC && this.jettonMinterCode.equals(Cell.fromBoc(givenMinterCodeBOC)[0])) {
                 const givenMinter = this.contractOpener.open(new JettonMaster(address(tvmTokenAddress)));
                 await sleep(this.delay * 1000);
-                return await givenMinter.getL2Address();
+                const l2Address = await givenMinter.getL2Address();
+                await sleep(this.delay * 1000);
+                return l2Address;
             }
         }
 
