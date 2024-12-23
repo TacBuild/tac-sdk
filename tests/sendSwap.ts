@@ -1,15 +1,17 @@
+import 'dotenv/config';
+
 import {toNano} from '@ton/ton';
 import {ethers} from 'ethers';
+
 import {
+    AssetBridgingData,
+    EvmProxyMsg,
+    Network,
     SenderFactory,
+    startTracking,
     TacSdk,
     TacSDKTonClientParams,
-    Network,
-    EvmProxyMsg,
-    AssetBridgingData,
-    startTracking,
 } from '../src';
-import 'dotenv/config';
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 

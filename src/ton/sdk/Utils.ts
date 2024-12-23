@@ -1,5 +1,7 @@
-import { EvmProxyMsg, RandomNumberByTimestamp, TransactionLinker } from '../structs/Struct';
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
+import { isAddress } from 'ethers';
+
+import { EvmProxyMsg, RandomNumberByTimestamp, TransactionLinker } from '../structs/Struct';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -53,5 +55,11 @@ export function generateTransactionLinker(caller: string, shardCount: number): T
 export function validateTVMAddress(address: string): void {
     if (!Address.isAddress(Address.parse(address))) {
         throw new Error('invalid tvm address');
+    }
+}
+
+export function validateEVMAddress(address: string): void {
+    if (!isAddress(address)) {
+        throw new Error('invalid evm address');
     }
 }

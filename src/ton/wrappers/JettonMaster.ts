@@ -1,8 +1,16 @@
-import { Address, beginCell, Cell } from '@ton/core';
 import type { Contract, ContractProvider } from '@ton/core';
+import { Address, beginCell, Cell, contractAddress } from '@ton/core';
 import { fromNano } from '@ton/ton';
-import { readJettonMetadata } from './ContentUtils';
+
 import type { JettonExtendedMetadata } from './ContentUtils';
+import { readJettonMetadata } from './ContentUtils';
+
+export type JettonMasterInitData = {
+    evmTokenAddress: string;
+    crossChainLayerAddress: Address;
+    code: Cell;
+    walletCode: Cell;
+};
 
 export type JettonMasterData = {
     totalSupply: number;
@@ -13,8 +21,20 @@ export type JettonMasterData = {
 };
 
 export class JettonMaster implements Contract {
-    static create(address: Address) {
+    static createFromAddress(address: Address) {
         return new JettonMaster(address);
+    }
+
+    static createFromConfig(config: JettonMasterInitData, workchain = 0) {
+        const data = beginCell()
+            .storeCoins(0)
+            .storeAddress(config.crossChainLayerAddress)
+            .storeRef(beginCell().endCell())
+            .storeRef(config.walletCode)
+            .storeStringTail(config.evmTokenAddress)
+            .endCell();
+
+        return JettonMaster.createFromAddress(contractAddress(workchain, { data, code: config.code }));
     }
 
     readonly address: Address;
@@ -51,6 +71,6 @@ export class JettonMaster implements Contract {
 
     async getL2Address(provider: ContractProvider): Promise<string> {
         const result = await provider.get('get_l2_token_address', []);
-        return result.stack.readAddressOpt()?.toString() || '';
+        return result.stack.readString();
     }
 }

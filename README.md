@@ -80,6 +80,21 @@ const tonClientParams: TacSDKTonClientParams = {
 const tacSdk = new TacSdk(tonClientParams);
 await tacSdk.init();
 ```
+
+Optionally, you can provide custom client for TON blockchain in `contractOpener` argument to use instead of @ton/ton TonClient:
+
+```typescript
+import { TacSdk } from 'tac-sdk';
+import { Network } from 'tac-sdk';
+
+const tonClientParams: TacSDKTonClientParams = {
+  network: Network.Testnet,
+  contractOpener: <yourContractOpener>,
+}; // you can also customize TON client here
+const tacSdk = new TacSdk(tonClientParams);
+await tacSdk.init();
+```
+
 ### Function: `sendCrossChainTransaction`
 
 This function facilitates cross-chain transactions by bridging data and assets for interaction with TAC. Works with TON native coin transfer and/or it handles the required logic for burning or transferring jettons based on the Jetton type(wrapped by our s-c CrossChainLayer or not).
@@ -114,8 +129,46 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 - **`Promise<TransactionLinker>`**:
   - A `TransactionLinker` object for tracking the transaction status during cross chain.
+---
+
+#### **Functionality**
+
+1. Determines whether each Jetton requires a **burn** or **transfer** operation based on its type.
+2. Prepares shard messages and encodes the necessary payloads.
+3. Bridges Jettons by sending shard transactions to the appropriate smart contracts.
+4. Incorporates EVM logic into the payload for interaction with the TAC.
 
 ---
+
+### Getter: `nativeTONAddress`
+---
+This getter returns address(better to say "indicator") of native TON Coin.
+
+#### **Purpose**
+
+The indicator should only be used in *getEVMTokenAddress* to calculate address of TON wrapper on TAC Chain.
+
+#### **Returns**
+
+- **`string`**:
+  - A string that indicates the native TON Coin.
+
+---
+### Getter: `nativeTACAddress`
+---
+This getter returns address of TAC Coin on TAC Chain.
+
+#### **Purpose**
+
+The address could be used in *getTVMTokenAddress* to calculate address of TAC wrapper on TON Chain.
+
+#### **Returns**
+
+- **`Promise<string>`**:
+  - A promise that resolves to the computed EVM token address as a string.
+
+---
+
 ### Function: `getEVMTokenAddress`
 ---
 This function will get the EVM paired address for a TVM token. 
@@ -128,7 +181,7 @@ For example, when adding liquidity, you need to specify the addresses of the tok
 
 #### **Parameters**
 
-- **`tvmTokenAddress(string)`**: The address of the token on the TON blockchain (TVM format).
+- **`tvmTokenAddress(string)`**: The address of the token on the TON blockchain (TVM format), including support for native TON. Address of native TON can be retreieved using *nativeTONAddress* getter in TacSDK.
 
 ---
 
@@ -138,14 +191,26 @@ For example, when adding liquidity, you need to specify the addresses of the tok
   - A promise that resolves to the computed EVM token address as a string.
 
 ---
+### Function: `getTVMTokenAddress`
+---
+This function gets the TVM paired address for a EVM token. 
 
+#### **Purpose**
 
-#### **Functionality**
+This function provides the address of the wrapper for any EVM token at a specific address.
 
-1. Determines whether each Jetton requires a **burn** or **transfer** operation based on its type.
-2. Prepares shard messages and encodes the necessary payloads.
-3. Bridges Jettons by sending shard transactions to the appropriate smart contracts.
-4. Incorporates EVM logic into the payload for interaction with the TAC.
+#### **Parameters**
+
+- **`evmTokenAddress(string)`**: The address of the token on the TAC blockchain (EVM format), including support for native TAC. Address of native TAC can be retreieved using *nativeTACAddress* getter in TacSDK.
+
+---
+
+#### **Returns**
+
+- **`Promise<string>`**:
+  - A promise that resolves to the computed TVM token address as a string.
+
+---
 
 ## Sending Transactions: Two Approaches
 
@@ -184,9 +249,6 @@ const sender = await SenderFactory.getSender({
 - **Supported wallet versions**:
 ```
 export type WalletVersion =
-    | "v1r1"
-    | "v1r2"
-    | "v1r3"
     | "v2r1"
     | "v2r2"
     | "v3r1"
@@ -346,6 +408,7 @@ export type TacSDKTonClientParams = {
     tonClientParameters?: TonClientParameters;
     delay?: number;
     settingsAddress?: string;
+    contractOpener?: ContractOpener;
 }
 ```
 
@@ -354,7 +417,8 @@ Parameters for the TON SDK client.
 - **`tonClientParameters`** *(optional)*: Parameters for configuring the TON client.
 - **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0* for custom tonClientParameters, but with empty *tonClientParameters* delay would be set to *3*.
 This structure is used to create the TON client, which you will utilize for sending transactions. It allows you to specify the network (Testnet or Mainnet), configure client parameters, and set a delay for request execution. Proper configuration ensures smooth and efficient interaction with the TON blockchain during operations.
-- **`settingsAddress`** : TAC protocol contract address. Needed to retrieve protocol data. Set for tests only
+- **`settingsAddress`** *(optional)*: TAC protocol contract address. Needed to retrieve protocol data. Set for tests only
+- **`contractOpener`** *(optional)*: Client for TON chain to be used instead of @ton/ton TonClient. Used for smart contract interaction.
 
 ### `EvmProxyMsg (Type)`
 ```typescript
@@ -395,6 +459,7 @@ export type TransactionLinker = {
     shardCount: number,
     shardedId: string,
     timestamp: number,
+    sendTransactionResult?: unknown,
 }
 ```
 Linker to track cross-chain transaction.
@@ -402,6 +467,7 @@ Linker to track cross-chain transaction.
 - **`shardCount`**: Number of shards involved.
 - **`shardedId`**: Identifier for the shard.
 - **`timestamp`**: Timestamp of the transaction.
+- **`sendTransactionResult`** *(optional)*: Result of sending transaction. May be used to check result of sending transaction. Default TonClient does NOT fill this field. However, in unit tests @ton/sandbox set transaction result object to this field.
 
 This structure is designed to help track the entire execution path of a transaction across all levels. By using it, you can identify the `operationId` and subsequently monitor the transaction status through a public API. This is particularly useful for ensuring visibility and transparency in the transaction lifecycle, allowing you to verify its progress and outcome.
 

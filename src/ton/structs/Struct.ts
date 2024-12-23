@@ -1,5 +1,15 @@
+import { SandboxContract } from '@ton/sandbox';
+import type { Address, Contract, OpenedContract, TonClientParameters } from '@ton/ton';
 import { Cell } from '@ton/ton';
-import type { TonClientParameters } from '@ton/ton';
+
+export interface ContractOpener {
+    open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
+    getContractState(address: Address): Promise<{
+        balance: bigint;
+        state: 'active' | 'uninitialized' | 'frozen';
+        code: Buffer | null;
+    }>;
+}
 
 export enum Network {
     Testnet = 'testnet',
@@ -14,6 +24,11 @@ export enum SimplifiedStatuses {
 }
 
 export type TacSDKTonClientParams = {
+    /**
+     * Provider to use instead of @ton/ton TonClient
+     */
+    contractOpener?: ContractOpener;
+
     /**
      * TON CHAIN
      */
@@ -61,6 +76,7 @@ export type TransactionLinker = {
     shardCount: number;
     shardedId: string;
     timestamp: number;
+    sendTransactionResult?: unknown;
 };
 
 export type ShardMessage = {

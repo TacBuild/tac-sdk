@@ -1,7 +1,7 @@
 import { TransactionLinker } from '../structs/Struct';
+import { MAX_ITERATION_COUNT } from './Consts';
 import { TransactionStatus } from './TransactionStatus';
 import { sleep } from './Utils';
-import { MAX_ITERATION_COUNT } from './Consts';
 
 export async function startTracking(
     transactionLinker: TransactionLinker,
