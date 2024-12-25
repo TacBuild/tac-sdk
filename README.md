@@ -86,14 +86,30 @@ Optionally, you can provide custom client for TON blockchain in `contractOpener`
 ```typescript
 import { TacSdk } from 'tac-sdk';
 import { Network } from 'tac-sdk';
+import { liteClientOpener } from 'tac-sdk';
+
+// Ex.: your own lite clients for TON
+const liteClientServers = [<liteClientServer1>, <liteClientServer1>, ...];
 
 const tonClientParams: TacSDKTonClientParams = {
   network: Network.Testnet,
-  contractOpener: <yourContractOpener>,
-}; // you can also customize TON client here
+  contractOpener: await liteClientOpener({ liteservers : liteClientServers }),
+};
+
+/* or variant with default liteservers from ton.org:
+
+const tonClientParams: TacSDKTonClientParams = {
+  network: Network.Testnet,
+  contractOpener: await liteClientOpener({ network: Network.Testnet }),
+};
+
+*/
+
 const tacSdk = new TacSdk(tonClientParams);
 await tacSdk.init();
 ```
+
+*ATTENTION:* liteClientOpener uses ton-lite-client lib that does not stop some of its tasks, so process does not stop by itself [https://github.com/ton-core/ton-lite-client/issues/10]. Please, consider to use `process.exit()` in NodeJS environment after all your tasks are completed.
 
 ### Function: `sendCrossChainTransaction`
 

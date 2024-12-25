@@ -65,11 +65,9 @@ export class TacSdk {
     constructor(TacSDKParams: TacSDKTonClientParams) {
         this.network = TacSDKParams.network;
         this.artifacts = this.network === Network.Testnet ? testnet : mainnet;
-        this.delay = TacSDKParams.tonClientParameters ? (TacSDKParams.delay ?? 0) : DEFAULT_DELAY;
+        this.delay = TacSDKParams.delay === undefined ? DEFAULT_DELAY : TacSDKParams.delay;
 
-        this.settingsAddress = TacSDKParams.tonClientParameters
-            ? (TacSDKParams.settingsAddress ?? this.artifacts.ton.addresses.TON_SETTINGS_ADDRESS)
-            : this.artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
+        this.settingsAddress = TacSDKParams.settingsAddress ?? this.artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
 
         if (TacSDKParams.contractOpener) {
             this.contractOpener = TacSDKParams.contractOpener;
@@ -98,7 +96,7 @@ export class TacSdk {
         this.TACCrossChainLayer = new ethers.Contract(
             cclAddress,
             this.artifacts.tac.compilationArtifacts.CrossChainLayer.abi,
-            this.TACProvider
+            this.TACProvider,
         );
 
         const settings = this.contractOpener.open(new Settings(Address.parse(this.settingsAddress)));
@@ -119,7 +117,7 @@ export class TacSdk {
     }
 
     get nativeTONAddress(): string {
-       return 'NONE';
+        return 'NONE';
     }
 
     get nativeTACAddress(): Promise<string> {

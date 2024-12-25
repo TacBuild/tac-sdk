@@ -8,6 +8,7 @@ import { mnemonicNew } from 'ton-crypto';
 import { EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
 
 import { testnet } from '@tonappchain/artifacts';
+import { sandboxOpener } from '../../src/ton/adapters/contractOpener';
 
 describe('TacSDK', () => {
     const {
@@ -174,21 +175,10 @@ describe('TacSDK', () => {
         await deployJettonMinter();
 
         sdk = new TacSdk({
-            contractOpener: {
-                open: (contract) => blockchain.openContract(contract),
-                getContractState: async (address) => {
-                    const state = await blockchain.provider(address).getState();
-                    return {
-                        balance: state.balance,
-                        //@ts-ignore
-                        code: state.state.code || null,
-                        state: state.state.type === 'uninit' ? 'uninitialized' : state.state.type,
-                    };
-                },
-            },
+            contractOpener: sandboxOpener(blockchain),
             network: Network.Testnet,
             settingsAddress: settings.address.toString(),
-            tonClientParameters: { endpoint: '' },
+            delay: 0,
         });
 
         initialState = blockchain.snapshot();

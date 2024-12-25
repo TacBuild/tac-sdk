@@ -16,3 +16,4 @@ export type {
 export { Network, SimplifiedStatuses } from './ton/structs/Struct';
 export type { JettonWalletData } from './ton/wrappers/JettonWallet';
 export { JettonWallet, JettonWalletOpCodes } from './ton/wrappers/JettonWallet';
+export { liteClientOpener } from './ton/adapters/contractOpener';

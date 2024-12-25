@@ -7,3 +7,6 @@ export const TRANSACTION_TON_AMOUNT = 0.35;
 export const JETTON_TRANSFER_FORWARD_TON_AMOUNT = 0.2;
 
 export const MAX_ITERATION_COUNT = 120;
+
+export const TESTNET_DEFAULT_LITESERVERS = 'https://ton.org/testnet-global.config.json';
+export const MAINNET_DEFAULT_LITESERVERS = 'https://ton.org/global.config.json';
