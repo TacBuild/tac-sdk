@@ -1,5 +1,5 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
-import { isAddress } from 'ethers';
+import { AbiCoder, ethers, isAddress } from 'ethers';
 
 import { EvmProxyMsg, RandomNumberByTimestamp, TransactionLinker } from '../structs/Struct';
 
@@ -62,4 +62,20 @@ export function validateEVMAddress(address: string): void {
     if (!isAddress(address)) {
         throw new Error('invalid evm address');
     }
+}
+
+export function calculateEVMTokenAddress(
+    abiCoder: AbiCoder,
+    crossChainLayerAddress: string,
+    crossChainLayerBytecode: string,
+    settingsAddress: string,
+    l1Address: string,
+): string {
+    const salt = ethers.keccak256(ethers.solidityPacked(['string'], [l1Address]));
+    const initCode = ethers.solidityPacked(
+        ['bytes', 'bytes'],
+        [crossChainLayerBytecode, abiCoder.encode(['address'], [settingsAddress])],
+    );
+    const initCodeHash = ethers.keccak256(initCode);
+    return ethers.getCreate2Address(crossChainLayerAddress, salt, initCodeHash);
 }

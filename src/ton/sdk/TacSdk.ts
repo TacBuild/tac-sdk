@@ -32,6 +32,7 @@ import {
 import {
     buildEvmDataCell,
     calculateContractAddress,
+    calculateEVMTokenAddress,
     generateRandomNumberByTimestamp,
     generateTransactionLinker,
     sleep,
@@ -58,8 +59,8 @@ export class TacSdk {
     private contractOpener: ContractOpener;
     private TACProvider: ethers.AbstractProvider;
     private TACSettings: ethers.Contract;
-    private TACTokenUtils!: ethers.Contract;
     private TACCrossChainLayer!: ethers.Contract;
+    private abiCoder: ethers.AbiCoder;
 
     constructor(TacSDKParams: TacSDKTonClientParams) {
         this.network = TacSDKParams.network;
@@ -87,6 +88,7 @@ export class TacSdk {
             this.artifacts.tac.compilationArtifacts.Settings.abi,
             this.TACProvider,
         );
+        this.abiCoder = new ethers.AbiCoder();
     }
 
     async init(): Promise<void> {
@@ -97,15 +99,6 @@ export class TacSdk {
             cclAddress,
             this.artifacts.tac.compilationArtifacts.CrossChainLayer.abi,
             this.TACProvider
-        );
-
-        const tokenUtilsAddress: string = await this.TACSettings.getAddressSetting(
-            keccak256(toUtf8Bytes('TokenUtilsAddress')),
-        );
-        this.TACTokenUtils = new ethers.Contract(
-            tokenUtilsAddress,
-            this.artifacts.tac.compilationArtifacts.ITokenUtils.abi,
-            this.TACProvider,
         );
 
         const settings = this.contractOpener.open(new Settings(Address.parse(this.settingsAddress)));
@@ -360,18 +353,22 @@ export class TacSdk {
             validateTVMAddress(tvmTokenAddress);
 
             const { code: givenMinterCodeBOC } = await this.contractOpener.getContractState(address(tvmTokenAddress));
+            await sleep(this.delay * 1000);
+
             if (givenMinterCodeBOC && this.jettonMinterCode.equals(Cell.fromBoc(givenMinterCodeBOC)[0])) {
                 const givenMinter = this.contractOpener.open(new JettonMaster(address(tvmTokenAddress)));
-                await sleep(this.delay * 1000);
                 const l2Address = await givenMinter.getL2Address();
                 await sleep(this.delay * 1000);
                 return l2Address;
             }
         }
 
-        return await this.TACTokenUtils.computeAddress(
-            tvmTokenAddress,
+        return calculateEVMTokenAddress(
+            this.abiCoder,
+            await this.TACCrossChainLayer.getAddress(),
+            this.artifacts.tac.compilationArtifacts.CrossChainLayerToken.bytecode,
             this.artifacts.tac.addresses.TAC_SETTINGS_ADDRESS,
+            tvmTokenAddress,
         );
     }
 
