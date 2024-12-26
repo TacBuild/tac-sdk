@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- Calculate token addresses through emulation
+
 ## [0.3.5] - 2024-12-20
 
 ### Added
