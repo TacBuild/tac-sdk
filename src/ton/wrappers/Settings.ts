@@ -1,6 +1,7 @@
 import type { Cell, Contract, ContractProvider } from '@ton/core';
 import { Address } from '@ton/core';
 import { ethers } from 'ethers';
+import { emptySettingError } from '../errors';
 
 export class Settings implements Contract {
     static create(address: Address) {
@@ -35,7 +36,7 @@ export class Settings implements Contract {
         const cell = stack.readCellOpt();
         const found = stack.readBoolean();
         if (!found || cell == null) {
-            throw new Error(`unexpected empty ${setting}. Make sure the settings contract is valid.`);
+            throw emptySettingError(setting);
         }
         return cell;
     }

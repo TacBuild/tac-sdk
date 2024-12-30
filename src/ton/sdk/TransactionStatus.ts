@@ -3,6 +3,7 @@ import axios from 'axios';
 import type { TransactionLinker } from '../structs/Struct';
 import { SimplifiedStatuses } from '../structs/Struct';
 import { PUBLIC_LITE_SEQUENCER_ENDPOINTS } from './Consts';
+import { operationFetchError, statusFetchError } from '../errors';
 
 export class TransactionStatus {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
@@ -34,7 +35,7 @@ export class TransactionStatus {
                 console.error(`Failed to get OperationId with ${endpoint}:`, error);
             }
         }
-        throw new Error('Failed to fetch OperationId');
+        throw operationFetchError;
     }
 
     async getStatusTransaction(operationId: string): Promise<string> {
@@ -52,7 +53,7 @@ export class TransactionStatus {
                 console.error(`Error fetching status transaction with ${endpoint}:`, error);
             }
         }
-        throw new Error('Failed to fetch status transaction');
+        throw statusFetchError;
     }
 
     async getSimplifiedTransactionStatus(
