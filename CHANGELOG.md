@@ -2,11 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.3.6] - 2024-12-30
 
 ### Changed
 
 - Calculate token addresses through emulation
+
+### Added
+
+- Methods that may construct custom contractOpener for TacSDK. Currently, it provides methods for Sandbox(without export from SDK) and LiteClient openers creation.
+
+    ```typescript
+        export async function liteClientOpener(
+            options: { liteservers: LiteServer[] } | { network: Network },
+        ): Promise<ContractOpener>
+
+        export function sandboxOpener(blockchain: Blockchain): ContractOpener;
+    ```
 
 ## [0.3.5] - 2024-12-20
 
