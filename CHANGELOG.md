@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Custom errors
+
 ## [0.3.6] - 2024-12-30
 
 ### Changed
