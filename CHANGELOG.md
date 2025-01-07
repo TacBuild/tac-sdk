@@ -2,19 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-### Added
-
-- Custom errors
-
-## [0.3.6] - 2024-12-30
+## [0.3.6] - 2025-01-07
 
 ### Changed
 
 - Calculate token addresses through emulation
 
 ### Added
+
+- Custom errors
 
 - Methods that may construct custom contractOpener for TacSDK. Currently, it provides methods for Sandbox(without export from SDK) and LiteClient openers creation.
 
