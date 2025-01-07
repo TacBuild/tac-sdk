@@ -15,6 +15,7 @@ import { mnemonicToWalletKey } from 'ton-crypto';
 import { RawSender } from './RawSender';
 import { SenderAbstraction } from './SenderAbstraction';
 import { TonConnectSender } from './TonConnectSender';
+import { unknownWalletError } from '../errors';
 
 export type WalletVersion = 'v2r1' | 'v2r2' | 'v3r1' | 'v3r2' | 'v4' | 'v5r1';
 
@@ -41,7 +42,7 @@ export class SenderFactory {
         }
 
         if (!(params.version in wallets)) {
-            throw new Error(`Unknown wallet version ${params.version}`);
+            throw unknownWalletError(params.version);
         }
 
         const keypair = await mnemonicToWalletKey(params.mnemonic.split(' '));

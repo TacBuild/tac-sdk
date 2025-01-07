@@ -4,6 +4,7 @@ import { Sha256 } from '@aws-crypto/sha256-js';
 import { beginCell, Builder, Cell, Dictionary, Slice } from '@ton/core';
 import axios from 'axios';
 import BN from 'bn.js';
+import { notMultiplyOf8Error, prefixError, unsupportedFormatError, unsupportedKeyError } from '../errors';
 
 export const ONCHAIN_CONTENT_PREFIX = 0x00;
 export const OFFCHAIN_CONTENT_PREFIX = 0x01;
@@ -70,7 +71,7 @@ export function buildJettonOnchainMetadata(data: JettonMetadata) {
 
     Object.entries(data).forEach(([k, v]: [string, string | undefined]) => {
         if (!jettonOnChainMetadataSpec[k as JettonMetaDataKeys]) {
-            throw new Error(`Unsupported onchain key: ${k}`);
+            throw unsupportedKeyError(k);
         }
         if (!v || v == '' || v == null) {
             return;
@@ -89,11 +90,11 @@ export function buildJettonOnchainMetadata(data: JettonMetadata) {
 
 function readSnakeContent(slice: Slice, isFirst: boolean): Buffer {
     if (isFirst && slice.loadUint(8) !== SNAKE_PREFIX) {
-        throw new Error('Only snake format is supported');
+        throw unsupportedFormatError;
     }
 
     if (slice.remainingBits % 8 !== 0) {
-        throw new Error('Number remaining of bits is not multiply of 8');
+        throw notMultiplyOf8Error;
     }
 
     let remainingBytes = Buffer.from('');
@@ -154,7 +155,7 @@ async function parseJettonOffchainMetadata(contentSlice: Slice): Promise<{
     const remainingBits = contentSlice.remainingBits;
 
     if (remainingBits % 8 !== 0) {
-        throw new Error('Number remaining of bits is not multiply of 8');
+        throw notMultiplyOf8Error;
     }
 
     const jsonURI = contentSlice
@@ -204,6 +205,6 @@ export async function readJettonMetadata(contentCell: Cell): Promise<JettonExten
             };
         }
         default:
-            throw new Error('Unexpected wrappers metadata content prefix');
+            throw prefixError;
     }
 }

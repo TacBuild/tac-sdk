@@ -40,6 +40,7 @@ import {
     validateTVMAddress,
 } from './Utils';
 import { testnet, mainnet } from '@tonappchain/artifacts';
+import { emptyContractError } from '../errors';
 
 const DEFAULT_DELAY = 3;
 
@@ -182,7 +183,7 @@ export class TacSdk {
     private async getJettonOpType(asset: JettonBridgingData): Promise<AssetOpType> {
         const { code: givenMinterCodeBOC } = await this.contractOpener.getContractState(address(asset.address));
         if (!givenMinterCodeBOC) {
-            throw new Error('unexpected empty contract code of given jetton.');
+            throw emptyContractError;
         }
         const givenMinterCode = Cell.fromBoc(givenMinterCodeBOC)[0];
         await sleep(this.delay * 1000);

@@ -111,6 +111,10 @@ await tacSdk.init();
 
 *ATTENTION:* liteClientOpener uses ton-lite-client lib that does not stop some of its tasks, so process does not stop by itself [https://github.com/ton-core/ton-lite-client/issues/10]. Please, consider to use `process.exit()` in NodeJS environment after all your tasks are completed.
 
+#### Possible exceptions
+
+- **`SettingError`**: settings contract at provided address does not contain required setting key.
+
 ### Function: `sendCrossChainTransaction`
 
 This function facilitates cross-chain transactions by bridging data and assets for interaction with TAC. Works with TON native coin transfer and/or it handles the required logic for burning or transferring jettons based on the Jetton type(wrapped by our s-c CrossChainLayer or not).
@@ -145,6 +149,13 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 - **`Promise<TransactionLinker>`**:
   - A `TransactionLinker` object for tracking the transaction status during cross chain.
+---
+
+#### **Possible exceptions**
+
+- **`ContractError`**: contract for given jetton is not deployed on TVM side.
+- **`AddressError`**: invalid token address provided.
+
 ---
 
 #### **Functionality**
@@ -207,6 +218,12 @@ For example, when adding liquidity, you need to specify the addresses of the tok
   - A promise that resolves to the computed EVM token address as a string.
 
 ---
+
+#### **Possible exceptions**
+
+- **`AddressError`**: invalid token address provided.
+
+---
 ### Function: `getTVMTokenAddress`
 ---
 This function gets the TVM paired address for a EVM token. 
@@ -225,6 +242,12 @@ This function provides the address of the wrapper for any EVM token at a specifi
 
 - **`Promise<string>`**:
   - A promise that resolves to the computed TVM token address as a string.
+
+---
+
+#### **Possible exceptions**
+
+- **`AddressError`**: invalid token address provided.
 
 ---
 
@@ -272,6 +295,9 @@ export type WalletVersion =
     | "v4"
     | "v5r1";
 ```
+
+- **Possible exceptions**:
+  - **`WalletError`**: invalid wallet version provided.
 
 ## Tracking transaction
 The `TransactionStatus` class is designed to track the status of cross-chain transactions by interacting with public or custom Lite Sequencer endpoints. It provides methods to fetch and interpret transaction statuses, enabling smooth monitoring of transaction lifecycles.
@@ -393,6 +419,10 @@ Track the execution of crosschain operation with `startTracking` method
 #### **Returns**:
 - void:
   - Will stop requesting status once the final status of crosschain operation has been reached.
+
+#### **Possible exceptions**
+
+- **`FetchError`**: failed to fetch operation id or status of transaction from lite sequencer.
 
 ---
 
