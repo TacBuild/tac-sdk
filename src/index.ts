@@ -1,7 +1,7 @@
-export { TacSdk } from './ton/sdk/TacSdk';
-export { TransactionStatus } from './ton/sdk/TransactionStatus';
-export { startTracking } from './ton/sdk/TxTracker';
-export * from './ton/sender';
+export { TacSdk } from './sdk/TacSdk';
+export { TransactionStatus } from './sdk/TransactionStatus';
+export { startTracking } from './sdk/TxTracker';
+export * from './sender';
 export type {
     AssetBridgingData,
     EvmProxyMsg,
@@ -10,11 +10,13 @@ export type {
     JettonTransferData,
     ShardMessage,
     ShardTransaction,
-    TacSDKTonClientParams,
+    SDKParams,
+    TONParams,
+    TACParams,
     TransactionLinker,
-} from './ton/structs/Struct';
-export { Network, SimplifiedStatuses } from './ton/structs/Struct';
-export type { JettonWalletData } from './ton/wrappers/JettonWallet';
-export { JettonWallet, JettonWalletOpCodes } from './ton/wrappers/JettonWallet';
-export { liteClientOpener } from './ton/adapters/contractOpener';
-export * from './ton/errors';
+} from './structs/Struct';
+export { Network, SimplifiedStatuses } from './structs/Struct';
+export type { JettonWalletData } from './wrappers/JettonWallet';
+export { JettonWallet, JettonWalletOpCodes } from './wrappers/JettonWallet';
+export { liteClientOpener } from './adapters/contractOpener';
+export * from './errors';

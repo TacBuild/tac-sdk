@@ -8,7 +8,7 @@ import { mnemonicNew } from 'ton-crypto';
 import { EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
 
 import { testnet } from '@tonappchain/artifacts';
-import { sandboxOpener } from '../../src/ton/adapters/contractOpener';
+import { sandboxOpener } from '../../src/adapters/contractOpener';
 
 describe('TacSDK', () => {
     const {
@@ -99,7 +99,7 @@ describe('TacSDK', () => {
     };
 
     const deploySettings = async () => {
-        settings = await blockchain.openContract(
+        settings = blockchain.openContract(
             Settings.createFromConfig(
                 {
                     settings: Dictionary.empty(),
@@ -175,9 +175,11 @@ describe('TacSDK', () => {
         await deployJettonMinter();
 
         sdk = new TacSdk({
-            contractOpener: sandboxOpener(blockchain),
+            TONParams:{
+                contractOpener:  sandboxOpener(blockchain),
+                settingsAddress: settings.address.toString(),
+            },
             network: Network.Testnet,
-            settingsAddress: settings.address.toString(),
             delay: 0,
         });
 

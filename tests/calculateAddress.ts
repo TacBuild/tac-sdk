@@ -1,14 +1,14 @@
 import { address } from '@ton/core';
 
 import { TacSdk } from '../src';
-import { Network, TacSDKTonClientParams } from '../src';
+import { Network, SDKParams } from '../src';
 
 async function main() {
-    const tonClientParams: TacSDKTonClientParams = {
+    const sdkParams: SDKParams = {
         network: Network.Testnet,
         delay: 1,
     };
-    const tacSdk = new TacSdk(tonClientParams);
+    const tacSdk = new TacSdk(sdkParams);
     await tacSdk.init();
 
     console.log(`TAC Native token: ${await tacSdk.nativeTACAddress}`);

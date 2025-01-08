@@ -1,7 +1,7 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers, isAddress } from 'ethers';
 
-import { EvmProxyMsg, RandomNumberByTimestamp, TransactionLinker } from '../structs/Struct';
+import {EvmProxyMsg, RandomNumberByTimestamp, TransactionLinker} from '../structs/Struct';
 import { evmAddressError, tvmAddressError } from '../errors';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -49,7 +49,7 @@ export function generateTransactionLinker(caller: string, shardCount: number): T
         caller: Address.normalize(caller),
         shardCount,
         shardedId: String(random.randomNumber),
-        timestamp: random.timestamp,
+        timestamp: random.timestamp
     };
 }
 

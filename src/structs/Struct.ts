@@ -1,19 +1,16 @@
-import { SandboxContract } from '@ton/sandbox';
-import type { Address, Contract, OpenedContract, TonClientParameters } from '@ton/ton';
-import { Cell } from '@ton/ton';
+import {SandboxContract} from '@ton/sandbox';
+import type {Address, Contract, OpenedContract} from '@ton/ton';
+import {Cell} from '@ton/ton';
+import {AbstractProvider, Addressable, Interface, InterfaceAbi} from "ethers";
 
 export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
+
     getContractState(address: Address): Promise<{
         balance: bigint;
         state: 'active' | 'uninitialized' | 'frozen';
         code: Buffer | null;
     }>;
-}
-
-export enum Network {
-    Testnet = 'testnet',
-    Mainnet = 'mainnet',
 }
 
 export enum SimplifiedStatuses {
@@ -23,31 +20,66 @@ export enum SimplifiedStatuses {
     OperationIdNotFound,
 }
 
-export type TacSDKTonClientParams = {
+export enum Network {
+    Testnet = 'testnet',
+    Mainnet = 'mainnet',
+}
+
+export type TACParams = {
     /**
-     * Provider to use instead of @ton/ton TonClient
+     * Provider for TAC side. Use your own provider for tests or to increase ratelimit
+     */
+    provider?: AbstractProvider;
+
+    /**
+     * Address of TAC settings contract. Use only for tests.
+     */
+    settingsAddress?: string | Addressable;
+
+    /**
+     * ABI of TAC settings contract. Use only for tests.
+     */
+    settingsABI?: Interface | InterfaceAbi;
+
+    /**
+     * ABI of TAC CCL contract. Use only for tests.
+     */
+    crossChainLayerABI?: Interface | InterfaceAbi;
+}
+
+export type TONParams = {
+    /**
+     * Provider for TON side. Use your own provider for tests or to increase ratelimit
      */
     contractOpener?: ContractOpener;
 
     /**
-     * TON CHAIN
+     * Address of TON settings contract. Use only for tests.
+     */
+    settingsAddress?: string;
+}
+
+export type SDKParams = {
+    /**
+     * TON CHAIN. For your network use Сustom
      */
     network: Network;
 
     /**
-     * TonClient Parameters
-     */
-    tonClientParameters?: TonClientParameters;
-
-    /**
-     * Delay in request to TONClient
+     * Delay in requests to provider
      */
     delay?: number;
 
+
     /**
-     * Custom address of tvm settings contract. Use only for tests.
+     * Custom parameters for the TAC blockchain
      */
-    settingsAddress?: string;
+    TACParams?: TACParams;
+
+    /**
+     * Custom parameters for the TON blockchain
+     */
+    TONParams?: TONParams;
 };
 
 export type AssetBridgingData = {

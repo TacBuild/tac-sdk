@@ -6,7 +6,9 @@ async function main() {
     const sdk = new TacSdk({
         network: Network.Testnet,
         delay: 0,
-        contractOpener: await liteClientOpener({ network: NETWORK }),
+        TONParams: {
+            contractOpener: await liteClientOpener({ network: NETWORK }),
+        }
     });
     await sdk.init();
 

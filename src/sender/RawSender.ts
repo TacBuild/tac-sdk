@@ -1,4 +1,4 @@
-import { internal, TonClient } from '@ton/ton';
+import { internal } from '@ton/ton';
 import { MessageRelaxed, SendMode } from '@ton/ton';
 
 import type { ContractOpener, ShardTransaction } from '../structs/Struct';
