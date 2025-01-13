@@ -16,8 +16,7 @@ async function removeLiquidity() {
         network: Network.Testnet,
         delay: 3,
     };
-    const tacSdk = new TacSdk(sdkParams);
-    await tacSdk.init();
+    const tacSdk = await TacSdk.create(sdkParams);
 
     const amountLP = 1;
 

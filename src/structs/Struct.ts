@@ -1,7 +1,7 @@
-import {SandboxContract} from '@ton/sandbox';
-import type {Address, Contract, OpenedContract} from '@ton/ton';
-import {Cell} from '@ton/ton';
-import {AbstractProvider, Addressable, Interface, InterfaceAbi} from "ethers";
+import { SandboxContract } from '@ton/sandbox';
+import type { Address, Contract, OpenedContract } from '@ton/ton';
+import { Cell } from '@ton/ton';
+import { AbstractProvider, Addressable, ethers, Interface, InterfaceAbi } from 'ethers';
 
 export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
@@ -45,6 +45,16 @@ export type TACParams = {
      * ABI of TAC CCL contract. Use only for tests.
      */
     crossChainLayerABI?: Interface | InterfaceAbi;
+
+    /**
+     * ABI of TAC CrossChainLayerToken contract. Use only for tests.
+     */
+    crossChainLayerTokenABI?: Interface | InterfaceAbi;
+
+    /**
+     * bytecode of TAC CrossChainLayerToken contract. Use only for tests.
+     */
+    crossChainLayerTokenBytecode?: string;
 }
 
 export type TONParams = {
@@ -70,7 +80,6 @@ export type SDKParams = {
      */
     delay?: number;
 
-
     /**
      * Custom parameters for the TAC blockchain
      */
@@ -80,6 +89,24 @@ export type SDKParams = {
      * Custom parameters for the TON blockchain
      */
     TONParams?: TONParams;
+};
+
+export type InternalTONParams = {
+    contractOpener: ContractOpener;
+    jettonProxyAddress: string;
+    crossChainLayerAddress: string;
+    jettonMinterCode: Cell;
+    jettonWalletCode: Cell;
+};
+
+export type InternalTACParams = {
+    provider: AbstractProvider;
+    settingsAddress: string,
+    abiCoder: ethers.AbiCoder,
+    crossChainLayerABI: Interface | InterfaceAbi,
+    crossChainLayerAddress: string,
+    crossChainLayerTokenABI: Interface | InterfaceAbi,
+    crossChainLayerTokenBytecode: string,
 };
 
 export type AssetBridgingData = {

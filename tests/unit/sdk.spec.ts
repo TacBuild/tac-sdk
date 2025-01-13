@@ -174,7 +174,7 @@ describe('TacSDK', () => {
         await deploySettings();
         await deployJettonMinter();
 
-        sdk = new TacSdk({
+        sdk = await TacSdk.create({
             TONParams:{
                 contractOpener:  sandboxOpener(blockchain),
                 settingsAddress: settings.address.toString(),
