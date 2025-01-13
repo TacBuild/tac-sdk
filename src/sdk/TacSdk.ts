@@ -43,7 +43,7 @@ import {mainnet, testnet} from '@tonappchain/artifacts';
 import {emptyContractError} from '../errors';
 import {liteClientOpener} from "../adapters/contractOpener";
 
-const DEFAULT_DELAY = 0;
+const DEFAULT_DELAY = 3;
 
 
 
