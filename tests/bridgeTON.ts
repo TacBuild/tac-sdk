@@ -10,8 +10,7 @@ const bridgeTonSawSender = async (amount: number) => {
         network: Network.Testnet,
         delay: 5,
     };
-    const tacSdk = new TacSdk(sdkParams);
-    await tacSdk.init();
+    const tacSdk = TacSdk.createSDK(sdkParams);
 
     // create evm proxy msg
     const evmProxyMsg: EvmProxyMsg = {

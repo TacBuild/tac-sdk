@@ -12,8 +12,9 @@ const bridgeDataRawSender = async () => {
         network: Network.Testnet,
         delay: 5,
     };
-    const tacSdk = new TacSdk(sdkParams);
-    await tacSdk.init();
+
+    const tacSdk = TacSdk.createSDK(sdkParams);
+
 
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(

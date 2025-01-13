@@ -1,8 +1,7 @@
 import {SandboxContract} from '@ton/sandbox';
 import type {Address, Contract, OpenedContract} from '@ton/ton';
 import {Cell} from '@ton/ton';
-import {AbstractProvider, Addressable, Interface, InterfaceAbi} from "ethers";
-
+import {AbstractProvider, ethers, Addressable, Interface, InterfaceAbi} from "ethers";
 export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
 
@@ -26,25 +25,12 @@ export enum Network {
 }
 
 export type TACParams = {
-    /**
-     * Provider for TAC side. Use your own provider for tests or to increase ratelimit
-     */
-    provider?: AbstractProvider;
-
-    /**
-     * Address of TAC settings contract. Use only for tests.
-     */
-    settingsAddress?: string | Addressable;
-
-    /**
-     * ABI of TAC settings contract. Use only for tests.
-     */
-    settingsABI?: Interface | InterfaceAbi;
-
-    /**
-     * ABI of TAC CCL contract. Use only for tests.
-     */
-    crossChainLayerABI?: Interface | InterfaceAbi;
+    provider: AbstractProvider;
+    settingsAddress?: string
+    settings: ethers.Contract,
+    abiCoder: ethers.AbiCoder,
+    crossChainLayerABI: Interface | InterfaceAbi,
+    crossChainLayer?: ethers.Contract,
 }
 
 export type TONParams = {
@@ -57,6 +43,11 @@ export type TONParams = {
      * Address of TON settings contract. Use only for tests.
      */
     settingsAddress?: string;
+    
+    jettonProxyAddress?: string;
+    crossChainLayerAddress?: string;
+    jettonMinterCode?: Cell;
+    jettonWalletCode?: Cell;
 }
 
 export type SDKParams = {
@@ -68,7 +59,7 @@ export type SDKParams = {
     /**
      * Delay in requests to provider
      */
-    delay?: number;
+    delay: number;
 
 
     /**
