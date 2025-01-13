@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-import {Network, TransactionLinker} from '../structs/Struct';
-import {SimplifiedStatuses} from '../structs/Struct';
-import {MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS, TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS} from './Consts';
-import {operationFetchError, statusFetchError} from '../errors';
+import { Network, TransactionLinker } from '../structs/Struct';
+import { SimplifiedStatuses } from '../structs/Struct';
+import { MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS, TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS } from './Consts';
+import { operationFetchError, statusFetchError } from '../errors';
 
 export class TransactionStatus {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
@@ -56,7 +56,7 @@ export class TransactionStatus {
         for (const endpoint of endpoints) {
             try {
                 const response = await axios.get(`${endpoint}/status`, {
-                    params: {operationId: operationId},
+                    params: { operationId },
                 });
                 return response.data.response || '';
             } catch (error) {

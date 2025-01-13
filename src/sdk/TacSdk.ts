@@ -114,7 +114,7 @@ export class TacSdk {
             network === Network.Testnet ? TESTNET_TAC_RPC_ENDPOINT : MAINNET_TAC_RPC_ENDPOINT
         );
 
-        const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS
+        const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
         const settings = new ethers.Contract(
             settingsAddress,
             TACParams?.settingsABI ?? artifacts.tac.compilationArtifacts.Settings.abi,
