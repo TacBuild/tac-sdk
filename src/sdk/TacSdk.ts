@@ -12,8 +12,6 @@ import {
     JettonTransferData,
     Network,
     SDKParams,
-    TONParams,
-    TACParams,
     ShardMessage,
     ShardTransaction,
     TransactionLinker, ContractOpener
@@ -45,112 +43,87 @@ import {liteClientOpener} from "../adapters/contractOpener";
 
 const DEFAULT_DELAY = 3;
 
-
-
 export class TacSdk {
+    private isInited: boolean = false;
     readonly network: Network;
     readonly delay: number;
     readonly artifacts: typeof testnet | typeof mainnet;
 
-    private TONParams: TONParams;
-    private TACParams: TACParams;
+    private TONParams: {
+        contractOpener?: ContractOpener;
+        settingsAddress: string;
+        jettonProxyAddress?: string;
+        crossChainLayerAddress?: string;
+        jettonMinterCode?: Cell;
+        jettonWalletCode?: Cell;
+    };
 
-    private constructor(tonParams: TONParams,
-        tacParams: TACParams,
-        network: Network,
-        delay: number
-    ) {
-        this.TONParams = tonParams;
-        this.TACParams = tacParams;
-        this.network = network;
-        this.delay = delay;
-    }
+    private TACParams: {
+        provider: AbstractProvider;
+        settings: ethers.Contract,
+        abiCoder: ethers.AbiCoder,
+        crossChainLayerABI: Interface | InterfaceAbi,
+        crossChainLayer?: ethers.Contract,
+    };
 
-    static async createSDK(sdkParams: SDKParams): Promise<TacSdk> {
-        const tonParams = await this.calculateTONParams(sdkParams);
-        const tacParams = await this.calculateTACParams(sdkParams, tonParams);
-       
+    constructor(sdkParams: SDKParams) {
+        this.network = sdkParams.network;
+        this.delay = sdkParams.delay ?? DEFAULT_DELAY;
+        this.artifacts = this.network === Network.Testnet ? testnet : mainnet;
 
-        return new TacSdk(tonParams, tacParams, sdkParams.network, sdkParams.delay);
-    }
 
-    private static async calculateTONParams(sdkParams: SDKParams): Promise<TONParams> {
-        const network = sdkParams.network;
-        const artifacts = network === Network.Testnet ? testnet : mainnet;
-
-        const contractOpener = sdkParams.TONParams?.contractOpener || 
-            await liteClientOpener({ network });
-
-        const settingsAddress = sdkParams.TONParams?.settingsAddress 
-            ?? artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
-
-        const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
-
-        const delay = sdkParams.delay ?? DEFAULT_DELAY;
-
-        const jettonProxyAddress = await settings.getAddressSetting('JettonProxyAddress');
-        await sleep(delay * 1000);
-
-        const crossChainLayerAddress = await settings.getAddressSetting('CrossChainLayerAddress');
-        await sleep(delay * 1000);
-
-        const jettonMinterCode = await settings.getCellSetting('JETTON_MINTER_CODE');
-        await sleep(delay * 1000);
-
-        const jettonWalletCode = await settings.getCellSetting('JETTON_WALLET_CODE');
-        await sleep(delay * 1000);
-
-        return {
-            contractOpener,
-            settingsAddress,
-            jettonProxyAddress,
-            crossChainLayerAddress,
-            jettonMinterCode,
-            jettonWalletCode
+        this.TONParams = {
+            contractOpener: sdkParams.TONParams?.contractOpener,
+            settingsAddress: sdkParams.TONParams?.settingsAddress ?? this.artifacts.ton.addresses.TON_SETTINGS_ADDRESS
         };
-    }
 
-    private static async calculateTACParams(sdkParams: SDKParams, tonParams: TONParams): Promise<TACParams> {
-        const network = sdkParams.network;
-        const artifacts = network === Network.Testnet ? testnet : mainnet;
+        const TACProvider = sdkParams.TACParams?.provider
+            ?? ethers.getDefaultProvider(this.network === Network.Testnet ? TESTNET_TAC_RPC_ENDPOINT : MAINNET_TAC_RPC_ENDPOINT);
 
-        const provider = sdkParams.TACParams?.provider 
-            ?? ethers.getDefaultProvider(network === Network.Testnet 
-                ? TESTNET_TAC_RPC_ENDPOINT 
-                : MAINNET_TAC_RPC_ENDPOINT);
-
-        const settingsAddress = sdkParams.TACParams?.settingsAddress 
-            ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
-
-        const settings = new ethers.Contract(
-            settingsAddress,
-            artifacts.tac.compilationArtifacts.Settings.abi,
-            provider
-        );
-
-        const crossChainLayerABI = sdkParams.TACParams?.crossChainLayerABI 
-            ?? artifacts.tac.compilationArtifacts.CrossChainLayer.abi;
-
-        const cclAddress = await settings.getAddressSetting(
-            keccak256(toUtf8Bytes('CrossChainLayerAddress'))
-        );
-
-        const crossChainLayer = new ethers.Contract(
-            cclAddress,
-            crossChainLayerABI,
-            provider
-        );
-
-        return {
-            provider,
+        this.TACParams = {
+            provider: TACProvider,
             abiCoder: new ethers.AbiCoder(),
-            settings,
-            crossChainLayerABI,
-            crossChainLayer
+            settings: new ethers.Contract(
+                sdkParams.TACParams?.settingsAddress ?? this.artifacts.tac.addresses.TAC_SETTINGS_ADDRESS,
+                this.artifacts.tac.compilationArtifacts.Settings.abi,
+                TACProvider,
+            ),
+            crossChainLayerABI: sdkParams.TACParams?.crossChainLayerABI ?? this.artifacts.tac.compilationArtifacts.CrossChainLayer.abi
         };
+
     }
 
+    async init(): Promise<void> {
+        const cclAddress: string = await this.TACParams.settings.getAddressSetting(
+            keccak256(toUtf8Bytes('CrossChainLayerAddress')),
+        );
 
+        this.TACParams.crossChainLayer = new ethers.Contract(
+            cclAddress,
+            this.TACParams.crossChainLayerABI,
+            this.TACParams.provider,
+        );
+
+        if (!this.TONParams.contractOpener) {
+            this.TONParams.contractOpener = await liteClientOpener({network: this.network})
+        }
+
+        const settings = this.TONParams.contractOpener.open(new Settings(Address.parse(this.TONParams.settingsAddress)));
+
+        this.TONParams.jettonProxyAddress = await settings.getAddressSetting('JettonProxyAddress');
+        await sleep(this.delay * 1000);
+
+        this.TONParams.crossChainLayerAddress = await settings.getAddressSetting('CrossChainLayerAddress');
+        await sleep(this.delay * 1000);
+
+        this.TONParams.jettonMinterCode = await settings.getCellSetting('JETTON_MINTER_CODE');
+        await sleep(this.delay * 1000);
+
+        this.TONParams.jettonWalletCode = await settings.getCellSetting('JETTON_WALLET_CODE');
+        await sleep(this.delay * 1000);
+
+        this.isInited = true;
+    }
 
     get nativeTONAddress(): string {
         return 'NONE';
@@ -351,7 +324,9 @@ export class TacSdk {
         sender: SenderAbstraction,
         assets?: AssetBridgingData[],
     ): Promise<TransactionLinker> {
-        
+        if (!this.isInited) {
+            await this.init();
+        }
         const aggregatedData = this.aggregateJettons(assets);
         const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
 
@@ -377,7 +352,9 @@ export class TacSdk {
     }
 
     async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
-        
+        if (!this.isInited) {
+            await this.init();
+        }
 
         if (tvmTokenAddress !== this.nativeTONAddress) {
             validateTVMAddress(tvmTokenAddress);
@@ -403,7 +380,9 @@ export class TacSdk {
     }
 
     async getTVMTokenAddress(evmTokenAddress: string): Promise<string> {
-        
+        if (!this.isInited) {
+            await this.init();
+        }
 
         validateEVMAddress(evmTokenAddress);
 

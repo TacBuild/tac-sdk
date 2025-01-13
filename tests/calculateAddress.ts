@@ -8,7 +8,8 @@ async function main() {
         network: Network.Testnet,
         delay: 1,
     };
-    const tacSdk = TacSdk.createSDK(sdkParams);
+    const tacSdk = new TacSdk(sdkParams);
+    await tacSdk.init();
 
     console.log(`TAC Native token: ${await tacSdk.nativeTACAddress}`);
 

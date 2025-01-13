@@ -20,7 +20,8 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
         network: Network.Testnet,
         delay: 5,
     };
-    const tacSdk = TacSdk.createSDK(sdkParams);
+    const tacSdk = new TacSdk(sdkParams);
+    await tacSdk.init();
 
     let amountIn = 0;
     for (const amount of amountsIn) {
