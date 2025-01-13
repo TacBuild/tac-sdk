@@ -83,7 +83,7 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TONParams?: TONParams
     ): Promise<InternalTONParams> {
-        const contractOpener = TONParams?.contractOpener || await liteClientOpener({ network });
+        const contractOpener = TONParams?.contractOpener ?? await liteClientOpener({ network });
         const settingsAddress = TONParams?.settingsAddress ?? artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
         const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
 
