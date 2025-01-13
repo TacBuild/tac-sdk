@@ -64,8 +64,6 @@ export class TacSdk {
         this.TACParams = tacParams;
         this.network = network;
         this.delay = delay;
-        this.artifacts = this.network === Network.Testnet ? testnet : mainnet;
-
     }
 
     static async createSDK(sdkParams: SDKParams): Promise<TacSdk> {
