@@ -643,9 +643,10 @@ const assets: AssetBridgingData[] = [
     }
 ];
 
-const tacSdk = await TacSdk.create({
-  netw  ork: Network.Testnet
-});
+const sdkParams: SDKParams = {
+  network: Network.Testnet,
+};
+const tacSdk = await TacSdk.create(sdkParams);
 
 //Send transaction via tonConnect or mnemonic
 const tonConnectUI = new TonConnectUI({
