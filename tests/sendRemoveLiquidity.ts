@@ -1,14 +1,6 @@
 import {ethers} from "ethers";
 
-import {
-    AssetBridgingData,
-    EvmProxyMsg,
-    Network,
-    SenderFactory,
-    startTracking,
-    TacSdk,
-    TacSDKTonClientParams,
-} from "../src";
+import {AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk,} from "../src";
 
 const UNISWAPV2_PROXY_ADDRESS = "";
 
@@ -20,12 +12,10 @@ const WALLET_VERSION = "v4";
 const TVM_MNEMONICS = "";
 
 async function removeLiquidity() {
-    const tonClientParams: TacSDKTonClientParams = {
+    const sdkParams: SDKParams = {
         network: Network.Testnet,
-        delay: 3,
     };
-    const tacSdk = new TacSdk(tonClientParams);
-    await tacSdk.init();
+    const tacSdk = await TacSdk.create(sdkParams);
 
     const amountLP = 1;
 
@@ -83,7 +73,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result);
+        await startTracking(result, Network.Testnet);
     } catch (error) {
         console.error('Error during transaction:', error);
     }

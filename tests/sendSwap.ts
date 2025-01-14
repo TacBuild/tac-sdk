@@ -3,15 +3,7 @@ import 'dotenv/config';
 import {toNano} from '@ton/ton';
 import {ethers} from 'ethers';
 
-import {
-    AssetBridgingData,
-    EvmProxyMsg,
-    Network,
-    SenderFactory,
-    startTracking,
-    TacSdk,
-    TacSDKTonClientParams,
-} from '../src';
+import {AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk,} from '../src';
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 
@@ -24,12 +16,10 @@ const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
 
 const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, tokenAddress: string) => {
     // create TacSdk
-    const tonClientParams: TacSDKTonClientParams = {
+    const sdkParams: SDKParams = {
         network: Network.Testnet,
-        delay: 5,
     };
-    const tacSdk = new TacSdk(tonClientParams);
-    await tacSdk.init();
+    const tacSdk = await TacSdk.create(sdkParams);
 
     let amountIn = 0;
     for (const amount of amountsIn) {
@@ -83,7 +73,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result);
+        await startTracking(result, Network.Testnet);
     } catch (error) {
         console.error('Error during transaction:', error);
     }

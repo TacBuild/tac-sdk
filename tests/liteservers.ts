@@ -3,12 +3,13 @@ import { Network, TacSdk, liteClientOpener } from '../src';
 const NETWORK = Network.Testnet;
 
 async function main() {
-    const sdk = new TacSdk({
+    const sdk = await TacSdk.create({
         network: Network.Testnet,
         delay: 0,
-        contractOpener: await liteClientOpener({ network: NETWORK }),
+        TONParams: {
+            contractOpener: await liteClientOpener({ network: NETWORK }),
+        }
     });
-    await sdk.init();
 
     console.log(await sdk.getEVMTokenAddress('EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK'));
 

@@ -1,15 +1,17 @@
-import { TransactionLinker } from '../structs/Struct';
+import { Network, TransactionLinker } from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
-import { TransactionStatus } from './TransactionStatus';
+import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
 
 export async function startTracking(
     transactionLinker: TransactionLinker,
+    network: Network,
     isBridgeOperation: boolean = false,
+    customLiteSequencerEndpoints?: string[],
 ): Promise<void> {
-    const tracker = new TransactionStatus();
+    const tracker = new OperationTracker(network, customLiteSequencerEndpoints);
 
-    console.log('Start tracking transaction');
+    console.log('Start tracking operation');
     console.log('caller: ', transactionLinker.caller);
     console.log('shardedId: ', transactionLinker.shardedId);
     console.log('shardCount: ', transactionLinker.shardCount);
@@ -42,10 +44,10 @@ export async function startTracking(
                 console.log('get operationId error');
             }
         } else {
-            console.log('request transactionStatus');
+            console.log('request operationStatus');
 
             try {
-                currentStatus = await tracker.getStatusTransaction(operationId);
+                currentStatus = await tracker.getOperationStatus(operationId);
             } catch {
                 console.log('get status error');
             }

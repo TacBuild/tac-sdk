@@ -8,7 +8,7 @@ import { mnemonicNew } from 'ton-crypto';
 import { EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
 
 import { testnet } from '@tonappchain/artifacts';
-import { sandboxOpener } from '../../src/ton/adapters/contractOpener';
+import { sandboxOpener } from '../../src/adapters/contractOpener';
 
 describe('TacSDK', () => {
     const {
@@ -17,7 +17,7 @@ describe('TacSDK', () => {
         JettonMinterCompiled,
         JettonWalletCompiled,
         JettonProxyCompiled,
-        SettingsCompiled,
+        SettingsCompiled
     } = testnet.ton.compilationArtifacts;
     const { CrossChainLayer, CrossChainLayerOpCodes, JettonMinter, JettonProxy, Settings } = testnet.ton.wrappers;
 
@@ -63,16 +63,16 @@ describe('TacSDK', () => {
                     feeSupply,
                     merkleRoot,
                     epoch,
-                    sequencerMultisigAddress: sequencerMultisig.address.toString(),
+                    sequencerMultisigAddress: sequencerMultisig.address.toString()
                 },
-                CrossChainLayerCode,
-            ),
+                CrossChainLayerCode
+            )
         );
         const deployResult = await crossChainLayer.sendDeploy(admin.getSender(), toNano('1'));
         expect(deployResult.transactions).toHaveTransaction({
             to: crossChainLayer.address,
             deploy: true,
-            success: true,
+            success: true
         });
     };
 
@@ -80,16 +80,16 @@ describe('TacSDK', () => {
         jettonProxy = blockchain.openContract(
             JettonProxy.createFromConfig(
                 {
-                    crossChainLayerAddress: crossChainLayer.address.toString(),
+                    crossChainLayerAddress: crossChainLayer.address.toString()
                 },
-                JettonProxyCode,
-            ),
+                JettonProxyCode
+            )
         );
         const deployResult = await jettonProxy.sendDeploy(admin.getSender(), toNano('1'));
         expect(deployResult.transactions).toHaveTransaction({
             to: jettonProxy.address,
             deploy: true,
-            success: true,
+            success: true
         });
     };
 
@@ -99,38 +99,38 @@ describe('TacSDK', () => {
     };
 
     const deploySettings = async () => {
-        settings = await blockchain.openContract(
+        settings = blockchain.openContract(
             Settings.createFromConfig(
                 {
                     settings: Dictionary.empty(),
-                    adminAddress: admin.address,
+                    adminAddress: admin.address
                 },
-                SettingsCode,
-            ),
+                SettingsCode
+            )
         );
         const deployResult = await settings.sendDeploy(admin.getSender(), toNano(0.05));
         expect(deployResult.transactions).toHaveTransaction({
             from: admin.address,
             to: settings.address,
             deploy: true,
-            success: true,
+            success: true
         });
 
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
             key: getKeyFromString('JettonProxyAddress'),
-            value: beginCell().storeAddress(jettonProxy.address).endCell(),
+            value: beginCell().storeAddress(jettonProxy.address).endCell()
         });
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
             key: getKeyFromString('CrossChainLayerAddress'),
-            value: beginCell().storeAddress(crossChainLayer.address).endCell(),
+            value: beginCell().storeAddress(crossChainLayer.address).endCell()
         });
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
             key: getKeyFromString('JETTON_MINTER_CODE'),
-            value: JettonMinterCode,
+            value: JettonMinterCode
         });
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
             key: getKeyFromString('JETTON_WALLET_CODE'),
-            value: JettonWalletCode,
+            value: JettonWalletCode
         });
     };
 
@@ -142,10 +142,10 @@ describe('TacSDK', () => {
                     content: beginCell().endCell(),
                     jettonWalletCode: JettonWalletCode,
                     l2TokenAddress: '0x1234',
-                    totalSupply: 0,
+                    totalSupply: 0
                 },
-                JettonMinterCode,
-            ),
+                JettonMinterCode
+            )
         );
 
         const deployResult = await jettonMinter.sendDeploy(admin.getSender(), toNano('0.05'));
@@ -154,7 +154,7 @@ describe('TacSDK', () => {
             from: admin.address,
             to: jettonMinter.address,
             deploy: true,
-            success: true,
+            success: true
         });
     };
 
@@ -174,11 +174,12 @@ describe('TacSDK', () => {
         await deploySettings();
         await deployJettonMinter();
 
-        sdk = new TacSdk({
-            contractOpener: sandboxOpener(blockchain),
-            network: Network.Testnet,
-            settingsAddress: settings.address.toString(),
-            delay: 0,
+        sdk = await TacSdk.create({
+            TONParams: {
+                contractOpener: sandboxOpener(blockchain),
+                settingsAddress: settings.address.toString()
+            },
+            network: Network.Testnet
         });
 
         initialState = blockchain.snapshot();
@@ -209,14 +210,14 @@ describe('TacSDK', () => {
         'should send cross chain message to CCL from wallet %s',
         async (version) => {
             const evmProxyMsg: EvmProxyMsg = {
-                evmTargetAddress: evmTargetRandomAddress,
+                evmTargetAddress: evmTargetRandomAddress
             };
 
             // sending TON
             const assets = [
                 {
-                    amount: 2,
-                },
+                    amount: 2
+                }
             ];
 
             const mnemonic: string[] = await mnemonicNew(24, '');
@@ -224,7 +225,7 @@ describe('TacSDK', () => {
             let fee = 0;
             const rawSender = await SenderFactory.getSender({
                 version,
-                mnemonic: mnemonic.join(' '),
+                mnemonic: mnemonic.join(' ')
             });
 
             await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
@@ -233,10 +234,10 @@ describe('TacSDK', () => {
                 from: address(rawSender.getSenderAddress()),
                 to: crossChainLayer.address,
                 success: true,
-                op: CrossChainLayerOpCodes.anyone_l1MsgToL2,
+                op: CrossChainLayerOpCodes.anyone_l1MsgToL2
             });
             fee += feeAmount;
             expect((await crossChainLayer.getFullData()).feeSupply).toBe(+fee.toFixed(1));
-        },
+        }
     );
 });

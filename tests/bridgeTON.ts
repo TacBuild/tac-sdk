@@ -1,25 +1,15 @@
 import 'dotenv/config';
 
-import {
-    AssetBridgingData,
-    EvmProxyMsg,
-    Network,
-    SenderFactory,
-    startTracking,
-    TacSdk,
-    TacSDKTonClientParams,
-} from '../src';
+import {AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk,} from '../src';
 
 const WALLET_VERSION = "v4";
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
-    const tonClientParams: TacSDKTonClientParams = {
+    const sdkParams: SDKParams = {
         network: Network.Testnet,
-        delay: 5,
     };
-    const tacSdk = new TacSdk(tonClientParams);
-    await tacSdk.init();
+    const tacSdk = await TacSdk.create(sdkParams);
 
     // create evm proxy msg
     const evmProxyMsg: EvmProxyMsg = {
@@ -48,7 +38,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result, true);
+        await startTracking(result, Network.Testnet,true);
     } catch (error) {
         console.error('Error during transaction:', error);
     }

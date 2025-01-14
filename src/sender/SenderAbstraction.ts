@@ -1,6 +1,7 @@
 import type { Contract, ContractProvider, MessageRelaxed, SendMode } from '@ton/ton';
 
-import type { ContractOpener, ShardTransaction } from '../structs/Struct';
+import type { ContractOpener } from '../structs/Struct';
+import type { ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

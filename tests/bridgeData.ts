@@ -2,20 +2,16 @@ import 'dotenv/config';
 
 import {ethers} from "ethers";
 
-import {startTracking} from '../src';
-import {SenderFactory, TacSdk} from '../src';
-import {EvmProxyMsg, Network,TacSDKTonClientParams} from '../src';
+import {EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk} from '../src';
 
 const WALLET_VERSION = "v4";
 
 const bridgeDataRawSender = async () => {
     // create TacSdk
-    const tonClientParams: TacSDKTonClientParams = {
+    const sdkParams: SDKParams = {
         network: Network.Testnet,
-        delay: 5,
     };
-    const tacSdk = new TacSdk(tonClientParams);
-    await tacSdk.init();
+    const tacSdk = await TacSdk.create(sdkParams);
 
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(
@@ -46,7 +42,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result, true);
+        await startTracking(result, Network.Testnet, true);
     } catch (error) {
         console.error('Error during transaction:', error);
     }
