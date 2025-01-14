@@ -2,16 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.6] - 2025-01-07
+## [0.3.6] - 2025-01-14
 
 ### Changed
 
 - Calculate token addresses through emulation
+- Renamed `TransactionStatus` to `OperationTracker`
+- Renamed method `OperationTracker.getStatusTransaction()` to `OperationTracker.getOperationStatus()`
+- Renamed method `OperationTracker.getSimpifiedTransactionStatus()` to `OperationTracker.getSimplifiedOperationStatus()`
+- Renamed `TacSDKTonClientParams` to `SDKParams`
+- Changed struct of `SDKParams`
 
 ### Added
 
+- Custom `TONParams` and `TACParams` in `SDKParams`
+- `network` and `customLiteSequencerEndpoints` params to `OperationTracker` constructor
+- Static async function `create` in `TacSdk` for creating an instance of `TacSdk`
 - Custom errors
-
 - Methods that may construct custom contractOpener for TacSDK. Currently, it provides methods for Sandbox(without export from SDK) and LiteClient openers creation.
 
     ```typescript
@@ -21,6 +28,11 @@ All notable changes to this project will be documented in this file.
 
         export function sandboxOpener(blockchain: Blockchain): ContractOpener;
     ```
+### Removed
+
+- `init` function in `TacSdk`
+- public constructor of `TacSdk`
+
 
 ## [0.3.5] - 2024-12-20
 
