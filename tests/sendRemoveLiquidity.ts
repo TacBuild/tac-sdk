@@ -14,7 +14,6 @@ const TVM_MNEMONICS = "";
 async function removeLiquidity() {
     const sdkParams: SDKParams = {
         network: Network.Testnet,
-        delay: 3,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 

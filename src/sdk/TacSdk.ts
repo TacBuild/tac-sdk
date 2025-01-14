@@ -1,25 +1,27 @@
 import { Address, address, beginCell, Cell, toNano } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
-
 import type { SenderAbstraction } from '../sender';
 // import structs
 import {
     AssetBridgingData,
-    AssetOpType,
     EvmProxyMsg,
-    JettonBridgingData,
-    JettonBurnData,
-    JettonTransferData,
     Network,
     SDKParams,
-    ShardMessage,
-    ShardTransaction,
     TransactionLinker,
-    InternalTONParams,
-    InternalTACParams,
     TONParams,
     TACParams
 } from '../structs/Struct';
+// import internal structs
+import {
+    InternalTONParams,
+    InternalTACParams,
+    JettonBridgingData,
+    JettonBurnData,
+    JettonTransferData,
+    AssetOpType,
+    ShardMessage,
+    ShardTransaction,
+} from '../structs/InternalStruct';
 // jetton imports
 import { JettonMaster } from '../wrappers/JettonMaster';
 import { JettonWallet } from '../wrappers/JettonWallet';

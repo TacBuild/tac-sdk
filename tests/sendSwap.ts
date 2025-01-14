@@ -18,7 +18,6 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
     // create TacSdk
     const sdkParams: SDKParams = {
         network: Network.Testnet,
-        delay: 5,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 

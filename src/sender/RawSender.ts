@@ -1,7 +1,8 @@
 import { internal } from '@ton/ton';
 import { MessageRelaxed, SendMode } from '@ton/ton';
 
-import type { ContractOpener, ShardTransaction } from '../structs/Struct';
+import type { ContractOpener } from '../structs/Struct';
+import type { ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 import { SenderAbstraction, sleep, WalletInstance } from './SenderAbstraction';
 

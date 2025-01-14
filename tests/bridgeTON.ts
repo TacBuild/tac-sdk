@@ -8,7 +8,6 @@ const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
     const sdkParams: SDKParams = {
         network: Network.Testnet,
-        delay: 5,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 

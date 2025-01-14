@@ -6,7 +6,6 @@ import { Network, SDKParams } from '../src';
 async function main() {
     const sdkParams: SDKParams = {
         network: Network.Testnet,
-        delay: 1,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 

@@ -1,7 +1,8 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers, isAddress } from 'ethers';
 
-import { EvmProxyMsg, RandomNumberByTimestamp, TransactionLinker } from '../structs/Struct';
+import { EvmProxyMsg, TransactionLinker } from '../structs/Struct';
+import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import { evmAddressError, tvmAddressError } from '../errors';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,7 +1,6 @@
 import { SandboxContract } from '@ton/sandbox';
 import type { Address, Contract, OpenedContract } from '@ton/ton';
-import { Cell } from '@ton/ton';
-import { AbstractProvider, Addressable, ethers, Interface, InterfaceAbi } from 'ethers';
+import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
 
 export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
@@ -91,37 +90,9 @@ export type SDKParams = {
     TONParams?: TONParams;
 };
 
-export type InternalTONParams = {
-    contractOpener: ContractOpener;
-    jettonProxyAddress: string;
-    crossChainLayerAddress: string;
-    jettonMinterCode: Cell;
-    jettonWalletCode: Cell;
-};
-
-export type InternalTACParams = {
-    provider: AbstractProvider;
-    settingsAddress: string,
-    abiCoder: ethers.AbiCoder,
-    crossChainLayerABI: Interface | InterfaceAbi,
-    crossChainLayerAddress: string,
-    crossChainLayerTokenABI: Interface | InterfaceAbi,
-    crossChainLayerTokenBytecode: string,
-};
-
 export type AssetBridgingData = {
     amount: number;
     address?: string;
-};
-
-export type JettonBridgingData = AssetBridgingData & {
-    address: string;
-};
-
-export type JettonTransferData = JettonBridgingData;
-
-export type JettonBurnData = JettonBridgingData & {
-    notificationReceiverAddress: string;
 };
 
 export type EvmProxyMsg = {
@@ -136,26 +107,4 @@ export type TransactionLinker = {
     shardedId: string;
     timestamp: number;
     sendTransactionResult?: unknown;
-};
-
-export type ShardMessage = {
-    address: string;
-    value: number;
-    payload: Cell;
-};
-
-export type ShardTransaction = {
-    validUntil: number;
-    messages: ShardMessage[];
-    network: Network;
-};
-
-export enum AssetOpType {
-    JettonBurn = 'JettonBurn',
-    JettonTransfer = 'JettonTransfer',
-}
-
-export type RandomNumberByTimestamp = {
-    timestamp: number;
-    randomNumber: number;
 };
