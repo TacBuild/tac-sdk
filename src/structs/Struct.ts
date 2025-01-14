@@ -54,7 +54,7 @@ export type TACParams = {
      * bytecode of TAC CrossChainLayerToken contract. Use only for tests.
      */
     crossChainLayerTokenBytecode?: string;
-}
+};
 
 export type TONParams = {
     /**
@@ -66,7 +66,7 @@ export type TONParams = {
      * Address of TON settings contract. Use only for tests.
      */
     settingsAddress?: string;
-}
+};
 
 export type SDKParams = {
     /**

@@ -17,9 +17,10 @@ export class OperationTracker {
     }
 
     async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
-        const PUBLIC_LITE_SEQUENCER_ENDPOINTS = this.network === Network.Testnet
-            ? TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS
-            : MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+        const PUBLIC_LITE_SEQUENCER_ENDPOINTS =
+            this.network === Network.Testnet
+                ? TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS
+                : MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS;
 
         const endpoints = this.customLiteSequencerEndpoints
             ? this.customLiteSequencerEndpoints
@@ -44,9 +45,10 @@ export class OperationTracker {
     }
 
     async getOperationStatus(operationId: string): Promise<string> {
-        const PUBLIC_LITE_SEQUENCER_ENDPOINTS = this.network === Network.Testnet
-            ? TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS
-            : MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+        const PUBLIC_LITE_SEQUENCER_ENDPOINTS =
+            this.network === Network.Testnet
+                ? TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS
+                : MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS;
 
         const endpoints = this.customLiteSequencerEndpoints
             ? this.customLiteSequencerEndpoints

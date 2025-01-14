@@ -50,7 +50,7 @@ export function generateTransactionLinker(caller: string, shardCount: number): T
         caller: Address.normalize(caller),
         shardCount,
         shardedId: String(random.randomNumber),
-        timestamp: random.timestamp
+        timestamp: random.timestamp,
     };
 }
 

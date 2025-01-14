@@ -7,12 +7,9 @@ export async function startTracking(
     transactionLinker: TransactionLinker,
     network: Network,
     isBridgeOperation: boolean = false,
-    customLiteSequencerEndpoints?: string[]
+    customLiteSequencerEndpoints?: string[],
 ): Promise<void> {
-    const tracker = new OperationTracker(
-        network,
-        customLiteSequencerEndpoints
-    );
+    const tracker = new OperationTracker(network, customLiteSequencerEndpoints);
 
     console.log('Start tracking operation');
     console.log('caller: ', transactionLinker.caller);

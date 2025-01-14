@@ -44,10 +44,10 @@ export type InternalTONParams = {
 
 export type InternalTACParams = {
     provider: AbstractProvider;
-    settingsAddress: string,
-    abiCoder: ethers.AbiCoder,
-    crossChainLayerABI: Interface | InterfaceAbi,
-    crossChainLayerAddress: string,
-    crossChainLayerTokenABI: Interface | InterfaceAbi,
-    crossChainLayerTokenBytecode: string,
-}
+    settingsAddress: string;
+    abiCoder: ethers.AbiCoder;
+    crossChainLayerABI: Interface | InterfaceAbi;
+    crossChainLayerAddress: string;
+    crossChainLayerTokenABI: Interface | InterfaceAbi;
+    crossChainLayerTokenBytecode: string;
+};
