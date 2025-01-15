@@ -10,6 +10,8 @@ export interface ContractOpener {
         state: 'active' | 'uninitialized' | 'frozen';
         code: Buffer | null;
     }>;
+
+    closeConnections?: () => unknown;
 }
 
 export enum SimplifiedStatuses {

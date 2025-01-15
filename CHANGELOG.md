@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.6] - 2025-01-14
+## [0.3.6] - 2025-01-15
 
 ### Changed
 
@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - Renamed method `OperationTracker.getSimpifiedTransactionStatus()` to `OperationTracker.getSimplifiedOperationStatus()`
 - Renamed `TacSDKTonClientParams` to `SDKParams`
 - Changed struct of `SDKParams`
+- Changed `ton-lite-client` library to its fork `@tonappchain/ton-lite-client`
 
 ### Added
 
@@ -28,6 +29,9 @@ All notable changes to this project will be documented in this file.
 
         export function sandboxOpener(blockchain: Blockchain): ContractOpener;
     ```
+- Method `closeConnections` in `TacSdk` for closing all network connections, e.g. to liteclients, if required
+- Optional method `closeConnections` to `ContractOpener` interface which is called in `TacSdk.closeConnections` method
+
 ### Removed
 
 - `init` function in `TacSdk`

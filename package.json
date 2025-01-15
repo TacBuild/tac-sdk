@@ -21,12 +21,12 @@
     "@ton/core": "^0.59.1",
     "@ton/ton": "^15.1.0",
     "@tonappchain/artifacts": "^0.0.10",
+    "@tonappchain/ton-lite-client": "^3.0.2",
     "@tonconnect/ui": "^2.0.9",
     "bn.js": "^5.2.1",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.4",
-    "ton-crypto": "^3.2.0",
-    "ton-lite-client": "^3.0.0"
+    "ton-crypto": "^3.2.0"
   },
   "keywords": [],
   "description": "",

@@ -1,4 +1,4 @@
-import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from 'ton-lite-client';
+import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 import { ContractOpener, Network } from '../structs/Struct';
 import { Blockchain } from '@ton/sandbox';
 import { MAINNET_DEFAULT_LITESERVERS, TESTNET_DEFAULT_LITESERVERS } from '../sdk/Consts';
@@ -37,6 +37,13 @@ export async function liteClientOpener(
 
     const engine: LiteEngine | null = new LiteRoundRobinEngine(engines);
     const client = new LiteClient({ engine });
+
+    const closeConnections = () => {
+        engines.forEach((e) => {
+            e.close();
+        });
+    };
+
     return {
         getContractState: async (addr) => {
             const block = await client.getMasterchainInfo();
@@ -48,6 +55,7 @@ export async function liteClientOpener(
             };
         },
         open: (contract) => client.open(contract),
+        closeConnections,
     };
 }
 
