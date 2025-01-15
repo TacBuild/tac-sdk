@@ -106,7 +106,11 @@ const sdkParams: SDKParams = {
 const tacSdk = await TacSdk.create(sdkParams);
 ```
 
-*ATTENTION:* liteClientOpener uses ton-lite-client lib that does not stop some of its tasks, so process does not stop by itself [https://github.com/ton-core/ton-lite-client/issues/10]. Please, consider to use `process.exit()` in NodeJS environment after all your tasks are completed.
+*ATTENTION:* don't forget to close the connections after all the work is done, otherwise the script will hang:
+
+```typescript
+tacSdk.closeConnections();
+```
 
 Optionally, you can provide @ton/ton TonClient (public endpoints will be used by default):
 
@@ -136,6 +140,10 @@ const tacSdk = await TacSdk.create(sdkParams);
 - **`SettingError`**: settings contract at provided address does not contain required setting key.
 
 ---
+
+### Function: `closeConnections`
+
+This function stops all connections to the network, such as Ton Liteservers, and should be called after all operations are completed.
 
 ### Function: `sendCrossChainTransaction`
 
@@ -656,7 +664,9 @@ const sender = await SenderFactory.getSender({
     tonConnect: tonConnectUI,
 });
 
-return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+
+tacSdk.closeConnections();
 ```
 For a detailed example, see `test/sendSwap.ts` or `test/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
 

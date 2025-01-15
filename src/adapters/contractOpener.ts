@@ -23,7 +23,7 @@ async function getDefaultLiteServers(network: Network): Promise<LiteServer[]> {
 
 export async function liteClientOpener(
     options: { liteservers: LiteServer[] } | { network: Network },
-): Promise<ContractOpener & { closeConnections: () => void }> {
+): Promise<ContractOpener> {
     const liteservers = 'liteservers' in options ? options.liteservers : await getDefaultLiteServers(options.network);
     const engines: LiteEngine[] = [];
     for (const server of liteservers) {

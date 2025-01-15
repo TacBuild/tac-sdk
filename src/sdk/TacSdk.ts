@@ -147,8 +147,8 @@ export class TacSdk {
         };
     }
 
-    closeConnections() {
-        this.TONParams.contractOpener.closeConnections?.call(this);
+    closeConnections(): unknown {
+        return this.TONParams.contractOpener.closeConnections?.call(this);
     }
 
     get nativeTONAddress(): string {

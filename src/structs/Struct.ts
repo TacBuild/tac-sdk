@@ -11,7 +11,7 @@ export interface ContractOpener {
         code: Buffer | null;
     }>;
 
-    closeConnections?: () => void;
+    closeConnections?: () => unknown;
 }
 
 export enum SimplifiedStatuses {
