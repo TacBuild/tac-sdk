@@ -1,9 +1,9 @@
 import 'dotenv/config';
 
-import {toNano} from '@ton/ton';
-import {ethers} from 'ethers';
+import { toNano } from '@ton/ton';
+import { ethers } from 'ethers';
 
-import {AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk,} from '../src';
+import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 
@@ -39,28 +39,29 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
             [EVM_TKA_ADDRESS, EVM_TKB_ADDRESS],
             UNISWAPV2_PROXY_ADDRESS,
             19010987500,
-        ]
+        ],
     );
 
     const evmProxyMsg: EvmProxyMsg = {
         evmTargetAddress: UNISWAPV2_PROXY_ADDRESS,
         methodName: 'swapExactTokensForTokens(uint256,uint256,address[],address,uint256)',
         encodedParameters,
-    }
+    };
 
     // create sender abstraction
     const sender = await SenderFactory.getSender({
+        network: Network.Testnet,
         version: WALLET_VERSION,
         mnemonic,
-      });
+    });
 
     // create JettonTransferData (transfer jetton in TVM to swap)
-    const assets: AssetBridgingData[] = []
+    const assets: AssetBridgingData[] = [];
     for (const amount of amountsIn) {
         assets.push({
             address: tokenAddress,
-            amount: amount
-        })
+            amount: amount,
+        });
     }
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);

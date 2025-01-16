@@ -294,9 +294,11 @@ The `RawSender` class allows direct interaction with the blockchain using a raw 
 ```typescript
 const walletVersion = 'v4';
 const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
+const network = Network.Testnet; // or Network.Mainnet
 const sender = await SenderFactory.getSender({
     version: walletVersion,
     mnemonic,
+    network,
 });
 ```
 

@@ -19,6 +19,7 @@ const bridgeTonSawSender = async (amount: number) => {
     // create sender abstraction
     const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
     const sender = await SenderFactory.getSender({
+        network: Network.Testnet,
         version: WALLET_VERSION,
         mnemonic,
     });

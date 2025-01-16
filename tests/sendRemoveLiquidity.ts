@@ -1,15 +1,15 @@
-import {ethers} from "ethers";
+import { ethers } from 'ethers';
 
-import {AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk,} from "../src";
+import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
 
-const UNISWAPV2_PROXY_ADDRESS = "";
+const UNISWAPV2_PROXY_ADDRESS = '';
 
-const TVM_LP_ADDRESS = "";
-const EVM_TKA_ADDRESS = "";
-const EVM_TKB_ADDRESS = "";
+const TVM_LP_ADDRESS = '';
+const EVM_TKA_ADDRESS = '';
+const EVM_TKB_ADDRESS = '';
 
-const WALLET_VERSION = "v4";
-const TVM_MNEMONICS = "";
+const WALLET_VERSION = 'v4';
+const TVM_MNEMONICS = '';
 
 async function removeLiquidity() {
     const sdkParams: SDKParams = {
@@ -21,15 +21,7 @@ async function removeLiquidity() {
 
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(
-        [
-            "address",
-            "address",
-            "uint256",
-            "uint256",
-            "uint256",
-            "address",
-            "uint256",
-        ],
+        ['address', 'address', 'uint256', 'uint256', 'uint256', 'address', 'uint256'],
         [
             EVM_TKA_ADDRESS,
             EVM_TKB_ADDRESS,
@@ -38,32 +30,28 @@ async function removeLiquidity() {
             0, // amountBMin
             UNISWAPV2_PROXY_ADDRESS, // recipient
             19010987500, // deadline
-        ]
+        ],
     );
 
     const evmProxyMsg: EvmProxyMsg = {
         evmTargetAddress: UNISWAPV2_PROXY_ADDRESS,
-        methodName:
-            "removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)",
+        methodName: 'removeLiquidity(address,address,uint256,uint256,uint256,address,uint256)',
         encodedParameters,
     };
 
     const sender = await SenderFactory.getSender({
-      version: WALLET_VERSION,
-      mnemonic: TVM_MNEMONICS,
+        network: Network.Testnet,
+        version: WALLET_VERSION,
+        mnemonic: TVM_MNEMONICS,
     });
 
     const jettons: AssetBridgingData[] = [];
     jettons.push({
         address: TVM_LP_ADDRESS,
-        amount: amountLP
+        amount: amountLP,
     });
 
-    return await tacSdk.sendCrossChainTransaction(
-        evmProxyMsg,
-        sender,
-        jettons,
-    );
+    return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons);
 }
 
 async function main() {

@@ -252,6 +252,7 @@ describe('TacSDK', () => {
 
             let fee = 0;
             const rawSender = await SenderFactory.getSender({
+                network: Network.Testnet,
                 version,
                 mnemonic: mnemonic.join(' '),
             });
