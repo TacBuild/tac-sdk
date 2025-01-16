@@ -39,6 +39,7 @@ import {
     calculateEVMTokenAddress,
     generateRandomNumberByTimestamp,
     generateTransactionLinker,
+    isEthereumAddress,
     sleep,
     validateEVMAddress,
     validateTVMAddress,
@@ -257,23 +258,28 @@ export class TacSdk {
         return AssetOpType.JettonBurn;
     }
 
-    private aggregateJettons(assets?: AssetBridgingData[]): {
+    private async aggregateJettons(assets?: AssetBridgingData[]): Promise<{
         jettons: JettonBridgingData[];
         crossChainTonAmount: number;
-    } {
+    }> {
         const uniqueAssetsMap: Map<string, number> = new Map();
         let crossChainTonAmount = 0;
 
-        assets?.forEach((asset) => {
-            if (asset.amount <= 0) return;
+        for await (const asset of assets ?? []) {
+            if (asset.amount <= 0) continue;
 
             if (asset.address) {
-                validateTVMAddress(asset.address);
-                uniqueAssetsMap.set(asset.address, (uniqueAssetsMap.get(asset.address) || 0) + asset.amount);
+                const jettonAddress = isEthereumAddress(asset.address)
+                    ? await this.getTVMTokenAddress(asset.address)
+                    : asset.address;
+
+                validateTVMAddress(jettonAddress);
+
+                uniqueAssetsMap.set(jettonAddress, (uniqueAssetsMap.get(jettonAddress) || 0) + asset.amount);
             } else {
                 crossChainTonAmount += asset.amount;
             }
-        });
+        };
 
         const jettons: JettonBridgingData[] = Array.from(uniqueAssetsMap.entries()).map(([address, amount]) => ({
             address,
@@ -359,7 +365,7 @@ export class TacSdk {
         sender: SenderAbstraction,
         assets?: AssetBridgingData[],
     ): Promise<TransactionLinker> {
-        const aggregatedData = this.aggregateJettons(assets);
+        const aggregatedData = await this.aggregateJettons(assets);
         const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
 
         const caller = sender.getSenderAddress();

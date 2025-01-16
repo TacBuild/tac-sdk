@@ -62,8 +62,12 @@ export function validateTVMAddress(address: string): void {
     }
 }
 
+export function isEthereumAddress(address: string): boolean {
+    return isAddress(address);
+}
+
 export function validateEVMAddress(address: string): void {
-    if (!isAddress(address)) {
+    if (!isEthereumAddress(address)) {
         throw evmAddressError(address);
     }
 }
