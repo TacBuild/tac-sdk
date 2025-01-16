@@ -554,7 +554,7 @@ export type AssetBridgingData = {
 
 Represents general data for Asset operations.
 - **`amount`**: Amount of Assets to be transferred.
-- **`address`** *(optional)*: TVM asset's address.
+- **`address`** *(optional)*: TVM or EVM asset's address.
 
 > **Note:** If you need to transfer a native TON coin, do not specify address.
 
