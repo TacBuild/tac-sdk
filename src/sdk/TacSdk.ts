@@ -1,5 +1,5 @@
 import { Address, address, beginCell, Cell, toNano } from '@ton/ton';
-import { ethers, keccak256, toUtf8Bytes } from 'ethers';
+import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
 import type { SenderAbstraction } from '../sender';
 // import structs
 import {
@@ -39,7 +39,6 @@ import {
     calculateEVMTokenAddress,
     generateRandomNumberByTimestamp,
     generateTransactionLinker,
-    isEthereumAddress,
     sleep,
     validateEVMAddress,
     validateTVMAddress,

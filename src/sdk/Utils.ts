@@ -1,5 +1,5 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
-import { AbiCoder, ethers, isAddress } from 'ethers';
+import { AbiCoder, ethers, isAddress as isEthereumAddress } from 'ethers';
 
 import { EvmProxyMsg, TransactionLinker } from '../structs/Struct';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
@@ -60,10 +60,6 @@ export function validateTVMAddress(address: string): void {
     } catch {
         throw tvmAddressError(address);
     }
-}
-
-export function isEthereumAddress(address: string): boolean {
-    return isAddress(address);
 }
 
 export function validateEVMAddress(address: string): void {
