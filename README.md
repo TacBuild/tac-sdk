@@ -294,9 +294,11 @@ The `RawSender` class allows direct interaction with the blockchain using a raw 
 ```typescript
 const walletVersion = 'v4';
 const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
+const network = Network.Testnet; // or Network.Mainnet
 const sender = await SenderFactory.getSender({
     version: walletVersion,
     mnemonic,
+    network,
 });
 ```
 
@@ -554,7 +556,7 @@ export type AssetBridgingData = {
 
 Represents general data for Asset operations.
 - **`amount`**: Amount of Assets to be transferred.
-- **`address`** *(optional)*: TVM asset's address.
+- **`address`** *(optional)*: TVM or EVM asset's address.
 
 > **Note:** If you need to transfer a native TON coin, do not specify address.
 

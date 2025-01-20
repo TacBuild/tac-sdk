@@ -13,6 +13,7 @@ import { RawSender } from './RawSender';
 import { SenderAbstraction } from './SenderAbstraction';
 import { TonConnectSender } from './TonConnectSender';
 import { unknownWalletError } from '../errors';
+import { Network } from '../structs/Struct';
 
 export type WalletVersion = 'v2r1' | 'v2r2' | 'v3r1' | 'v3r2' | 'v4' | 'v5r1';
 
@@ -29,6 +30,7 @@ export class SenderFactory {
     static async getSender(
         params:
             | {
+                  network: Network;
                   version: WalletVersion;
                   mnemonic: string;
               }
@@ -43,10 +45,20 @@ export class SenderFactory {
         }
 
         const keypair = await mnemonicToWalletKey(params.mnemonic.split(' '));
-        const wallet = wallets[params.version].create({
+
+        const config: { workchain: number; publicKey: Buffer; walletId?: any } = {
             workchain: 0,
             publicKey: keypair.publicKey,
-        });
+        };
+        if (params.version === 'v5r1') {
+            // manual setup of wallet id required to support wallet w5 both on mainnet and testnet
+            config.walletId = {
+                networkGlobalId: params.network === Network.Testnet ? -3 : -239,
+                context: { walletVersion: 'v5r1', workchain: 0, subwalletNumber: 0 },
+            };
+        }
+
+        const wallet = wallets[params.version].create(config);
 
         return new RawSender(wallet, keypair.secretKey);
     }
