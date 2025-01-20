@@ -1,6 +1,6 @@
 {
   "name": "tac-sdk",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "repository": "https://github.com/TacBuild/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
