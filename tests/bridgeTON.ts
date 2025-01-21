@@ -1,8 +1,6 @@
 import 'dotenv/config';
-
 import {AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk,} from '../src';
 
-const WALLET_VERSION = "v4";
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
@@ -20,29 +18,37 @@ const bridgeTonSawSender = async (amount: number) => {
     const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
     const sender = await SenderFactory.getSender({
         network: Network.Testnet,
-        version: WALLET_VERSION,
+        version: 'v3r2',
         mnemonic,
     });
+
+    console.log(sender.getSenderAddress());
     
     // create JettonTransferData (transfer jetton in TVM to swap)
     const assets: AssetBridgingData[] = [{
         amount: amount
     }]
 
-    return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    // const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+
+    tacSdk.closeConnections();
+
+    return "result";
 };
 
 async function main() {
     try {
         // send transaction
-        const result = await bridgeTonSawSender(2);
+        const result = await bridgeTonSawSender(1);
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result, Network.Testnet,true);
+        // await startTracking(result, Network.Testnet, true);
     } catch (error) {
         console.error('Error during transaction:', error);
     }
+
+    return
 }
 
 main().catch((error) => console.error('Fatal error:', error));

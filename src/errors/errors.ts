@@ -69,3 +69,10 @@ export class SettingError extends ErrorWithStatusCode {
         this.name = 'SettingError';
     }
 }
+
+export class EVMCallError extends ErrorWithStatusCode {
+    constructor(message: string, errorCode: number) {
+        super(message, errorCode);
+        this.name = 'EVMCallError';
+    }
+}

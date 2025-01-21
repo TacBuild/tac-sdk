@@ -10,6 +10,7 @@ export {
     notMultiplyOf8Error,
     prefixError,
     emptySettingError,
+    invalidMethodNameError
 } from './instances';
 
 export {
@@ -22,4 +23,5 @@ export {
     BitError,
     MetadataError,
     SettingError,
+    EVMCallError
 } from './errors';

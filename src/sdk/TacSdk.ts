@@ -32,6 +32,7 @@ import {
     MAINNET_TAC_RPC_ENDPOINT,
     TESTNET_TAC_RPC_ENDPOINT,
     TRANSACTION_TON_AMOUNT,
+    DEFAULT_DELAY
 } from './Consts';
 import {
     buildEvmDataCell,
@@ -46,8 +47,6 @@ import {
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError } from '../errors';
 import { liteClientOpener } from '../adapters/contractOpener';
-
-const DEFAULT_DELAY = 0;
 
 export class TacSdk {
     readonly network: Network;
@@ -231,7 +230,7 @@ export class TacSdk {
         const givenMinterCode = Cell.fromBoc(givenMinterCodeBOC)[0];
         await sleep(this.delay * 1000);
 
-        if (this.TONParams.jettonMinterCode.equals(givenMinterCode)) {
+        if (!this.TONParams.jettonMinterCode.equals(givenMinterCode)) {
             return AssetOpType.JettonTransfer;
         }
 
@@ -250,7 +249,7 @@ export class TacSdk {
                 .endCell(),
         );
 
-        if (expectedMinterAddress.equals(givenMinter.address)) {
+        if (!expectedMinterAddress.equals(givenMinter.address)) {
             return AssetOpType.JettonTransfer;
         }
 

@@ -1,4 +1,4 @@
-import { Network, TacSdk } from '../src';
+import { Network, TacSdk } from '../../src';
 import { TonClient } from '@ton/ton';
 
 

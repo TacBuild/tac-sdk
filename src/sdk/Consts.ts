@@ -11,3 +11,8 @@ export const MAX_ITERATION_COUNT = 120;
 
 export const TESTNET_DEFAULT_LITESERVERS = 'https://ton.org/testnet-global.config.json';
 export const MAINNET_DEFAULT_LITESERVERS = 'https://ton.org/global.config.json';
+
+export const DEFAULT_DELAY = 0;
+
+export const SOLIDITY_METHOD_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*(\((bytes,bytes)\))?$/;
+

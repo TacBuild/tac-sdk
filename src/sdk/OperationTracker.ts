@@ -9,24 +9,21 @@ export class OperationTracker {
     readonly BRIDGE_TERMINATED_STATUS = 'EVMMerkleMessageExecuted';
 
     readonly network: Network;
-    readonly customLiteSequencerEndpoints: string[] | undefined;
+    readonly customLiteSequencerEndpoints: string[];
 
     constructor(network: Network, customLiteSequencerEndpoints?: string[]) {
         this.network = network;
-        this.customLiteSequencerEndpoints = customLiteSequencerEndpoints;
-    }
 
-    async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
         const PUBLIC_LITE_SEQUENCER_ENDPOINTS =
             this.network === Network.Testnet
                 ? TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS
                 : MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS;
 
-        const endpoints = this.customLiteSequencerEndpoints
-            ? this.customLiteSequencerEndpoints
-            : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+        this.customLiteSequencerEndpoints = customLiteSequencerEndpoints ?? PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+    }
 
-        for (const endpoint of endpoints) {
+    async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
+        for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
                 const response = await axios.get(`${endpoint}/operationId`, {
                     params: {
