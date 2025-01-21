@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 
 import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
+import { toNano } from '@ton/ton';
 
 const UNISWAPV2_PROXY_ADDRESS = '0x14Ad9182F54903dFD8215CA2c1aD0F9A47Ac7Edb';
 
@@ -9,8 +10,8 @@ const TVM_LP_ADDRESS = '';
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
-const WALLET_VERSION = 'v4';
-const TVM_MNEMONICS = '';
+const WALLET_VERSION = 'v3r2';
+const TVM_MNEMONICS = process.env.TVM_MNEMONICS || '';
 
 async function removeLiquidity() {
     const sdkParams: SDKParams = {
@@ -29,7 +30,7 @@ async function removeLiquidity() {
             [
                 EVM_TKA_ADDRESS,
                 EVM_TKB_ADDRESS,
-                amountLP, // liquidity
+                Number(toNano(amountLP)), // liquidity
                 0, // amountAMin
                 0, // amountBMin
                 UNISWAPV2_PROXY_ADDRESS, // recipient

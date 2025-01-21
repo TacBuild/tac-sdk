@@ -25,6 +25,8 @@ async function main() {
 
     // Making sure that initial and final addresses are equal
     console.log(`Addresses equal: ${address(tvmTokenAddress).equals(address(tvmTokenAddressCalculated))}`);
+
+    tacSdk.closeConnections();
 }
 
 main();

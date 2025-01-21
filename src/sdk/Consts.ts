@@ -14,5 +14,5 @@ export const MAINNET_DEFAULT_LITESERVERS = 'https://ton.org/global.config.json';
 
 export const DEFAULT_DELAY = 0;
 
-export const SOLIDITY_METHOD_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*(\((bytes,bytes)\))?$/;
-
+export const SOLIDITY_SIGNATURE_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*(\((bytes,bytes)\))?$/;
+export const SOLIDITY_METHOD_NAME_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;

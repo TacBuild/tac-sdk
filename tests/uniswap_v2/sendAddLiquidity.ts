@@ -1,13 +1,14 @@
 import { ethers } from 'ethers';
 
 import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
+import { toNano } from '@ton/ton';
 
 const UNISWAPV2_PROXY_ADDRESS = '0x14Ad9182F54903dFD8215CA2c1aD0F9A47Ac7Edb';
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
-const WALLET_VERSION = 'v4';
+const WALLET_VERSION = 'v3r2';
 const TVM_MNEMONICS = '';
 
 async function addLiquidity() {
@@ -17,7 +18,9 @@ async function addLiquidity() {
     const tacSdk = await TacSdk.create(sdkParams);
 
     const EVM_TKA_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKA_ADDRESS);
+    console.log(EVM_TKA_ADDRESS);
     const EVM_TKB_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKB_ADDRESS);
+    console.log(EVM_TKB_ADDRESS);
     const amountA = 1;
     const amountB = 2;
 
@@ -28,8 +31,8 @@ async function addLiquidity() {
             [
                 EVM_TKA_ADDRESS,
                 EVM_TKB_ADDRESS,
-                amountA, // liquidity
-                amountB, // liquidity
+                Number(toNano(amountA)),
+                Number(toNano(amountB)),
                 0, // amountAMin
                 0, // amountBMin
                 UNISWAPV2_PROXY_ADDRESS, // recipient

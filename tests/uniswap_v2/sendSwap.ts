@@ -11,7 +11,7 @@ const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
 const UNISWAPV2_PROXY_ADDRESS = '0x14Ad9182F54903dFD8215CA2c1aD0F9A47Ac7Edb';
 
-const WALLET_VERSION = 'v4';
+const WALLET_VERSION = 'v3r2';
 const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
 
 const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, tokenAddress: string) => {

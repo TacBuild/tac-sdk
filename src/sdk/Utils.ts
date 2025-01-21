@@ -4,7 +4,10 @@ import { AbiCoder, ethers, isAddress as isEthereumAddress } from 'ethers';
 import { EvmProxyMsg, TransactionLinker } from '../structs/Struct';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import { evmAddressError, invalidMethodNameError, tvmAddressError } from '../errors';
-import { SOLIDITY_METHOD_REGEX } from './Consts';
+import {
+    SOLIDITY_METHOD_NAME_REGEX,
+    SOLIDITY_SIGNATURE_REGEX
+} from './Consts';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -27,7 +30,6 @@ export async function calculateContractAddress(code: Cell, data: Cell): Promise<
 }
 
 export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyMsg: EvmProxyMsg): Cell {
-    validateSolidityMethodName(evmProxyMsg.methodName);
 
     const evmArguments = evmProxyMsg.encodedParameters
         ? Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64')
@@ -36,20 +38,26 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
     const json = JSON.stringify({
         evm_call: {
             target: evmProxyMsg.evmTargetAddress,
-            method_name: evmProxyMsg.methodName ?? '',
+            method_name: formatSolidityMethodName(evmProxyMsg.methodName),
             arguments: evmArguments
         },
         sharded_id: transactionLinker.shardedId,
         shard_count: transactionLinker.shardCount
     });
 
+    console.log(json);
+
     return beginCell().storeStringTail(json).endCell();
 }
 
-export function validateSolidityMethodName(methodName?: string) {
-    if (methodName && !SOLIDITY_METHOD_REGEX.test(methodName)) {
+export function formatSolidityMethodName(methodName?: string): string {
+    if (!methodName) return '';
+
+    if (!SOLIDITY_SIGNATURE_REGEX.test(methodName)) {
         throw invalidMethodNameError(methodName);
     }
+
+    return SOLIDITY_METHOD_NAME_REGEX.test(methodName) ? `${methodName}(bytes,bytes)` : methodName;
 }
 
 export function generateTransactionLinker(caller: string, shardCount: number): TransactionLinker {
