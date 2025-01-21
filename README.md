@@ -536,7 +536,7 @@ export type EvmProxyMsg = {
 ```
 Represents a proxy message to a TAC.
 - **`evmTargetAddress`**: Target address on the EVM network.
-- **`methodName`** *(optional)*: Method name to be called on the target contract.
+- **`methodName`** *(optional)*: Method name to be called on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
 - **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the crosschain transaction.
@@ -620,41 +620,43 @@ export interface ContractOpener {
 ## Usage
 
 ```typescript
-import { TacSdk } from "tac-sdk";
-import { TonConnectUI } from "@tonconnect/ui";
-import { ethers } from "ethers";
+import { TacSdk } from 'tac-sdk';
+import { TonConnectUI } from '@tonconnect/ui';
+import { ethers } from 'ethers';
 
 // Create EVM payload for DappProxy
 const abi = new ethers.AbiCoder();
 const encodedParameters = abi.encode(
-    ['uint256', 'uint256', 'address[]', 'address'],
+    ['tuple(uint256,uint256,address[],address)'],
     [
-        tokenAAmount,
-        tokenBAmount,
-        [EVMtokenAAddress, EVMtokenBAddress],
-        proxyDapp,
+        [
+            tokenAAmount,
+            tokenBAmount,
+            [EVMtokenAAddress, EVMtokenBAddress],
+            proxyDapp
+        ]
     ]
 );
 const evmProxyMsg: EvmProxyMsg = {
     evmTargetAddress: DappProxyAddress,
-    methodName: 'addLiquidity(uint256,uint256,address[],address)',
+    methodName: 'addLiquidity',
     encodedParameters
 };
 
 // Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
 const assets: AssetBridgingData[] = [
     {
-      address: TVMtokenAAddress,
-      amount: tokenAAmount
+        address: TVMtokenAAddress,
+        amount: tokenAAmount
     },
     {
-      address: TVMtokenBAddress,
-      amount: tokenBAmount
+        address: TVMtokenBAddress,
+        amount: tokenBAmount
     }
 ];
 
 const sdkParams: SDKParams = {
-  network: Network.Testnet,
+    network: Network.Testnet
 };
 const tacSdk = await TacSdk.create(sdkParams);
 
@@ -663,7 +665,7 @@ const tonConnectUI = new TonConnectUI({
     manifestUrl: config.tonconnectManifestUrl as string
 });
 const sender = await SenderFactory.getSender({
-    tonConnect: tonConnectUI,
+    tonConnect: tonConnectUI
 });
 
 await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);

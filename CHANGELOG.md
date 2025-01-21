@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - new docs for TACHeader logic
+- addLiquidity Uniswap_v2 test
 
 ### Changed
 

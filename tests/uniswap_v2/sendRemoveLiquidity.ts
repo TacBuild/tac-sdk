@@ -51,12 +51,14 @@ async function removeLiquidity() {
         mnemonic: TVM_MNEMONICS
     });
 
-    const jettons: AssetBridgingData[] = [{
+    const assets: AssetBridgingData[] = [{
         address: TVM_LP_ADDRESS,
         amount: amountLP
     }];
 
-    return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons);
+    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    tacSdk.closeConnections();
+    return result;
 }
 
 async function main() {

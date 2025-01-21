@@ -64,7 +64,9 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
         });
     }
 
-    return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    tacSdk.closeConnections();
+    return result;
 };
 
 async function main() {
