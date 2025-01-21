@@ -29,11 +29,11 @@ const bridgeTonSawSender = async (amount: number) => {
         amount: amount
     }]
 
-    // const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
 
     tacSdk.closeConnections();
 
-    return "result";
+    return result;
 };
 
 async function main() {
@@ -43,7 +43,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        // await startTracking(result, Network.Testnet, true);
+        await startTracking(result, Network.Testnet, true);
     } catch (error) {
         console.error('Error during transaction:', error);
     }
