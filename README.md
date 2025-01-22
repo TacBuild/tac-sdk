@@ -210,7 +210,7 @@ The first argument of methods must always be TACHeader. It is sent by protocol, 
 - **`bytes tacHeader`**: Encoded structure TacHeaderV1, containing:
   - **`uint64 shardedId`**: ID you can specify for yourself an inside message to the TVM contract on the TON network. 
   - **`uint256 timestamp`**: The block timestamp on TON where the user's message was created. 
-  - **`string operationId`**: Unique identifier for the message created by the TAC infrastructure. 
+  - **`bytes32 operationId`**: Unique identifier for the message created by the TAC infrastructure. 
   - **`string tvmCaller`**: The TON user's wallet address that sent the message. 
   - **`bytes extraData`**: Untrusted extra data, provided by executor with the current message if needed. Otherwise, it's an empty bytes array.
 
