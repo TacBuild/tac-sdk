@@ -191,19 +191,14 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 ---
 ### TACHeader 
-> **Note:** The TAC protocol only knows how to send data to contracts that inherit from a TacProxy (TacProxyV1) contract. Such a contract must have a strictly defined signature of its methods. 
-
-It is specified below:
+> **Note:** The TAC protocol only knows how to send data to contracts that inherit from a TacProxy (TacProxyV1) contract. Such a contract must have a strictly defined signature of its methods. It is specified below:
 
 ```
 function myProxyFunction(bytes calldata tacHeader, bytes calldata arguments) external onlyTacCCL {
   // Function implementation 
 }
 ```
-Important! All contract functions for crosschain transactions must have the following signature:
-```
-function <func_name>(bytes calldata, bytes calldata) external;
-```
+
 > **Note:** methodName in `evmProxyMsg` must be either a simple method name or a signature of the form MethodName(bytes,bytes)
 
 The first argument of methods must always be TACHeader. It is sent by protocol, augmented with data from executor.

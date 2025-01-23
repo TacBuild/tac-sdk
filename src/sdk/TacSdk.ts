@@ -32,7 +32,7 @@ import {
     MAINNET_TAC_RPC_ENDPOINT,
     TESTNET_TAC_RPC_ENDPOINT,
     TRANSACTION_TON_AMOUNT,
-    DEFAULT_DELAY
+    DEFAULT_DELAY,
 } from './Consts';
 import {
     buildEvmDataCell,
@@ -176,7 +176,7 @@ export class TacSdk {
         const userJettonWallet = this.TONParams.contractOpener.open(
             new JettonWallet(Address.parse(userJettonWalletAddress)),
         );
-        return await userJettonWallet.getJettonBalance();
+        return userJettonWallet.getJettonBalance();
     }
 
     private getJettonTransferPayload(
@@ -277,8 +277,7 @@ export class TacSdk {
             } else {
                 crossChainTonAmount += asset.amount;
             }
-        };
-
+        }
         const jettons: JettonBridgingData[] = Array.from(uniqueAssetsMap.entries()).map(([address, amount]) => ({
             address,
             amount,
@@ -388,7 +387,7 @@ export class TacSdk {
     }
 
     async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
-        if (tvmTokenAddress != this.nativeTONAddress) {
+        if (tvmTokenAddress !== this.nativeTONAddress) {
             validateTVMAddress(tvmTokenAddress);
 
             const { code: givenMinterCodeBOC } = await this.TONParams.contractOpener.getContractState(

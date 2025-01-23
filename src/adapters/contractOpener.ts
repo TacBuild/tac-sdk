@@ -48,8 +48,8 @@ export async function liteClientOpener(
         getContractState: async (addr) => {
             const block = await client.getMasterchainInfo();
             const state = await client.getAccountState(addr, block.last);
-            const accountState = state.state?.storage?.state
-            const code = accountState?.type === 'active' ? accountState?.state?.code?.toBoc() : null
+            const accountState = state.state?.storage?.state;
+            const code = accountState?.type === 'active' ? accountState?.state?.code?.toBoc() : null;
             return {
                 balance: state.balance.coins,
                 state: state.state!.storage.state.type === 'uninit' ? 'uninitialized' : state.state!.storage.state.type,

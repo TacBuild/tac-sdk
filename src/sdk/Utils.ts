@@ -4,10 +4,7 @@ import { AbiCoder, ethers, isAddress as isEthereumAddress } from 'ethers';
 import { EvmProxyMsg, TransactionLinker } from '../structs/Struct';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import { evmAddressError, invalidMethodNameError, tvmAddressError } from '../errors';
-import {
-    SOLIDITY_METHOD_NAME_REGEX,
-    SOLIDITY_SIGNATURE_REGEX
-} from './Consts';
+import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -20,7 +17,7 @@ export function generateRandomNumberByTimestamp(): RandomNumberByTimestamp {
 
     return {
         timestamp,
-        randomNumber: timestamp + generateRandomNumber(1000)
+        randomNumber: timestamp + generateRandomNumber(1000),
     };
 }
 
@@ -30,7 +27,6 @@ export async function calculateContractAddress(code: Cell, data: Cell): Promise<
 }
 
 export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyMsg: EvmProxyMsg): Cell {
-
     const evmArguments = evmProxyMsg.encodedParameters
         ? Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64')
         : null;
@@ -39,13 +35,11 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
         evm_call: {
             target: evmProxyMsg.evmTargetAddress,
             method_name: formatSolidityMethodName(evmProxyMsg.methodName),
-            arguments: evmArguments
+            arguments: evmArguments,
         },
         sharded_id: transactionLinker.shardedId,
-        shard_count: transactionLinker.shardCount
+        shard_count: transactionLinker.shardCount,
     });
-
-    console.log(json);
 
     return beginCell().storeStringTail(json).endCell();
 }
@@ -67,7 +61,7 @@ export function generateTransactionLinker(caller: string, shardCount: number): T
         caller: Address.normalize(caller),
         shardCount,
         shardedId: String(random.randomNumber),
-        timestamp: random.timestamp
+        timestamp: random.timestamp,
     };
 }
 
@@ -90,12 +84,12 @@ export function calculateEVMTokenAddress(
     crossChainLayerAddress: string,
     crossChainLayerBytecode: string,
     settingsAddress: string,
-    l1Address: string
+    l1Address: string,
 ): string {
     const salt = ethers.keccak256(ethers.solidityPacked(['string'], [l1Address]));
     const initCode = ethers.solidityPacked(
         ['bytes', 'bytes'],
-        [crossChainLayerBytecode, abiCoder.encode(['address'], [settingsAddress])]
+        [crossChainLayerBytecode, abiCoder.encode(['address'], [settingsAddress])],
     );
     const initCodeHash = ethers.keccak256(initCode);
     return ethers.getCreate2Address(crossChainLayerAddress, salt, initCodeHash);
