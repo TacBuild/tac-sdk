@@ -35,4 +35,4 @@ export const emptySettingError = (setting: string) =>
     new SettingError(`unexpected empty ${setting}. Make sure the settings contract is valid.`, 110);
 
 export const invalidMethodNameError = (methodName: string) =>
-    new EVMCallError(`Invalid Solidity method name: "${methodName}". Method must be either a valid identifier or have parameters (bytes, bytes).`, 110);
+    new EVMCallError(`Invalid Solidity method name: "${methodName}". Method must be either a valid identifier or have parameters (bytes,bytes).`, 110);
