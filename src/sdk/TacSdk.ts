@@ -388,7 +388,7 @@ export class TacSdk {
     }
 
     async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
-        if (tvmTokenAddress == this.nativeTONAddress) {
+        if (tvmTokenAddress != this.nativeTONAddress) {
             validateTVMAddress(tvmTokenAddress);
 
             const { code: givenMinterCodeBOC } = await this.TONParams.contractOpener.getContractState(
