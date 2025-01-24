@@ -14,12 +14,11 @@ export class OperationTracker {
     constructor(network: Network, customLiteSequencerEndpoints?: string[]) {
         this.network = network;
 
-        const PUBLIC_LITE_SEQUENCER_ENDPOINTS =
-            this.network === Network.Testnet
+        this.customLiteSequencerEndpoints =
+            customLiteSequencerEndpoints ??
+            (this.network === Network.Testnet
                 ? TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS
-                : MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS;
-
-        this.customLiteSequencerEndpoints = customLiteSequencerEndpoints ?? PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+                : MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS);
     }
 
     async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
@@ -42,16 +41,7 @@ export class OperationTracker {
     }
 
     async getOperationStatus(operationId: string): Promise<string> {
-        const PUBLIC_LITE_SEQUENCER_ENDPOINTS =
-            this.network === Network.Testnet
-                ? TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS
-                : MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS;
-
-        const endpoints = this.customLiteSequencerEndpoints
-            ? this.customLiteSequencerEndpoints
-            : PUBLIC_LITE_SEQUENCER_ENDPOINTS;
-
-        for (const endpoint of endpoints) {
+        for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
                 const response = await axios.get(`${endpoint}/status`, {
                     params: { operationId },
