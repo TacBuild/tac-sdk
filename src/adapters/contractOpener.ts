@@ -2,6 +2,8 @@ import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '
 import { ContractOpener, Network } from '../structs/Struct';
 import { Blockchain } from '@ton/sandbox';
 import { MAINNET_DEFAULT_LITESERVERS, TESTNET_DEFAULT_LITESERVERS } from '../sdk/Consts';
+import { getHttpEndpoint } from '@orbs-network/ton-access';
+import { TonClient } from '@ton/ton';
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
 
@@ -73,4 +75,12 @@ export function sandboxOpener(blockchain: Blockchain): ContractOpener {
             };
         },
     };
+}
+
+export async function orbsOpener(network: Network): Promise<ContractOpener> {
+    const endpoint = await getHttpEndpoint({
+        network,
+    });
+    const client = new TonClient({ endpoint });
+    return client;
 }

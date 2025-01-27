@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@aws-crypto/sha256-js": "^5.2.0",
+    "@orbs-network/ton-access": "^2.3.3",
     "@ton/core": "^0.59.1",
     "@ton/ton": "^15.1.0",
     "@tonappchain/artifacts": "^0.0.11",

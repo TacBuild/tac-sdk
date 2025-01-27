@@ -2,15 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.7] - 2025-01-23
+## [0.3.7] - 2025-01-28
 
 ### Added
 
 - section in readme about TACHeader
 - addLiquidity uniswap_v2 test
+- `orbsOpener` method to construct custom contractOpener for TacSDK. It uses Orbs Network and does not have rate limits.
+
+    ```typescript
+        export async function orbsOpener(network: Network): Promise<ContractOpener>
+    ```
 
 ### Changed
 
+- SDK uses orbsOpener by default.
 - `address` field in `AssetBridgingData` can be either EVM or TVM address
 - Method `SenderFactory.getSender` requires additional parameter `network` when creating wallet wrapper using mnemonic
 - Fixed `getContractState` in `liteClientOpener`
