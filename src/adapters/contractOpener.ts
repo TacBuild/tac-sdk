@@ -29,21 +29,18 @@ export async function liteClientOpener(
     const liteservers = 'liteservers' in options ? options.liteservers : await getDefaultLiteServers(options.network);
     const engines: LiteEngine[] = [];
     for (const server of liteservers) {
-        engines.push(
-            new LiteSingleEngine({
-                host: `tcp://${intToIP(server.ip)}:${server.port}`,
-                publicKey: Buffer.from(server.id.key, 'base64'),
-            }),
-        );
+        const engine = await LiteSingleEngine.create({
+            host: `tcp://${intToIP(server.ip)}:${server.port}`,
+            publicKey: Buffer.from(server.id.key, 'base64'),
+        });
+        engines.push(engine);
     }
 
     const engine: LiteEngine | null = new LiteRoundRobinEngine(engines);
     const client = new LiteClient({ engine });
 
     const closeConnections = () => {
-        engines.forEach((e) => {
-            e.close();
-        });
+        engine.close();
     };
 
     return {

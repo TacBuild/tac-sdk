@@ -22,7 +22,7 @@
     "@ton/core": "^0.59.1",
     "@ton/ton": "^15.1.0",
     "@tonappchain/artifacts": "^0.0.11",
-    "@tonappchain/ton-lite-client": "^3.0.2",
+    "@tonappchain/ton-lite-client": "^3.0.3",
     "@tonconnect/ui": "^2.0.9",
     "bn.js": "^5.2.1",
     "dotenv": "^16.4.5",
