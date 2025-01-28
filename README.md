@@ -86,9 +86,9 @@ const sdkParams: SDKParams = {
 }; 
 const tacSdk = await TacSdk.create(sdkParams);
 ```
-> **Note:** By default public liteservers from ton.org are used as TON providers 
+> **Note:** By default Orbs Network is used as TON provider 
 
-Optionally, you can provide custom liteservers client for TON blockchain in `contractOpener` argument:
+Optionally, only in NodeJS you can provide custom liteservers client for TON blockchain in `contractOpener` argument:
 
 ```typescript
 import { TacSdk, Network, liteClientOpener } from 'tac-sdk';
@@ -143,7 +143,7 @@ const tacSdk = await TacSdk.create(sdkParams);
 
 ### Function: `closeConnections`
 
-This function stops all connections to the network, such as Ton Liteservers, and should be called after all operations are completed.
+This function stops all connections to the network, such as Ton Liteservers, and should be called after all operations are completed. Can be used if you use custom contract opener and need to close connections manually.
 
 ### Function: `sendCrossChainTransaction`
 
@@ -544,7 +544,7 @@ export type TONParams = {
 }
 ```
 TON Parameters for SDK:
-- **`contractOpener`** *(optional)*: Client used for TON smart contract interaction. Default is `LiteClientOpener`. Set for increasing rate limit or tests only 
+- **`contractOpener`** *(optional)*: Client used for TON smart contract interaction. Default is `orbsOpener`. Set for tests only 
 - **`settingsAddress`** *(optional)*: TON settings contract address. Needed to retrieve protocol data. Set for tests only
 
 ---

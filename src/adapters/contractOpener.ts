@@ -2,6 +2,8 @@ import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '
 import { ContractOpener, Network } from '../structs/Struct';
 import { Blockchain } from '@ton/sandbox';
 import { MAINNET_DEFAULT_LITESERVERS, TESTNET_DEFAULT_LITESERVERS } from '../sdk/Consts';
+import { getHttpEndpoint } from '@orbs-network/ton-access';
+import { TonClient } from '@ton/ton';
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
 
@@ -27,21 +29,18 @@ export async function liteClientOpener(
     const liteservers = 'liteservers' in options ? options.liteservers : await getDefaultLiteServers(options.network);
     const engines: LiteEngine[] = [];
     for (const server of liteservers) {
-        engines.push(
-            new LiteSingleEngine({
-                host: `tcp://${intToIP(server.ip)}:${server.port}`,
-                publicKey: Buffer.from(server.id.key, 'base64'),
-            }),
-        );
+        const engine = await LiteSingleEngine.create({
+            host: `tcp://${intToIP(server.ip)}:${server.port}`,
+            publicKey: Buffer.from(server.id.key, 'base64'),
+        });
+        engines.push(engine);
     }
 
     const engine: LiteEngine | null = new LiteRoundRobinEngine(engines);
     const client = new LiteClient({ engine });
 
     const closeConnections = () => {
-        engines.forEach((e) => {
-            e.close();
-        });
+        engine.close();
     };
 
     return {
@@ -73,4 +72,12 @@ export function sandboxOpener(blockchain: Blockchain): ContractOpener {
             };
         },
     };
+}
+
+export async function orbsOpener(network: Network): Promise<ContractOpener> {
+    const endpoint = await getHttpEndpoint({
+        network,
+    });
+    const client = new TonClient({ endpoint });
+    return client;
 }

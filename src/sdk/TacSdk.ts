@@ -46,7 +46,7 @@ import {
 } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError } from '../errors';
-import { liteClientOpener } from '../adapters/contractOpener';
+import { orbsOpener } from '../adapters/contractOpener';
 
 export class TacSdk {
     readonly network: Network;
@@ -84,7 +84,7 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TONParams?: TONParams,
     ): Promise<InternalTONParams> {
-        const contractOpener = TONParams?.contractOpener ?? (await liteClientOpener({ network }));
+        const contractOpener = TONParams?.contractOpener ?? (await orbsOpener(network));
         const settingsAddress = TONParams?.settingsAddress ?? artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
         const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
 

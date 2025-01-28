@@ -6,5 +6,5 @@ export * from './structs/Struct';
 export { Network, SimplifiedStatuses } from './structs/Struct';
 export type { JettonWalletData } from './wrappers/JettonWallet';
 export { JettonWallet, JettonWalletOpCodes } from './wrappers/JettonWallet';
-export { liteClientOpener } from './adapters/contractOpener';
+export { orbsOpener, liteClientOpener } from './adapters/contractOpener';
 export * from './errors';
