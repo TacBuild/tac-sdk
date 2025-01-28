@@ -32,6 +32,7 @@ import {
     MAINNET_TAC_RPC_ENDPOINT,
     TESTNET_TAC_RPC_ENDPOINT,
     TRANSACTION_TON_AMOUNT,
+    DEFAULT_DELAY,
 } from './Consts';
 import {
     buildEvmDataCell,
@@ -46,8 +47,6 @@ import {
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError } from '../errors';
 import { liteClientOpener } from '../adapters/contractOpener';
-
-const DEFAULT_DELAY = 0;
 
 export class TacSdk {
     readonly network: Network;
@@ -177,7 +176,7 @@ export class TacSdk {
         const userJettonWallet = this.TONParams.contractOpener.open(
             new JettonWallet(Address.parse(userJettonWalletAddress)),
         );
-        return await userJettonWallet.getJettonBalance();
+        return userJettonWallet.getJettonBalance();
     }
 
     private getJettonTransferPayload(
@@ -231,7 +230,7 @@ export class TacSdk {
         const givenMinterCode = Cell.fromBoc(givenMinterCodeBOC)[0];
         await sleep(this.delay * 1000);
 
-        if (this.TONParams.jettonMinterCode.equals(givenMinterCode)) {
+        if (!this.TONParams.jettonMinterCode.equals(givenMinterCode)) {
             return AssetOpType.JettonTransfer;
         }
 
@@ -250,7 +249,7 @@ export class TacSdk {
                 .endCell(),
         );
 
-        if (expectedMinterAddress.equals(givenMinter.address)) {
+        if (!expectedMinterAddress.equals(givenMinter.address)) {
             return AssetOpType.JettonTransfer;
         }
 
@@ -278,8 +277,7 @@ export class TacSdk {
             } else {
                 crossChainTonAmount += asset.amount;
             }
-        };
-
+        }
         const jettons: JettonBridgingData[] = Array.from(uniqueAssetsMap.entries()).map(([address, amount]) => ({
             address,
             amount,
@@ -389,7 +387,7 @@ export class TacSdk {
     }
 
     async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
-        if (tvmTokenAddress == this.nativeTONAddress) {
+        if (tvmTokenAddress !== this.nativeTONAddress) {
             validateTVMAddress(tvmTokenAddress);
 
             const { code: givenMinterCodeBOC } = await this.TONParams.contractOpener.getContractState(

@@ -2,12 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.7] - 2025-01-20
+## [0.3.7] - 2025-01-23
+
+### Added
+
+- section in readme about TACHeader
+- addLiquidity uniswap_v2 test
 
 ### Changed
 
 - `address` field in `AssetBridgingData` can be either EVM or TVM address
 - Method `SenderFactory.getSender` requires additional parameter `network` when creating wallet wrapper using mnemonic
+- Fixed `getContractState` in `liteClientOpener`
+- Fixed all tests for TACHeader logic
+
+### Removed
+
+- Deleted test bridgeData
+
 
 ## [0.3.6] - 2025-01-15
 

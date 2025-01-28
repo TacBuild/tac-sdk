@@ -3,15 +3,15 @@ import 'dotenv/config';
 import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
+import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
-const UNISWAPV2_PROXY_ADDRESS = '0xd47Cf3c26312B645B5e7a910fCE30B46CFf6a8f8';
+const UNISWAPV2_PROXY_ADDRESS = '0x14Ad9182F54903dFD8215CA2c1aD0F9A47Ac7Edb';
 
-const WALLET_VERSION = 'v4';
+const WALLET_VERSION = 'v3r2';
 const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
 
 const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, tokenAddress: string) => {
@@ -32,7 +32,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
     // create evm proxy msg
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(
-        ['uint256', 'uint256', 'address[]', 'address', 'uint256'],
+        ['tuple(uint256,uint256,address[],address,uint256'],
         [
             Number(toNano(amountIn)),
             Number(toNano(amountOutMin)),
@@ -44,7 +44,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
 
     const evmProxyMsg: EvmProxyMsg = {
         evmTargetAddress: UNISWAPV2_PROXY_ADDRESS,
-        methodName: 'swapExactTokensForTokens(uint256,uint256,address[],address,uint256)',
+        methodName: 'swapExactTokensForTokens',
         encodedParameters,
     };
 
@@ -64,7 +64,9 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
         });
     }
 
-    return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    tacSdk.closeConnections();
+    return result;
 };
 
 async function main() {

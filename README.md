@@ -157,8 +157,8 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 - **`evmProxyMsg`**: An `EvmProxyMsg` object defining the EVM-specific logic:
   - **`evmTargetAddress`**: Target address on the EVM network.
-  - **`methodName`** *(optional)*: Method name to execute on the target contract.
-  - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method.
+  - **`methodName`** *(optional)*: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
+  - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method. You need to specify all arguments except the first one (TACHeader bytes). The TACHeader logic will be specified below
 
 - **`sender`**: A `SenderAbstraction` object, such as:
   - **`TonConnectSender`**: For TonConnect integration.
@@ -168,8 +168,9 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - **`address`** *(optional)*: Address of the Asset.
   - **`amount`**: Amount of Assets to transfer.
 
-> **Note:** If you don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
+> **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 
+> **Note:** If you don't specify methodName and encodedParameters and specify assets this will mean bridge any assets to evmTargetAddress (be sure to specify assets when doing this).
 
 #### **Returns**
 
@@ -187,6 +188,50 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 2. Prepares shard messages and encodes the necessary payloads.
 3. Bridges Jettons by sending shard transactions to the appropriate smart contracts.
 4. Incorporates EVM logic into the payload for interaction with the TAC.
+
+---
+### TACHeader 
+> **Note:** The TAC protocol only knows how to send data to contracts that inherit from a TacProxy (TacProxyV1) contract. Such a contract must have a strictly defined signature of its methods. It is specified below:
+
+```
+function myProxyFunction(bytes calldata tacHeader, bytes calldata arguments) external onlyTacCCL {
+  // Function implementation 
+}
+```
+
+> **Note:** methodName in `evmProxyMsg` must be either a simple method name or a signature of the form MethodName(bytes,bytes)
+
+The first argument of methods must always be TACHeader. It is sent by protocol, augmented with data from executor.
+- **`bytes tacHeader`**: Encoded structure TacHeaderV1, containing:
+  - **`uint64 shardedId`**: ID you can specify for yourself an inside message to the TVM contract on the TON network. 
+  - **`uint256 timestamp`**: The block timestamp on TON where the user's message was created. 
+  - **`bytes32 operationId`**: Unique identifier for the message created by the TAC infrastructure. 
+  - **`string tvmCaller`**: The TON user's wallet address that sent the message. 
+  - **`bytes extraData`**: Untrusted extra data, provided by executor with the current message if needed. Otherwise, it's an empty bytes array.
+
+You need to specify all the remaining data you need in tuple (bytes) in arguments. For example this is how arguments for addLiquidity method in UniswapV2 (a special proxy contract for it) will look like:
+
+```
+    const abi = new ethers.AbiCoder();
+    const encodedParameters = abi.encode(
+        ['tuple(address,address,uint256,uint256,uint256,uint256,address,uint256)'],
+        [
+            [
+                EVM_TOKEN_A_ADDRESS,
+                EVM_TOKEN_B_ADDRESS,
+                amountA,
+                amountB,
+                amountAMin, 
+                amountBMin,  
+                UNISWAPV2_PROXY_ADDRESS, 
+                deadline 
+            ]
+        ]
+    );
+```
+More details in [sendAddLiquidity.ts](tests/uniswap_v2/sendAddLiquidity.ts) and in other tests.
+
+
 
 ---
 
@@ -536,7 +581,7 @@ export type EvmProxyMsg = {
 ```
 Represents a proxy message to a TAC.
 - **`evmTargetAddress`**: Target address on the EVM network.
-- **`methodName`** *(optional)*: Method name to be called on the target contract.
+- **`methodName`** *(optional)*: Method name to be called on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
 - **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the crosschain transaction.
@@ -620,41 +665,43 @@ export interface ContractOpener {
 ## Usage
 
 ```typescript
-import { TacSdk } from "tac-sdk";
-import { TonConnectUI } from "@tonconnect/ui";
-import { ethers } from "ethers";
+import { TacSdk } from 'tac-sdk';
+import { TonConnectUI } from '@tonconnect/ui';
+import { ethers } from 'ethers';
 
 // Create EVM payload for DappProxy
 const abi = new ethers.AbiCoder();
 const encodedParameters = abi.encode(
-    ['uint256', 'uint256', 'address[]', 'address'],
+    ['tuple(uint256,uint256,address[],address)'],
     [
-        tokenAAmount,
-        tokenBAmount,
-        [EVMtokenAAddress, EVMtokenBAddress],
-        proxyDapp,
+        [
+            tokenAAmount,
+            tokenBAmount,
+            [EVMtokenAAddress, EVMtokenBAddress],
+            proxyDapp
+        ]
     ]
 );
 const evmProxyMsg: EvmProxyMsg = {
     evmTargetAddress: DappProxyAddress,
-    methodName: 'addLiquidity(uint256,uint256,address[],address)',
+    methodName: 'addLiquidity',
     encodedParameters
 };
 
 // Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
 const assets: AssetBridgingData[] = [
     {
-      address: TVMtokenAAddress,
-      amount: tokenAAmount
+        address: TVMtokenAAddress,
+        amount: tokenAAmount
     },
     {
-      address: TVMtokenBAddress,
-      amount: tokenBAmount
+        address: TVMtokenBAddress,
+        amount: tokenBAmount
     }
 ];
 
 const sdkParams: SDKParams = {
-  network: Network.Testnet,
+    network: Network.Testnet
 };
 const tacSdk = await TacSdk.create(sdkParams);
 
@@ -663,7 +710,7 @@ const tonConnectUI = new TonConnectUI({
     manifestUrl: config.tonconnectManifestUrl as string
 });
 const sender = await SenderFactory.getSender({
-    tonConnect: tonConnectUI,
+    tonConnect: tonConnectUI
 });
 
 await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);

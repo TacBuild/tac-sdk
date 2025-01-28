@@ -8,6 +8,7 @@ import {
     BitError,
     MetadataError,
     SettingError,
+    EVMCallError
 } from './errors';
 
 export const emptyContractError = new ContractError('unexpected empty contract code of given jetton.', 100);
@@ -32,3 +33,6 @@ export const prefixError = new MetadataError('Unexpected wrappers metadata conte
 
 export const emptySettingError = (setting: string) =>
     new SettingError(`unexpected empty ${setting}. Make sure the settings contract is valid.`, 110);
+
+export const invalidMethodNameError = (methodName: string) =>
+    new EVMCallError(`Invalid Solidity method name: "${methodName}". Method must be either a valid identifier or have parameters (bytes,bytes).`, 110);

@@ -39,7 +39,10 @@ describe('TacSDK', () => {
     let feeAmount: number;
     let feeSupply: number;
     let merkleRoot: bigint;
-    let epoch: number;
+    let epochDelay: number;
+    let nextVotingTime: number;
+    let currEpoch: number;
+    let prevEpoch: number;
     let user: SandboxContract<TreasuryContract>;
 
     // JETTON PROXY
@@ -58,13 +61,16 @@ describe('TacSDK', () => {
         crossChainLayer = blockchain.openContract(
             CrossChainLayer.createFromConfig(
                 {
+                    currEpoch,
+                    prevEpoch,
                     adminAddress: admin.address.toString(),
                     executorCode: ExecutorCode,
                     feeAmount,
                     feeSupply,
                     merkleRoot,
-                    epoch,
-                    sequencerMultisigAddress: sequencerMultisig.address.toString(),
+                    epochDelay,
+                    nextVotingTime,
+                    sequencerMultisigAddress: sequencerMultisig.address.toString()
                 },
                 CrossChainLayerCode,
             ),
@@ -168,7 +174,11 @@ describe('TacSDK', () => {
         feeAmount = 0.1;
         feeSupply = 0;
         merkleRoot = 0n;
-        epoch = 0;
+        epochDelay = 0;
+        nextVotingTime = 0;
+        nextVotingTime = 0;
+        prevEpoch = 0;
+        currEpoch = 0;
 
         await deployCCL();
         await deployJettonProxy();
