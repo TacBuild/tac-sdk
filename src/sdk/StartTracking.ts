@@ -47,7 +47,7 @@ export async function startTracking(
             console.log('request operationStatus');
 
             try {
-                currentStatus = await tracker.getOperationStatus(operationId);
+                ({ status: currentStatus } = await tracker.getOperationStatus(operationId));
             } catch {
                 console.log('get status error');
             }

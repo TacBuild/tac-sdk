@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.3.7] - 2025-01-28
+## [0.3.7] - 2025-01-29
 
 ### Added
 
@@ -21,6 +21,13 @@ All notable changes to this project will be documented in this file.
 - Method `SenderFactory.getSender` requires additional parameter `network` when creating wallet wrapper using mnemonic
 - Fixed `getContractState` in `liteClientOpener`
 - Fixed all tests for TACHeader logic
+- Version `@tonappchain/artifacts` upgraded to `0.0.12-addresses`
+- Request to `/status` endpoint of Sequencer API changed from `GET` to `POST` with body
+- Signature of `getOperationStatus` is changed to:
+
+    ```typescript
+        async getOperationStatus(operationId: string): Promise<StatusByOperationId>
+    ```
 
 ### Removed
 

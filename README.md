@@ -54,7 +54,7 @@ After obtaining the `operationId`, you can check the operation’s status by usi
 5. **TVMMerkleRootSet:** The TVM message has been added to the Merkle tree, updating future roots accordingly.
 6. **TVMMerkleMessageExecuted:** The TVM Merkle message has been successfully executed on the TVM CrossChainLayer.
 
-Currently, there are no explicit error statuses. If an issue occurs, the operation will pause at a particular stage. Further error statuses will be added in future versions.
+If an issue occurs, the error message will also be included in response.
 
 ### Terminal State
 - **TVMMerkleMessageExecuted**: Indicates that the operation has completed its full cycle from TVM to EVM and back.
@@ -417,7 +417,7 @@ Use the `getOperationId(transactionLinker)` method with the `transactionLinker` 
 
 Use the `getOperationStatus(operationId)` method to fetch the operation status.
 
-#### **Method: `getOperationStatus(operationId: string): Promise<string>`**
+#### **Method: `getOperationStatus(operationId: string): Promise<StatusByOperationId>`**
 
 Retrieves the current status of an operation using its `operationId`.
 
@@ -425,21 +425,27 @@ Retrieves the current status of an operation using its `operationId`.
   - `operationId`: The identifier obtained from `getOperationId`.
 
 #### **Returns**:
-- **`Promise<string>`**:
-  - A string representing the operation's status, such as:
-    - `EVMMerkleMessageCollected`: Validator has collected all events for a single sharded message.
-    - `EVMMerkleRootSet`: The EVM message has been added to the Merkle tree.
-    - `EVMMerkleMessageExecuted`: The collected message has been executed on the EVM side.
-    - `TVMMerkleMessageCollected`: After EVM execution, a return message event is generated for TVM execution.
-    - `TVMMerkleRootSet`: The TVM message has been added to the Merkle tree.
-    - `TVMMerkleMessageExecuted`: The operation is fully executed across TVM and EVM.
+- **`Promise<StatusByOperationId>`**:
+  - A structure representing the operation's status, including:
+    - `status`:
+      - `EVMMerkleMessageCollected`: Validator has collected all events for a single sharded message.
+      - `EVMMerkleRootSet`: The EVM message has been added to the Merkle tree.
+      - `EVMMerkleMessageExecuted`: The collected message has been executed on the EVM side.
+      - `TVMMerkleMessageCollected`: After EVM execution, a return message event is generated for TVM execution.
+      - `TVMMerkleRootSet`: The TVM message has been added to the Merkle tree.
+      - `TVMMerkleMessageExecuted`: The operation is fully executed across TVM and EVM.
+    - `error_message`: The error message if the operation failed.
+    - `operation_id`: The identifier of the operation.
   (error requests will be processed in future version)
 #### **Usage**:
   ```typescript
   const tracker = new OperationTracker(
         network: Network.Testnet
   );
-  const status = await tracker.getOperationStatus(operationId);
+  const { status, error_message } = await tracker.getOperationStatus(operationId);
+  if (error_message) {
+      console.log('Error:', status);
+  }
   console.log('Operation Status:', status);
   ```
 
