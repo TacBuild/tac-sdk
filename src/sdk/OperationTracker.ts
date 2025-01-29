@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import { Network, TransactionLinker, SimplifiedStatuses } from '../structs/Struct';
+import { Network, TransactionLinker, SimplifiedStatuses, StatusesResponse } from '../structs/Struct';
 import { MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS, TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS } from './Consts';
 import { operationFetchError, statusFetchError } from '../errors';
 
@@ -43,15 +43,21 @@ export class OperationTracker {
     async getOperationStatus(operationId: string): Promise<string> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
-                const response = await axios.get(`${endpoint}/status`, {
-                    params: { operationId },
+                const response = await axios.post<StatusesResponse>(`${endpoint}/status`, {
+                    operationIds: [operationId],
                 });
-                return response.data.response || '';
+
+                const result = response.data.response.find((s) => s.operation_id === operationId);
+                if (result?.error_message) {
+                    throw statusFetchError(result.error_message);
+                }
+
+                return result?.status || '';
             } catch (error) {
                 console.error(`Error fetching status transaction with ${endpoint}:`, error);
             }
         }
-        throw statusFetchError;
+        throw statusFetchError('all endpoints failed to complete request');
     }
 
     async getSimplifiedOperationStatus(
