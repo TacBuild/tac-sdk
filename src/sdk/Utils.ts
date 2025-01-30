@@ -81,16 +81,16 @@ export function validateEVMAddress(address: string): void {
 
 export function calculateEVMTokenAddress(
     abiCoder: AbiCoder,
-    crossChainLayerAddress: string,
-    crossChainLayerBytecode: string,
+    tokenUtilsAddress: string,
+    crossChainLayerTokenBytecode: string,
     settingsAddress: string,
     l1Address: string,
 ): string {
     const salt = ethers.keccak256(ethers.solidityPacked(['string'], [l1Address]));
     const initCode = ethers.solidityPacked(
         ['bytes', 'bytes'],
-        [crossChainLayerBytecode, abiCoder.encode(['address'], [settingsAddress])],
+        [crossChainLayerTokenBytecode, abiCoder.encode(['address'], [settingsAddress])],
     );
     const initCodeHash = ethers.keccak256(initCode);
-    return ethers.getCreate2Address(crossChainLayerAddress, salt, initCodeHash);
+    return ethers.getCreate2Address(tokenUtilsAddress, salt, initCodeHash);
 }
