@@ -114,3 +114,9 @@ export type TransactionLinker = {
     timestamp: number;
     sendTransactionResult?: unknown;
 };
+
+export type StatusByOperationId = { operationId: string; errorMessage: string | null; status: string }
+
+export type ResponseBase<T> = { response: T };
+
+export type StatusesResponse = ResponseBase<StatusByOperationId[]>;

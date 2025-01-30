@@ -1,8 +1,15 @@
 import axios from 'axios';
 
-import { Network, TransactionLinker, SimplifiedStatuses } from '../structs/Struct';
+import {
+    Network,
+    TransactionLinker,
+    SimplifiedStatuses,
+    StatusesResponse,
+    StatusByOperationId,
+} from '../structs/Struct';
 import { MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS, TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS } from './Consts';
 import { operationFetchError, statusFetchError } from '../errors';
+import { convertKeysToCamelCase } from './Utils';
 
 export class OperationTracker {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
@@ -40,18 +47,39 @@ export class OperationTracker {
         throw operationFetchError;
     }
 
-    async getOperationStatus(operationId: string): Promise<string> {
+    async getOperationStatus(operationId: string): Promise<StatusByOperationId> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
-                const response = await axios.get(`${endpoint}/status`, {
-                    params: { operationId },
-                });
-                return response.data.response || '';
+                const response = await axios.post<StatusesResponse>(
+                    `${endpoint}/status`,
+                    {
+                        operationIds: [operationId],
+                    },
+                    {
+                        transformResponse: [
+                            (data) => {
+                                try {
+                                    const parsedData = JSON.parse(data);
+                                    return convertKeysToCamelCase(parsedData);
+                                } catch {
+                                    return data;
+                                }
+                            },
+                        ],
+                    },
+                );
+
+                const result = response.data.response.find((s) => s.operationId === operationId);
+                if (!result) {
+                    throw statusFetchError('operation is not found in response');
+                }
+
+                return result;
             } catch (error) {
                 console.error(`Error fetching status transaction with ${endpoint}:`, error);
             }
         }
-        throw statusFetchError;
+        throw statusFetchError('all endpoints failed to complete request');
     }
 
     async getSimplifiedOperationStatus(
@@ -63,7 +91,10 @@ export class OperationTracker {
             return SimplifiedStatuses.OperationIdNotFound;
         }
 
-        const status = await this.getOperationStatus(operationId);
+        const { status, errorMessage } = await this.getOperationStatus(operationId);
+        if (errorMessage) {
+            return SimplifiedStatuses.Failed;
+        }
         const finalStatus = isBridgeOperation ? this.BRIDGE_TERMINATED_STATUS : this.TERMINATED_STATUS;
         if (status == finalStatus) {
             return SimplifiedStatuses.Successful;

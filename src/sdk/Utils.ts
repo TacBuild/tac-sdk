@@ -94,3 +94,18 @@ export function calculateEVMTokenAddress(
     const initCodeHash = ethers.keccak256(initCode);
     return ethers.getCreate2Address(tokenUtilsAddress, salt, initCodeHash);
 }
+
+const snakeToCamel = (str: string): string => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+export const convertKeysToCamelCase = <T>(data: T): T => {
+    if (Array.isArray(data)) {
+        return data.map(convertKeysToCamelCase) as T;
+    } else if (data !== null && typeof data === 'object') {
+        return Object.keys(data).reduce((acc, key) => {
+            const camelKey = snakeToCamel(key);
+            (acc as any)[camelKey] = convertKeysToCamelCase((data as any)[key]);
+            return acc;
+        }, {} as T);
+    }
+    return data;
+};
