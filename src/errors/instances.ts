@@ -15,7 +15,7 @@ export const emptyContractError = new ContractError('unexpected empty contract c
 
 export const operationFetchError = new FetchError('failed to fetch OperationId', 101);
 
-export const statusFetchError = new FetchError('failed to fetch status transaction', 102);
+export const statusFetchError = (msg: string) => new FetchError(`failed to fetch status transaction: ${msg}`, 102);
 
 export const tvmAddressError = (addr: string) => new AddressError(`invalid tvm address ${addr}`, 103);
 

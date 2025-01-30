@@ -21,11 +21,13 @@ export async function startTracking(
     let currentStatus = '';
     let iteration = 0; // number of iterations
     let ok = true; // finished successfully
+    let errorMessage: string | null;
 
     while (true) {
         ++iteration;
         if (iteration >= MAX_ITERATION_COUNT) {
             ok = false;
+            errorMessage = 'maximum number of iterations has been exceeded'
             break;
         }
 
@@ -47,7 +49,11 @@ export async function startTracking(
             console.log('request operationStatus');
 
             try {
-                currentStatus = await tracker.getOperationStatus(operationId);
+                ({ status: currentStatus, errorMessage } = await tracker.getOperationStatus(operationId));
+                if (errorMessage) {
+                    ok = false;
+                    break;
+                }
             } catch {
                 console.log('get status error');
             }
@@ -60,7 +66,7 @@ export async function startTracking(
     }
 
     if (!ok) {
-        console.log('Finished with error');
+        console.log(`Finished with error: ${errorMessage!}`);
     } else {
         console.log('Tracking successfully finished');
     }
