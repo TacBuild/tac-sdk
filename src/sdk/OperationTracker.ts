@@ -1,8 +1,15 @@
 import axios from 'axios';
 
-import { Network, TransactionLinker, SimplifiedStatuses, StatusesResponse, StatusByOperationId } from '../structs/Struct';
+import {
+    Network,
+    TransactionLinker,
+    SimplifiedStatuses,
+    StatusesResponse,
+    StatusByOperationId,
+} from '../structs/Struct';
 import { MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS, TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS } from './Consts';
 import { operationFetchError, statusFetchError } from '../errors';
+import { convertKeysToCamelCase } from './Utils';
 
 export class OperationTracker {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
@@ -43,11 +50,26 @@ export class OperationTracker {
     async getOperationStatus(operationId: string): Promise<StatusByOperationId> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
-                const response = await axios.post<StatusesResponse>(`${endpoint}/status`, {
-                    operationIds: [operationId],
-                });
+                const response = await axios.post<StatusesResponse>(
+                    `${endpoint}/status`,
+                    {
+                        operationIds: [operationId],
+                    },
+                    {
+                        transformResponse: [
+                            (data) => {
+                                try {
+                                    const parsedData = JSON.parse(data);
+                                    return convertKeysToCamelCase(parsedData);
+                                } catch {
+                                    return data;
+                                }
+                            },
+                        ],
+                    },
+                );
 
-                const result = response.data.response.find((s) => s.operation_id === operationId);
+                const result = response.data.response.find((s) => s.operationId === operationId);
                 if (!result) {
                     throw statusFetchError('operation is not found in response');
                 }
@@ -69,8 +91,8 @@ export class OperationTracker {
             return SimplifiedStatuses.OperationIdNotFound;
         }
 
-        const { status, error_message } = await this.getOperationStatus(operationId);
-        if (error_message) {
+        const { status, errorMessage } = await this.getOperationStatus(operationId);
+        if (errorMessage) {
             return SimplifiedStatuses.Failed;
         }
         const finalStatus = isBridgeOperation ? this.BRIDGE_TERMINATED_STATUS : this.TERMINATED_STATUS;

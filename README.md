@@ -434,16 +434,16 @@ Retrieves the current status of an operation using its `operationId`.
       - `TVMMerkleMessageCollected`: After EVM execution, a return message event is generated for TVM execution.
       - `TVMMerkleRootSet`: The TVM message has been added to the Merkle tree.
       - `TVMMerkleMessageExecuted`: The operation is fully executed across TVM and EVM.
-    - `error_message`: The error message if the operation failed.
-    - `operation_id`: The identifier of the operation.
+    - `errorMessage`: The error message if the operation failed.
+    - `operationId`: The identifier of the operation.
   (error requests will be processed in future version)
 #### **Usage**:
   ```typescript
   const tracker = new OperationTracker(
         network: Network.Testnet
   );
-  const { status, error_message } = await tracker.getOperationStatus(operationId);
-  if (error_message) {
+  const { status, errorMessage } = await tracker.getOperationStatus(operationId);
+  if (errorMessage) {
       console.log('Error:', status);
   }
   console.log('Operation Status:', status);
