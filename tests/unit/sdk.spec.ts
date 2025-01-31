@@ -70,7 +70,7 @@ describe('TacSDK', () => {
                     merkleRoot,
                     epochDelay,
                     nextVotingTime,
-                    sequencerMultisigAddress: sequencerMultisig.address.toString()
+                    sequencerMultisigAddress: sequencerMultisig.address.toString(),
                 },
                 CrossChainLayerCode,
             ),
@@ -214,10 +214,12 @@ describe('TacSDK', () => {
 
     it('should get set jetton balance', async () => {
         const balance = await sdk.getUserJettonBalance(user.address.toString(), jettonMinter.address.toString());
-        expect(balance).toBe(0);
+        expect(balance).toBe(0n);
     });
 
     it('should create valid jetton bridging data from asset bridging data', async () => {
+        const amountTokenForEVMAddress = BigInt(2 * 10 ** 18); // decimals = 18
+        const amountTokenForTVMAddress = BigInt(3 * 10 ** 10); // decimals = 10
         const assets: AssetBridgingData[] = [
             {
                 /** TON */
@@ -226,12 +228,12 @@ describe('TacSDK', () => {
             {
                 /** ETH address */
                 address: evmRandomAddress,
-                amount: 2,
+                amount: amountTokenForEVMAddress,
             },
             {
                 /** TON address */
                 address: tvmRandomAddress,
-                amount: 3,
+                amount: amountTokenForTVMAddress,
             },
         ];
 
@@ -240,8 +242,11 @@ describe('TacSDK', () => {
         const jettonAssets = await sdk['aggregateJettons'](assets);
         expect(jettonAssets.jettons.length).toBe(2);
         expect(jettonAssets.crossChainTonAmount).toBe(1);
-        expect(jettonAssets.jettons).toContainEqual({ address: tvmRandomAddress, amount: 3 });
-        expect(jettonAssets.jettons).toContainEqual({ address: expectedTVMAddressForEVM, amount: 2 });
+        expect(jettonAssets.jettons).toContainEqual({ address: tvmRandomAddress, amount: amountTokenForTVMAddress });
+        expect(jettonAssets.jettons).toContainEqual({
+            address: expectedTVMAddressForEVM,
+            amount: amountTokenForEVMAddress,
+        });
     });
 
     it.each(Object.keys(wallets) as WalletVersion[])(

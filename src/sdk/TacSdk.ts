@@ -168,7 +168,7 @@ export class TacSdk {
         return await jettonMaster.getWalletAddress(userAddress);
     }
 
-    async getUserJettonBalance(userAddress: string, tokenAddress: string): Promise<number> {
+    async getUserJettonBalance(userAddress: string, tokenAddress: string): Promise<bigint> {
         const jettonMaster = this.TONParams.contractOpener.open(new JettonMaster(Address.parse(tokenAddress)));
         const userJettonWalletAddress = await jettonMaster.getWalletAddress(userAddress);
         await sleep(this.delay * 1000);
@@ -260,7 +260,7 @@ export class TacSdk {
         jettons: JettonBridgingData[];
         crossChainTonAmount: number;
     }> {
-        const uniqueAssetsMap: Map<string, number> = new Map();
+        const uniqueAssetsMap: Map<string, bigint> = new Map();
         let crossChainTonAmount = 0;
 
         for await (const asset of assets ?? []) {
@@ -273,9 +273,9 @@ export class TacSdk {
 
                 validateTVMAddress(jettonAddress);
 
-                uniqueAssetsMap.set(jettonAddress, (uniqueAssetsMap.get(jettonAddress) || 0) + asset.amount);
+                uniqueAssetsMap.set(jettonAddress, (uniqueAssetsMap.get(jettonAddress) || 0n) + BigInt(asset.amount));
             } else {
-                crossChainTonAmount += asset.amount;
+                crossChainTonAmount += Number(asset.amount);
             }
         }
         const jettons: JettonBridgingData[] = Array.from(uniqueAssetsMap.entries()).map(([address, amount]) => ({
@@ -297,7 +297,7 @@ export class TacSdk {
     ) {
         const opType = await this.getJettonOpType(jetton);
         await sleep(this.delay * 1000);
-        console.log(`***** Jetton ${jetton.amount} requires ${opType} operation`);
+        console.log(`***** Jetton ${jetton.address} requires ${opType} operation`);
 
         let payload: Cell;
         switch (opType) {

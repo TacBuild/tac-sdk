@@ -2,7 +2,7 @@ import type { Contract, ContractProvider, Sender } from '@ton/core';
 import { Address, beginCell, Cell, contractAddress, fromNano, SendMode, toNano } from '@ton/core';
 
 export type JettonWalletData = {
-    balance: number;
+    balance: bigint;
     ownerAddress: string;
     jettonMasterAddress: string;
     jettonWalletCode: Cell;
@@ -15,7 +15,7 @@ export enum JettonWalletOpCodes {
 
 export function jettonWalletConfigToCell(config: JettonWalletData): Cell {
     return beginCell()
-        .storeCoins(toNano(config.balance.toFixed(9)))
+        .storeCoins(config.balance)
         .storeAddress(Address.parse(config.ownerAddress))
         .storeAddress(Address.parse(config.jettonMasterAddress))
         .endCell();
@@ -38,7 +38,7 @@ export class JettonWallet implements Contract {
     }
 
     static burnMessage(
-        jettonAmount: number,
+        jettonAmount: number | bigint,
         receiverAddress?: string,
         crossChainTonAmount?: number,
         crossChainPayload?: Cell | null,
@@ -47,7 +47,7 @@ export class JettonWallet implements Contract {
         const body = beginCell()
             .storeUint(JettonWalletOpCodes.burn, 32)
             .storeUint(queryId || 0, 64)
-            .storeCoins(toNano(jettonAmount.toFixed(9)))
+            .storeCoins(jettonAmount)
             .storeAddress(receiverAddress ? Address.parse(receiverAddress) : null);
 
         if (crossChainTonAmount || crossChainPayload) {
@@ -92,7 +92,7 @@ export class JettonWallet implements Contract {
     }
 
     static transferMessage(
-        jettonAmount: number,
+        jettonAmount: number | bigint,
         to: string,
         responseAddress: string | null,
         forwardTonAmount?: number,
@@ -103,7 +103,7 @@ export class JettonWallet implements Contract {
         return beginCell()
             .storeUint(JettonWalletOpCodes.transfer, 32)
             .storeUint(queryId ?? 0, 64)
-            .storeCoins(toNano(jettonAmount.toFixed(9)))
+            .storeCoins(jettonAmount)
             .storeAddress(Address.parse(to))
             .storeAddress(responseAddress ? Address.parse(responseAddress) : null)
             .storeMaybeRef(null)
@@ -119,7 +119,7 @@ export class JettonWallet implements Contract {
         value: bigint,
         opts: {
             queryId?: number;
-            jettonAmount: number;
+            jettonAmount: number | bigint;
             toOwnerAddress: string;
             responseAddress?: string;
             customPayload?: Cell | null;
@@ -133,7 +133,7 @@ export class JettonWallet implements Contract {
             body: beginCell()
                 .storeUint(JettonWalletOpCodes.transfer, 32)
                 .storeUint(opts.queryId || 0, 64)
-                .storeCoins(toNano(opts.jettonAmount.toFixed(9)))
+                .storeCoins(opts.jettonAmount)
                 .storeAddress(Address.parse(opts.toOwnerAddress))
                 .storeAddress(opts.responseAddress ? Address.parse(opts.responseAddress) : null)
                 .storeMaybeRef(opts.customPayload)
@@ -146,19 +146,19 @@ export class JettonWallet implements Contract {
     async getWalletData(provider: ContractProvider): Promise<JettonWalletData> {
         const result = await provider.get('get_wallet_data', []);
         return {
-            balance: Number(fromNano(result.stack.readBigNumber())),
+            balance: result.stack.readBigNumber(),
             ownerAddress: result.stack.readAddress().toString(),
             jettonMasterAddress: result.stack.readAddress().toString(),
             jettonWalletCode: result.stack.readCell(),
         };
     }
 
-    async getJettonBalance(provider: ContractProvider): Promise<number> {
+    async getJettonBalance(provider: ContractProvider): Promise<bigint> {
         const state = await provider.getState();
         if (state.state.type !== 'active') {
-            return 0;
+            return 0n;
         }
         const result = await provider.get('get_wallet_data', []);
-        return Number(fromNano(result.stack.readBigNumber()));
+        return result.stack.readBigNumber();
     }
 }

@@ -93,7 +93,7 @@ export type SDKParams = {
 };
 
 export type AssetBridgingData = {
-    amount: number;
+    amount: number | bigint;
     /**
      * Address of TAC or TON token.
      * Empty if sending native TON coin.
