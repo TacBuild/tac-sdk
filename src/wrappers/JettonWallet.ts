@@ -40,7 +40,7 @@ export class JettonWallet implements Contract {
     static burnMessage(
         jettonAmount: number | bigint,
         receiverAddress?: string,
-        crossChainTonAmount?: number,
+        crossChainTonAmount?: bigint,
         crossChainPayload?: Cell | null,
         queryId?: number,
     ) {
@@ -53,7 +53,7 @@ export class JettonWallet implements Contract {
         if (crossChainTonAmount || crossChainPayload) {
             body.storeMaybeRef(
                 beginCell()
-                    .storeCoins(toNano(crossChainTonAmount?.toFixed(9) ?? 0))
+                    .storeCoins(crossChainTonAmount ?? 0)
                     .storeMaybeRef(crossChainPayload)
                     .endCell(),
             );
@@ -72,7 +72,7 @@ export class JettonWallet implements Contract {
             queryId?: number;
             jettonAmount: number;
             receiverAddress?: string;
-            crossChainTonAmount?: number;
+            crossChainTonAmount?: bigint;
             crossChainPayload?: Cell | null;
         },
     ) {
@@ -95,8 +95,8 @@ export class JettonWallet implements Contract {
         jettonAmount: number | bigint,
         to: string,
         responseAddress: string | null,
-        forwardTonAmount?: number,
-        crossChainTonAmount?: number,
+        forwardTonAmount?: bigint,
+        crossChainTonAmount?: bigint,
         crossChainPayload?: Cell | null,
         queryId?: number,
     ) {
@@ -107,8 +107,8 @@ export class JettonWallet implements Contract {
             .storeAddress(Address.parse(to))
             .storeAddress(responseAddress ? Address.parse(responseAddress) : null)
             .storeMaybeRef(null)
-            .storeCoins(toNano(forwardTonAmount?.toFixed(9) || 0))
-            .storeCoins(toNano(crossChainTonAmount?.toFixed(9) ?? 0))
+            .storeCoins(forwardTonAmount || 0)
+            .storeCoins(crossChainTonAmount ?? 0)
             .storeMaybeRef(crossChainPayload)
             .endCell();
     }
@@ -123,7 +123,7 @@ export class JettonWallet implements Contract {
             toOwnerAddress: string;
             responseAddress?: string;
             customPayload?: Cell | null;
-            forwardTonAmount?: number;
+            forwardTonAmount?: number | bigint;
             forwardPayload?: Cell | null;
         },
     ) {
@@ -137,7 +137,7 @@ export class JettonWallet implements Contract {
                 .storeAddress(Address.parse(opts.toOwnerAddress))
                 .storeAddress(opts.responseAddress ? Address.parse(opts.responseAddress) : null)
                 .storeMaybeRef(opts.customPayload)
-                .storeCoins(toNano(opts.forwardTonAmount?.toFixed(9) || 0))
+                .storeCoins(opts.forwardTonAmount ?? 0)
                 .storeMaybeRef(opts.forwardPayload)
                 .endCell(),
         });

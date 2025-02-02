@@ -15,7 +15,7 @@ const TVM_MNEMONICS = process.env.TVM_MNEMONICS || '';
 
 async function removeLiquidity() {
     const sdkParams: SDKParams = {
-        network: Network.Testnet
+        network: Network.Testnet,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
@@ -34,27 +34,30 @@ async function removeLiquidity() {
                 0, // amountAMin
                 0, // amountBMin
                 UNISWAPV2_PROXY_ADDRESS, // recipient
-                19010987500 // deadline
-            ]
-        ]
+                19010987500, // deadline
+            ],
+        ],
     );
 
     const evmProxyMsg: EvmProxyMsg = {
         evmTargetAddress: UNISWAPV2_PROXY_ADDRESS,
         methodName: 'removeLiquidity',
-        encodedParameters
+        encodedParameters,
     };
 
     const sender = await SenderFactory.getSender({
         network: Network.Testnet,
         version: WALLET_VERSION,
-        mnemonic: TVM_MNEMONICS
+        mnemonic: TVM_MNEMONICS,
     });
 
-    const assets: AssetBridgingData[] = [{
-        address: TVM_LP_ADDRESS,
-        amount: amountLP
-    }];
+    const assets: AssetBridgingData[] = [
+        {
+            address: TVM_LP_ADDRESS,
+            amountWithoutDecimals: amountLP,
+            decimals: 9,
+        },
+    ];
 
     const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
     tacSdk.closeConnections();

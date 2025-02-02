@@ -92,14 +92,36 @@ export type SDKParams = {
     TONParams?: TONParams;
 };
 
-export type AssetBridgingData = {
-    amount: number | bigint;
+export type RawAssetBridgingData = {
+    /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
+    amountWithDecimals: number | bigint;
     /**
      * Address of TAC or TON token.
      * Empty if sending native TON coin.
      */
     address?: string;
 };
+
+export type UserFriendlyAssetBridgingData = {
+    /**
+     * User friendly format, e.g. 12.34 tokens 
+     * Specified value will be converted automatically to raw format: 12.34 * (10^decimals).
+     * No decimals should be specified.
+     */
+    amountWithoutDecimals: number;
+    /**
+     * Decimals may be specified manually.
+     * Otherwise, SDK tries to extract them from chain.
+     */
+    decimals?: number;
+    /**
+     * Address of TAC or TON token.
+     * Empty if sending native TON coin.
+     */
+    address?: string;
+};
+
+export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridgingData;
 
 export type EvmProxyMsg = {
     evmTargetAddress: string;
@@ -115,7 +137,7 @@ export type TransactionLinker = {
     sendTransactionResult?: unknown;
 };
 
-export type StatusByOperationId = { operationId: string; errorMessage: string | null; status: string }
+export type StatusByOperationId = { operationId: string; errorMessage: string | null; status: string };
 
 export type ResponseBase<T> = { response: T };
 
