@@ -5,15 +5,7 @@ import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } fro
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
-import {
-    AssetBridgingData,
-    EvmProxyMsg,
-    Network,
-    SenderFactory,
-    TacSdk,
-    wallets,
-    WalletVersion,
-} from '../../src';
+import { AssetBridgingData, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
 
 import { testnet } from '@tonappchain/artifacts';
 import { sandboxOpener } from '../../src/adapters/contractOpener';
@@ -257,6 +249,38 @@ describe('TacSDK', () => {
         expect(jettonAssets.jettons).toContainEqual({
             address: expectedTVMAddressForEVM,
             rawAmount: BigInt(amountTokenForEVMAddress) * 10n ** BigInt(decimalsForEVMAddress),
+        });
+    });
+
+    it('should correctly handle different types of AssetBridgingData', async () => {
+        const amount1 = 1;
+        const amount2 = 0.12;
+        const decimals2 = 24;
+        const amount3 = BigInt(3) ** BigInt(24);
+        const assets: AssetBridgingData[] = [
+            {
+                amount: amount1,
+            },
+            {
+                address: tvmRandomAddress,
+                amount: amount2,
+                decimals: decimals2,
+            },
+            {
+                address: tvmRandomAddress,
+                rawAmount: amount3,
+            },
+        ];
+
+        const rawAssets = await sdk['convertAssetsToRawFormat'](assets);
+        expect(rawAssets).toContainEqual({ address: undefined, rawAmount: toNano(1) });
+        expect(rawAssets).toContainEqual({
+            address: tvmRandomAddress,
+            rawAmount: BigInt(amount2 * 100) * 10n ** BigInt(decimals2 - 2),
+        });
+        expect(rawAssets).toContainEqual({
+            address: tvmRandomAddress,
+            rawAmount: amount3,
         });
     });
 

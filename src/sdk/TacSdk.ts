@@ -357,6 +357,15 @@ export class TacSdk {
         return messages;
     }
 
+    private calculateRawAmount(amount: number, decimals: number): bigint {
+        const [integerPart, fractionalPart = ''] = amount.toString().split('.');
+
+        // Ensure the fractional part has enough digits
+        const paddedFraction = fractionalPart.padEnd(decimals, '0').slice(0, decimals);
+
+        return BigInt(integerPart + paddedFraction);
+    }
+
     private async getRawAmount(
         asset: AssetBridgingData,
         precalculatedAddress: string | undefined,
@@ -373,7 +382,7 @@ export class TacSdk {
 
         if (typeof asset.decimals === 'number') {
             // User manually set decimals
-            return BigInt(asset.amount) * 10n ** BigInt(asset.decimals);
+            return this.calculateRawAmount(asset.amount, asset.decimals);
         }
 
         // Get decimals from chain
@@ -386,7 +395,7 @@ export class TacSdk {
             return toNano(asset.amount);
         }
 
-        return BigInt(asset.amount) * 10n ** BigInt(content.metadata.decimals);
+        return this.calculateRawAmount(asset.amount, Number(content.metadata.decimals));
     }
 
     private async convertAssetsToRawFormat(assets?: AssetBridgingData[]): Promise<RawAssetBridgingData[]> {
