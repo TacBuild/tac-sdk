@@ -601,15 +601,18 @@ This structure defines the logic you want to execute on the TAC side. This messa
 This structure is used to specify the details of the Assets you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your crosschain transaction.
 
 ```typescript
-export type RawAssetBridgingData = {
-    /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
-    rawAmount: bigint;
+export type WithAddress = {
     /**
      * Address of TAC or TON token.
      * Empty if sending native TON coin.
      */
     address?: string;
 };
+
+export type RawAssetBridgingData = {
+    /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
+    rawAmount: bigint;
+} & WithAddress;
 
 export type UserFriendlyAssetBridgingData = {
     /**
@@ -623,12 +626,7 @@ export type UserFriendlyAssetBridgingData = {
      * Otherwise, SDK tries to extract them from chain.
      */
     decimals?: number;
-    /**
-     * Address of TAC or TON token.
-     * Empty if sending native TON coin.
-     */
-    address?: string;
-};
+} & WithAddress;
 
 export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridgingData;
 ```

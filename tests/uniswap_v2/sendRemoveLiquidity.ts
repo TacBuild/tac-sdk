@@ -30,7 +30,7 @@ async function removeLiquidity() {
             [
                 EVM_TKA_ADDRESS,
                 EVM_TKB_ADDRESS,
-                Number(toNano(amountLP)), // liquidity
+                10n ** 18n, // liquidity
                 0, // amountAMin
                 0, // amountBMin
                 UNISWAPV2_PROXY_ADDRESS, // recipient
@@ -55,7 +55,6 @@ async function removeLiquidity() {
         {
             address: TVM_LP_ADDRESS,
             amount: amountLP,
-            decimals: 9,
         },
     ];
 

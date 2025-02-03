@@ -61,7 +61,6 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
         assets.push({
             address: tokenAddress,
             amount: amount,
-            decimals: 9,
         });
     }
 

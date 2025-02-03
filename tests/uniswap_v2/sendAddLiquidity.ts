@@ -57,12 +57,10 @@ async function addLiquidity() {
         {
             address: TVM_TKA_ADDRESS,
             amount: amountA,
-            decimals: 9,
         },
         {
             address: TVM_TKB_ADDRESS,
             amount: amountB,
-            decimals: 9,
         },
     ];
 
