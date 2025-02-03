@@ -232,18 +232,18 @@ describe('TacSDK', () => {
         const assets: AssetBridgingData[] = [
             {
                 /** TON */
-                amountWithoutDecimals: 1,
+                amount: 1,
             },
             {
                 /** ETH address */
                 address: evmRandomAddress,
-                amountWithoutDecimals: amountTokenForEVMAddress,
+                amount: amountTokenForEVMAddress,
                 decimals: decimalsForEVMAddress,
             },
             {
                 /** TON address */
                 address: tvmRandomAddress,
-                amountWithDecimals: amountTokenForTVMAddress,
+                rawAmount: amountTokenForTVMAddress,
             },
         ];
 
@@ -253,10 +253,10 @@ describe('TacSDK', () => {
         const jettonAssets = await sdk['aggregateJettons'](rawAssets);
         expect(jettonAssets.jettons.length).toBe(2);
         expect(jettonAssets.crossChainTonAmount).toBe(toNano(1));
-        expect(jettonAssets.jettons).toContainEqual({ address: tvmRandomAddress, amountWithDecimals: amountTokenForTVMAddress });
+        expect(jettonAssets.jettons).toContainEqual({ address: tvmRandomAddress, rawAmount: amountTokenForTVMAddress });
         expect(jettonAssets.jettons).toContainEqual({
             address: expectedTVMAddressForEVM,
-            amountWithDecimals: BigInt(amountTokenForEVMAddress) * 10n ** BigInt(decimalsForEVMAddress),
+            rawAmount: BigInt(amountTokenForEVMAddress) * 10n ** BigInt(decimalsForEVMAddress),
         });
     });
 
@@ -270,7 +270,7 @@ describe('TacSDK', () => {
             // sending TON
             const assets: AssetBridgingData[] = [
                 {
-                    amountWithDecimals: 2,
+                    rawAmount: 2,
                 },
             ];
 

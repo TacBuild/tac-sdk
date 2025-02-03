@@ -188,7 +188,7 @@ export class TacSdk {
     ): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
         return JettonWallet.transferMessage(
-            jettonData.amountWithDecimals,
+            jettonData.rawAmount,
             this.TONParams.jettonProxyAddress,
             responseAddress,
             JETTON_TRANSFER_FORWARD_TON_AMOUNT,
@@ -201,7 +201,7 @@ export class TacSdk {
     private getJettonBurnPayload(jettonData: JettonBurnData, evmData: Cell, crossChainTonAmount: bigint): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
         return JettonWallet.burnMessage(
-            jettonData.amountWithDecimals,
+            jettonData.rawAmount,
             jettonData.notificationReceiverAddress,
             crossChainTonAmount,
             evmData,
@@ -265,25 +265,23 @@ export class TacSdk {
         let crossChainTonAmount = 0n;
 
         for await (const asset of assets ?? []) {
-            if (asset.amountWithDecimals <= 0) continue;
+            if (asset.rawAmount <= 0) continue;
 
             if (asset.address) {
                 validateTVMAddress(asset.address);
 
                 uniqueAssetsMap.set(
                     asset.address,
-                    (uniqueAssetsMap.get(asset.address) || 0n) + BigInt(asset.amountWithDecimals),
+                    (uniqueAssetsMap.get(asset.address) || 0n) + BigInt(asset.rawAmount),
                 );
             } else {
-                crossChainTonAmount += BigInt(asset.amountWithDecimals);
+                crossChainTonAmount += BigInt(asset.rawAmount);
             }
         }
-        const jettons: JettonBridgingData[] = Array.from(uniqueAssetsMap.entries()).map(
-            ([address, amountWithDecimals]) => ({
-                address,
-                amountWithDecimals,
-            }),
-        );
+        const jettons: JettonBridgingData[] = Array.from(uniqueAssetsMap.entries()).map(([address, rawAmount]) => ({
+            address,
+            rawAmount,
+        }));
 
         return {
             jettons,
@@ -363,19 +361,19 @@ export class TacSdk {
         asset: AssetBridgingData,
         precalculatedAddress: string | undefined,
     ): Promise<number | bigint> {
-        if ('amountWithDecimals' in asset) {
+        if ('rawAmount' in asset) {
             // User specified raw format amount
-            return asset.amountWithDecimals;
+            return asset.rawAmount;
         }
 
         if (!precalculatedAddress) {
             // User specified TON Coin
-            return toNano(asset.amountWithoutDecimals);
+            return toNano(asset.amount);
         }
 
         if (typeof asset.decimals === 'number') {
             // User manually set decimals
-            return BigInt(asset.amountWithoutDecimals) * 10n ** BigInt(asset.decimals);
+            return BigInt(asset.amount) * 10n ** BigInt(asset.decimals);
         }
 
         // Get decimals from chain
@@ -385,10 +383,10 @@ export class TacSdk {
         const { content } = await contract.getJettonData();
         if (!content.metadata.decimals) {
             // if decimals not specified use default value 9
-            return toNano(asset.amountWithoutDecimals);
+            return toNano(asset.amount);
         }
 
-        return BigInt(asset.amountWithoutDecimals) * 10n ** BigInt(content.metadata.decimals);
+        return BigInt(asset.amount) * 10n ** BigInt(content.metadata.decimals);
     }
 
     private async convertAssetsToRawFormat(assets?: AssetBridgingData[]): Promise<RawAssetBridgingData[]> {
@@ -399,7 +397,7 @@ export class TacSdk {
                     : asset.address;
                 return {
                     address,
-                    amountWithDecimals: await this.getRawAmount(asset, address),
+                    rawAmount: await this.getRawAmount(asset, address),
                 };
             }),
         );

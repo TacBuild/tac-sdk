@@ -166,8 +166,8 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   
 - **`assets`** *(optional)*: An array of `AssetBridgingData` objects, each specifying the Assets details:
   - **`address`** *(optional)*: Address of the Asset.
-  - **`amountWithDecimals`** *(required if `amountWithoutDecimals` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
-  - **`amountWithoutDecimals`** *(required if `amountWithDecimals` is not specified): Amount of Assets to be transferred.
+  - **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
+  - **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
   - **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
 
 > **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
@@ -603,7 +603,7 @@ This structure is used to specify the details of the Assets you want to bridge f
 ```typescript
 export type RawAssetBridgingData = {
     /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
-    amountWithDecimals: number | bigint;
+    rawAmount: number | bigint;
     /**
      * Address of TAC or TON token.
      * Empty if sending native TON coin.
@@ -617,7 +617,7 @@ export type UserFriendlyAssetBridgingData = {
      * Specified value will be converted automatically to raw format: 12.34 * (10^decimals).
      * No decimals should be specified.
      */
-    amountWithoutDecimals: number;
+    amount: number;
     /**
      * Decimals may be specified manually.
      * Otherwise, SDK tries to extract them from chain.
@@ -634,8 +634,8 @@ export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridging
 ```
 
 Represents general data for Asset operations.
-- **`amountWithDecimals`** *(required if `amountWithoutDecimals` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
-- **`amountWithoutDecimals`** *(required if `amountWithDecimals` is not specified): Amount of Assets to be transferred.
+- **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
+- **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
 - **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
 - **`address`** *(optional)*: TVM or EVM asset's address.
 
@@ -728,11 +728,11 @@ const evmProxyMsg: EvmProxyMsg = {
 const assets: AssetBridgingData[] = [
     {
         address: TVMtokenAAddress,
-        amountWithoutDecimals: tokenAAmount
+        amount: tokenAAmount
     },
     {
         address: TVMtokenBAddress,
-        amountWithoutDecimals: tokenBAmount
+        amount: tokenBAmount
     }
 ];
 

@@ -56,12 +56,12 @@ async function addLiquidity() {
     const jettons: AssetBridgingData[] = [
         {
             address: TVM_TKA_ADDRESS,
-            amountWithoutDecimals: amountA,
+            amount: amountA,
             decimals: 9,
         },
         {
             address: TVM_TKB_ADDRESS,
-            amountWithoutDecimals: amountB,
+            amount: amountB,
             decimals: 9,
         },
     ];

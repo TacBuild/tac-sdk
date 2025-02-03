@@ -54,7 +54,7 @@ async function removeLiquidity() {
     const assets: AssetBridgingData[] = [
         {
             address: TVM_LP_ADDRESS,
-            amountWithoutDecimals: amountLP,
+            amount: amountLP,
             decimals: 9,
         },
     ];
