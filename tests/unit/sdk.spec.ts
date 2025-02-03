@@ -70,7 +70,7 @@ describe('TacSDK', () => {
                     merkleRoot,
                     epochDelay,
                     nextVotingTime,
-                    sequencerMultisigAddress: sequencerMultisig.address.toString()
+                    sequencerMultisigAddress: sequencerMultisig.address.toString(),
                 },
                 CrossChainLayerCode,
             ),
@@ -214,10 +214,13 @@ describe('TacSDK', () => {
 
     it('should get set jetton balance', async () => {
         const balance = await sdk.getUserJettonBalance(user.address.toString(), jettonMinter.address.toString());
-        expect(balance).toBe(0);
+        expect(balance).toBe(0n);
     });
 
     it('should create valid jetton bridging data from asset bridging data', async () => {
+        const amountTokenForEVMAddress = 2;
+        const decimalsForEVMAddress = 18;
+        const amountTokenForTVMAddress = BigInt(3 * 10 ** 10); // decimals = 10
         const assets: AssetBridgingData[] = [
             {
                 /** TON */
@@ -226,22 +229,59 @@ describe('TacSDK', () => {
             {
                 /** ETH address */
                 address: evmRandomAddress,
-                amount: 2,
+                amount: amountTokenForEVMAddress,
+                decimals: decimalsForEVMAddress,
             },
             {
                 /** TON address */
                 address: tvmRandomAddress,
-                amount: 3,
+                rawAmount: amountTokenForTVMAddress,
             },
         ];
 
         const expectedTVMAddressForEVM = await sdk.getTVMTokenAddress(evmRandomAddress);
 
-        const jettonAssets = await sdk['aggregateJettons'](assets);
+        const rawAssets = await sdk['convertAssetsToRawFormat'](assets);
+        const jettonAssets = await sdk['aggregateJettons'](rawAssets);
         expect(jettonAssets.jettons.length).toBe(2);
-        expect(jettonAssets.crossChainTonAmount).toBe(1);
-        expect(jettonAssets.jettons).toContainEqual({ address: tvmRandomAddress, amount: 3 });
-        expect(jettonAssets.jettons).toContainEqual({ address: expectedTVMAddressForEVM, amount: 2 });
+        expect(jettonAssets.crossChainTonAmount).toBe(toNano(1));
+        expect(jettonAssets.jettons).toContainEqual({ address: tvmRandomAddress, rawAmount: amountTokenForTVMAddress });
+        expect(jettonAssets.jettons).toContainEqual({
+            address: expectedTVMAddressForEVM,
+            rawAmount: BigInt(amountTokenForEVMAddress) * 10n ** BigInt(decimalsForEVMAddress),
+        });
+    });
+
+    it('should correctly handle different types of AssetBridgingData', async () => {
+        const amount1 = 1;
+        const amount2 = 0.12;
+        const decimals2 = 24;
+        const amount3 = BigInt(3) ** BigInt(24);
+        const assets: AssetBridgingData[] = [
+            {
+                amount: amount1,
+            },
+            {
+                address: tvmRandomAddress,
+                amount: amount2,
+                decimals: decimals2,
+            },
+            {
+                address: tvmRandomAddress,
+                rawAmount: amount3,
+            },
+        ];
+
+        const rawAssets = await sdk['convertAssetsToRawFormat'](assets);
+        expect(rawAssets).toContainEqual({ address: undefined, rawAmount: toNano(1) });
+        expect(rawAssets).toContainEqual({
+            address: tvmRandomAddress,
+            rawAmount: BigInt(amount2 * 100) * 10n ** BigInt(decimals2 - 2),
+        });
+        expect(rawAssets).toContainEqual({
+            address: tvmRandomAddress,
+            rawAmount: amount3,
+        });
     });
 
     it.each(Object.keys(wallets) as WalletVersion[])(
@@ -252,9 +292,9 @@ describe('TacSDK', () => {
             };
 
             // sending TON
-            const assets = [
+            const assets: AssetBridgingData[] = [
                 {
-                    amount: 2,
+                    rawAmount: 2n,
                 },
             ];
 

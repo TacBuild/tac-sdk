@@ -1,10 +1,10 @@
 import { Cell } from '@ton/ton';
-import { AssetBridgingData, ContractOpener, Network } from './Struct';
+import { ContractOpener, Network, RawAssetBridgingData } from './Struct';
 import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
 
 export type ShardMessage = {
     address: string;
-    value: number;
+    value: bigint;
     payload: Cell;
 };
 
@@ -24,7 +24,7 @@ export type RandomNumberByTimestamp = {
     randomNumber: number;
 };
 
-export type JettonBridgingData = AssetBridgingData & {
+export type JettonBridgingData = RawAssetBridgingData & {
     address: string;
 };
 

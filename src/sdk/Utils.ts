@@ -109,3 +109,25 @@ export const convertKeysToCamelCase = <T>(data: T): T => {
     }
     return data;
 };
+
+export const calculateRawAmount = (amount: number, decimals: number): bigint => {
+    const [integerPart, fractionalPart = ''] = amount.toString().split('.');
+
+    // Ensure the fractional part has enough digits
+    const paddedFraction = fractionalPart.padEnd(decimals, '0').slice(0, decimals);
+
+    return BigInt(integerPart + paddedFraction);
+};
+
+export const calculateAmount = (rawAmount: bigint, decimals: number): number => {
+    const rawStr = rawAmount.toString();
+
+    if (rawStr.length <= decimals) {
+        return Number(`0.${rawStr.padStart(decimals, '0')}`);
+    }
+
+    const integerPart = rawStr.slice(0, -decimals);
+    const fractionalPart = rawStr.slice(-decimals).replace(/0+$/, '');
+
+    return Number(fractionalPart ? `${integerPart}.${fractionalPart}` : integerPart);
+};

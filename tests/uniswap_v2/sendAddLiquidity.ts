@@ -13,7 +13,7 @@ const TVM_MNEMONICS = '';
 
 async function addLiquidity() {
     const sdkParams: SDKParams = {
-        network: Network.Testnet
+        network: Network.Testnet,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
@@ -36,32 +36,32 @@ async function addLiquidity() {
                 0, // amountAMin
                 0, // amountBMin
                 UNISWAPV2_PROXY_ADDRESS, // recipient
-                19010987500 // deadline
-            ]
-        ]
+                19010987500, // deadline
+            ],
+        ],
     );
 
     const evmProxyMsg: EvmProxyMsg = {
         evmTargetAddress: UNISWAPV2_PROXY_ADDRESS,
         methodName: 'addLiquidity',
-        encodedParameters
+        encodedParameters,
     };
 
     const sender = await SenderFactory.getSender({
         network: Network.Testnet,
         version: WALLET_VERSION,
-        mnemonic: TVM_MNEMONICS
+        mnemonic: TVM_MNEMONICS,
     });
 
     const jettons: AssetBridgingData[] = [
         {
             address: TVM_TKA_ADDRESS,
-            amount: amountA
+            amount: amountA,
         },
         {
             address: TVM_TKB_ADDRESS,
-            amount: amountB
-        }
+            amount: amountB,
+        },
     ];
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons);

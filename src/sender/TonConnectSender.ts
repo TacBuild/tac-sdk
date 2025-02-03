@@ -23,7 +23,7 @@ export class TonConnectSender implements SenderAbstraction {
         for (const message of shardTransaction.messages) {
             messages.push({
                 address: message.address,
-                amount: toNano(message.value.toFixed(9)).toString(),
+                amount: message.value.toString(),
                 payload: Base64.encode(message.payload.toBoc()).toString(),
             });
         }

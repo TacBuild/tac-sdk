@@ -1,9 +1,9 @@
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 import { ContractOpener, Network } from '../structs/Struct';
 import { Blockchain } from '@ton/sandbox';
-import { MAINNET_DEFAULT_LITESERVERS, TESTNET_DEFAULT_LITESERVERS } from '../sdk/Consts';
 import { getHttpEndpoint } from '@orbs-network/ton-access';
 import { TonClient } from '@ton/ton';
+import { mainnet, testnet } from '@tonappchain/artifacts';
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
 
@@ -17,7 +17,7 @@ function intToIP(int: number) {
 }
 
 async function getDefaultLiteServers(network: Network): Promise<LiteServer[]> {
-    const url = network === Network.Testnet ? TESTNET_DEFAULT_LITESERVERS : MAINNET_DEFAULT_LITESERVERS;
+    const url = network === Network.Testnet ? testnet.DEFAULT_LITESERVERS : mainnet.DEFAULT_LITESERVERS;
     const resp = await fetch(url);
     const liteClients = await resp.json();
     return liteClients.liteservers;
