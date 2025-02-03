@@ -294,7 +294,7 @@ describe('TacSDK', () => {
             // sending TON
             const assets: AssetBridgingData[] = [
                 {
-                    rawAmount: 2,
+                    rawAmount: 2n,
                 },
             ];
 

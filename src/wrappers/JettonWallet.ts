@@ -38,7 +38,7 @@ export class JettonWallet implements Contract {
     }
 
     static burnMessage(
-        jettonAmount: number | bigint,
+        jettonAmount: bigint,
         receiverAddress?: string,
         crossChainTonAmount?: bigint,
         crossChainPayload?: Cell | null,
@@ -70,7 +70,7 @@ export class JettonWallet implements Contract {
         value: bigint,
         opts: {
             queryId?: number;
-            jettonAmount: number;
+            jettonAmount: bigint;
             receiverAddress?: string;
             crossChainTonAmount?: bigint;
             crossChainPayload?: Cell | null;
@@ -92,7 +92,7 @@ export class JettonWallet implements Contract {
     }
 
     static transferMessage(
-        jettonAmount: number | bigint,
+        jettonAmount: bigint,
         to: string,
         responseAddress: string | null,
         forwardTonAmount?: bigint,
@@ -119,11 +119,11 @@ export class JettonWallet implements Contract {
         value: bigint,
         opts: {
             queryId?: number;
-            jettonAmount: number | bigint;
+            jettonAmount: bigint;
             toOwnerAddress: string;
             responseAddress?: string;
             customPayload?: Cell | null;
-            forwardTonAmount?: number | bigint;
+            forwardTonAmount?: bigint;
             forwardPayload?: Cell | null;
         },
     ) {

@@ -603,7 +603,7 @@ This structure is used to specify the details of the Assets you want to bridge f
 ```typescript
 export type RawAssetBridgingData = {
     /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
-    rawAmount: number | bigint;
+    rawAmount: bigint;
     /**
      * Address of TAC or TON token.
      * Empty if sending native TON coin.

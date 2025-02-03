@@ -102,7 +102,7 @@ export type WithAddress = {
 
 export type RawAssetBridgingData = {
     /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
-    rawAmount: number | bigint;
+    rawAmount: bigint;
 } & WithAddress;
 
 export type UserFriendlyAssetBridgingData = {

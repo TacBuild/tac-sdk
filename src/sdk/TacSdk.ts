@@ -369,7 +369,7 @@ export class TacSdk {
     private async getRawAmount(
         asset: AssetBridgingData,
         precalculatedAddress: string | undefined,
-    ): Promise<number | bigint> {
+    ): Promise<bigint> {
         if ('rawAmount' in asset) {
             // User specified raw format amount
             return asset.rawAmount;
