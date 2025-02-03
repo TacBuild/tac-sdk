@@ -31,8 +31,6 @@ import { JettonWallet } from '../wrappers/JettonWallet';
 import { Settings } from '../wrappers/Settings';
 import {
     JETTON_TRANSFER_FORWARD_TON_AMOUNT,
-    MAINNET_TAC_RPC_ENDPOINT,
-    TESTNET_TAC_RPC_ENDPOINT,
     TRANSACTION_TON_AMOUNT,
     DEFAULT_DELAY,
 } from './Consts';
@@ -78,7 +76,7 @@ export class TacSdk {
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
         const artifacts = network === Network.Testnet ? testnet : mainnet;
         const TONParams = await this.prepareTONParams(network, delay, artifacts, sdkParams.TONParams);
-        const TACParams = await this.prepareTACParams(network, artifacts, sdkParams.TACParams);
+        const TACParams = await this.prepareTACParams(artifacts, sdkParams.TACParams);
         return new TacSdk(network, delay, artifacts, TONParams, TACParams);
     }
 
@@ -111,15 +109,12 @@ export class TacSdk {
     }
 
     private static async prepareTACParams(
-        network: Network,
         artifacts: typeof testnet | typeof mainnet,
         TACParams?: TACParams,
     ): Promise<InternalTACParams> {
         const provider =
             TACParams?.provider ??
-            ethers.getDefaultProvider(
-                network === Network.Testnet ? TESTNET_TAC_RPC_ENDPOINT : MAINNET_TAC_RPC_ENDPOINT,
-            );
+            ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
 
         const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
         const settings = new ethers.Contract(
