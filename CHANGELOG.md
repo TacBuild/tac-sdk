@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `getUserJettonBalanceExtended` method in `TacSdk` to get user jetton balance extended with decimals info.
+
+    ```typescript
+        async getUserJettonBalanceExtended(userAddress: string, tokenAddress: string): Promise<UserWalletBalanceExtended>
+    ```
+
 ### Changed
 
 - `AssetBridgingData` now supports multiple formats of asset value: with decimals and without decimals. In case decimals are not provided, the SDK will try to extract it from chain.

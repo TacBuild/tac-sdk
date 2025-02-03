@@ -11,6 +11,7 @@ import {
     TONParams,
     TACParams,
     RawAssetBridgingData,
+    UserWalletBalanceExtended,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -37,8 +38,10 @@ import {
 } from './Consts';
 import {
     buildEvmDataCell,
+    calculateAmount,
     calculateContractAddress,
     calculateEVMTokenAddress,
+    calculateRawAmount,
     generateRandomNumberByTimestamp,
     generateTransactionLinker,
     sleep,
@@ -178,6 +181,34 @@ export class TacSdk {
             new JettonWallet(Address.parse(userJettonWalletAddress)),
         );
         return userJettonWallet.getJettonBalance();
+    }
+
+    async getUserJettonBalanceExtended(userAddress: string, tokenAddress: string): Promise<UserWalletBalanceExtended> {
+        const masterAddress = Address.parse(tokenAddress);
+        const masterState = await this.TONParams.contractOpener.getContractState(masterAddress);
+        if (masterState.state !== 'active') {
+            return { exists: false };
+        }
+        await sleep(this.delay * 1000);
+
+        const jettonMaster = this.TONParams.contractOpener.open(new JettonMaster(masterAddress));
+        const userJettonWalletAddress = await jettonMaster.getWalletAddress(userAddress);
+        await sleep(this.delay * 1000);
+
+        const userJettonWallet = this.TONParams.contractOpener.open(
+            new JettonWallet(Address.parse(userJettonWalletAddress)),
+        );
+
+        const rawAmount = await userJettonWallet.getJettonBalance();
+        const decimalsRaw = (await jettonMaster.getJettonData()).content.metadata.decimals;
+        const decimals = decimalsRaw ? Number(decimalsRaw) : 9;
+
+        return {
+            rawAmount,
+            decimals,
+            amount: calculateAmount(rawAmount, decimals),
+            exists: true,
+        };
     }
 
     private getJettonTransferPayload(
@@ -357,19 +388,7 @@ export class TacSdk {
         return messages;
     }
 
-    private calculateRawAmount(amount: number, decimals: number): bigint {
-        const [integerPart, fractionalPart = ''] = amount.toString().split('.');
-
-        // Ensure the fractional part has enough digits
-        const paddedFraction = fractionalPart.padEnd(decimals, '0').slice(0, decimals);
-
-        return BigInt(integerPart + paddedFraction);
-    }
-
-    private async getRawAmount(
-        asset: AssetBridgingData,
-        precalculatedAddress: string | undefined,
-    ): Promise<bigint> {
+    private async getRawAmount(asset: AssetBridgingData, precalculatedAddress: string | undefined): Promise<bigint> {
         if ('rawAmount' in asset) {
             // User specified raw format amount
             return asset.rawAmount;
@@ -382,7 +401,7 @@ export class TacSdk {
 
         if (typeof asset.decimals === 'number') {
             // User manually set decimals
-            return this.calculateRawAmount(asset.amount, asset.decimals);
+            return calculateRawAmount(asset.amount, asset.decimals);
         }
 
         // Get decimals from chain
@@ -395,7 +414,7 @@ export class TacSdk {
             return toNano(asset.amount);
         }
 
-        return this.calculateRawAmount(asset.amount, Number(content.metadata.decimals));
+        return calculateRawAmount(asset.amount, Number(content.metadata.decimals));
     }
 
     private async convertAssetsToRawFormat(assets?: AssetBridgingData[]): Promise<RawAssetBridgingData[]> {

@@ -121,6 +121,17 @@ export type UserFriendlyAssetBridgingData = {
 
 export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridgingData;
 
+export type UserWalletBalanceExtended =
+    | {
+          exists: true;
+          amount: number;
+          rawAmount: bigint;
+          decimals: number;
+      }
+    | {
+          exists: false;
+      };
+
 export type EvmProxyMsg = {
     evmTargetAddress: string;
     methodName?: string;
