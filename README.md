@@ -166,7 +166,9 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   
 - **`assets`** *(optional)*: An array of `AssetBridgingData` objects, each specifying the Assets details:
   - **`address`** *(optional)*: Address of the Asset.
-  - **`amount`**: Amount of Assets to transfer.
+  - **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
+  - **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
+  - **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
 
 > **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 
@@ -599,14 +601,40 @@ This structure defines the logic you want to execute on the TAC side. This messa
 This structure is used to specify the details of the Assets you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your crosschain transaction.
 
 ```typescript
-export type AssetBridgingData = {
-  amount: number
-  address?: string
-}
+export type WithAddress = {
+    /**
+     * Address of TAC or TON token.
+     * Empty if sending native TON coin.
+     */
+    address?: string;
+};
+
+export type RawAssetBridgingData = {
+    /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
+    rawAmount: bigint;
+} & WithAddress;
+
+export type UserFriendlyAssetBridgingData = {
+    /**
+     * User friendly format, e.g. 12.34 tokens 
+     * Specified value will be converted automatically to raw format: 12.34 * (10^decimals).
+     * No decimals should be specified.
+     */
+    amount: number;
+    /**
+     * Decimals may be specified manually.
+     * Otherwise, SDK tries to extract them from chain.
+     */
+    decimals?: number;
+} & WithAddress;
+
+export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridgingData;
 ```
 
 Represents general data for Asset operations.
-- **`amount`**: Amount of Assets to be transferred.
+- **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
+- **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
+- **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
 - **`address`** *(optional)*: TVM or EVM asset's address.
 
 > **Note:** If you need to transfer a native TON coin, do not specify address.

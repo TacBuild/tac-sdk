@@ -1,4 +1,4 @@
-import { internal } from '@ton/ton';
+import { fromNano, internal } from '@ton/ton';
 import { MessageRelaxed, SendMode } from '@ton/ton';
 
 import type { ContractOpener } from '../structs/Struct';
@@ -31,7 +31,7 @@ export class RawSender implements SenderAbstraction {
             messages.push(
                 internal({
                     to: message.address,
-                    value: message.value.toString(),
+                    value: fromNano(message.value),
                     bounce: true,
                     body: message.payload,
                 }),

@@ -7,9 +7,9 @@ import {
     StatusesResponse,
     StatusByOperationId,
 } from '../structs/Struct';
-import { MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS, TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS } from './Consts';
 import { operationFetchError, statusFetchError } from '../errors';
 import { convertKeysToCamelCase } from './Utils';
+import { mainnet, testnet } from '@tonappchain/artifacts';
 
 export class OperationTracker {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
@@ -24,8 +24,8 @@ export class OperationTracker {
         this.customLiteSequencerEndpoints =
             customLiteSequencerEndpoints ??
             (this.network === Network.Testnet
-                ? TESTNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS
-                : MAINNET_PUBLIC_LITE_SEQUENCER_ENDPOINTS);
+                ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
+                : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
     }
 
     async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
