@@ -83,13 +83,13 @@ export function calculateEVMTokenAddress(
     abiCoder: AbiCoder,
     tokenUtilsAddress: string,
     crossChainLayerTokenBytecode: string,
-    settingsAddress: string,
+    crossChainLayerAddress: string,
     l1Address: string,
 ): string {
     const salt = ethers.keccak256(ethers.solidityPacked(['string'], [l1Address]));
     const initCode = ethers.solidityPacked(
         ['bytes', 'bytes'],
-        [crossChainLayerTokenBytecode, abiCoder.encode(['address'], [settingsAddress])],
+        [crossChainLayerTokenBytecode, abiCoder.encode(['address'], [crossChainLayerAddress])],
     );
     const initCodeHash = ethers.keccak256(initCode);
     return ethers.getCreate2Address(tokenUtilsAddress, salt, initCodeHash);

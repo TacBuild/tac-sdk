@@ -409,7 +409,7 @@ export class TacSdk {
             this.TACParams.abiCoder,
             this.TACParams.tokenUtilsAddress,
             this.TACParams.crossChainLayerTokenBytecode,
-            this.TACParams.settingsAddress,
+            this.TACParams.crossChainLayerAddress,
             tvmTokenAddress,
         );
     }
