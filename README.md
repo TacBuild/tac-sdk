@@ -552,7 +552,7 @@ export type TONParams = {
 }
 ```
 TON Parameters for SDK:
-- **`contractOpener`** *(optional)*: Client used for TON smart contract interaction. Default is `orbsOpener`. Set for tests only 
+- **`contractOpener`** *(optional)*: Client used for TON smart contract interaction. Default is `orbsOpener4`. Set for tests only 
 - **`settingsAddress`** *(optional)*: TON settings contract address. Needed to retrieve protocol data. Set for tests only
 
 ---
