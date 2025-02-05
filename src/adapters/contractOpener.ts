@@ -82,9 +82,9 @@ export async function orbsOpener(network: Network): Promise<ContractOpener> {
     return client;
 }
 
-export async function orbsOpener4(network: Network): Promise<ContractOpener> {
+export async function orbsOpener4(network: Network, timeout = 10000): Promise<ContractOpener> {
     const endpoint = await getHttpV4Endpoint({ network });
-    const client4 = new TonClient4({ endpoint });
+    const client4 = new TonClient4({ endpoint, timeout });
     return {
         open: (contract) => client4.open(contract),
         getContractState: async (address) => {
