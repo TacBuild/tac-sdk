@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2] - 2025-02-05
+
+## Added
+
+- Contract opener `orbsOpener4` that uses new vesrion TON enpoints
+
+## Changed 
+
+- `orbsOpener4` set as default in SDK
+
 ## [0.4.1] - 2025-02-05
 
 ### Changed
