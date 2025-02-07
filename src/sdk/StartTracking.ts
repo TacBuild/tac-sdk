@@ -14,7 +14,7 @@ export async function startTracking(
     console.log('Start tracking operation');
     console.log('caller: ', transactionLinker.caller);
     console.log('shardsKey: ', transactionLinker.shardsKey);
-    console.log('shardCount: ', transactionLinker.shardCount);
+    console.log('shardsCount: ', transactionLinker.shardsCount);
     console.log('timestamp: ', transactionLinker.timestamp);
 
     let operationId = '';

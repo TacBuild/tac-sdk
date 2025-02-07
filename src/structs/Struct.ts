@@ -140,7 +140,7 @@ export type EvmProxyMsg = {
 
 export type TransactionLinker = {
     caller: string;
-    shardCount: number;
+    shardsCount: number;
     shardsKey: string;
     timestamp: number;
     sendTransactionResult?: unknown;
