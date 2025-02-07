@@ -40,7 +40,6 @@ import {
     calculateContractAddress,
     calculateEVMTokenAddress,
     calculateRawAmount,
-    convertKeysToCamelCase,
     generateRandomNumberByTimestamp,
     generateTransactionLinker,
     toCamelCaseTransformer,
@@ -49,9 +48,8 @@ import {
     validateTVMAddress,
 } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
-import { emptyContractError } from '../errors';
+import { emptyContractError, simulationError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
-import { simulationError } from '../errors/instances';
 
 export class TacSdk {
     readonly network: Network;
@@ -519,9 +517,13 @@ export class TacSdk {
     async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults> {
         for (const endpoint of this.TACParams.customLiteSequencerEndpoints) {
             try {
-                const response = await axios.post<EVMSimulationResponse>(`${endpoint}/evm/simulator/simulate-message`, req, {
-                    transformResponse: [toCamelCaseTransformer],
-                });
+                const response = await axios.post<EVMSimulationResponse>(
+                    `${endpoint}/evm/simulator/simulate-message`,
+                    req,
+                    {
+                        transformResponse: [toCamelCaseTransformer],
+                    },
+                );
 
                 return response.data.response;
             } catch (error) {

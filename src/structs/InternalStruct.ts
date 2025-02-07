@@ -50,5 +50,5 @@ export type InternalTACParams = {
     crossChainLayerAddress: string;
     crossChainLayerTokenABI: Interface | InterfaceAbi;
     crossChainLayerTokenBytecode: string;
-    customLiteSequencerEndpoints: string[]
+    customLiteSequencerEndpoints: string[];
 };
