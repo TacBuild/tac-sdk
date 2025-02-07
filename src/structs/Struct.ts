@@ -60,7 +60,7 @@ export type TACParams = {
     /**
      * url of lite sequencer
      */
-    customLiteSequencerEndpoints?: string[]
+    customLiteSequencerEndpoints?: string[];
 };
 
 export type TONParams = {
@@ -183,23 +183,31 @@ export type EVMSimulationResults = {
         suggestedGasTip: string;
     };
     message: string;
-    outMessages: {
-        callerAddress: string;
-        operationId: string;
-        payload: string;
-        queryId: number;
-        targetAddress: string;
-        tokensBurned: {
-            amount: string;
-            tokenAddress: string;
-        }[];
-        tokensLocked: {
-            amount: string;
-            tokenAddress: string;
-        }[];
-    }[];
+    outMessages:
+        | {
+              callerAddress: string;
+              operationId: string;
+              payload: string;
+              queryId: number;
+              targetAddress: string;
+              tokensBurned: {
+                  amount: string;
+                  tokenAddress: string;
+              }[];
+              tokensLocked: {
+                  amount: string;
+                  tokenAddress: string;
+              }[];
+          }[]
+        | null;
     simulationError: string;
     simulationStatus: boolean;
+    debugInfo: {
+        from: string;
+        to: string;
+        callData: string;
+        blockNumber: number;
+    };
 };
 
 export type EVMSimulationResponse = ResponseBase<EVMSimulationResults>;
