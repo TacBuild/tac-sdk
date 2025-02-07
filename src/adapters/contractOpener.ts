@@ -1,8 +1,8 @@
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 import { ContractOpener, Network } from '../structs/Struct';
 import { Blockchain } from '@ton/sandbox';
-import { getHttpEndpoint } from '@orbs-network/ton-access';
-import { TonClient } from '@ton/ton';
+import { getHttpEndpoint, getHttpV4Endpoint } from '@orbs-network/ton-access';
+import { TonClient, TonClient4 } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
@@ -80,4 +80,25 @@ export async function orbsOpener(network: Network): Promise<ContractOpener> {
     });
     const client = new TonClient({ endpoint });
     return client;
+}
+
+export async function orbsOpener4(network: Network, timeout = 10000): Promise<ContractOpener> {
+    const endpoint = await getHttpV4Endpoint({ network });
+    const client4 = new TonClient4({ endpoint, timeout });
+    return {
+        open: (contract) => client4.open(contract),
+        getContractState: async (address) => {
+            const latestBlock = await client4.getLastBlock();
+            const latestBlockNumber = latestBlock.last.seqno;
+            const state = await client4.getAccount(latestBlockNumber, address);
+            return {
+                balance: BigInt(state.account.balance.coins),
+                code:
+                    'code' in state.account.state && state.account.state.code !== null
+                        ? Buffer.from(state.account.state.code, 'base64')
+                        : null,
+                state: state.account.state.type === 'uninit' ? 'uninitialized' : state.account.state.type,
+            };
+        },
+    };
 }
