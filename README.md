@@ -205,7 +205,7 @@ function myProxyFunction(bytes calldata tacHeader, bytes calldata arguments) ext
 
 The first argument of methods must always be TACHeader. It is sent by protocol, augmented with data from executor.
 - **`bytes tacHeader`**: Encoded structure TacHeaderV1, containing:
-  - **`uint64 shardedId`**: ID you can specify for yourself an inside message to the TVM contract on the TON network. 
+  - **`uint64 shardsKey`**: ID you can specify for yourself an inside message to the TVM contract on the TON network. 
   - **`uint256 timestamp`**: The block timestamp on TON where the user's message was created. 
   - **`bytes32 operationId`**: Unique identifier for the message created by the TAC infrastructure. 
   - **`string tvmCaller`**: The TON user's wallet address that sent the message. 
@@ -646,7 +646,7 @@ Represents general data for Asset operations.
 export type TransactionLinker = {
     caller: string,
     shardCount: number,
-    shardedId: string,
+    shardsKey: string,
     timestamp: number,
     sendTransactionResult?: unknown,
 }
@@ -654,7 +654,7 @@ export type TransactionLinker = {
 Linker to track TON transaction for crosschain operation.
 - **`caller`**: Address of the transaction initiator.
 - **`shardCount`**: Number of shards involved.
-- **`shardedId`**: Identifier for the shard.
+- **`shardsKey`**: Identifier for the shard.
 - **`timestamp`**: Timestamp of the transaction.
 - **`sendTransactionResult`** *(optional)*: Result of sending transaction. May be used to check result of sending transaction. Default TonClient does NOT fill this field. However, in unit tests @ton/sandbox set transaction result object to this field.
 
