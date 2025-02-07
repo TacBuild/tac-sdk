@@ -131,3 +131,12 @@ export const calculateAmount = (rawAmount: bigint, decimals: number): number => 
 
     return Number(fractionalPart ? `${integerPart}.${fractionalPart}` : integerPart);
 };
+
+export const toCamelCaseTransformer = (data: any) => {
+    try {
+        const parsedData = JSON.parse(data);
+        return convertKeysToCamelCase(parsedData);
+    } catch {
+        return data;
+    }
+};

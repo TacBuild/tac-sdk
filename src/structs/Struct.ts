@@ -56,6 +56,11 @@ export type TACParams = {
      * bytecode of TAC CrossChainLayerToken contract. Use only for tests.
      */
     crossChainLayerTokenBytecode?: string;
+
+    /**
+     * url of lite sequencer
+     */
+    customLiteSequencerEndpoints?: string[]
 };
 
 export type TONParams = {
@@ -151,3 +156,50 @@ export type StatusByOperationId = { operationId: string; errorMessage: string | 
 export type ResponseBase<T> = { response: T };
 
 export type StatusesResponse = ResponseBase<StatusByOperationId[]>;
+
+export type EVMSimulationRequest = {
+    evmCallParams: {
+        arguments: string;
+        methodName: string;
+        target: string;
+    };
+    extraData: string;
+    feeAssetAddress: string;
+    shardedId: number;
+    tvmAssets: {
+        amount: string;
+        tokenAddress: string;
+    }[];
+    tvmCaller: string;
+};
+
+export type EVMSimulationResults = {
+    estimatedGas: number;
+    estimatedJettonFeeAmount: string;
+    feeParams: {
+        currentBaseFee: string;
+        isEip1559: boolean;
+        suggestedGasPrice: string;
+        suggestedGasTip: string;
+    };
+    message: string;
+    outMessages: {
+        callerAddress: string;
+        operationId: string;
+        payload: string;
+        queryId: number;
+        targetAddress: string;
+        tokensBurned: {
+            amount: string;
+            tokenAddress: string;
+        }[];
+        tokensLocked: {
+            amount: string;
+            tokenAddress: string;
+        }[];
+    }[];
+    simulationError: string;
+    simulationStatus: boolean;
+};
+
+export type EVMSimulationResponse = ResponseBase<EVMSimulationResults>;

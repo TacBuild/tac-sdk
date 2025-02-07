@@ -8,7 +8,7 @@ import {
     StatusByOperationId,
 } from '../structs/Struct';
 import { operationFetchError, statusFetchError } from '../errors';
-import { convertKeysToCamelCase } from './Utils';
+import { toCamelCaseTransformer } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 
 export class OperationTracker {
@@ -56,16 +56,7 @@ export class OperationTracker {
                         operationIds: [operationId],
                     },
                     {
-                        transformResponse: [
-                            (data) => {
-                                try {
-                                    const parsedData = JSON.parse(data);
-                                    return convertKeysToCamelCase(parsedData);
-                                } catch {
-                                    return data;
-                                }
-                            },
-                        ],
+                        transformResponse: [toCamelCaseTransformer],
                     },
                 );
 

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { Address, address, beginCell, Cell, toNano } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
 import type { SenderAbstraction } from '../sender';
@@ -12,6 +13,9 @@ import {
     TACParams,
     RawAssetBridgingData,
     UserWalletBalanceExtended,
+    EVMSimulationResults,
+    EVMSimulationRequest,
+    EVMSimulationResponse,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -29,19 +33,17 @@ import { JettonMaster } from '../wrappers/JettonMaster';
 import { JettonWallet } from '../wrappers/JettonWallet';
 // ton settings
 import { Settings } from '../wrappers/Settings';
-import {
-    JETTON_TRANSFER_FORWARD_TON_AMOUNT,
-    TRANSACTION_TON_AMOUNT,
-    DEFAULT_DELAY,
-} from './Consts';
+import { JETTON_TRANSFER_FORWARD_TON_AMOUNT, TRANSACTION_TON_AMOUNT, DEFAULT_DELAY } from './Consts';
 import {
     buildEvmDataCell,
     calculateAmount,
     calculateContractAddress,
     calculateEVMTokenAddress,
     calculateRawAmount,
+    convertKeysToCamelCase,
     generateRandomNumberByTimestamp,
     generateTransactionLinker,
+    toCamelCaseTransformer,
     sleep,
     validateEVMAddress,
     validateTVMAddress,
@@ -49,6 +51,7 @@ import {
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
+import { simulationError } from '../errors/instances';
 
 export class TacSdk {
     readonly network: Network;
@@ -76,7 +79,7 @@ export class TacSdk {
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
         const artifacts = network === Network.Testnet ? testnet : mainnet;
         const TONParams = await this.prepareTONParams(network, delay, artifacts, sdkParams.TONParams);
-        const TACParams = await this.prepareTACParams(artifacts, sdkParams.TACParams);
+        const TACParams = await this.prepareTACParams(network, artifacts, sdkParams.TACParams);
         return new TacSdk(network, delay, artifacts, TONParams, TACParams);
     }
 
@@ -109,12 +112,11 @@ export class TacSdk {
     }
 
     private static async prepareTACParams(
+        network: Network,
         artifacts: typeof testnet | typeof mainnet,
         TACParams?: TACParams,
     ): Promise<InternalTACParams> {
-        const provider =
-            TACParams?.provider ??
-            ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
+        const provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
 
         const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
         const settings = new ethers.Contract(
@@ -134,6 +136,12 @@ export class TacSdk {
         const crossChainLayerTokenBytecode =
             TACParams?.crossChainLayerTokenBytecode ?? artifacts.tac.compilationArtifacts.CrossChainLayerToken.bytecode;
 
+        const customLiteSequencerEndpoints =
+            TACParams?.customLiteSequencerEndpoints ??
+            (network === Network.Testnet
+                ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
+                : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
+
         return {
             provider,
             settingsAddress,
@@ -142,6 +150,7 @@ export class TacSdk {
             crossChainLayerAddress,
             crossChainLayerTokenABI,
             crossChainLayerTokenBytecode,
+            customLiteSequencerEndpoints,
         };
     }
 
@@ -505,5 +514,20 @@ export class TacSdk {
         });
 
         return jettonMaster.address.toString();
+    }
+
+    async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults> {
+        for (const endpoint of this.TACParams.customLiteSequencerEndpoints) {
+            try {
+                const response = await axios.post<EVMSimulationResponse>(`${endpoint}/evm/simulator/simulate-message`, req, {
+                    transformResponse: [toCamelCaseTransformer],
+                });
+
+                return response.data.response;
+            } catch (error) {
+                console.error(`Error while simulating with ${endpoint}:`, error);
+            }
+        }
+        throw simulationError;
     }
 }
