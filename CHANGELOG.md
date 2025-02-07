@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- calculateEVMTokenAddress function now requires tokenUtils address as deployer and crossChainLayer address as constructor params
+
 ## [0.4.2] - 2025-02-05
 
 ## Added
