@@ -35,7 +35,7 @@ export class OperationTracker {
                     params: {
                         shardsKey: transactionLinker.shardsKey,
                         caller: transactionLinker.caller,
-                        shardsCount: transactionLinker.shardsCount,
+                        shardCount: transactionLinker.shardCount,
                         timestamp: transactionLinker.timestamp,
                     },
                 });

@@ -38,7 +38,7 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
             arguments: evmArguments,
         },
         shards_key: transactionLinker.shardsKey,
-        shards_count: transactionLinker.shardsCount,
+        shard_count: transactionLinker.shardCount,
     });
 
     return beginCell().storeStringTail(json).endCell();
@@ -54,12 +54,12 @@ export function formatSolidityMethodName(methodName?: string): string {
     return SOLIDITY_METHOD_NAME_REGEX.test(methodName) ? `${methodName}(bytes,bytes)` : methodName;
 }
 
-export function generateTransactionLinker(caller: string, shardsCount: number): TransactionLinker {
+export function generateTransactionLinker(caller: string, shardCount: number): TransactionLinker {
     const random = generateRandomNumberByTimestamp();
 
     return {
         caller: Address.normalize(caller),
-        shardsCount,
+        shardCount,
         shardsKey: String(random.randomNumber),
         timestamp: random.timestamp,
     };

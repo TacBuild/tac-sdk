@@ -433,10 +433,10 @@ export class TacSdk {
     ): Promise<TransactionLinker> {
         const rawAssets = await this.convertAssetsToRawFormat(assets);
         const aggregatedData = await this.aggregateJettons(rawAssets);
-        const transactionLinkerShardsCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
+        const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
 
         const caller = sender.getSenderAddress();
-        const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardsCount);
+        const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
         const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
 
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData);
