@@ -15,7 +15,6 @@ import {
     UserWalletBalanceExtended,
     EVMSimulationResults,
     EVMSimulationRequest,
-    EVMSimulationResponse,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -27,6 +26,7 @@ import {
     AssetOpType,
     ShardMessage,
     ShardTransaction,
+    EVMSimulationResponse,
 } from '../structs/InternalStruct';
 // jetton imports
 import { JettonMaster } from '../wrappers/JettonMaster';

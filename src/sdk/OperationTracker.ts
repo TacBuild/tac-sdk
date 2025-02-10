@@ -4,12 +4,12 @@ import {
     Network,
     TransactionLinker,
     SimplifiedStatuses,
-    StatusesResponse,
     StatusByOperationId,
 } from '../structs/Struct';
 import { operationFetchError, statusFetchError } from '../errors';
 import { toCamelCaseTransformer } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
+import { StatusesResponse } from '../structs/InternalStruct';
 
 export class OperationTracker {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';

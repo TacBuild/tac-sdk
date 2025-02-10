@@ -8,6 +8,16 @@ All notable changes to this project will be documented in this file.
 
 - Rename shardedId -> shardsKey
 
+## Added
+
+- `simulateEVMMessage` method in `TacSdk` to simulate EVM message execution on TAC side
+
+    ```typescript
+        async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults>
+    ```
+
+- support for highload V3 wallet as a sender
+
 ## [0.4.2] - 2025-02-05
 
 ## Added

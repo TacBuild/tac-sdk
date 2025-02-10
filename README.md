@@ -315,6 +315,61 @@ This function provides the address of the wrapper for any EVM token at a specifi
 
 ---
 
+### Function: `simulateEVMMessage`
+
+This function will simulate the EVM message on the TAC side.
+
+#### **Purpose**
+
+The ability to simulate the EVM message is crucial for testing and debugging crosschain operations. By simulating the message, developers can verify that the transaction parameters are correctly configured and that the operation will execute.
+
+#### **Parameters**
+
+- **`evmCallParams`**: An object defining the EVM-specific logic:
+  - **`target`**: Target address on the EVM network.
+  - **`methodName`**: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
+  - **`arguments`**: Encoded parameters for the EVM method.
+- **`extraData`**: Unstrusted Extra Data provided by executor.
+- **`feeAssetAddress`**: TVM Fee Asset Address, empty string for native TON.
+- **`shardedId`**: Sharded ID.
+- **`tvmAssets`**: An array of objects, each specifying the Assets details:
+  - **`tokenAddress`**: Address of the Asset.
+  - **`amount`**: Amount of Assets to be transferred.
+- **`tvmCaller`**: TVM Caller wallet address.
+
+
+#### **Returns**
+
+- **`Promise<EVMSimulationResults>`**:
+  - A promise that resolves to detailed information about the execution of the given message, including:
+    - **`estimatedGas`**: The estimated gas required for the message.
+    - **`estimatedJettonFeeAmount`**: The estimated fee amount in Jettons.
+    - **`feeParams`**: The parameters related to the fee.
+      - **`currentBaseFee`**: The current base fee.
+      - **`isEip1559`**: Indicates if EIP-1559 is applied.
+      - **`suggestedGasPrice`**: The suggested gas price.
+      - **`suggestedGasTip`**: The suggested gas tip.
+    - **`message`**: The message details.
+    - **`outMessages`**: The outgoing messages.
+      - **`callerAddress`**: The address of the caller.
+      - **`operationId`**: The operation ID.
+      - **`payload`**: The payload.
+      - **`queryId`**: The query ID.
+      - **`targetAddress`**: The target address.
+      - **`tokensBurned`**: The tokens burned.
+        - **`amount`**: The amount of tokens burned.
+        - **`tokenAddress`**: The address of the token.
+      - **`tokensLocked`**: The tokens locked.
+    - **`simulationError`**: Any error encountered during the simulation.
+    - **`simulationStatus`**: The status of the simulation.
+    - **`debugInfo`**: Debugging information.
+      - **`from`**: The sender address.
+      - **`to`**: The recipient address.
+      - **`callData`**: The call data.
+      - **`blockNumber`**: The block number.
+
+---
+
 ## Sending TON Transactions: Two Approaches
 
 The SDK provides two approaches for sending TON transactions: using **TonConnect** or a **raw wallet via mnemonic**. Below is an explanation of both options.
@@ -357,7 +412,8 @@ export type WalletVersion =
     | "v3r1"
     | "v3r2"
     | "v4"
-    | "v5r1";
+    | "v5r1"
+    | "highloadV3";
 ```
 
 - **Possible exceptions**:

@@ -153,10 +153,6 @@ export type TransactionLinker = {
 
 export type StatusByOperationId = { operationId: string; errorMessage: string | null; status: string };
 
-export type ResponseBase<T> = { response: T };
-
-export type StatusesResponse = ResponseBase<StatusByOperationId[]>;
-
 export type EVMSimulationRequest = {
     evmCallParams: {
         arguments: string;
@@ -209,5 +205,3 @@ export type EVMSimulationResults = {
         blockNumber: number;
     };
 };
-
-export type EVMSimulationResponse = ResponseBase<EVMSimulationResults>;
