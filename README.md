@@ -32,7 +32,7 @@ Using these inputs, the SDK builds a TON transaction payload and enables further
 
 ## Sharded Messages
 
-Due to the specific architecture of TVM, it’s not possible to send multiple tokens in a single transaction. Therefore, transactions are handled using a sharded messaging system, where each message is linked on the validator side using a unique triplet: `(caller, ShardId, ShardCount)`. This system is particularly useful for complex operations like liquidity providing, where multiple tokens need to be transferred on the TON side.
+Due to the specific architecture of TVM, it’s not possible to send multiple tokens in a single transaction. Therefore, transactions are handled using a sharded messaging system, where each message is linked on the validator side using a unique triplet: `(caller, ShardsKey, ShardCount)`. This system is particularly useful for complex operations like liquidity providing, where multiple tokens need to be transferred on the TON side.
 
 **Example:**
 - **Liquidity Providing:** To add liquidity, two tokens need to be transferred on the TON side. Each token transfer is sent as an individual sharded message, which validators process and link together.
@@ -205,7 +205,7 @@ function myProxyFunction(bytes calldata tacHeader, bytes calldata arguments) ext
 
 The first argument of methods must always be TACHeader. It is sent by protocol, augmented with data from executor.
 - **`bytes tacHeader`**: Encoded structure TacHeaderV1, containing:
-  - **`uint64 shardedId`**: ID you can specify for yourself an inside message to the TVM contract on the TON network. 
+  - **`uint64 shardsKey`**: ID you can specify for yourself an inside message to the TVM contract on the TON network. 
   - **`uint256 timestamp`**: The block timestamp on TON where the user's message was created. 
   - **`bytes32 operationId`**: Unique identifier for the message created by the TAC infrastructure. 
   - **`string tvmCaller`**: The TON user's wallet address that sent the message. 
@@ -646,7 +646,7 @@ Represents general data for Asset operations.
 export type TransactionLinker = {
     caller: string,
     shardCount: number,
-    shardedId: string,
+    shardsKey: string,
     timestamp: number,
     sendTransactionResult?: unknown,
 }
@@ -654,7 +654,7 @@ export type TransactionLinker = {
 Linker to track TON transaction for crosschain operation.
 - **`caller`**: Address of the transaction initiator.
 - **`shardCount`**: Number of shards involved.
-- **`shardedId`**: Identifier for the shard.
+- **`shardsKey`**: Identifier for the shard.
 - **`timestamp`**: Timestamp of the transaction.
 - **`sendTransactionResult`** *(optional)*: Result of sending transaction. May be used to check result of sending transaction. Default TonClient does NOT fill this field. However, in unit tests @ton/sandbox set transaction result object to this field.
 
