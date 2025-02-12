@@ -57,6 +57,7 @@ export class TacSdk {
     readonly artifacts: typeof testnet | typeof mainnet;
     readonly TONParams: InternalTONParams;
     readonly TACParams: InternalTACParams;
+    readonly liteSequencerEndpoints: string[];
 
     private constructor(
         network: Network,
@@ -64,12 +65,14 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TONParams: InternalTONParams,
         TACParams: InternalTACParams,
+        liteSequencerEndpoints: string[],
     ) {
         this.network = network;
         this.delay = delay;
         this.artifacts = artifacts;
         this.TONParams = TONParams;
         this.TACParams = TACParams;
+        this.liteSequencerEndpoints = liteSequencerEndpoints;
     }
 
     static async create(sdkParams: SDKParams): Promise<TacSdk> {
@@ -77,8 +80,13 @@ export class TacSdk {
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
         const artifacts = network === Network.Testnet ? testnet : mainnet;
         const TONParams = await this.prepareTONParams(network, delay, artifacts, sdkParams.TONParams);
-        const TACParams = await this.prepareTACParams(network, artifacts, sdkParams.TACParams);
-        return new TacSdk(network, delay, artifacts, TONParams, TACParams);
+        const TACParams = await this.prepareTACParams(artifacts, sdkParams.TACParams);
+        const liteSequencerEndpoints =
+            sdkParams.customLiteSequencerEndpoints ??
+            (network === Network.Testnet
+                ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
+                : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
+        return new TacSdk(network, delay, artifacts, TONParams, TACParams, liteSequencerEndpoints);
     }
 
     private static async prepareTONParams(
@@ -110,7 +118,6 @@ export class TacSdk {
     }
 
     private static async prepareTACParams(
-        network: Network,
         artifacts: typeof testnet | typeof mainnet,
         TACParams?: TACParams,
     ): Promise<InternalTACParams> {
@@ -134,12 +141,6 @@ export class TacSdk {
         const crossChainLayerTokenBytecode =
             TACParams?.crossChainLayerTokenBytecode ?? artifacts.tac.compilationArtifacts.CrossChainLayerToken.bytecode;
 
-        const customLiteSequencerEndpoints =
-            TACParams?.customLiteSequencerEndpoints ??
-            (network === Network.Testnet
-                ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
-                : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
-
         return {
             provider,
             settingsAddress,
@@ -148,7 +149,6 @@ export class TacSdk {
             crossChainLayerAddress,
             crossChainLayerTokenABI,
             crossChainLayerTokenBytecode,
-            customLiteSequencerEndpoints,
         };
     }
 
@@ -515,7 +515,7 @@ export class TacSdk {
     }
 
     async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults> {
-        for (const endpoint of this.TACParams.customLiteSequencerEndpoints) {
+        for (const endpoint of this.liteSequencerEndpoints) {
             try {
                 const response = await axios.post<EVMSimulationResponse>(
                     `${endpoint}/evm/simulator/simulate-message`,

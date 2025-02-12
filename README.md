@@ -589,6 +589,7 @@ export type SDKParams = {
     delay?: number;
     TACParams?: TACParams;
     TONParams?: TONParams;
+    customLiteSequencerEndpoints?: string[];
 }
 ```
 
@@ -597,6 +598,7 @@ Parameters for SDK:
 - **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0*.
 - **`TACParams`** *(optional)*: Custom parameters for TAC side
 - **`TONParams`** *(optional)*: Custom parameters for TON side
+- **`customLiteSequencerEndpoints`** *(optional)*: Custom lite sequencer endpoints for API access.
 
 ---
 

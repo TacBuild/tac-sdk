@@ -56,11 +56,6 @@ export type TACParams = {
      * bytecode of TAC CrossChainLayerToken contract. Use only for tests.
      */
     crossChainLayerTokenBytecode?: string;
-
-    /**
-     * url of lite sequencer
-     */
-    customLiteSequencerEndpoints?: string[];
 };
 
 export type TONParams = {
@@ -95,6 +90,11 @@ export type SDKParams = {
      * Custom parameters for the TON blockchain
      */
     TONParams?: TONParams;
+
+    /**
+     * URLs of lite sequencers
+     */
+    customLiteSequencerEndpoints?: string[];
 };
 
 export type WithAddress = {

@@ -50,7 +50,6 @@ export type InternalTACParams = {
     crossChainLayerAddress: string;
     crossChainLayerTokenABI: Interface | InterfaceAbi;
     crossChainLayerTokenBytecode: string;
-    customLiteSequencerEndpoints: string[];
 };
 
 export type ResponseBase<T> = { response: T };

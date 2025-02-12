@@ -35,6 +35,15 @@ export class SenderFactory {
                   network: Network;
                   version: WalletVersion;
                   mnemonic: string;
+                  options?: {
+                    v5r1?: {
+                        subwalletNumber?: number;
+                    },
+                    highloadV3?: {
+                        subwalletId?: number;
+                        timeout?: number;
+                    }
+                  };
               }
             | { tonConnect: TonConnectUI },
     ): Promise<SenderAbstraction> {
@@ -60,13 +69,13 @@ export class SenderFactory {
             // manual setup of wallet id required to support wallet w5 both on mainnet and testnet
             config.walletId = {
                 networkGlobalId: params.network === Network.Testnet ? -3 : -239,
-                context: { walletVersion: 'v5r1', workchain: 0, subwalletNumber: 0 },
+                context: { walletVersion: 'v5r1', workchain: 0, subwalletNumber: params.options?.v5r1?.subwalletNumber ?? 0 },
             };
         }
 
         if (params.version === 'highloadV3') {
-            config.subwalletId = DEFAULT_SUBWALLET_ID;
-            config.timeout = DEFAULT_TIMEOUT;
+            config.subwalletId = params.options?.highloadV3?.subwalletId ?? DEFAULT_SUBWALLET_ID;
+            config.timeout = params.options?.highloadV3?.timeout ?? DEFAULT_TIMEOUT;
         }
 
         const wallet = wallets[params.version].create(config);
