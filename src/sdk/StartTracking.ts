@@ -13,7 +13,7 @@ export async function startTracking(
 
     console.log('Start tracking operation');
     console.log('caller: ', transactionLinker.caller);
-    console.log('shardedId: ', transactionLinker.shardedId);
+    console.log('shardsKey: ', transactionLinker.shardsKey);
     console.log('shardCount: ', transactionLinker.shardCount);
     console.log('timestamp: ', transactionLinker.timestamp);
 

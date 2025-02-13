@@ -37,7 +37,7 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
             method_name: formatSolidityMethodName(evmProxyMsg.methodName),
             arguments: evmArguments,
         },
-        sharded_id: transactionLinker.shardedId,
+        shards_key: transactionLinker.shardsKey,
         shard_count: transactionLinker.shardCount,
     });
 
@@ -60,7 +60,7 @@ export function generateTransactionLinker(caller: string, shardCount: number): T
     return {
         caller: Address.normalize(caller),
         shardCount,
-        shardedId: String(random.randomNumber),
+        shardsKey: String(random.randomNumber),
         timestamp: random.timestamp,
     };
 }

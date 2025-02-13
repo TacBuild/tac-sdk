@@ -33,7 +33,7 @@ export class OperationTracker {
             try {
                 const response = await axios.get(`${endpoint}/operationId`, {
                     params: {
-                        shardedId: transactionLinker.shardedId,
+                        shardsKey: transactionLinker.shardsKey,
                         caller: transactionLinker.caller,
                         shardCount: transactionLinker.shardCount,
                         timestamp: transactionLinker.timestamp,
