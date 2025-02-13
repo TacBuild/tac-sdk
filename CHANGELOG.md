@@ -8,6 +8,20 @@ All notable changes to this project will be documented in this file.
 
 - Rename shardedId -> shardsKey
 
+## Added
+
+- `options` parameter in `getSender` method to modify W5 and Highload V3 wallets
+
+- `customLiteSequencerEndpoints` parameter in `SDKParams` to specify custom lite sequencer endpoints
+
+- `simulateEVMMessage` method in `TacSdk` to simulate EVM message execution on TAC side
+
+    ```typescript
+        async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults>
+    ```
+
+- support for highload V3 wallet as a sender
+
 ## [0.4.2] - 2025-02-05
 
 ## Added

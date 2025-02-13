@@ -90,6 +90,11 @@ export type SDKParams = {
      * Custom parameters for the TON blockchain
      */
     TONParams?: TONParams;
+
+    /**
+     * URLs of lite sequencers
+     */
+    customLiteSequencerEndpoints?: string[];
 };
 
 export type WithAddress = {
@@ -148,6 +153,55 @@ export type TransactionLinker = {
 
 export type StatusByOperationId = { operationId: string; errorMessage: string | null; status: string };
 
-export type ResponseBase<T> = { response: T };
+export type EVMSimulationRequest = {
+    evmCallParams: {
+        arguments: string;
+        methodName: string;
+        target: string;
+    };
+    extraData: string;
+    feeAssetAddress: string;
+    shardedId: number;
+    tvmAssets: {
+        amount: string;
+        tokenAddress: string;
+    }[];
+    tvmCaller: string;
+};
 
-export type StatusesResponse = ResponseBase<StatusByOperationId[]>;
+export type EVMSimulationResults = {
+    estimatedGas: number;
+    estimatedJettonFeeAmount: string;
+    feeParams: {
+        currentBaseFee: string;
+        isEip1559: boolean;
+        suggestedGasPrice: string;
+        suggestedGasTip: string;
+    };
+    message: string;
+    outMessages:
+        | {
+              callerAddress: string;
+              operationId: string;
+              payload: string;
+              queryId: number;
+              targetAddress: string;
+              tokensBurned: {
+                  amount: string;
+                  tokenAddress: string;
+              }[];
+              tokensLocked: {
+                  amount: string;
+                  tokenAddress: string;
+              }[];
+          }[]
+        | null;
+    simulationError: string;
+    simulationStatus: boolean;
+    debugInfo: {
+        from: string;
+        to: string;
+        callData: string;
+        blockNumber: number;
+    };
+};

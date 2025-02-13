@@ -4,12 +4,12 @@ import {
     Network,
     TransactionLinker,
     SimplifiedStatuses,
-    StatusesResponse,
     StatusByOperationId,
 } from '../structs/Struct';
 import { operationFetchError, statusFetchError } from '../errors';
-import { convertKeysToCamelCase } from './Utils';
+import { toCamelCaseTransformer } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
+import { StatusesResponse } from '../structs/InternalStruct';
 
 export class OperationTracker {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
@@ -56,16 +56,7 @@ export class OperationTracker {
                         operationIds: [operationId],
                     },
                     {
-                        transformResponse: [
-                            (data) => {
-                                try {
-                                    const parsedData = JSON.parse(data);
-                                    return convertKeysToCamelCase(parsedData);
-                                } catch {
-                                    return data;
-                                }
-                            },
-                        ],
+                        transformResponse: [toCamelCaseTransformer],
                     },
                 );
 
