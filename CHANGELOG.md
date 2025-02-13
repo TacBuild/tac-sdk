@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## Changed
+### Changed
+
+- calculateEVMTokenAddress function now requires tokenUtils address as deployer and crossChainLayer address as constructor params
 
 - Rename shardedId -> shardsKey
 
@@ -24,11 +26,11 @@ All notable changes to this project will be documented in this file.
 
 ## [0.4.2] - 2025-02-05
 
-## Added
+### Added
 
 - Contract opener `orbsOpener4` that uses new vesrion TON enpoints
 
-## Changed 
+### Changed 
 
 - `orbsOpener4` set as default in SDK
 

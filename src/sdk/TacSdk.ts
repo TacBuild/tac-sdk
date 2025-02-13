@@ -135,6 +135,7 @@ export class TacSdk {
         const crossChainLayerAddress = await settings.getAddressSetting(
             keccak256(toUtf8Bytes('CrossChainLayerAddress')),
         );
+        const tokenUtilsAddress = await settings.getAddressSetting(keccak256(toUtf8Bytes('TokenUtilsAddress')));
 
         const crossChainLayerTokenABI =
             TACParams?.crossChainLayerTokenABI ?? artifacts.tac.compilationArtifacts.CrossChainLayerToken.abi;
@@ -144,6 +145,7 @@ export class TacSdk {
         return {
             provider,
             settingsAddress,
+            tokenUtilsAddress,
             abiCoder: new ethers.AbiCoder(),
             crossChainLayerABI,
             crossChainLayerAddress,
@@ -482,9 +484,9 @@ export class TacSdk {
 
         return calculateEVMTokenAddress(
             this.TACParams.abiCoder,
-            this.TACParams.crossChainLayerAddress,
+            this.TACParams.tokenUtilsAddress,
             this.TACParams.crossChainLayerTokenBytecode,
-            this.TACParams.settingsAddress,
+            this.TACParams.crossChainLayerAddress,
             tvmTokenAddress,
         );
     }
