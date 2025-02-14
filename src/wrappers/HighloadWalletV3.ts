@@ -103,7 +103,7 @@ export class HighloadWalletV3 implements WalletInstance {
         opts: {
             message: MessageRelaxed | Cell;
             mode: number;
-            query_id: bigint | HighloadQueryId;
+            queryId: bigint | HighloadQueryId;
             createdAt: number;
             subwalletId: number;
             timeout: number;
@@ -119,7 +119,7 @@ export class HighloadWalletV3 implements WalletInstance {
             messageCell = messageBuilder.endCell();
         }
 
-        const queryId = opts.query_id instanceof HighloadQueryId ? opts.query_id.getQueryId() : opts.query_id;
+        const queryId = opts.queryId instanceof HighloadQueryId ? opts.queryId.getQueryId() : opts.queryId;
 
         const messageInner = beginCell()
             .storeUint(opts.subwalletId, 32)
@@ -140,7 +140,7 @@ export class HighloadWalletV3 implements WalletInstance {
         secretKey: Buffer,
         messages: OutActionSendMsg[],
         subwallet: number,
-        query_id: HighloadQueryId,
+        queryId: HighloadQueryId,
         timeout: number,
         createdAt?: number,
         value: bigint = 0n,
@@ -150,9 +150,9 @@ export class HighloadWalletV3 implements WalletInstance {
         }
 
         return await this.sendExternalMessage(provider, secretKey, {
-            message: this.packActions(messages, value, query_id),
+            message: this.packActions(messages, value, queryId),
             mode: value > 0n ? SendMode.PAY_GAS_SEPARATELY : SendMode.CARRY_ALL_REMAINING_BALANCE,
-            query_id: query_id,
+            queryId: queryId,
             createdAt: createdAt,
             subwalletId: subwallet,
             timeout: timeout,
@@ -186,21 +186,21 @@ export class HighloadWalletV3 implements WalletInstance {
         });
     }
 
-    packActions(messages: OutAction[], value: bigint = toNano('1'), query_id: HighloadQueryId) {
+    packActions(messages: OutAction[], value: bigint = toNano('1'), queryId: HighloadQueryId) {
         let batch: OutAction[];
         if (messages.length > 254) {
             batch = messages.slice(0, 253);
             batch.push({
                 type: 'sendMsg',
                 mode: value > 0n ? SendMode.PAY_GAS_SEPARATELY : SendMode.CARRY_ALL_REMAINING_BALANCE,
-                outMsg: this.packActions(messages.slice(253), value, query_id),
+                outMsg: this.packActions(messages.slice(253), value, queryId),
             });
         } else {
             batch = messages;
         }
         return this.createInternalTransfer({
             actions: batch,
-            queryId: query_id,
+            queryId: queryId,
             value,
         });
     }

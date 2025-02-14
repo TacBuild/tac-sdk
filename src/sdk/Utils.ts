@@ -32,13 +32,13 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
         : null;
 
     const json = JSON.stringify({
-        evm_call: {
+        evmCall: {
             target: evmProxyMsg.evmTargetAddress,
-            method_name: formatSolidityMethodName(evmProxyMsg.methodName),
+            methodName: formatSolidityMethodName(evmProxyMsg.methodName),
             arguments: evmArguments,
         },
-        shards_key: transactionLinker.shardsKey,
-        shard_count: transactionLinker.shardCount,
+        shardsKey: transactionLinker.shardsKey,
+        shardCount: transactionLinker.shardCount,
     });
 
     return beginCell().storeStringTail(json).endCell();
