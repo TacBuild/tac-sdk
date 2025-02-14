@@ -12,8 +12,10 @@ import { mainnet, testnet } from '@tonappchain/artifacts';
 import { StatusesResponse } from '../structs/InternalStruct';
 
 export class OperationTracker {
-    readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
-    readonly BRIDGE_TERMINATED_STATUS = 'EVMMerkleMessageExecuted';
+    readonly TERMINATED_STATUS = 'TVMMerkleMessageExecutionSuccessful';
+    readonly BRIDGE_TERMINATED_STATUS = 'EVMMerkleMessageExecutionSuccessful';
+    readonly EVM_FAILED_STATUS = "EVMMerkleMessageExecutionFailed";
+    readonly TVM_FAILED_STATUS = "TVMMerkleMessageExecutionFailed";
 
     readonly network: Network;
     readonly customLiteSequencerEndpoints: string[];
@@ -47,25 +49,17 @@ export class OperationTracker {
         throw operationFetchError;
     }
 
-    async getOperationStatus(operationId: string): Promise<StatusByOperationId> {
+    async getOperationStatus(operationIds: string[]): Promise<StatusByOperationId> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
                 const response = await axios.post<StatusesResponse>(
                     `${endpoint}/status`,
                     {
-                        operationIds: [operationId],
-                    },
-                    {
-                        transformResponse: [toCamelCaseTransformer],
+                        operationIds,
                     },
                 );
-
-                const result = response.data.response.find((s) => s.operationId === operationId);
-                if (!result) {
-                    throw statusFetchError('operation is not found in response');
-                }
-
-                return result;
+                
+                return response.data.response;
             } catch (error) {
                 console.error(`Error fetching status transaction with ${endpoint}:`, error);
             }
@@ -82,12 +76,14 @@ export class OperationTracker {
             return SimplifiedStatuses.OperationIdNotFound;
         }
 
-        const { status, errorMessage } = await this.getOperationStatus(operationId);
-        if (errorMessage) {
+        const status = await this.getOperationStatus([operationId]);
+        
+        if (status[operationId].status_name == this.EVM_FAILED_STATUS || status[operationId].status_name == this.TVM_FAILED_STATUS) {
             return SimplifiedStatuses.Failed;
         }
+
         const finalStatus = isBridgeOperation ? this.BRIDGE_TERMINATED_STATUS : this.TERMINATED_STATUS;
-        if (status == finalStatus) {
+        if (status[operationId].status_name == finalStatus) {
             return SimplifiedStatuses.Successful;
         }
 

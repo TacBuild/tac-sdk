@@ -55,6 +55,6 @@ export type InternalTACParams = {
 
 export type ResponseBase<T> = { response: T };
 
-export type StatusesResponse = ResponseBase<StatusByOperationId[]>;
+export type StatusesResponse = ResponseBase<StatusByOperationId>;
 
 export type EVMSimulationResponse = ResponseBase<EVMSimulationResults>;

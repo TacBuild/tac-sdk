@@ -141,6 +141,7 @@ export type EvmProxyMsg = {
     evmTargetAddress: string;
     methodName?: string;
     encodedParameters?: string;
+    gasLimit?: bigint;
 };
 
 export type TransactionLinker = {
@@ -151,8 +152,6 @@ export type TransactionLinker = {
     sendTransactionResult?: unknown;
 };
 
-export type StatusByOperationId = { operationId: string; errorMessage: string | null; status: string };
-
 export type EVMSimulationRequest = {
     evmCallParams: {
         arguments: string;
@@ -161,7 +160,7 @@ export type EVMSimulationRequest = {
     };
     extraData: string;
     feeAssetAddress: string;
-    shardedId: number;
+    shardsKey: number;
     tvmAssets: {
         amount: string;
         tokenAddress: string;
@@ -169,8 +168,25 @@ export type EVMSimulationRequest = {
     tvmCaller: string;
 };
 
+export type StatusByOperationId = Record<string, {
+    status_name: string;
+    exists: boolean;
+    error: string | null;
+    info: {
+        success: boolean;
+        timestamp: number;
+        transaction_hash: string;
+        note: {
+            content: string;
+            error_name: string;
+            internal_msg: string;
+            internal_bytes_error: string;
+        };
+    };
+}>;
+
 export type EVMSimulationResults = {
-    estimatedGas: number;
+    estimatedGas: bigint;
     estimatedJettonFeeAmount: string;
     feeParams: {
         currentBaseFee: string;
