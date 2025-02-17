@@ -3,13 +3,13 @@ import { ethers } from 'ethers';
 import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
 import { toNano, TonClient } from '@ton/ton';
 
-const UNISWAPV2_PROXY_ADDRESS = '0x1e8B741cecF886F3C3ba6fC53e372F4584bD3A0a';
+const UNISWAPV2_PROXY_ADDRESS = ''; // uniswap proxy address
 
-const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
-const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
+const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1'; // TKA
+const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK'; // TKB
 
 const WALLET_VERSION = 'v3r2';
-const TVM_MNEMONICS = '';
+const TVM_MNEMONICS = ''; // mnemonic
 
 async function addLiquidity() {
     const sdkParams: SDKParams = {
@@ -29,9 +29,9 @@ async function addLiquidity() {
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
-    const EVM_TKA_ADDRESS = "0x62646a91Bb58B09Af104062c67e14Cf3b2EC1FF3";
+    const EVM_TKA_ADDRESS = ""; // hardcode paired evm address for TKA (or calculate them)
     console.log(EVM_TKA_ADDRESS);
-    const EVM_TKB_ADDRESS = "0x7428F78f86C5cFF0538783B50730379D28DBFcfe";
+    const EVM_TKB_ADDRESS = ""; // hardcode paired evm address for TKB (or calculate them)
     console.log(EVM_TKB_ADDRESS);
     const amountA = 1;
     const amountB = 2;

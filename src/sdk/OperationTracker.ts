@@ -5,6 +5,7 @@ import {
     TransactionLinker,
     SimplifiedStatuses,
     StatusByOperationId,
+    StatusInfo,
 } from '../structs/Struct';
 import { operationFetchError, statusFetchError } from '../errors';
 import { toCamelCaseTransformer } from './Utils';
@@ -49,13 +50,16 @@ export class OperationTracker {
         throw operationFetchError;
     }
 
-    async getOperationStatus(operationIds: string[]): Promise<StatusByOperationId> {
+    async getOperationStatuses(operationIds: string[]): Promise<StatusByOperationId> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
                 const response = await axios.post<StatusesResponse>(
                     `${endpoint}/status`,
                     {
                         operationIds,
+                    },
+                    {
+                        transformResponse: [toCamelCaseTransformer],
                     },
                 );
                 
@@ -67,6 +71,16 @@ export class OperationTracker {
         throw statusFetchError('all endpoints failed to complete request');
     }
 
+    async getOperationStatus(operationId: string): Promise<StatusInfo> {
+        const result = await this.getOperationStatuses([operationId]);
+        const currentStatus = result[operationId]
+        if (!currentStatus) {
+            throw statusFetchError('operation is not found in response');
+        }
+
+        return currentStatus;
+    }
+
     async getSimplifiedOperationStatus(
         transactionLinker: TransactionLinker,
         isBridgeOperation: boolean = false,
@@ -76,14 +90,14 @@ export class OperationTracker {
             return SimplifiedStatuses.OperationIdNotFound;
         }
 
-        const status = await this.getOperationStatus([operationId]);
+        const status = await this.getOperationStatus(operationId);
         
-        if (status[operationId].status_name == this.EVM_FAILED_STATUS || status[operationId].status_name == this.TVM_FAILED_STATUS) {
+        if (status.statusName == this.EVM_FAILED_STATUS || status.statusName == this.TVM_FAILED_STATUS) {
             return SimplifiedStatuses.Failed;
         }
 
         const finalStatus = isBridgeOperation ? this.BRIDGE_TERMINATED_STATUS : this.TERMINATED_STATUS;
-        if (status[operationId].status_name == finalStatus) {
+        if (status.statusName == finalStatus) {
             return SimplifiedStatuses.Successful;
         }
 

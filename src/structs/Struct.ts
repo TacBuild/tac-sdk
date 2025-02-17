@@ -168,22 +168,24 @@ export type EVMSimulationRequest = {
     tvmCaller: string;
 };
 
-export type StatusByOperationId = Record<string, {
-    status_name: string;
+export type StatusInfo = {
+    statusName: string;
     exists: boolean;
     error: string | null;
     info: {
         success: boolean;
         timestamp: number;
-        transaction_hash: string;
+        transactionHash: string;
         note: {
             content: string;
-            error_name: string;
-            internal_msg: string;
-            internal_bytes_error: string;
+            errorName: string;
+            internalMsg: string;
+            internalBytesError: string;
         };
     };
-}>;
+};
+
+export type StatusByOperationId = Record<string, StatusInfo>;
 
 export type EVMSimulationResults = {
     estimatedGas: bigint;

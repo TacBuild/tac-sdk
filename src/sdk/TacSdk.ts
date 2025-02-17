@@ -438,18 +438,11 @@ export class TacSdk {
         );
     }
 
-    async sendCrossChainTransaction(
+    private async getGasLimit(
         evmProxyMsg: EvmProxyMsg,
-        sender: SenderAbstraction,
-        assets?: AssetBridgingData[],
-    ): Promise<TransactionLinker> {
-        const rawAssets = await this.convertAssetsToRawFormat(assets);
-        const aggregatedData = await this.aggregateJettons(rawAssets);
-        const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
-
-        const caller = sender.getSenderAddress();
-        const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
-
+        transactionLinker: TransactionLinker,
+        rawAssets: RawAssetBridgingData[],
+    ): Promise<bigint> {
         const evmSimulationBody: EVMSimulationRequest = {
             evmCallParams: {
                 arguments: evmProxyMsg.encodedParameters ?? '0x',
@@ -463,7 +456,7 @@ export class TacSdk {
                 amount: asset.rawAmount.toString(),
                 tokenAddress: asset.address || 'NONE'
             })),
-            tvmCaller: caller
+            tvmCaller: transactionLinker.caller
         }
 
         const evmSimulationResult = await this.simulateEVMMessage(evmSimulationBody)
@@ -471,10 +464,26 @@ export class TacSdk {
             throw evmSimulationResult;
         }
 
-        if (evmProxyMsg.gasLimit !== undefined) {
-            evmProxyMsg.gasLimit = evmProxyMsg.gasLimit * 120n / 100n;
-        }
+        return evmSimulationResult.estimatedGas * 120n / 100n;
+    }
+ 
+    async sendCrossChainTransaction(
+        evmProxyMsg: EvmProxyMsg,
+        sender: SenderAbstraction,
+        assets?: AssetBridgingData[],
+    ): Promise<TransactionLinker> {
+        const rawAssets = await this.convertAssetsToRawFormat(assets);
+        const aggregatedData = await this.aggregateJettons(rawAssets);
+        const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
+
+        const caller = sender.getSenderAddress();
+        const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
         
+        const gasLimit = await this.getGasLimit(evmProxyMsg, transactionLinker, rawAssets);
+        if (evmProxyMsg.gasLimit != undefined) {
+            evmProxyMsg.gasLimit = gasLimit;
+        }
+
         const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData);
 
