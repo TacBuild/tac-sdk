@@ -475,7 +475,7 @@ Use the `getOperationId(transactionLinker)` method with the `transactionLinker` 
 
 Use the `getOperationStatus(operationId)` method to fetch the operation status.
 
-#### **Method: `getOperationStatus(operationId: string): Promise<StatusByOperationId>`**
+#### **Method: `getOperationStatus(operationId: string): Promise<StatusInfo>`**
 
 Retrieves the current status of an operation using its `operationId`.
 
@@ -483,7 +483,7 @@ Retrieves the current status of an operation using its `operationId`.
   - `operationId`: The identifier obtained from `getOperationId`.
 
 #### **Returns**:
-- **`Promise<StatusByOperationId>`**:
+- **`Promise<StatusInfo>`**:
   - A structure representing the operation's status, including:
     - `status`:
       - `EVMMerkleMessageCollected`: Validator has collected all events for a single sharded message.
@@ -643,12 +643,14 @@ export type EvmProxyMsg = {
     evmTargetAddress: string,
     methodName?: string,
     encodedParameters?: string,
+    gasLimit?: bigint,
 }
 ```
 Represents a proxy message to a TAC.
 - **`evmTargetAddress`**: Target address on the EVM network.
 - **`methodName`** *(optional)*: Method name to be called on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
 - **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
+- **`gasLimit`** *(optional)*: `gasLimit` is a parameter that will be passed on the TAC side. The executor must allocate at least gasLimit gas for executing the transaction on the TAC side. If this parameter is not specified, it will be calculated using the `simulateEVMMessage` method(prefered).
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the crosschain transaction.
 

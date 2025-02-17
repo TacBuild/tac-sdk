@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 
 - Rename shardedId -> shardsKey
 
--  
+- A `gasLimit` field has been added to `EvmProxyMsg` (defaulting to undefined, which will be set through simulation in this case).
 
 ## Added
 
