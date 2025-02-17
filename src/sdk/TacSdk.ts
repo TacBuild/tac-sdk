@@ -480,7 +480,8 @@ export class TacSdk {
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
         
         const gasLimit = await this.getGasLimit(evmProxyMsg, transactionLinker, rawAssets);
-        if (evmProxyMsg.gasLimit == 0n && evmProxyMsg.gasLimit != undefined) {
+  
+        if (evmProxyMsg.gasLimit == 0n || evmProxyMsg.gasLimit != undefined) {
             evmProxyMsg.gasLimit = gasLimit;
         }
 
