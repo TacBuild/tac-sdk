@@ -50,7 +50,7 @@ export class OperationTracker {
         throw operationFetchError;
     }
 
-    async getOperationStatuses(operationIds: string[]): Promise<StatusByOperationId> {
+    async getOperationsStatuses(operationIds: string[]): Promise<StatusByOperationId> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
                 const response = await axios.post<StatusesResponse>(
@@ -72,7 +72,7 @@ export class OperationTracker {
     }
 
     async getOperationStatus(operationId: string): Promise<StatusInfo> {
-        const result = await this.getOperationStatuses([operationId]);
+        const result = await this.getOperationsStatuses([operationId]);
         const currentStatus = result[operationId]
         if (!currentStatus) {
             throw statusFetchError('operation is not found in response');
