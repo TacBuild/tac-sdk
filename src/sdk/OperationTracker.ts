@@ -4,7 +4,7 @@ import {
     Network,
     TransactionLinker,
     SimplifiedStatuses,
-    StatusByOperationId,
+    StatusesByOperationsIds,
     StatusInfo,
 } from '../structs/Struct';
 import { operationFetchError, statusFetchError } from '../errors';
@@ -50,7 +50,7 @@ export class OperationTracker {
         throw operationFetchError;
     }
 
-    async getOperationsStatuses(operationIds: string[]): Promise<StatusByOperationId> {
+    async getOperationsStatuses(operationIds: string[]): Promise<StatusesByOperationsIds> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
                 const response = await axios.post<StatusesResponse>(
@@ -73,6 +73,7 @@ export class OperationTracker {
 
     async getOperationStatus(operationId: string): Promise<StatusInfo> {
         const result = await this.getOperationsStatuses([operationId]);
+        console.log(result)
         const currentStatus = result[operationId]
         if (!currentStatus) {
             throw statusFetchError('operation is not found in response');

@@ -185,7 +185,7 @@ export type StatusInfo = {
     };
 };
 
-export type StatusByOperationId = Record<string, StatusInfo>;
+export type StatusesByOperationsIds = Record<string, StatusInfo>;
 
 export type EVMSimulationResults = {
     estimatedGas: bigint;

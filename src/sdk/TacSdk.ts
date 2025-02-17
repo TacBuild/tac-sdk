@@ -464,9 +464,9 @@ export class TacSdk {
             throw evmSimulationResult;
         }
 
-        return evmSimulationResult.estimatedGas * 120n / 100n;
+        return BigInt(evmSimulationResult.estimatedGas) * 120n / 100n;
     }
- 
+
     async sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
@@ -480,12 +480,13 @@ export class TacSdk {
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
         
         const gasLimit = await this.getGasLimit(evmProxyMsg, transactionLinker, rawAssets);
-        if (evmProxyMsg.gasLimit != undefined) {
+        if (evmProxyMsg.gasLimit == 0n && evmProxyMsg.gasLimit != undefined) {
             evmProxyMsg.gasLimit = gasLimit;
         }
 
         const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData);
+        await sleep(this.delay * 1000);
 
         const transaction: ShardTransaction = {
             validUntil: +new Date() + 15 * 60 * 1000,

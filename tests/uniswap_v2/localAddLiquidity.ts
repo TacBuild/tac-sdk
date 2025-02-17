@@ -1,7 +1,8 @@
 import { ethers } from 'ethers';
 
 import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
-import { toNano, TonClient } from '@ton/ton';
+
+import { toNano } from '@ton/ton';
 
 const UNISWAPV2_PROXY_ADDRESS = ''; // uniswap proxy address
 
@@ -16,16 +17,12 @@ async function addLiquidity() {
         network: Network.Testnet,
         TACParams: {
             provider: new ethers.JsonRpcProvider("https://turin.rpc.tac.build/"),
-            settingsAddress: "",
+            settingsAddress: "", // set local tac settings
         },
         TONParams: {
-            settingsAddress: "",
-            contractOpener: new TonClient({
-                endpoint: "https://testnet.toncenter.com/api/v2/jsonRPC",
-              })
+            settingsAddress: "EQA4c4YONqc9nfoadZ5L5uRfnCM8KW5FRVKOYTXXFjxihnms",
         },
         customLiteSequencerEndpoints: ['http://localhost:8080'],
-        delay: 2,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
@@ -81,12 +78,11 @@ async function addLiquidity() {
 
 async function main() {
     try {
-        // send transaction
+        // // send transaction
         const result = await addLiquidity();
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-
         await startTracking(result, Network.Testnet, false, ['http://localhost:8080']);
     } catch (error) {
         console.error('Error during transaction:', error);

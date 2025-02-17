@@ -49,11 +49,11 @@ export async function startTracking(
             console.log('request operationStatus');
 
             try {
-                const status = await tracker.getOperationStatus([operationId]);
-                currentStatus = status[operationId].status_name
+                const status = await tracker.getOperationsStatuses([operationId]);
+                currentStatus = status[operationId].statusName
 
-                if (status[operationId].status_name == tracker.EVM_FAILED_STATUS || status[operationId].status_name == tracker.TVM_FAILED_STATUS) {
-                    console.log("transactionHash: ", status[operationId].info.transaction_hash)
+                if (status[operationId].statusName == tracker.EVM_FAILED_STATUS || status[operationId].statusName == tracker.TVM_FAILED_STATUS) {
+                    console.log("transactionHash: ", status[operationId].info.transactionHash)
                     console.log(status[operationId].info.note)
                     ok = false;
                     break;
