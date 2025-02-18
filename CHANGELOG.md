@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 
 - Rename shardedId -> shardsKey
 
+- A `gasLimit` field has been added to `EvmProxyMsg` (defaulting to undefined, which will be set through simulation in this case).
+
 ## Added
 
 - `options` parameter in `getSender` method to modify W5 and Highload V3 wallets
@@ -21,6 +23,10 @@ All notable changes to this project will be documented in this file.
     ```typescript
         async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults>
     ```
+
+- `getOperationsStatuses` method in `OperationTracker` retrieves the statuses of multiple operations based on their respective `operationId's`
+
+- Added a pre-check before sending to the blockchain to ensure the transaction will execute successfully on the TAC side using the `simulateEVMMessage` method.
 
 - support for highload V3 wallet as a sender
 

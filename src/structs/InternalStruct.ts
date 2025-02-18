@@ -1,5 +1,5 @@
 import { Cell } from '@ton/ton';
-import { ContractOpener, EVMSimulationResults, Network, RawAssetBridgingData, StatusByOperationId } from './Struct';
+import { ContractOpener, EVMSimulationResults, Network, RawAssetBridgingData, StatusesByOperationsIds } from './Struct';
 import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
 
 export type ShardMessage = {
@@ -55,6 +55,6 @@ export type InternalTACParams = {
 
 export type ResponseBase<T> = { response: T };
 
-export type StatusesResponse = ResponseBase<StatusByOperationId[]>;
+export type StatusesResponse = ResponseBase<StatusesByOperationsIds>;
 
 export type EVMSimulationResponse = ResponseBase<EVMSimulationResults>;
