@@ -36,6 +36,7 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
             target: evmProxyMsg.evmTargetAddress,
             methodName: formatSolidityMethodName(evmProxyMsg.methodName),
             arguments: evmArguments,
+            gas_limit: Number(evmProxyMsg.gasLimit)
         },
         shardsKey: transactionLinker.shardsKey,
         shardCount: transactionLinker.shardCount,

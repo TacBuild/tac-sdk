@@ -2,6 +2,7 @@ import axios from 'axios';
 import { Address, address, beginCell, Cell, toNano } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
 import type { SenderAbstraction } from '../sender';
+
 // import structs
 import {
     AssetBridgingData,
@@ -46,6 +47,7 @@ import {
     sleep,
     validateEVMAddress,
     validateTVMAddress,
+    formatSolidityMethodName
 } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
@@ -377,6 +379,7 @@ export class TacSdk {
         const messages: ShardMessage[] = [];
         for (const jetton of aggregatedData.jettons) {
             const payload = await this.generatePayload(jetton, caller, evmData, crossChainTonAmount);
+            await sleep(this.delay * 1000);
             const jettonWalletAddress = await this.getUserJettonWalletAddress(caller, jetton.address);
             await sleep(this.delay * 1000);
 
@@ -435,6 +438,35 @@ export class TacSdk {
         );
     }
 
+    private async getGasLimit(
+        evmProxyMsg: EvmProxyMsg,
+        transactionLinker: TransactionLinker,
+        rawAssets: RawAssetBridgingData[],
+    ): Promise<bigint> {
+        const evmSimulationBody: EVMSimulationRequest = {
+            evmCallParams: {
+                arguments: evmProxyMsg.encodedParameters ?? '0x',
+                methodName: formatSolidityMethodName(evmProxyMsg.methodName),
+                target: evmProxyMsg.evmTargetAddress,
+            },
+            extraData: '0x',
+            feeAssetAddress: '',
+            shardsKey: Number(transactionLinker.shardsKey),
+            tvmAssets: (rawAssets).map(asset => ({
+                amount: asset.rawAmount.toString(),
+                tokenAddress: asset.address || 'NONE'
+            })),
+            tvmCaller: transactionLinker.caller
+        }
+
+        const evmSimulationResult = await this.simulateEVMMessage(evmSimulationBody)
+        if (evmSimulationResult.simulationStatus == false) {
+            throw evmSimulationResult;
+        }
+
+        return BigInt(evmSimulationResult.estimatedGas) * 120n / 100n;
+    }
+
     async sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
@@ -446,9 +478,17 @@ export class TacSdk {
 
         const caller = sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
-        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
+        
+        const gasLimit = await this.getGasLimit(evmProxyMsg, transactionLinker, rawAssets);
+        
+        if (evmProxyMsg.gasLimit == 0n || evmProxyMsg.gasLimit == undefined) {
+            evmProxyMsg.gasLimit = gasLimit;
+        }
 
+        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData);
+        await sleep(this.delay * 1000);
+
         const transaction: ShardTransaction = {
             validUntil: +new Date() + 15 * 60 * 1000,
             messages,

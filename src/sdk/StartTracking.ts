@@ -49,8 +49,12 @@ export async function startTracking(
             console.log('request operationStatus');
 
             try {
-                ({ status: currentStatus, errorMessage } = await tracker.getOperationStatus(operationId));
-                if (errorMessage) {
+                const status = await tracker.getOperationsStatuses([operationId]);
+                currentStatus = status[operationId].statusName
+
+                if (status[operationId].statusName == tracker.EVM_FAILED_STATUS || status[operationId].statusName == tracker.TVM_FAILED_STATUS) {
+                    console.log("transactionHash: ", status[operationId].info.transactionHash)
+                    console.log(status[operationId].info.note)
                     ok = false;
                     break;
                 }
