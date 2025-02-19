@@ -168,24 +168,50 @@ export type EVMSimulationRequest = {
     tvmCaller: string;
 };
 
-export type StatusInfo = {
-    statusName: string;
-    exists: boolean;
-    error: string | null;
-    info: {
-        success: boolean;
-        timestamp: number;
-        transactionHash: string;
-        note: {
-            content: string;
-            errorName: string;
-            internalMsg: string;
-            internalBytesError: string;
-        };
-    };
+export type TransactionData = {
+    hash: string;
 };
 
-export type StatusesByOperationsIds = Record<string, StatusInfo>;
+export type NoteInfo = {
+    content: string;
+    errorName: string;
+    internalMsg: string;
+    internalBytesError: string;
+};
+
+export type StageData = {
+    success: boolean;
+    timestamp: number;
+    transactions: TransactionData[];
+    note: NoteInfo;
+};
+
+export type StatusInfo = StageData & {
+    stage: string;
+};
+
+export type ProfilingStageData = {
+    exists: boolean;
+    stageData?: StageData;
+};
+
+export type ExecutionStages = {
+    evmMerkleMsgCollected: ProfilingStageData;
+    evmMerkleRootSet: ProfilingStageData;
+    evmMerkleMsgExecuted: ProfilingStageData;
+    tvmMerkleMsgCollected: ProfilingStageData;
+    tvmMerkleMsgExecuted: ProfilingStageData;
+};
+
+export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
+
+export type StatusInfosByOperationId = Record<string, StatusInfo>;
+
+export type OperationIds = {
+    operationIds: string[];
+};
+
+export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
 export type EVMSimulationResults = {
     estimatedGas: bigint;

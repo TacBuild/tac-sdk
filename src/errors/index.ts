@@ -12,6 +12,8 @@ export {
     emptySettingError,
     invalidMethodNameError,
     simulationError,
+    emptyArrayError,
+    profilingFetchError,
 } from './instances';
 
 export {

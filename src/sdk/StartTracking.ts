@@ -27,7 +27,7 @@ export async function startTracking(
         ++iteration;
         if (iteration >= MAX_ITERATION_COUNT) {
             ok = false;
-            errorMessage = 'maximum number of iterations has been exceeded'
+            errorMessage = 'maximum number of iterations has been exceeded';
             break;
         }
 
@@ -49,12 +49,14 @@ export async function startTracking(
             console.log('request operationStatus');
 
             try {
-                const status = await tracker.getOperationsStatuses([operationId]);
-                currentStatus = status[operationId].statusName
+                const status = await tracker.getOperationStatuses([operationId]);
+                currentStatus = status[operationId].stage;
 
-                if (status[operationId].statusName == tracker.EVM_FAILED_STATUS || status[operationId].statusName == tracker.TVM_FAILED_STATUS) {
-                    console.log("transactionHash: ", status[operationId].info.transactionHash)
-                    console.log(status[operationId].info.note)
+                if (!status[operationId].success) {
+                    if (status[operationId].transactions.length > 0) {
+                        console.log('transactionHash: ', status[operationId].transactions[0]);
+                    }
+                    console.log(status[operationId].note);
                     ok = false;
                     break;
                 }
