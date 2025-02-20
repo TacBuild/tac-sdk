@@ -1,4 +1,4 @@
-import { Network, TransactionLinker } from '../structs/Struct';
+import { ExecutionStages, Network, TransactionLinker } from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
 import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
@@ -27,7 +27,7 @@ export async function startTracking(
         ++iteration;
         if (iteration >= MAX_ITERATION_COUNT) {
             ok = false;
-            errorMessage = 'maximum number of iterations has been exceeded'
+            errorMessage = 'maximum number of iterations has been exceeded';
             break;
         }
 
@@ -49,17 +49,20 @@ export async function startTracking(
             console.log('request operationStatus');
 
             try {
-                const status = await tracker.getOperationsStatuses([operationId]);
-                currentStatus = status[operationId].statusName
+                const status = await tracker.getOperationStatuses([operationId]);
+                currentStatus = status[operationId].stage;
 
-                if (status[operationId].statusName == tracker.EVM_FAILED_STATUS || status[operationId].statusName == tracker.TVM_FAILED_STATUS) {
-                    console.log("transactionHash: ", status[operationId].info.transactionHash)
-                    console.log(status[operationId].info.note)
+                if (!status[operationId].success) {
+                    if (status[operationId].transactions != null && status[operationId].transactions!.length > 0) {
+                        console.log('transactionHash: ', status[operationId].transactions![0]);
+                    }
+                    console.log(status[operationId]);
                     ok = false;
+                    errorMessage = status[operationId].note != null ? status[operationId].note!.errorName : '';
                     break;
                 }
-            } catch {
-                console.log('get status error');
+            } catch (err) {
+                console.log('get status error:', err);
             }
 
             console.log('operationId:', operationId);
@@ -74,4 +77,32 @@ export async function startTracking(
     } else {
         console.log('Tracking successfully finished');
     }
+    const stages = await tracker.getStageProfiling(operationId);
+    formatExecutionStages(stages);
 }
+
+const formatExecutionStages = (stages: ExecutionStages) => {
+    const tableData = Object.entries(stages).map(([stage, data]) => ({
+        Stage: stage,
+        Exists: data.exists ? 'Yes' : 'No',
+        Success: data.exists && data.stageData ? (data.stageData.success ? 'Yes' : 'No') : '-',
+        Timestamp: data.exists && data.stageData ? new Date(data.stageData.timestamp * 1000).toLocaleString() : '-',
+        Transactions:
+            data.exists &&
+            data.stageData &&
+            data.stageData.transactions != null &&
+            data.stageData.transactions.length > 0
+                ? data.stageData.transactions.map((t) => t.hash).join(', ')
+                : '-',
+        'Note Content':
+            data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.content : '-',
+        'Error Name':
+            data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.errorName : '-',
+        'Internal Msg':
+            data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalMsg : '-',
+        'Bytes Error':
+            data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalBytesError : '-',
+    }));
+
+    console.table(tableData);
+};

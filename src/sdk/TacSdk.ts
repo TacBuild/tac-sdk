@@ -47,7 +47,7 @@ import {
     sleep,
     validateEVMAddress,
     validateTVMAddress,
-    formatSolidityMethodName
+    formatSolidityMethodName,
 } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
@@ -175,7 +175,7 @@ export class TacSdk {
 
     async getUserJettonWalletAddress(userAddress: string, tokenAddress: string): Promise<string> {
         const jettonMaster = this.TONParams.contractOpener.open(new JettonMaster(Address.parse(tokenAddress)));
-        return await jettonMaster.getWalletAddress(userAddress);
+        return jettonMaster.getWalletAddress(userAddress);
     }
 
     async getUserJettonBalance(userAddress: string, tokenAddress: string): Promise<bigint> {
@@ -452,19 +452,19 @@ export class TacSdk {
             extraData: '0x',
             feeAssetAddress: '',
             shardsKey: Number(transactionLinker.shardsKey),
-            tvmAssets: (rawAssets).map(asset => ({
+            tvmAssets: rawAssets.map((asset) => ({
                 amount: asset.rawAmount.toString(),
-                tokenAddress: asset.address || 'NONE'
+                tokenAddress: asset.address || 'NONE',
             })),
-            tvmCaller: transactionLinker.caller
-        }
+            tvmCaller: transactionLinker.caller,
+        };
 
-        const evmSimulationResult = await this.simulateEVMMessage(evmSimulationBody)
-        if (evmSimulationResult.simulationStatus == false) {
+        const evmSimulationResult = await this.simulateEVMMessage(evmSimulationBody);
+        if (!evmSimulationResult.simulationStatus) {
             throw evmSimulationResult;
         }
 
-        return BigInt(evmSimulationResult.estimatedGas) * 120n / 100n;
+        return (BigInt(evmSimulationResult.estimatedGas) * 120n) / 100n;
     }
 
     async sendCrossChainTransaction(
@@ -478,9 +478,9 @@ export class TacSdk {
 
         const caller = sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
-        
+
         const gasLimit = await this.getGasLimit(evmProxyMsg, transactionLinker, rawAssets);
-        
+
         if (evmProxyMsg.gasLimit == 0n || evmProxyMsg.gasLimit == undefined) {
             evmProxyMsg.gasLimit = gasLimit;
         }

@@ -10,7 +10,11 @@ All notable changes to this project will be documented in this file.
 
 - Rename shardedId -> shardsKey
 
-- A `gasLimit` field has been added to `EvmProxyMsg` (defaulting to undefined, which will be set through simulation in this case).
+- A `gasLimit` field has been added to `EvmProxyMsg` (defaulting to undefined, which will be set through simulation in this case)
+
+- Renamed json properties in `buildEvmDataCell`
+
+- Renamed urls in `OperationTracker` 
 
 ## Added
 
@@ -24,9 +28,15 @@ All notable changes to this project will be documented in this file.
         async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults>
     ```
 
-- `getOperationsStatuses` method in `OperationTracker` retrieves the statuses of multiple operations based on their respective `operationId's`
+- `getOperationStatuses` method in `OperationTracker` retrieves the statuses of multiple operations based on their respective `operationId's`
 
-- Added a pre-check before sending to the blockchain to ensure the transaction will execute successfully on the TAC side using the `simulateEVMMessage` method.
+- `getOperationIdsByShardsKeys` method in `OperationTracker` retrieves the `operationId's` based on their respective `shardsKey's`
+
+- `getStageProfilings` method in `OperationTracker` retrieves the `ExecutionStages's` based on their respective `operationId's`
+
+- `getStageProfiling` method in `OperationTracker` retrieves the `ExecutionStages` for `operationId`
+
+- Added a pre-check before sending to the blockchain to ensure the transaction will execute successfully on the TAC side using the `simulateEVMMessage` method
 
 - support for highload V3 wallet as a sender
 
