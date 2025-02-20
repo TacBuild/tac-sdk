@@ -10,11 +10,10 @@ import {
     ExecutionStages,
     ExecutionStagesByOperationId,
 } from '../structs/Struct';
-import { operationFetchError, statusFetchError } from '../errors';
+import { operationFetchError, statusFetchError, emptyArrayError, profilingFetchError } from '../errors';
 import { toCamelCaseTransformer } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { OperationIdsByShardsKeyResponse, StageProfilingResponse, StatusesResponse } from '../structs/InternalStruct';
-import { emptyArrayError, profilingFetchError } from '../errors/instances';
 
 export class OperationTracker {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';

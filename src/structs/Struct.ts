@@ -182,8 +182,8 @@ export type NoteInfo = {
 export type StageData = {
     success: boolean;
     timestamp: number;
-    transactions: TransactionData[];
-    note: NoteInfo;
+    transactions: TransactionData[] | null;
+    note: NoteInfo | null;
 };
 
 export type StatusInfo = StageData & {
@@ -192,7 +192,7 @@ export type StatusInfo = StageData & {
 
 export type ProfilingStageData = {
     exists: boolean;
-    stageData?: StageData;
+    stageData: StageData | null;
 };
 
 export type ExecutionStages = {
