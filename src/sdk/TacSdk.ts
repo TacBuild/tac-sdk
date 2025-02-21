@@ -454,7 +454,7 @@ export class TacSdk {
             shardsKey: Number(transactionLinker.shardsKey),
             tvmAssets: rawAssets.map((asset) => ({
                 amount: asset.rawAmount.toString(),
-                tokenAddress: asset.address || 'NONE',
+                tokenAddress: asset.address || '',
             })),
             tvmCaller: transactionLinker.caller,
         };
