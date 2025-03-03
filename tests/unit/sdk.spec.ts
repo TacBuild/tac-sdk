@@ -1,6 +1,6 @@
 import '@ton/test-utils';
 
-import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
+import { address, beginCell, Cell, Dictionary, toNano } from '@ton/ton';
 import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
@@ -88,6 +88,7 @@ describe('TacSDK', () => {
             JettonProxy.createFromConfig(
                 {
                     crossChainLayerAddress: crossChainLayer.address.toString(),
+                    adminAddress: admin.address.toString(),
                 },
                 JettonProxyCode,
             ),

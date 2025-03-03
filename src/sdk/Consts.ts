@@ -1,4 +1,4 @@
-import { toNano } from '@ton/core';
+import { toNano } from '@ton/ton';
 
 export const TRANSACTION_TON_AMOUNT = toNano(0.35);
 export const JETTON_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.2);
