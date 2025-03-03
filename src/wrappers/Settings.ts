@@ -1,5 +1,5 @@
-import type { Cell, Contract, ContractProvider } from '@ton/core';
-import { Address } from '@ton/core';
+import type { Cell, Contract, ContractProvider } from '@ton/ton';
+import { Address } from '@ton/ton';
 import { ethers } from 'ethers';
 import { emptySettingError } from '../errors';
 

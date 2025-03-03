@@ -1,6 +1,8 @@
+import axios from 'axios';
 import { Address, address, beginCell, Cell, toNano } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
 import type { SenderAbstraction } from '../sender';
+
 // import structs
 import {
     AssetBridgingData,
@@ -12,6 +14,8 @@ import {
     TACParams,
     RawAssetBridgingData,
     UserWalletBalanceExtended,
+    EVMSimulationResults,
+    EVMSimulationRequest,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -23,17 +27,14 @@ import {
     AssetOpType,
     ShardMessage,
     ShardTransaction,
+    EVMSimulationResponse,
 } from '../structs/InternalStruct';
 // jetton imports
 import { JettonMaster } from '../wrappers/JettonMaster';
 import { JettonWallet } from '../wrappers/JettonWallet';
 // ton settings
 import { Settings } from '../wrappers/Settings';
-import {
-    JETTON_TRANSFER_FORWARD_TON_AMOUNT,
-    TRANSACTION_TON_AMOUNT,
-    DEFAULT_DELAY,
-} from './Consts';
+import { JETTON_TRANSFER_FORWARD_TON_AMOUNT, TRANSACTION_TON_AMOUNT, DEFAULT_DELAY } from './Consts';
 import {
     buildEvmDataCell,
     calculateAmount,
@@ -42,12 +43,14 @@ import {
     calculateRawAmount,
     generateRandomNumberByTimestamp,
     generateTransactionLinker,
+    toCamelCaseTransformer,
     sleep,
     validateEVMAddress,
     validateTVMAddress,
+    formatSolidityMethodName,
 } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
-import { emptyContractError } from '../errors';
+import { emptyContractError, simulationError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
 
 export class TacSdk {
@@ -56,6 +59,7 @@ export class TacSdk {
     readonly artifacts: typeof testnet | typeof mainnet;
     readonly TONParams: InternalTONParams;
     readonly TACParams: InternalTACParams;
+    readonly liteSequencerEndpoints: string[];
 
     private constructor(
         network: Network,
@@ -63,12 +67,14 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TONParams: InternalTONParams,
         TACParams: InternalTACParams,
+        liteSequencerEndpoints: string[],
     ) {
         this.network = network;
         this.delay = delay;
         this.artifacts = artifacts;
         this.TONParams = TONParams;
         this.TACParams = TACParams;
+        this.liteSequencerEndpoints = liteSequencerEndpoints;
     }
 
     static async create(sdkParams: SDKParams): Promise<TacSdk> {
@@ -77,7 +83,12 @@ export class TacSdk {
         const artifacts = network === Network.Testnet ? testnet : mainnet;
         const TONParams = await this.prepareTONParams(network, delay, artifacts, sdkParams.TONParams);
         const TACParams = await this.prepareTACParams(artifacts, sdkParams.TACParams);
-        return new TacSdk(network, delay, artifacts, TONParams, TACParams);
+        const liteSequencerEndpoints =
+            sdkParams.customLiteSequencerEndpoints ??
+            (network === Network.Testnet
+                ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
+                : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
+        return new TacSdk(network, delay, artifacts, TONParams, TACParams, liteSequencerEndpoints);
     }
 
     private static async prepareTONParams(
@@ -112,9 +123,7 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TACParams?: TACParams,
     ): Promise<InternalTACParams> {
-        const provider =
-            TACParams?.provider ??
-            ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
+        const provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
 
         const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
         const settings = new ethers.Contract(
@@ -128,6 +137,7 @@ export class TacSdk {
         const crossChainLayerAddress = await settings.getAddressSetting(
             keccak256(toUtf8Bytes('CrossChainLayerAddress')),
         );
+        const tokenUtilsAddress = await settings.getAddressSetting(keccak256(toUtf8Bytes('TokenUtilsAddress')));
 
         const crossChainLayerTokenABI =
             TACParams?.crossChainLayerTokenABI ?? artifacts.tac.compilationArtifacts.CrossChainLayerToken.abi;
@@ -137,6 +147,7 @@ export class TacSdk {
         return {
             provider,
             settingsAddress,
+            tokenUtilsAddress,
             abiCoder: new ethers.AbiCoder(),
             crossChainLayerABI,
             crossChainLayerAddress,
@@ -164,7 +175,7 @@ export class TacSdk {
 
     async getUserJettonWalletAddress(userAddress: string, tokenAddress: string): Promise<string> {
         const jettonMaster = this.TONParams.contractOpener.open(new JettonMaster(Address.parse(tokenAddress)));
-        return await jettonMaster.getWalletAddress(userAddress);
+        return jettonMaster.getWalletAddress(userAddress);
     }
 
     async getUserJettonBalance(userAddress: string, tokenAddress: string): Promise<bigint> {
@@ -368,6 +379,7 @@ export class TacSdk {
         const messages: ShardMessage[] = [];
         for (const jetton of aggregatedData.jettons) {
             const payload = await this.generatePayload(jetton, caller, evmData, crossChainTonAmount);
+            await sleep(this.delay * 1000);
             const jettonWalletAddress = await this.getUserJettonWalletAddress(caller, jetton.address);
             await sleep(this.delay * 1000);
 
@@ -426,6 +438,35 @@ export class TacSdk {
         );
     }
 
+    private async getGasLimit(
+        evmProxyMsg: EvmProxyMsg,
+        transactionLinker: TransactionLinker,
+        rawAssets: RawAssetBridgingData[],
+    ): Promise<bigint> {
+        const evmSimulationBody: EVMSimulationRequest = {
+            evmCallParams: {
+                arguments: evmProxyMsg.encodedParameters ?? '0x',
+                methodName: formatSolidityMethodName(evmProxyMsg.methodName),
+                target: evmProxyMsg.evmTargetAddress,
+            },
+            extraData: '0x',
+            feeAssetAddress: '',
+            shardsKey: Number(transactionLinker.shardsKey),
+            tvmAssets: rawAssets.map((asset) => ({
+                amount: asset.rawAmount.toString(),
+                tokenAddress: asset.address || '',
+            })),
+            tvmCaller: transactionLinker.caller,
+        };
+
+        const evmSimulationResult = await this.simulateEVMMessage(evmSimulationBody);
+        if (!evmSimulationResult.simulationStatus) {
+            throw evmSimulationResult;
+        }
+
+        return (BigInt(evmSimulationResult.estimatedGas) * 120n) / 100n;
+    }
+
     async sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
@@ -437,9 +478,17 @@ export class TacSdk {
 
         const caller = sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
-        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
 
+        const gasLimit = await this.getGasLimit(evmProxyMsg, transactionLinker, rawAssets);
+
+        if (evmProxyMsg.gasLimit == 0n || evmProxyMsg.gasLimit == undefined) {
+            evmProxyMsg.gasLimit = gasLimit;
+        }
+
+        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData);
+        await sleep(this.delay * 1000);
+
         const transaction: ShardTransaction = {
             validUntil: +new Date() + 15 * 60 * 1000,
             messages,
@@ -475,9 +524,9 @@ export class TacSdk {
 
         return calculateEVMTokenAddress(
             this.TACParams.abiCoder,
-            this.TACParams.crossChainLayerAddress,
+            this.TACParams.tokenUtilsAddress,
             this.TACParams.crossChainLayerTokenBytecode,
-            this.TACParams.settingsAddress,
+            this.TACParams.crossChainLayerAddress,
             tvmTokenAddress,
         );
     }
@@ -505,5 +554,24 @@ export class TacSdk {
         });
 
         return jettonMaster.address.toString();
+    }
+
+    async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults> {
+        for (const endpoint of this.liteSequencerEndpoints) {
+            try {
+                const response = await axios.post<EVMSimulationResponse>(
+                    `${endpoint}/evm/simulator/simulate-message`,
+                    req,
+                    {
+                        transformResponse: [toCamelCaseTransformer],
+                    },
+                );
+
+                return response.data.response;
+            } catch (error) {
+                console.error(`Error while simulating with ${endpoint}:`, error);
+            }
+        }
+        throw simulationError;
     }
 }

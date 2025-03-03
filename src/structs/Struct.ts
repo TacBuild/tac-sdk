@@ -90,6 +90,11 @@ export type SDKParams = {
      * Custom parameters for the TON blockchain
      */
     TONParams?: TONParams;
+
+    /**
+     * URLs of lite sequencers
+     */
+    customLiteSequencerEndpoints?: string[];
 };
 
 export type WithAddress = {
@@ -136,18 +141,111 @@ export type EvmProxyMsg = {
     evmTargetAddress: string;
     methodName?: string;
     encodedParameters?: string;
+    gasLimit?: bigint;
 };
 
 export type TransactionLinker = {
     caller: string;
     shardCount: number;
-    shardedId: string;
+    shardsKey: string;
     timestamp: number;
     sendTransactionResult?: unknown;
 };
 
-export type StatusByOperationId = { operationId: string; errorMessage: string | null; status: string };
+export type EVMSimulationRequest = {
+    evmCallParams: {
+        arguments: string;
+        methodName: string;
+        target: string;
+    };
+    extraData: string;
+    feeAssetAddress: string;
+    shardsKey: number;
+    tvmAssets: {
+        amount: string;
+        tokenAddress: string;
+    }[];
+    tvmCaller: string;
+};
 
-export type ResponseBase<T> = { response: T };
+export type TransactionData = {
+    hash: string;
+};
 
-export type StatusesResponse = ResponseBase<StatusByOperationId[]>;
+export type NoteInfo = {
+    content: string;
+    errorName: string;
+    internalMsg: string;
+    internalBytesError: string;
+};
+
+export type StageData = {
+    success: boolean;
+    timestamp: number;
+    transactions: TransactionData[] | null;
+    note: NoteInfo | null;
+};
+
+export type StatusInfo = StageData & {
+    stage: string;
+};
+
+export type ProfilingStageData = {
+    exists: boolean;
+    stageData: StageData | null;
+};
+
+export type ExecutionStages = {
+    evmMerkleMsgCollected: ProfilingStageData;
+    evmMerkleRootSet: ProfilingStageData;
+    evmMerkleMsgExecuted: ProfilingStageData;
+    tvmMerkleMsgCollected: ProfilingStageData;
+    tvmMerkleMsgExecuted: ProfilingStageData;
+};
+
+export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
+
+export type StatusInfosByOperationId = Record<string, StatusInfo>;
+
+export type OperationIds = {
+    operationIds: string[];
+};
+
+export type OperationIdsByShardsKey = Record<string, OperationIds>;
+
+export type EVMSimulationResults = {
+    estimatedGas: bigint;
+    estimatedJettonFeeAmount: string;
+    feeParams: {
+        currentBaseFee: string;
+        isEip1559: boolean;
+        suggestedGasPrice: string;
+        suggestedGasTip: string;
+    };
+    message: string;
+    outMessages:
+        | {
+              callerAddress: string;
+              operationId: string;
+              payload: string;
+              queryId: number;
+              targetAddress: string;
+              tokensBurned: {
+                  amount: string;
+                  tokenAddress: string;
+              }[];
+              tokensLocked: {
+                  amount: string;
+                  tokenAddress: string;
+              }[];
+          }[]
+        | null;
+    simulationError: string;
+    simulationStatus: boolean;
+    debugInfo: {
+        from: string;
+        to: string;
+        callData: string;
+        blockNumber: number;
+    };
+};

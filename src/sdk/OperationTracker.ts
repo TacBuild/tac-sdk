@@ -4,12 +4,16 @@ import {
     Network,
     TransactionLinker,
     SimplifiedStatuses,
-    StatusesResponse,
-    StatusByOperationId,
+    StatusInfosByOperationId,
+    StatusInfo,
+    OperationIdsByShardsKey,
+    ExecutionStages,
+    ExecutionStagesByOperationId,
 } from '../structs/Struct';
-import { operationFetchError, statusFetchError } from '../errors';
-import { convertKeysToCamelCase } from './Utils';
+import { operationFetchError, statusFetchError, emptyArrayError, profilingFetchError } from '../errors';
+import { toCamelCaseTransformer } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
+import { OperationIdsByShardsKeyResponse, StageProfilingResponse, StatusesResponse } from '../structs/InternalStruct';
 
 export class OperationTracker {
     readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
@@ -31,9 +35,9 @@ export class OperationTracker {
     async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
-                const response = await axios.get(`${endpoint}/operationId`, {
+                const response = await axios.get(`${endpoint}/operation-id`, {
                     params: {
-                        shardedId: transactionLinker.shardedId,
+                        shardsKey: transactionLinker.shardsKey,
                         caller: transactionLinker.caller,
                         shardCount: transactionLinker.shardCount,
                         timestamp: transactionLinker.timestamp,
@@ -47,39 +51,95 @@ export class OperationTracker {
         throw operationFetchError;
     }
 
-    async getOperationStatus(operationId: string): Promise<StatusByOperationId> {
+    async getOperationIdsByShardsKeys(shardsKeys: string[], caller: string): Promise<OperationIdsByShardsKey> {
+        const requestBody = {
+            shardsKeys: shardsKeys,
+            caller: caller,
+        };
+
+        for (const endpoint of this.customLiteSequencerEndpoints) {
+            try {
+                const response = await axios.post<OperationIdsByShardsKeyResponse>(
+                    `${endpoint}/operation-ids-by-shards-keys`,
+                    requestBody,
+                );
+
+                return response.data.response;
+            } catch (error) {
+                console.error(`Failed to get OperationIds with ${endpoint}:`, error);
+            }
+        }
+
+        throw operationFetchError;
+    }
+
+    async getStageProfiling(operationId: string): Promise<ExecutionStages> {
+        const map = await this.getStageProfilings([operationId]);
+        const result = map[operationId];
+        if (!result) {
+            throw new Error(`No stageProfiling data for operationId=${operationId}`);
+        }
+        return result;
+    }
+
+    async getStageProfilings(operationIds: string[]): Promise<ExecutionStagesByOperationId> {
+        if (!operationIds || operationIds.length === 0) {
+            throw emptyArrayError('operationIds');
+        }
+
+        for (const endpoint of this.customLiteSequencerEndpoints) {
+            try {
+                const response = await axios.post<StageProfilingResponse>(
+                    `${endpoint}/stage-profiling`,
+                    {
+                        operationIds,
+                    },
+                    {
+                        transformResponse: [toCamelCaseTransformer],
+                    },
+                );
+
+                return response.data.response;
+            } catch (error) {
+                console.error(`Error fetching status transaction with ${endpoint}:`, error);
+            }
+        }
+        throw profilingFetchError('all endpoints failed to complete request');
+    }
+
+    async getOperationStatuses(operationIds: string[]): Promise<StatusInfosByOperationId> {
+        if (!operationIds || operationIds.length === 0) {
+            throw emptyArrayError('operationIds');
+        }
+
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
                 const response = await axios.post<StatusesResponse>(
                     `${endpoint}/status`,
                     {
-                        operationIds: [operationId],
+                        operationIds,
                     },
                     {
-                        transformResponse: [
-                            (data) => {
-                                try {
-                                    const parsedData = JSON.parse(data);
-                                    return convertKeysToCamelCase(parsedData);
-                                } catch {
-                                    return data;
-                                }
-                            },
-                        ],
+                        transformResponse: [toCamelCaseTransformer],
                     },
                 );
 
-                const result = response.data.response.find((s) => s.operationId === operationId);
-                if (!result) {
-                    throw statusFetchError('operation is not found in response');
-                }
-
-                return result;
+                return response.data.response;
             } catch (error) {
                 console.error(`Error fetching status transaction with ${endpoint}:`, error);
             }
         }
         throw statusFetchError('all endpoints failed to complete request');
+    }
+
+    async getOperationStatus(operationId: string): Promise<StatusInfo> {
+        const result = await this.getOperationStatuses([operationId]);
+        const currentStatus = result[operationId];
+        if (!currentStatus) {
+            throw statusFetchError('operation is not found in response');
+        }
+
+        return currentStatus;
     }
 
     async getSimplifiedOperationStatus(
@@ -91,12 +151,14 @@ export class OperationTracker {
             return SimplifiedStatuses.OperationIdNotFound;
         }
 
-        const { status, errorMessage } = await this.getOperationStatus(operationId);
-        if (errorMessage) {
+        const status = await this.getOperationStatus(operationId);
+
+        if (!status.success) {
             return SimplifiedStatuses.Failed;
         }
+
         const finalStatus = isBridgeOperation ? this.BRIDGE_TERMINATED_STATUS : this.TERMINATED_STATUS;
-        if (status == finalStatus) {
+        if (status.stage == finalStatus) {
             return SimplifiedStatuses.Successful;
         }
 

@@ -1,6 +1,6 @@
 # TAC-SDK
 
-[![Version npm](https://img.shields.io/npm/v/tac-sdk.svg?logo=npm)](https://www.npmjs.com/package/tac-sdk)
+[![Version npm](https://img.shields.io/npm/v/@tonappchain/sdk.svg?logo=npm)](https://www.npmjs.com/package/@tonappchain/sdk)
 
 **TAC-SDK** is an SDK for facilitating crosschain operations from TVM (TON Virtual Machine) to EVM-compatible blockchains. It is designed to simplify crosschain interactions for EVM developers by enabling transactions from TVM to EVM with minimal configuration.
 
@@ -32,7 +32,7 @@ Using these inputs, the SDK builds a TON transaction payload and enables further
 
 ## Sharded Messages
 
-Due to the specific architecture of TVM, it’s not possible to send multiple tokens in a single transaction. Therefore, transactions are handled using a sharded messaging system, where each message is linked on the validator side using a unique triplet: `(caller, ShardId, ShardCount)`. This system is particularly useful for complex operations like liquidity providing, where multiple tokens need to be transferred on the TON side.
+Due to the specific architecture of TVM, it’s not possible to send multiple tokens in a single transaction. Therefore, transactions are handled using a sharded messaging system, where each message is linked on the validator side using a unique triplet: `(caller, ShardsKey, ShardCount)`. This system is particularly useful for complex operations like liquidity providing, where multiple tokens need to be transferred on the TON side.
 
 **Example:**
 - **Liquidity Providing:** To add liquidity, two tokens need to be transferred on the TON side. Each token transfer is sent as an individual sharded message, which validators process and link together.
@@ -64,7 +64,7 @@ If an issue occurs, the error message will also be included in response.
 ## Install
 
 ```bash
-npm install tac-sdk
+npm install @tonappchain/sdk
 ```
 
 ---
@@ -77,8 +77,8 @@ The `TacSdk` class is designed for performing crosschain operations, particularl
 To use the `TacSdk` class, create it with the required parameters encapsulated in the `SDKParams` object (you can also specify custom params for TAC and TON by `TACParams` and `TONParams`): 
 
 ```typescript
-import { TacSdk } from 'tac-sdk';
-import { Network } from 'tac-sdk';
+import { TacSdk } from '@tonappchain/sdk';
+import { Network } from '@tonappchain/sdk';
 
 const sdkParams: SDKParams = {
   network: Network.Testnet
@@ -91,7 +91,7 @@ const tacSdk = await TacSdk.create(sdkParams);
 Optionally, only in NodeJS you can provide custom liteservers client for TON blockchain in `contractOpener` argument:
 
 ```typescript
-import { TacSdk, Network, liteClientOpener } from 'tac-sdk';
+import { TacSdk, Network, liteClientOpener } from '@tonappchain/sdk';
 
 // Ex.: your own lite clients for TON
 const liteClientServers = [<liteClientServer1>, <liteClientServer1>, ...];
@@ -118,7 +118,7 @@ Optionally, you can provide @ton/ton TonClient (public endpoints will be used by
 - **Testnet**: https://testnet.toncenter.com/api/v2/jsonRPC
 
 ```typescript
-import { TacSdk, Network } from 'tac-sdk';
+import { TacSdk, Network } from '@tonappchain/sdk';
 import { TonClient } from '@ton/ton';
 
 const sdk = await TacSdk.create({
@@ -205,7 +205,7 @@ function myProxyFunction(bytes calldata tacHeader, bytes calldata arguments) ext
 
 The first argument of methods must always be TACHeader. It is sent by protocol, augmented with data from executor.
 - **`bytes tacHeader`**: Encoded structure TacHeaderV1, containing:
-  - **`uint64 shardedId`**: ID you can specify for yourself an inside message to the TVM contract on the TON network. 
+  - **`uint64 shardsKey`**: ID you can specify for yourself an inside message to the TVM contract on the TON network. 
   - **`uint256 timestamp`**: The block timestamp on TON where the user's message was created. 
   - **`bytes32 operationId`**: Unique identifier for the message created by the TAC infrastructure. 
   - **`string tvmCaller`**: The TON user's wallet address that sent the message. 
@@ -233,8 +233,6 @@ You need to specify all the remaining data you need in tuple (bytes) in argument
 ```
 More details in [sendAddLiquidity.ts](tests/uniswap_v2/sendAddLiquidity.ts) and in other tests.
 
-
-
 ---
 
 ### Getter: `nativeTONAddress`
@@ -250,7 +248,6 @@ The indicator should only be used in *getEVMTokenAddress* to calculate address o
 - **`string`**:
   - A string that indicates the native TON Coin.
 
----
 
 ### Getter: `nativeTACAddress`
 
@@ -265,7 +262,6 @@ The address could be used in *getTVMTokenAddress* to calculate address of TAC wr
 - **`Promise<string>`**:
   - A promise that resolves to the computed EVM token address as a string.
 
----
 
 ### Function: `getEVMTokenAddress`
 
@@ -290,7 +286,6 @@ For example, when adding liquidity, you need to specify the addresses of the tok
 
 - **`AddressError`**: invalid token address provided.
 
----
 
 ### Function: `getTVMTokenAddress`
 
@@ -312,6 +307,134 @@ This function provides the address of the wrapper for any EVM token at a specifi
 #### **Possible exceptions**
 
 - **`AddressError`**: invalid token address provided.
+
+
+### Function: `getUserJettonWalletAddress`
+
+This function retrieves the address of a user's Jetton wallet for a specific token.
+
+#### **Purpose**
+
+This function is useful for obtaining the address of a user's Jetton wallet, which is necessary for interacting with Jetton tokens on the TON blockchain.
+
+#### **Parameters**
+
+- **`userAddress(string)`**: The address of the user's wallet on the TON blockchain.
+- **`tokenAddress(string)`**: The address of the Jetton token.
+
+#### **Returns**
+
+- **`Promise<string>`**:
+  - A promise that resolves to the address of the user's Jetton wallet as a string.
+
+#### **Possible exceptions**
+
+- **`AddressError`**: invalid token address provided.
+
+
+### Function: `getUserJettonBalance`
+
+This function retrieves the balance of a specific Jetton token in a user's wallet.
+
+#### **Purpose**
+
+This function allows users to check their balance of a specific Jetton token, which is essential for managing assets on the TON blockchain.
+
+#### **Parameters**
+
+- **`userAddress(string)`**: The address of the user's wallet on the TON blockchain.
+- **`tokenAddress(string)`**: The address of the Jetton token.
+
+#### **Returns**
+
+- **`Promise<bigint>`**:
+  - A promise that resolves to the balance of the Jetton token in the user's wallet as a `bigint`.
+
+#### **Possible exceptions**
+
+- **`AddressError`**: invalid token address provided.
+
+
+### Function: `getUserJettonBalanceExtended`
+
+This function retrieves detailed information about a user's Jetton balance, including the raw amount, decimals, and formatted amount.
+
+#### **Purpose**
+
+This function provides a more detailed view of a user's Jetton balance, including the raw amount, the number of decimals, and the formatted amount, which is useful for displaying balances in a user-friendly format.
+
+#### **Parameters**
+
+- **`userAddress(string)`**: The address of the user's wallet on the TON blockchain.
+- **`tokenAddress(string)`**: The address of the Jetton token.
+
+#### **Returns**
+
+- **`Promise<UserWalletBalanceExtended>`**:
+  - A promise that resolves to an object with one of the following structures:
+    - If the Jetton wallet exists:
+      - **`exists`**: A boolean indicating whether the Jetton wallet exists (`true`).
+      - **`rawAmount`**: The raw balance of the Jetton token as a `bigint`.
+      - **`decimals`**: The number of decimals for the Jetton token.
+      - **`amount`**: The formatted balance of the Jetton token as a number.
+    - If the Jetton wallet does not exist:
+      - **`exists`**: A boolean indicating whether the Jetton wallet exists (`false`).
+#### **Possible exceptions**
+
+- **`AddressError`**: invalid token address provided.
+
+
+### Function: `simulateEVMMessage`
+
+This function will simulate the EVM message on the TAC side.
+
+#### **Purpose**
+
+The ability to simulate the EVM message is crucial for testing and debugging crosschain operations. By simulating the message, developers can verify that the transaction parameters are correctly configured and that the operation will execute.
+
+#### **Parameters**
+
+- **`evmCallParams`**: An object defining the EVM-specific logic:
+  - **`target`**: Target address on the EVM network.
+  - **`methodName`**: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
+  - **`arguments`**: Encoded parameters for the EVM method.
+- **`extraData`**: Unstrusted Extra Data provided by executor.
+- **`feeAssetAddress`**: TVM Fee Asset Address, empty string for native TON.
+- **`shardedId`**: Sharded ID.
+- **`tvmAssets`**: An array of objects, each specifying the Assets details:
+  - **`tokenAddress`**: Address of the Asset.
+  - **`amount`**: Amount of Assets to be transferred.
+- **`tvmCaller`**: TVM Caller wallet address.
+
+#### **Returns**
+
+- **`Promise<EVMSimulationResults>`**:
+  - A promise that resolves to detailed information about the execution of the given message, including:
+    - **`estimatedGas`**: The estimated gas required for the message.
+    - **`estimatedJettonFeeAmount`**: The estimated fee amount in Jettons.
+    - **`feeParams`**: The parameters related to the fee.
+      - **`currentBaseFee`**: The current base fee.
+      - **`isEip1559`**: Indicates if EIP-1559 is applied.
+      - **`suggestedGasPrice`**: The suggested gas price.
+      - **`suggestedGasTip`**: The suggested gas tip.
+    - **`message`**: The message details.
+    - **`outMessages`**: The outgoing messages.
+      - **`callerAddress`**: The address of the caller.
+      - **`operationId`**: The operation ID.
+      - **`payload`**: The payload.
+      - **`queryId`**: The query ID.
+      - **`targetAddress`**: The target address.
+      - **`tokensBurned`**: The tokens burned.
+        - **`amount`**: The amount of tokens burned.
+        - **`tokenAddress`**: The address of the token.
+      - **`tokensLocked`**: The tokens locked.
+    - **`simulationError`**: Any error encountered during the simulation.
+    - **`simulationStatus`**: The status of the simulation.
+    - **`debugInfo`**: Debugging information.
+      - **`from`**: The sender address.
+      - **`to`**: The recipient address.
+      - **`callData`**: The call data.
+      - **`blockNumber`**: The block number.
 
 ---
 
@@ -357,7 +480,8 @@ export type WalletVersion =
     | "v3r1"
     | "v3r2"
     | "v4"
-    | "v5r1";
+    | "v5r1"
+    | "highloadV3";
 ```
 
 - **Possible exceptions**:
@@ -382,7 +506,7 @@ To track an operation, follow these steps:
 To use the `OperationTracker` class, initialize it with the required parameters (you can specify `customLiteSequencerEndpoints` for sending requests there):
 
 ```typescript
-import { OperationTracker, Network } from 'tac-sdk';
+import { OperationTracker, Network } from '@tonappchain/sdk';
 
 const tracker = new OperationTracker(
   network: Network.Testnet,
@@ -419,7 +543,7 @@ Use the `getOperationId(transactionLinker)` method with the `transactionLinker` 
 
 Use the `getOperationStatus(operationId)` method to fetch the operation status.
 
-#### **Method: `getOperationStatus(operationId: string): Promise<StatusByOperationId>`**
+#### **Method: `getOperationStatus(operationId: string): Promise<StatusInfo>`**
 
 Retrieves the current status of an operation using its `operationId`.
 
@@ -427,7 +551,7 @@ Retrieves the current status of an operation using its `operationId`.
   - `operationId`: The identifier obtained from `getOperationId`.
 
 #### **Returns**:
-- **`Promise<StatusByOperationId>`**:
+- **`Promise<StatusInfo>`**:
   - A structure representing the operation's status, including:
     - `status`:
       - `EVMMerkleMessageCollected`: Validator has collected all events for a single sharded message.
@@ -482,6 +606,62 @@ console.log('Simplified Status:', simplifiedStatus);
 ```
 
 ---
+### Other functions
+
+#### Method: `getOperationIdsByShardsKeys(shardsKeys: string[], caller: string): Promise<OperationIdsByShardsKey>`
+
+Retrieves operation IDs associated with specific shard keys for a given caller. Shard keys uniquely identify shards within the TON network, and this method maps them to their corresponding operation IDs.
+
+##### **Parameters**
+
+- **`shardsKeys`**: An array of shard keys for which operation IDs are to be fetched.
+- **`caller`**: The address of the caller initiating the request.
+
+##### **Returns**
+
+- **`Promise<OperationIdsByShardsKey>`**: A promise that resolves to a mapping of shard keys to their corresponding operation IDs.
+
+
+#### Method: `getStageProfiling(operationId: string): Promise<ExecutionStages>`
+
+Fetches profiling information for all execution stages of operation identified by its operation ID.
+
+##### **Parameters**
+
+- **`operationId`**: The unique identifier of the operation whose profiling data is to be retrieved.
+
+##### **Returns**
+
+- **`Promise<ExecutionStages>`**: A promise that resolves to the profiling data of the operation's execution stages.
+
+
+#### Method: `getStageProfilings(operationIds: string[]): Promise<ExecutionStagesByOperationId>`
+
+Retrieves profiling information for multiple operations at once.
+
+##### **Parameters**
+
+- **`operationIds`**: An array of operation IDs for which profiling data is to be fetched.
+
+##### **Returns**
+
+- **`Promise<ExecutionStagesByOperationId>`**: A promise that resolves to a mapping of operation IDs to their corresponding execution stages profiling data.
+
+
+#### Method: `getOperationStatuses(operationIds: string[]): Promise<StatusInfosByOperationId>`
+
+Fetches the current status information for multiple operations based on their operation IDs. 
+
+##### **Parameters**
+
+- **`operationIds: string[]`**: An array of operation IDs whose statuses need to be retrieved.
+
+##### **Returns**
+
+- **`Promise<StatusInfosByOperationId>`**: A promise that resolves to a mapping of operation IDs to their respective status information.
+
+
+---
 ### startTracking
 
 Track the execution of crosschain operation with `startTracking` method
@@ -524,7 +704,6 @@ export enum Network {
 - **`Testnet`**: Represents the testnet TON network.
 - **`Mainnet`**: Represents the mainnet TON network.
 
----
 
 ### `SDKParams (Type)`
 ```typescript
@@ -533,6 +712,7 @@ export type SDKParams = {
     delay?: number;
     TACParams?: TACParams;
     TONParams?: TONParams;
+    customLiteSequencerEndpoints?: string[];
 }
 ```
 
@@ -541,8 +721,8 @@ Parameters for SDK:
 - **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0*.
 - **`TACParams`** *(optional)*: Custom parameters for TAC side
 - **`TONParams`** *(optional)*: Custom parameters for TON side
+- **`customLiteSequencerEndpoints`** *(optional)*: Custom lite sequencer endpoints for API access.
 
----
 
 ### `TONParams (Type)`
 ```typescript
@@ -555,7 +735,6 @@ TON Parameters for SDK:
 - **`contractOpener`** *(optional)*: Client used for TON smart contract interaction. Default is `orbsOpener4`. Set for tests only 
 - **`settingsAddress`** *(optional)*: TON settings contract address. Needed to retrieve protocol data. Set for tests only
 
----
 
 ### `TACParams (Type)`
 ```typescript
@@ -577,7 +756,6 @@ TAC Parameters for SDK:
 - **`crossChainLayerTokenABI`** *(optional)*: TAC CCL Token contract ABI. Set for tests only
 - **`crossChainLayerTokenBytecode`** *(optional)*: TAC CCL Token contract bytecode. Set for tests only
 
----
 
 ### `EvmProxyMsg (Type)`
 ```typescript
@@ -585,16 +763,17 @@ export type EvmProxyMsg = {
     evmTargetAddress: string,
     methodName?: string,
     encodedParameters?: string,
+    gasLimit?: bigint,
 }
 ```
 Represents a proxy message to a TAC.
 - **`evmTargetAddress`**: Target address on the EVM network.
 - **`methodName`** *(optional)*: Method name to be called on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
 - **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
+- **`gasLimit`** *(optional)*: `gasLimit` is a parameter that will be passed on the TAC side. The executor must allocate at least gasLimit gas for executing the transaction on the TAC side. If this parameter is not specified, it will be calculated using the `simulateEVMMessage` method(prefered).
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the crosschain transaction.
 
----
 
 ### `AssetBridgingData (Type)`
 
@@ -639,14 +818,13 @@ Represents general data for Asset operations.
 
 > **Note:** If you need to transfer a native TON coin, do not specify address.
 
----
 
 ### `TransactionLinker (Type)`
 ```typescript
 export type TransactionLinker = {
     caller: string,
     shardCount: number,
-    shardedId: string,
+    shardsKey: string,
     timestamp: number,
     sendTransactionResult?: unknown,
 }
@@ -654,13 +832,12 @@ export type TransactionLinker = {
 Linker to track TON transaction for crosschain operation.
 - **`caller`**: Address of the transaction initiator.
 - **`shardCount`**: Number of shards involved.
-- **`shardedId`**: Identifier for the shard.
+- **`shardsKey`**: Identifier for the shard.
 - **`timestamp`**: Timestamp of the transaction.
 - **`sendTransactionResult`** *(optional)*: Result of sending transaction. May be used to check result of sending transaction. Default TonClient does NOT fill this field. However, in unit tests @ton/sandbox set transaction result object to this field.
 
 This structure is designed to help track the entire execution path of a operation across all levels. By using it, you can identify the `operationId` and subsequently monitor the operation status through a public API. This is particularly useful for ensuring visibility and transparency in the operation lifecycle, allowing you to verify its progress and outcome.
 
----
 
 ### `SimplifiedStatuses (Enum)`
 ```typescript
@@ -677,7 +854,6 @@ Represents the simplified operation statuses.
 - **`Successful`**: The operation was executed successfully.
 - **`OperationIdNotFound`**: The operation ID was not found.
 
----
 
 ### `ContractOpener (Interface)`
 
@@ -694,12 +870,273 @@ export interface ContractOpener {
 }
 ```
 
+
+### `EVMSimulationRequest`
+
+```typescript
+export type EVMSimulationRequest = {
+    evmCallParams: {
+        arguments: string;
+        methodName: string;
+        target: string;
+    };
+    extraData: string;
+    feeAssetAddress: string;
+    shardsKey: number;
+    tvmAssets: {
+        amount: string;
+        tokenAddress: string;
+    }[];
+    tvmCaller: string;
+};
+```
+
+Represents a request to simulate an EVM message.
+
+- **`evmCallParams`**: An object containing parameters for the EVM call.
+  - **`arguments`**: Encoded arguments for the EVM method.
+  - **`methodName`**: Name of the method to be called on the target EVM contract.
+  - **`target`**: The target address on the EVM network.
+- **`extraData`**: Additional non-root data to be included in EVM call.
+- **`feeAssetAddress`**: Address of the asset used to cover fees; empty string if using native TON.
+- **`shardsKey`**: Key identifying shards for the operation.
+- **`tvmAssets`**: An array of assets involved in the transaction.
+  - **`amount`**: Amount of the asset to be transferred.
+  - **`tokenAddress`**: Address of the token.
+- **`tvmCaller`**: Address of the caller in the TVM.
+
+
+### `TransactionData`
+
+```typescript
+export type TransactionData = {
+    hash: string;
+};
+```
+
+Represents transaction details.
+- **`hash`**: The hash of the transaction.
+
+
+### `NoteInfo`
+
+```typescript
+export type NoteInfo = {
+  content: string;
+  errorName: string;
+  internalMsg: string;
+  internalBytesError: string;
+};
+```
+
+Provides detailed information about any notes or errors encountered during operation processing.
+
+- **`content`**: Content of the note.
+- **`errorName`**: Name of the error.
+- **`internalMsg`**: Internal message related to the note or error.
+- **`internalBytesError`**: Detailed bytes error information.
+
+
+### `StageData`
+
+```typescript
+export type StageData = {
+  success: boolean;
+  timestamp: number;
+  transactions: TransactionData[] | null;
+  note: NoteInfo | null;
+};
+```
+
+Represents data for a specific stage of operation execution.
+
+#### **Properties**
+
+- **`success`**: Indicates whether the stage was successful.
+- **`timestamp`**: Timestamp of when the stage was executed.
+- **`transactions`** *(optional)*: Array of transaction data related to the stage. `null` if none.
+- **`note`** *(optional)*: Additional notes or errors related to the stage. `null` if none.
+
+
+### `StatusInfo`
+
+```typescript
+export type StatusInfo = StageData & {
+  stage: string;
+};
+```
+
+Combines `StageData` with an additional stage identifier.
+
+- **`stage`**: Name of the current stage.
+
+- **Other Properties from `StageData`**
+
+
+### `ProfilingStageData`
+
+```typescript
+export type ProfilingStageData = {
+  exists: boolean;
+  stageData: StageData | null;
+};
+
+```
+
+Provides profiling information for a specific stage.
+
+- **`exists`**: Indicates whether profiling data exists for the stage.
+
+- **`stageData`** *(optional)*: Detailed data of the stage. `null` if none.
+
+
+### `ExecutionStages`
+
+```typescript
+export type ExecutionStages = {
+  evmMerkleMsgCollected: ProfilingStageData;
+  evmMerkleRootSet: ProfilingStageData;
+  evmMerkleMsgExecuted: ProfilingStageData;
+  tvmMerkleMsgCollected: ProfilingStageData;
+  tvmMerkleMsgExecuted: ProfilingStageData;
+};
+```
+
+Represents the profiling data for all execution stages within an operation.
+
+- **`evmMerkleMsgCollected`**: Profiling data for the EVM Merkle message collection stage.
+- **`evmMerkleRootSet`**: Profiling data for setting the EVM Merkle root.
+- **`evmMerkleMsgExecuted`**: Profiling data for executing the EVM Merkle message.
+- **`tvmMerkleMsgCollected`**: Profiling data for the TVM Merkle message collection stage.
+- **`tvmMerkleMsgExecuted`**: Profiling data for executing the TVM Merkle message.
+
+
+### `ExecutionStagesByOperationId`
+
+```typescript
+export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
+```
+
+Maps each `operationId` to its respective `executionStages`.
+
+
+### `StatusInfosByOperationId`
+
+```typescript
+export type StatusInfosByOperationId = Record<string, StatusInfo>;
+```
+
+Maps each `operationId` to its respective `statusInfo`.
+
+
+### `OperationIdsByShardsKeyResponse`
+
+Maps each `operationId[]` to its respective `shardsKey`.
+
+
+### `UserWalletBalanceExtended`
+
+Provides extended information about a user's Jetton balance.
+
+#### **Union Types**
+
+- **If the Jetton wallet exists:**
+  ```typescript
+  {
+      exists: true;
+      amount: number;       // The formatted balance of the Jetton token.
+      rawAmount: bigint;    // The raw balance of the Jetton token.
+      decimals: number;     // The number of decimals for the Jetton token.
+  }
+  ```
+
+- **If the Jetton wallet does not exist:**
+  ```typescript
+  {
+      exists: false;
+  }
+  ```
+
+
+- **`exists`**: Indicates whether the Jetton wallet exists.
+- **`amount`** *(optional)*: The formatted balance of the Jetton token. Present only if `exists` is `true`.
+- **`rawAmount`** *(optional)*: The raw balance of the Jetton token. Present only if `exists` is `true`.
+- **`decimals`** *(optional)*: The number of decimals for the Jetton token. Present only if `exists` is `true`.
+
+
+### `EVMSimulationResults`
+
+```typescript
+export type EVMSimulationResults = {
+  estimatedGas: bigint;
+  estimatedJettonFeeAmount: string;
+  feeParams: {
+    currentBaseFee: string;
+    isEip1559: boolean;
+    suggestedGasPrice: string;
+    suggestedGasTip: string;
+  };
+  message: string;
+  outMessages:
+          | {
+    callerAddress: string;
+    operationId: string;
+    payload: string;
+    queryId: number;
+    targetAddress: string;
+    tokensBurned: {
+      amount: string;
+      tokenAddress: string;
+    }[];
+    tokensLocked: {
+      amount: string;
+      tokenAddress: string;
+    }[];
+  }[]
+          | null;
+  simulationError: string;
+  simulationStatus: boolean;
+  debugInfo: {
+    from: string;
+    to: string;
+    callData: string;
+    blockNumber: number;
+  };
+};
+```
+Provides EVM simulation results.
+
+  - **`estimatedGas`**: The estimated gas required for the message.
+  - **`estimatedJettonFeeAmount`**: The estimated fee amount in Jettons.
+  - **`feeParams`**: The parameters related to the fee.
+    - **`currentBaseFee`**: The current base fee.
+    - **`isEip1559`**: Indicates if EIP-1559 is applied.
+    - **`suggestedGasPrice`**: The suggested gas price.
+    - **`suggestedGasTip`**: The suggested gas tip.
+  - **`message`**: The message details.
+  - **`outMessages`** *(optional)*: The outgoing messages. Maybe `null` if there is a bridge operation.
+    - **`callerAddress`**: The address of the caller.
+    - **`operationId`**: The operation ID.
+    - **`payload`**: The payload.
+    - **`queryId`**: The query ID.
+    - **`targetAddress`**: The target address.
+    - **`tokensBurned`**: The tokens burned.
+      - **`amount`**: The amount of tokens burned.
+      - **`tokenAddress`**: The address of the token.
+    - **`tokensLocked`**: The tokens locked.
+  - **`simulationError`**: Any error encountered during the simulation.
+  - **`simulationStatus`**: The status of the simulation.
+  - **`debugInfo`**: Debugging information.
+    - **`from`**: The sender address.
+    - **`to`**: The recipient address.
+    - **`callData`**: The call data.
+    - **`blockNumber`**: The block number.
 ---
 
 ## Usage
 
 ```typescript
-import { TacSdk } from 'tac-sdk';
+import { TacSdk } from '@tonappchain/sdk';
 import { TonConnectUI } from '@tonconnect/ui';
 import { ethers } from 'ethers';
 

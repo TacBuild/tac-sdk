@@ -32,13 +32,14 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
         : null;
 
     const json = JSON.stringify({
-        evm_call: {
+        evmCall: {
             target: evmProxyMsg.evmTargetAddress,
-            method_name: formatSolidityMethodName(evmProxyMsg.methodName),
+            methodName: formatSolidityMethodName(evmProxyMsg.methodName),
             arguments: evmArguments,
+            gasLimit: Number(evmProxyMsg.gasLimit),
         },
-        sharded_id: transactionLinker.shardedId,
-        shard_count: transactionLinker.shardCount,
+        shardsKey: transactionLinker.shardsKey,
+        shardCount: transactionLinker.shardCount,
     });
 
     return beginCell().storeStringTail(json).endCell();
@@ -60,7 +61,7 @@ export function generateTransactionLinker(caller: string, shardCount: number): T
     return {
         caller: Address.normalize(caller),
         shardCount,
-        shardedId: String(random.randomNumber),
+        shardsKey: String(random.randomNumber),
         timestamp: random.timestamp,
     };
 }
@@ -81,18 +82,18 @@ export function validateEVMAddress(address: string): void {
 
 export function calculateEVMTokenAddress(
     abiCoder: AbiCoder,
+    tokenUtilsAddress: string,
+    crossChainLayerTokenBytecode: string,
     crossChainLayerAddress: string,
-    crossChainLayerBytecode: string,
-    settingsAddress: string,
     l1Address: string,
 ): string {
     const salt = ethers.keccak256(ethers.solidityPacked(['string'], [l1Address]));
     const initCode = ethers.solidityPacked(
         ['bytes', 'bytes'],
-        [crossChainLayerBytecode, abiCoder.encode(['address'], [settingsAddress])],
+        [crossChainLayerTokenBytecode, abiCoder.encode(['address'], [crossChainLayerAddress])],
     );
     const initCodeHash = ethers.keccak256(initCode);
-    return ethers.getCreate2Address(crossChainLayerAddress, salt, initCodeHash);
+    return ethers.getCreate2Address(tokenUtilsAddress, salt, initCodeHash);
 }
 
 const snakeToCamel = (str: string): string => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -130,4 +131,13 @@ export const calculateAmount = (rawAmount: bigint, decimals: number): number => 
     const fractionalPart = rawStr.slice(-decimals).replace(/0+$/, '');
 
     return Number(fractionalPart ? `${integerPart}.${fractionalPart}` : integerPart);
+};
+
+export const toCamelCaseTransformer = (data: any) => {
+    try {
+        const parsedData = JSON.parse(data);
+        return convertKeysToCamelCase(parsedData);
+    } catch {
+        return data;
+    }
 };

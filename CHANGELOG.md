@@ -2,13 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.4.2] - 2025-02-05
+## [0.5.0] - 2025-03-03
+
+### Changed
+
+- **changed package tac-sdk -> @tonappchain/sdk**
+
+- calculateEVMTokenAddress function now requires tokenUtils address as deployer and crossChainLayer address as constructor params
+
+- Rename shardedId -> shardsKey
+
+- A `gasLimit` field has been added to `EvmProxyMsg` (defaulting to undefined, which will be set through simulation in this case)
+
+- Renamed json properties in `buildEvmDataCell`
+
+- Renamed urls in `OperationTracker` 
 
 ## Added
 
+- `options` parameter in `getSender` method to modify W5 and Highload V3 wallets
+
+- `customLiteSequencerEndpoints` parameter in `SDKParams` to specify custom lite sequencer endpoints
+
+- `simulateEVMMessage` method in `TacSdk` to simulate EVM message execution on TAC side
+
+    ```typescript
+        async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults>
+    ```
+
+- `getOperationStatuses` method in `OperationTracker` retrieves the statuses of multiple operations based on their respective `operationId's`
+
+- `getOperationIdsByShardsKeys` method in `OperationTracker` retrieves the `operationId's` based on their respective `shardsKey's`
+
+- `getStageProfilings` method in `OperationTracker` retrieves the `ExecutionStages's` based on their respective `operationId's`
+
+- `getStageProfiling` method in `OperationTracker` retrieves the `ExecutionStages` for `operationId`
+
+- Added a pre-check before sending to the blockchain to ensure the transaction will execute successfully on the TAC side using the `simulateEVMMessage` method
+
+- support for highload V3 wallet as a sender
+
+## [0.4.2] - 2025-02-05
+
+### Added
+
 - Contract opener `orbsOpener4` that uses new vesrion TON enpoints
 
-## Changed 
+### Changed 
 
 - `orbsOpener4` set as default in SDK
 

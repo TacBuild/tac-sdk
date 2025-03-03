@@ -1,4 +1,4 @@
-import { address } from '@ton/core';
+import { address } from '@ton/ton';
 
 import { TacSdk } from '../src';
 import { Network, SDKParams } from '../src';
