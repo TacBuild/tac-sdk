@@ -12,7 +12,7 @@ import {
     storeMessageRelaxed,
     storeOutList,
     toNano,
-} from '@ton/core';
+} from '@ton/ton';
 import { sign } from 'ton-crypto';
 import { HighloadQueryId } from './HighloadQueryId';
 import { WalletInstance } from '../sender';

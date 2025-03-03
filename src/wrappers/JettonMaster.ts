@@ -1,6 +1,4 @@
-import type { Contract, ContractProvider } from '@ton/core';
-import { Address, beginCell, Cell, contractAddress } from '@ton/core';
-import { fromNano } from '@ton/ton';
+import { Address, Cell, fromNano, Contract, beginCell, contractAddress, ContractProvider } from '@ton/ton';
 
 import type { JettonExtendedMetadata } from './ContentUtils';
 import { readJettonMetadata } from './ContentUtils';
