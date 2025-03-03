@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **changed package tac-sdk -> @tonappchain/sdk**
+
 - calculateEVMTokenAddress function now requires tokenUtils address as deployer and crossChainLayer address as constructor params
 
 - Rename shardedId -> shardsKey
