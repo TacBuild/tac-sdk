@@ -26,6 +26,21 @@ export enum Network {
     Mainnet = 'mainnet',
 }
 
+
+export enum BlockchainType {
+	TAC = "TAC",
+	TON = "TON",
+}
+
+export enum OperationType {
+	PENDING     = "PENDING",
+	TON_TAC_TON = "TON-TAC-TON",
+	ROLLBACK    = "ROLLBACK",
+	TON_TAC     = "TON-TAC",
+	TAC_TON     = "TAC-TON",
+	UNKNOWN     = "UNKNOWN",
+}
+
 export type TACParams = {
     /**
      * Provider for TAC side. Use your own provider for tests or to increase ratelimit
@@ -152,24 +167,25 @@ export type TransactionLinker = {
     sendTransactionResult?: unknown;
 };
 
-export type EVMSimulationRequest = {
-    evmCallParams: {
+export type TACSimulationRequest = {
+    tacCallParams: {
         arguments: string;
         methodName: string;
         target: string;
     };
     extraData: string;
     feeAssetAddress: string;
-    shardsKey: number;
-    tvmAssets: {
+    shardsKey: string;
+    tonAssets: {
         amount: string;
         tokenAddress: string;
     }[];
-    tvmCaller: string;
+    tonCaller: string;
 };
 
 export type TransactionData = {
     hash: string;
+    blockchainType: BlockchainType;
 };
 
 export type NoteInfo = {
@@ -196,11 +212,13 @@ export type ProfilingStageData = {
 };
 
 export type ExecutionStages = {
-    evmMerkleMsgCollected: ProfilingStageData;
-    evmMerkleRootSet: ProfilingStageData;
-    evmMerkleMsgExecuted: ProfilingStageData;
-    tvmMerkleMsgCollected: ProfilingStageData;
-    tvmMerkleMsgExecuted: ProfilingStageData;
+    operationType:  OperationType;
+    collectedInTAC: ProfilingStageData;
+    includedInTACConsensus: ProfilingStageData;
+    executedInTAC: ProfilingStageData;
+    collectedInTON: ProfilingStageData;
+    includedInTONConsensus: ProfilingStageData;
+    executedInTON: ProfilingStageData;
 };
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
@@ -213,7 +231,7 @@ export type OperationIds = {
 
 export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
-export type EVMSimulationResults = {
+export type TACSimulationResults = {
     estimatedGas: bigint;
     estimatedJettonFeeAmount: string;
     feeParams: {

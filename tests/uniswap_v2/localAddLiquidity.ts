@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
+import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk, OperationTracker, TransactionLinker } from '../../src';
 
 import { toNano } from '@ton/ton';
 
@@ -20,12 +20,11 @@ async function addLiquidity() {
             settingsAddress: "", // set local tac settings
         },
         TONParams: {
-            settingsAddress: "EQA4c4YONqc9nfoadZ5L5uRfnCM8KW5FRVKOYTXXFjxihnms",
+            settingsAddress: "",
         },
         customLiteSequencerEndpoints: ['http://localhost:8080'],
     };
     const tacSdk = await TacSdk.create(sdkParams);
-
     const EVM_TKA_ADDRESS = ""; // hardcode paired evm address for TKA (or calculate them)
     console.log(EVM_TKA_ADDRESS);
     const EVM_TKB_ADDRESS = ""; // hardcode paired evm address for TKB (or calculate them)
@@ -72,7 +71,6 @@ async function addLiquidity() {
             amount: amountB,
         },
     ];
-
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons);
 }
 
@@ -81,9 +79,8 @@ async function main() {
         // // send transaction
         const result = await addLiquidity();
         console.log('Transaction successful:', result);
-
         // start tracking transaction status
-        await startTracking(result, Network.Testnet, false, ['http://localhost:8080']);
+        await startTracking(result, Network.Testnet, ['http://localhost:8080']);
     } catch (error) {
         console.error('Error during transaction:', error);
     }

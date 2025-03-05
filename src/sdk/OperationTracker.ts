@@ -9,15 +9,16 @@ import {
     OperationIdsByShardsKey,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    OperationType,
 } from '../structs/Struct';
 import { operationFetchError, statusFetchError, emptyArrayError, profilingFetchError } from '../errors';
 import { toCamelCaseTransformer } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
-import { OperationIdsByShardsKeyResponse, StageProfilingResponse, StatusesResponse } from '../structs/InternalStruct';
+import { OperationIdsByShardsKeyResponse, OperationTypeResponse, StageProfilingResponse, StatusesResponse, StringResponse } from '../structs/InternalStruct';
 
 export class OperationTracker {
-    readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
-    readonly BRIDGE_TERMINATED_STATUS = 'EVMMerkleMessageExecuted';
+    readonly TERMINATED_STATUS = 'executedInTON';
+    readonly BRIDGE_TERMINATED_STATUS = 'executedInTAC';
 
     readonly network: Network;
     readonly customLiteSequencerEndpoints: string[];
@@ -32,17 +33,36 @@ export class OperationTracker {
                 : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
     }
 
-    async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
+    async getOperationType(operationId: string): Promise<OperationType> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
-                const response = await axios.get(`${endpoint}/operation-id`, {
+                const response = await axios.get<OperationTypeResponse>(`${endpoint}/operation-type`, {
                     params: {
-                        shardsKey: transactionLinker.shardsKey,
-                        caller: transactionLinker.caller,
-                        shardCount: transactionLinker.shardCount,
-                        timestamp: transactionLinker.timestamp,
-                    },
+                        operationId
+                    }
                 });
+                return response.data.response || '';
+            } catch (error) {
+                console.error(`Failed to get operationType with ${endpoint}:`, error);
+            }
+        }
+        throw operationFetchError;
+    }
+
+    async getTONOperationId(transactionLinker: TransactionLinker): Promise<string> {
+        for (const endpoint of this.customLiteSequencerEndpoints) {
+            try {
+                const requestBody = {
+                    shardsKey: transactionLinker.shardsKey,
+                    caller: transactionLinker.caller,
+                    shardCount: transactionLinker.shardCount,
+                    timestamp: transactionLinker.timestamp
+                };
+
+                const response = await axios.post<StringResponse>(
+                    `${endpoint}/ton/operation-id`, 
+                    requestBody,
+                );
                 return response.data.response || '';
             } catch (error) {
                 console.error(`Failed to get OperationId with ${endpoint}:`, error);
@@ -146,7 +166,7 @@ export class OperationTracker {
         transactionLinker: TransactionLinker,
         isBridgeOperation: boolean = false,
     ): Promise<SimplifiedStatuses> {
-        const operationId = await this.getOperationId(transactionLinker);
+        const operationId = await this.getTONOperationId(transactionLinker);
         if (operationId == '') {
             return SimplifiedStatuses.OperationIdNotFound;
         }

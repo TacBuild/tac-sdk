@@ -14,8 +14,8 @@ import {
     TACParams,
     RawAssetBridgingData,
     UserWalletBalanceExtended,
-    EVMSimulationResults,
-    EVMSimulationRequest,
+    TACSimulationResults,
+    TACSimulationRequest,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -27,7 +27,7 @@ import {
     AssetOpType,
     ShardMessage,
     ShardTransaction,
-    EVMSimulationResponse,
+    TACSimulationResponse,
 } from '../structs/InternalStruct';
 // jetton imports
 import { JettonMaster } from '../wrappers/JettonMaster';
@@ -443,28 +443,28 @@ export class TacSdk {
         transactionLinker: TransactionLinker,
         rawAssets: RawAssetBridgingData[],
     ): Promise<bigint> {
-        const evmSimulationBody: EVMSimulationRequest = {
-            evmCallParams: {
+        const evmSimulationBody: TACSimulationRequest = {
+            tacCallParams: {
                 arguments: evmProxyMsg.encodedParameters ?? '0x',
                 methodName: formatSolidityMethodName(evmProxyMsg.methodName),
                 target: evmProxyMsg.evmTargetAddress,
             },
             extraData: '0x',
             feeAssetAddress: '',
-            shardsKey: Number(transactionLinker.shardsKey),
-            tvmAssets: rawAssets.map((asset) => ({
+            shardsKey: transactionLinker.shardsKey,
+            tonAssets: rawAssets.map((asset) => ({
                 amount: asset.rawAmount.toString(),
                 tokenAddress: asset.address || '',
             })),
-            tvmCaller: transactionLinker.caller,
+            tonCaller: transactionLinker.caller,
         };
 
-        const evmSimulationResult = await this.simulateEVMMessage(evmSimulationBody);
-        if (!evmSimulationResult.simulationStatus) {
-            throw evmSimulationResult;
+        const tacSimulationResult = await this.simulateTACMessage(evmSimulationBody);
+        if (!tacSimulationResult.simulationStatus) {
+            throw tacSimulationResult;
         }
 
-        return (BigInt(evmSimulationResult.estimatedGas) * 120n) / 100n;
+        return (BigInt(tacSimulationResult.estimatedGas) * 120n) / 100n;
     }
 
     async sendCrossChainTransaction(
@@ -556,11 +556,11 @@ export class TacSdk {
         return jettonMaster.address.toString();
     }
 
-    async simulateEVMMessage(req: EVMSimulationRequest): Promise<EVMSimulationResults> {
+    async simulateTACMessage(req: TACSimulationRequest): Promise<TACSimulationResults> {
         for (const endpoint of this.liteSequencerEndpoints) {
             try {
-                const response = await axios.post<EVMSimulationResponse>(
-                    `${endpoint}/evm/simulator/simulate-message`,
+                const response = await axios.post<TACSimulationResponse>(
+                    `${endpoint}/tac/simulator/simulate-message`,
                     req,
                     {
                         transformResponse: [toCamelCaseTransformer],

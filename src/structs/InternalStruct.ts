@@ -1,12 +1,13 @@
 import { Cell } from '@ton/ton';
 import {
     ContractOpener,
-    EVMSimulationResults,
+    TACSimulationResults,
     ExecutionStagesByOperationId,
     Network,
     OperationIdsByShardsKey,
     RawAssetBridgingData,
     StatusInfosByOperationId,
+    OperationType,
 } from './Struct';
 import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
 
@@ -63,10 +64,14 @@ export type InternalTACParams = {
 
 export type ResponseBase<T> = { response: T };
 
+export type StringResponse = ResponseBase<string>;
+
+export type OperationTypeResponse = ResponseBase<OperationType>;
+
 export type StatusesResponse = ResponseBase<StatusInfosByOperationId>;
 
 export type OperationIdsByShardsKeyResponse = ResponseBase<OperationIdsByShardsKey>;
 
 export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
 
-export type EVMSimulationResponse = ResponseBase<EVMSimulationResults>;
+export type TACSimulationResponse = ResponseBase<TACSimulationResults>;

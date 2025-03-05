@@ -1,4 +1,4 @@
-import { ExecutionStages, Network, TransactionLinker } from '../structs/Struct';
+import { ExecutionStages, Network, TransactionLinker, OperationType } from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
 import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
@@ -6,7 +6,6 @@ import { sleep } from './Utils';
 export async function startTracking(
     transactionLinker: TransactionLinker,
     network: Network,
-    isBridgeOperation: boolean = false,
     customLiteSequencerEndpoints?: string[],
 ): Promise<void> {
     const tracker = new OperationTracker(network, customLiteSequencerEndpoints);
@@ -32,37 +31,32 @@ export async function startTracking(
         }
 
         console.log();
-        const finalStatus = isBridgeOperation ? tracker.BRIDGE_TERMINATED_STATUS : tracker.TERMINATED_STATUS;
-        if (currentStatus == finalStatus) {
-            break;
-        }
 
         if (operationId == '') {
             console.log('request operationId');
 
             try {
-                operationId = await tracker.getOperationId(transactionLinker);
-            } catch {
+                operationId = await tracker.getTONOperationId(transactionLinker);
+            } catch (err) {
                 console.log('get operationId error');
             }
         } else {
             console.log('request operationStatus');
 
             try {
-                const status = await tracker.getOperationStatuses([operationId]);
-                currentStatus = status[operationId].stage;
+                const status = await tracker.getOperationStatus(operationId);
+                currentStatus = status.stage;
+            } catch (err) {
+                console.log('get status error:', err);
+            }
 
-                if (!status[operationId].success) {
-                    if (status[operationId].transactions != null && status[operationId].transactions!.length > 0) {
-                        console.log('transactionHash: ', status[operationId].transactions![0]);
-                    }
-                    console.log(status[operationId]);
-                    ok = false;
-                    errorMessage = status[operationId].note != null ? status[operationId].note!.errorName : '';
+            try {
+                const operationType = await tracker.getOperationType(operationId)
+                if (operationType != OperationType.PENDING && operationType != OperationType.UNKNOWN) {
                     break;
                 }
             } catch (err) {
-                console.log('get status error:', err);
+                console.log('failed to get operation type:', err)
             }
 
             console.log('operationId:', operationId);
@@ -72,17 +66,19 @@ export async function startTracking(
         await sleep(10 * 1000);
     }
 
+    console.log("Tracking finished")
     if (!ok) {
-        console.log(`Finished with error: ${errorMessage!}`);
-    } else {
-        console.log('Tracking successfully finished');
+        console.log(errorMessage!);
     }
+    
     const stages = await tracker.getStageProfiling(operationId);
     formatExecutionStages(stages);
 }
 
 const formatExecutionStages = (stages: ExecutionStages) => {
-    const tableData = Object.entries(stages).map(([stage, data]) => ({
+    const { operationType, ...stagesData } = stages;
+
+    const tableData = Object.entries(stagesData).map(([stage, data]) => ({
         Stage: stage,
         Exists: data.exists ? 'Yes' : 'No',
         Success: data.exists && data.stageData ? (data.stageData.success ? 'Yes' : 'No') : '-',
@@ -104,5 +100,6 @@ const formatExecutionStages = (stages: ExecutionStages) => {
             data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalBytesError : '-',
     }));
 
+    console.log(`Operation Type: ${operationType}`);
     console.table(tableData);
 };
