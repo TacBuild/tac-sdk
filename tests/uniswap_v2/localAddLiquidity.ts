@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk, OperationTracker, TransactionLinker } from '../../src';
+import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
 
 import { toNano } from '@ton/ton';
 
