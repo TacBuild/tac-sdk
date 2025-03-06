@@ -17,10 +17,10 @@ async function addLiquidity() {
         network: Network.Testnet,
         TACParams: {
             provider: new ethers.JsonRpcProvider("https://turin.rpc.tac.build/"),
-            settingsAddress: "0x3092BA969D20Ef5DfF91EC2f605A79D98b5D1F11", // set local tac settings
+            settingsAddress: "", // set local tac settings
         },
         TONParams: {
-            settingsAddress: "EQAYzWfw-A2gqK98cjNTp33Widnpr7p8JbxyUUqnf4zoYTj_",
+            settingsAddress: "",
         },
         customLiteSequencerEndpoints: ['http://localhost:8080'],
     };
