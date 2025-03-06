@@ -443,7 +443,7 @@ export class TacSdk {
         transactionLinker: TransactionLinker,
         rawAssets: RawAssetBridgingData[],
     ): Promise<bigint> {
-        const evmSimulationBody: TACSimulationRequest = {
+        const tacSimulationBody: TACSimulationRequest = {
             tacCallParams: {
                 arguments: evmProxyMsg.encodedParameters ?? '0x',
                 methodName: formatSolidityMethodName(evmProxyMsg.methodName),
@@ -459,7 +459,7 @@ export class TacSdk {
             tonCaller: transactionLinker.caller,
         };
 
-        const tacSimulationResult = await this.simulateTACMessage(evmSimulationBody);
+        const tacSimulationResult = await this.simulateTACMessage(tacSimulationBody);
         if (!tacSimulationResult.simulationStatus) {
             throw tacSimulationResult;
         }

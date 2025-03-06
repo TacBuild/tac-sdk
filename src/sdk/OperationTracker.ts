@@ -49,7 +49,7 @@ export class OperationTracker {
         throw operationFetchError;
     }
 
-    async getTONOperationId(transactionLinker: TransactionLinker): Promise<string> {
+    async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
                 const requestBody = {
@@ -166,7 +166,7 @@ export class OperationTracker {
         transactionLinker: TransactionLinker,
         isBridgeOperation: boolean = false,
     ): Promise<SimplifiedStatuses> {
-        const operationId = await this.getTONOperationId(transactionLinker);
+        const operationId = await this.getOperationId(transactionLinker);
         if (operationId == '') {
             return SimplifiedStatuses.OperationIdNotFound;
         }
