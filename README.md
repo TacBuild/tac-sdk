@@ -47,12 +47,12 @@ To track an operation, you first need to obtain its `operationId`. The `operatio
 
 After obtaining the `operationId`, you can check the operation’s status by using `OperationTracker.getOperationStatus(operationId: string)`. The following statuses may be returned:
 
-1. **EVMMerkleMessageCollected:** The validator has collected all events for a single sharded message. For simple transfers (e.g., a token swap), this status indicates that the message is fully gathered.
-2. **EVMMerkleRootSet:** The EVM message has been added to the Merkle tree, and subsequent roots will reflect this addition.
-3. **EVMMerkleMessageExecuted:** The collected message has been executed on the EVM side.
-4. **TVMMerkleMessageCollected:** After execution on EVM, a return message event is generated, which will then be executed on the TVM side.
-5. **TVMMerkleRootSet:** The TVM message has been added to the Merkle tree, updating future roots accordingly.
-6. **TVMMerkleMessageExecuted:** The TVM Merkle message has been successfully executed on the TVM CrossChainLayer.
+1. **CollectedInTAC:** The validator has collected all events for a single sharded message. For simple transfers (e.g., a token swap), this status indicates that the message is fully gathered.
+2. **IncludedInTACConsensus:** The EVM message has been added to the Merkle tree, and subsequent roots will reflect this addition.
+3. **ExecutedInTAC:** The collected message has been executed on the EVM side.
+4. **CollectedInTON:** After execution on EVM, a return message event is generated, which will then be executed on the TVM side.
+5. **IncludedInTONConsensus:** The TVM message has been added to the Merkle tree, updating future roots accordingly.
+6. **ExecutedInTON:** The TVM Merkle message has been successfully executed on the TVM CrossChainLayer.
 
 If an issue occurs, the error message will also be included in response.
 
@@ -554,12 +554,12 @@ Retrieves the current status of an operation using its `operationId`.
 - **`Promise<StatusInfo>`**:  
   A structure representing the operation's status, including:  
   - **`stage`** (`string`):  
-    - `collectedInTAC`: Validator has collected all events for a single sharded message.  
-    - `includedInTACConsensus`: The EVM message has been added to the Merkle tree.  
-    - `executedInTAC`: The collected message has been executed on the EVM side.  
-    - `collectedInTON`: After EVM execution, a return message event is generated for TVM execution.  
-    - `includedInTONConsensus`: The TVM message has been added to the Merkle tree.  
-    - `executedInTON`: The operation is fully executed across TVM and EVM.  
+    - `collectedInTAC`.  
+    - `includedInTACConsensus`.  
+    - `executedInTAC`.  
+    - `collectedInTON`.  
+    - `includedInTONConsensus`.  
+    - `executedInTON`.  
   - **`success`** (`boolean`): Indicates if the stage completed successfully.  
   - **`timestamp`** (`number`): UNIX timestamp of the stage’s completion.  
   - **`transactions`** (`TransactionData[]`): List of transactions with details:  
@@ -616,7 +616,6 @@ const simplifiedStatus = await tracker.getSimpifiedOperationStatus(transactionLi
 console.log('Simplified Status:', simplifiedStatus);
 ```
 
----isBridgeOperation: boolean = falseisBridgeOperation: boolean = false
 ### Other functions
 #### **Method: `getOperationType(operationId: string): Promise<OperationType>`**
 
@@ -1055,13 +1054,13 @@ export type ExecutionStages = {
 ```
 
 Represents the profiling data for all execution stages within an operation.
-- **`operationType`**: Type of the operation.
-- **`collectedInTAC`**: Validator has collected all shards for a single sharded message.
-- **`includedInTACConsensus`**: The EVM message has been added to the Merkle tree.
-- **`executedInTAC`**: The collected message has been executed on the EVM side.
-- **`collectedInTON`**: After EVM execution, a rollback message event is generated for TVM execution.
-- **`includedInTONConsensus`**: The TVM rollback message has been added to the Merkle tree.
-- **`executedInTON`**: The operation is fully executed on TVM.
+- **`operationType`**.
+- **`collectedInTAC`**.
+- **`includedInTACConsensus`**.
+- **`executedInTAC`**.
+- **`collectedInTON`**.
+- **`includedInTONConsensus`**.
+- **`executedInTON`**.
 
 ### `ExecutionStagesByOperationId`
 
