@@ -164,24 +164,22 @@ export class OperationTracker {
 
     async getSimplifiedOperationStatus(
         transactionLinker: TransactionLinker,
-        isBridgeOperation: boolean = false,
     ): Promise<SimplifiedStatuses> {
         const operationId = await this.getOperationId(transactionLinker);
         if (operationId == '') {
             return SimplifiedStatuses.OperationIdNotFound;
         }
 
-        const status = await this.getOperationStatus(operationId);
+        const operationType = await this.getOperationType(operationId);
 
-        if (!status.success) {
+        if (operationType == OperationType.PENDING || operationType == OperationType.UNKNOWN) {
+            return SimplifiedStatuses.Pending
+        }
+
+        if (operationType == OperationType.ROLLBACK) {
             return SimplifiedStatuses.Failed;
         }
 
-        const finalStatus = isBridgeOperation ? this.BRIDGE_TERMINATED_STATUS : this.TERMINATED_STATUS;
-        if (status.stage == finalStatus) {
-            return SimplifiedStatuses.Successful;
-        }
-
-        return SimplifiedStatuses.Pending;
+        return SimplifiedStatuses.Successful;
     }
 }
