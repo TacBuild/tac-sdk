@@ -36,7 +36,7 @@ export async function startTracking(
             console.log('request operationId');
 
             try {
-                operationId = await tracker.getTONOperationId(transactionLinker);
+                operationId = await tracker.getOperationId(transactionLinker);
             } catch (err) {
                 console.log('get operationId error');
             }
