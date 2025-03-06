@@ -1,7 +1,17 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+## Release notes
 
+- The stage names have been changed.
+
+- Added `OperationType`.
+
+- `OperationType` added in the `ExecutionStages`
+
+- `getOperationType` method added. 
+
+- Deleted `isBridgeOperation`(now it can be determined with `getOperationType`)
 ## [0.5.0] - 2025-03-03
 
 ### Changed
