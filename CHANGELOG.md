@@ -5,11 +5,11 @@ All notable changes to this project will be documented in this file.
 
 - The stage names have been changed.
 
-- Added `OperationType`.
+- Added `OperationType` struct.
 
 - `OperationType` added in the `ExecutionStages`
 
-- `getOperationType` method added. 
+- `getOperationType` method added. (`PENDIN`, `TON_TAC_TON`...)
 
 - Deleted `isBridgeOperation`(now it can be determined with `getOperationType`)
 ## [0.5.0] - 2025-03-03
