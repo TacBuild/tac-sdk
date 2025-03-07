@@ -47,7 +47,7 @@ To track an operation, you first need to obtain its `operationId`. The `operatio
 
 After obtaining the `operationId`, you can check the operation’s status by using `OperationTracker.getOperationStatus(operationId: string)`. The following statuses may be returned:
 
-1. **CollectedInTAC:** The validator has collected all events for a single sharded message. For simple transfers (e.g., a token swap), this status indicates that the message is fully gathered.
+1. **CollectedInTAC:** The sequencer has collected all events for a single sharded message. For simple transfers (e.g., a token swap), this status indicates that the message is fully gathered.
 2. **IncludedInTACConsensus:** The EVM message has been added to the Merkle tree, and subsequent roots will reflect this addition.
 3. **ExecutedInTAC:** The collected message has been executed on the EVM side.
 4. **CollectedInTON:** After execution on EVM, a return message event is generated, which will then be executed on the TVM side.
@@ -159,6 +159,7 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - **`evmTargetAddress`**: Target address on the EVM network.
   - **`methodName`** *(optional)*: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
   - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method. You need to specify all arguments except the first one (TACHeader bytes). The TACHeader logic will be specified below
+  - **`forceSend`** *(optional)*: Parameter indicates that the transaction should be sent even if simulation returned an error. Default `false`
 
 - **`sender`**: A `SenderAbstraction` object, such as:
   - **`TonConnectSender`**: For TonConnect integration.
@@ -553,31 +554,25 @@ Retrieves the current status of an operation using its `operationId`.
 #### **Returns**:  
 - **`Promise<StatusInfo>`**:  
   A structure representing the operation's status, including:  
-  - **`stage`** (`string`):  
-    - `collectedInTAC`.  
-    - `includedInTACConsensus`.  
-    - `executedInTAC`.  
-    - `collectedInTON`.  
-    - `includedInTONConsensus`.  
-    - `executedInTON`.  
+  - **`stage`** A value of type `StageName` (enum) which can be one of:
+    - `StageName.CollectedInTAC` ('collectedInTAC')
+    - `StageName.IncludedInTACConsensus` ('includedInTACConsensus') 
+    - `StageName.ExecutedInTAC` ('executedInTAC')
+    - `StageName.CollectedInTON` ('collectedInTON')
+    - `StageName.IncludedInTONConsensus` ('includedInTONConsensus')
+    - `StageName.ExecutedInTON` ('executedInTON')
   - **`success`** (`boolean`): Indicates if the stage completed successfully.  
   - **`timestamp`** (`number`): UNIX timestamp of the stage’s completion.  
-  - **`transactions`** (`TransactionData[]`): List of transactions with details:  
-    ```ts
-    {
-      hash: string; // Transaction hash  
-      blockchainType: BlockchainType; // TAC, TON.  
-    }
-    ```  
-  - **`note`** (`NoteInfo | null`): Error/debug information (if applicable):  
-    ```ts
-    {
-      content: string; 
-      errorName: string;
-      internalMsg: string; 
-      internalBytesError: string; 
-    }
-    ```  
+  - **`transactions`**: An array of `TransactionData` objects or null. Each transaction contains:
+    - **`hash`**: A string with the transaction hash.
+    - **`blockchainType`**: A `BlockchainType` indicating the blockchain (`TAC`, `TON`).
+  - **`note`**: An object of type `NoteInfo` or null containing error/debug information:
+    - **`content`**: A string with additional details.
+    - **`errorName`**: A string representing the error name.
+    - **`internalMsg`**: A string with an internal message.
+    - **`internalBytesError`**: A string with internal error details in bytes.
+
+
 #### **Usage**:
   ```typescript
   const tracker = new OperationTracker(
@@ -625,7 +620,14 @@ Retrieves the current type of operation using its `operationId`.
   - `operationId`: The identifier obtained from `getOperationType`.
 
 #### **Returns**:  
-- **`Promise<OperationType>`**:  Returns operationType
+- **`Promise<OperationType>`**:  
+- A type from the `operationType` enum:
+  - **`PENDING`**: The operation is still in progress.
+  - **`TON_TAC_TON`**: The operation has successfully completed in TON-TAC-TON.
+  - **`ROLLBACK`**: The operation failed and there was an asset rollback.
+  - **`TON_TAC`**: The operation has successfully completed in TON-TAC.
+  - **`TAC_TON`**: The operation has successfully completed in TAC-TON.
+  - **`UNKNOWN`**: unknown operation type.
 
 
 #### Method: `getOperationIdsByShardsKeys(shardsKeys: string[], caller: string): Promise<OperationIdsByShardsKey>`
@@ -686,16 +688,22 @@ Fetches the current status information for multiple operations based on their op
 
 Track the execution of crosschain operation with `startTracking` method
 
-#### Method: `async startTracking(transactionLinker: TransactionLinker, network: network): Promise<void>`
+#### Method: `async function startTracking(transactionLinker: TransactionLinker, network: Network, customLiteSequencerEndpoints?: string[], delay: number = 10, maxIterationCount = MAX_ITERATION_COUNT, returnValue: boolean = false): Promise<void | { profilingData: ExecutionStages; tableData: ExecutionStagesTableData[]; }>`
 
 #### **Parameters**:
   - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainTransaction` function.
   - `network`: TON network (`Network` type).
   - `customLiteSequencerEndpoints` *(optional)*: specify custom lite sequencer API URL for sending requests there.
+  - `delay` *(optional)*: specify custom delay after requests there.
+  - `maxIterationCount` *(optional)*: specify custom max iteration count there.
+  - `returnValue` *(optional)*: specify whether to return the data to you after tracking. When `false` will write to the console. Default is `false`
 
 #### **Returns**:
-- void:
-  - Will stop requesting status once the final status of crosschain operation has been reached.
+- Will stop requesting status once the final status of crosschain operation has been reached.
+- if returnValue is `false` return `Promise<void>`
+- if `true` return `Promise<TrackingOperationResult>` with value:
+  - **`profilingData`**: `ExecutionStages` - execution stages profiling data;
+  - **`tableData`**: `ExecutionStagesTableData[]` - execution stages profiling data in table format;
 
 #### **Possible exceptions**
 
@@ -910,31 +918,45 @@ export type TACSimulationRequest = {
 };
 ```
 
-Represents a request to simulate an EVM message.
+Represents a request to simulate an TAC message.
 
-- **`evmCallParams`**: An object containing parameters for the EVM call.
-  - **`arguments`**: Encoded arguments for the EVM method.
-  - **`methodName`**: Name of the method to be called on the target EVM contract.
-  - **`target`**: The target address on the EVM network.
-- **`extraData`**: Additional non-root data to be included in EVM call.
+- **`tacCallParams`**: An object containing parameters for the TAC call.
+  - **`arguments`**: Encoded arguments for the TAC method.
+  - **`methodName`**: Name of the method to be called on the target TAC contract.
+  - **`target`**: The target address on the TAC network.
+- **`extraData`**: Additional non-root data to be included in TAC call.
 - **`feeAssetAddress`**: Address of the asset used to cover fees; empty string if using native TON.
 - **`shardsKey`**: Key identifying shards for the operation.
-- **`tvmAssets`**: An array of assets involved in the transaction.
+- **`tonAssets`**: An array of assets involved in the transaction.
   - **`amount`**: Amount of the asset to be transferred.
   - **`tokenAddress`**: Address of the token.
-- **`tvmCaller`**: Address of the caller in the TVM.
+- **`tonCaller`**: Address of the caller in the TON.
+
+
+### `BlockchainType`
+
+```typescript
+export enum BlockchainType {
+    TAC = 'TAC',
+    TON = 'TON',
+}
+```
+
+Represents blockchain type.
 
 
 ### `TransactionData`
 
 ```typescript
 export type TransactionData = {
-    hash: string;
+  hash: string;
+  blockchainType: BlockchainType;
 };
 ```
 
 Represents transaction details.
 - **`hash`**: The hash of the transaction.
+- **`blockchainType`**: The type of the blockchain (`TON` or `TAC`).
 
 
 ### `NoteInfo`
@@ -954,6 +976,22 @@ Provides detailed information about any notes or errors encountered during opera
 - **`errorName`**: Name of the error.
 - **`internalMsg`**: Internal message related to the note or error.
 - **`internalBytesError`**: Detailed bytes error information.
+
+
+### `StageName`
+
+```typescript
+export enum StageName {
+  CollectedInTAC = 'collectedInTAC',
+  IncludedInTACConsensus = 'includedInTACConsensus',
+  ExecutedInTAC = 'executedInTAC',
+  CollectedInTON = 'collectedInTON',
+  IncludedInTONConsensus = 'includedInTONConsensus',
+  ExecutedInTON = 'executedInTON',
+}
+```
+
+Represents stage in TAC protocol.
 
 
 ### `StageData`
@@ -981,17 +1019,16 @@ Represents data for a specific stage of operation execution.
 
 ```typescript
 export type StatusInfo = StageData & {
-  stage: string;
+  stage: StageName;
 };
 ```
 
 Combines `StageData` with an additional stage identifier.
 
-- **`stage`**: Name of the current stage.
-
+- **`stage`**: Current stage in `StageName` enum.
 - **Other Properties from `StageData`**
 
-### `ProfilingStageData`
+### `OperationType`
 
 ```typescript
 export enum OperationType {
@@ -1007,18 +1044,13 @@ export enum OperationType {
 Provides information about transaction.
 
 - **`PENDING`**: The transaction is still processing and has not yet reached a final state.
-
 - **`TON_TAC_TON`**:  
   The transaction succeeded fully:  
   - Executed on **TAC** (successfully interacted with dapp)
-  - Processed a `roundTrip` message (e.g., a cross-chain callback - bridging back received assets).  
-
+  - Processed a `roundTrip` message (e.g., a cross-chain callback - bridging back received assets).
 - **`ROLLBACK`**: The transaction failed on TAC, and funds were rolled back to their original on TON (e.g., tokens returned to the sender).
-
 - **`TON_TAC`**: The transaction was fully executed on TAC. (successfully interacted with dapp or assets were bridged)
-
 - **`TAC_TON`**: The cross-chain bridge operation from TAC to TON has completed successfully (e.g., tokens bridged to TON).
-
 - **`UNKNOWN`**: The status could not be determined (e.g., due to network errors, invalid operation ID, or outdated data).
 
 
@@ -1035,7 +1067,6 @@ export type ProfilingStageData = {
 Provides profiling information for a specific stage.
 
 - **`exists`**: Indicates whether profiling data exists for the stage.
-
 - **`stageData`** *(optional)*: Detailed data of the stage. `null` if none.
 
 
@@ -1043,14 +1074,9 @@ Provides profiling information for a specific stage.
 
 ```typescript
 export type ExecutionStages = {
-  operationType:  OperationType;
-  collectedInTAC: ProfilingStageData;
-  includedInTACConsensus: ProfilingStageData;
-  executedInTAC: ProfilingStageData;
-  collectedInTON: ProfilingStageData;
-  includedInTONConsensus: ProfilingStageData;
-  executedInTON: ProfilingStageData;
-};
+  operationType: OperationType;
+} & Record<StageName, ProfilingStageData>;
+
 ```
 
 Represents the profiling data for all execution stages within an operation.
@@ -1061,6 +1087,25 @@ Represents the profiling data for all execution stages within an operation.
 - **`collectedInTON`**.
 - **`includedInTONConsensus`**.
 - **`executedInTON`**.
+
+### `ExecutionStagesTableData`
+
+```typescript
+export type ExecutionStagesTableData = {
+  Stage: string;
+  Exists: string;
+  Success: string;
+  Timestamp: string;
+  Transactions: string;
+  NoteContent: string;
+  ErrorName: string;
+  InternalMsg: string;
+  BytesError: string;
+};
+```
+
+Represents the profiling data for all execution stages in table format.
+
 
 ### `ExecutionStagesByOperationId`
 

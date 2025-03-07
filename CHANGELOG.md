@@ -9,6 +9,8 @@ All notable changes to this project will be documented in this file.
 - `OperationType` type
 
 - `ExecutionStagesTableData` type
+- 
+- `TrackingOperationResult` type
 
 - `StageName` enum
 

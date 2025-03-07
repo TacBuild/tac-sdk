@@ -182,6 +182,15 @@ export type TACSimulationRequest = {
     tonCaller: string;
 };
 
+export enum StageName {
+    CollectedInTAC = 'collectedInTAC',
+    IncludedInTACConsensus = 'includedInTACConsensus',
+    ExecutedInTAC = 'executedInTAC',
+    CollectedInTON = 'collectedInTON',
+    IncludedInTONConsensus = 'includedInTONConsensus',
+    ExecutedInTON = 'executedInTON',
+}
+
 export type TransactionData = {
     hash: string;
     blockchainType: BlockchainType;
@@ -210,15 +219,6 @@ export type ProfilingStageData = {
     stageData: StageData | null;
 };
 
-export enum StageName {
-    CollectedInTAC = 'collectedInTAC',
-    IncludedInTACConsensus = 'includedInTACConsensus',
-    ExecutedInTAC = 'executedInTAC',
-    CollectedInTON = 'collectedInTON',
-    IncludedInTONConsensus = 'includedInTONConsensus',
-    ExecutedInTON = 'executedInTON',
-}
-
 export type ExecutionStages = {
     operationType: OperationType;
 } & Record<StageName, ProfilingStageData>;
@@ -233,6 +233,11 @@ export type ExecutionStagesTableData = {
     ErrorName: string;
     InternalMsg: string;
     BytesError: string;
+};
+
+export type TrackingOperationResult = {
+    profilingData: ExecutionStages;
+    tableData: ExecutionStagesTableData[];
 };
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;

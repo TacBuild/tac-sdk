@@ -3,6 +3,7 @@ import {
     ExecutionStagesTableData,
     Network,
     OperationType,
+    TrackingOperationResult,
     TransactionLinker,
 } from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
@@ -16,10 +17,7 @@ export async function startTracking(
     delay: number = 10,
     maxIterationCount = MAX_ITERATION_COUNT,
     returnValue: boolean = false,
-): Promise<void | {
-    profilingData: ExecutionStages;
-    tableData: ExecutionStagesTableData[];
-}> {
+): Promise<void | TrackingOperationResult> {
     const tracker = new OperationTracker(network, customLiteSequencerEndpoints);
 
     console.log('Start tracking operation');
