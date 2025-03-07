@@ -442,6 +442,7 @@ export class TacSdk {
         evmProxyMsg: EvmProxyMsg,
         transactionLinker: TransactionLinker,
         rawAssets: RawAssetBridgingData[],
+        forceSend: boolean = false,
     ): Promise<bigint> {
         const tacSimulationBody: TACSimulationRequest = {
             tacCallParams: {
@@ -460,7 +461,11 @@ export class TacSdk {
         };
 
         const tacSimulationResult = await this.simulateTACMessage(tacSimulationBody);
+
         if (!tacSimulationResult.simulationStatus) {
+            if (forceSend) {
+                return 0n;
+            }
             throw tacSimulationResult;
         }
 
@@ -471,6 +476,7 @@ export class TacSdk {
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
         assets?: AssetBridgingData[],
+        forceSend: boolean = false,
     ): Promise<TransactionLinker> {
         const rawAssets = await this.convertAssetsToRawFormat(assets);
         const aggregatedData = await this.aggregateJettons(rawAssets);
@@ -479,7 +485,7 @@ export class TacSdk {
         const caller = sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
 
-        const gasLimit = await this.getGasLimit(evmProxyMsg, transactionLinker, rawAssets);
+        const gasLimit = await this.getGasLimit(evmProxyMsg, transactionLinker, rawAssets, forceSend);
 
         if (evmProxyMsg.gasLimit == 0n || evmProxyMsg.gasLimit == undefined) {
             evmProxyMsg.gasLimit = gasLimit;

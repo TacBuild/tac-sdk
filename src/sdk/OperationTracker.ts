@@ -14,12 +14,15 @@ import {
 import { operationFetchError, statusFetchError, emptyArrayError, profilingFetchError } from '../errors';
 import { toCamelCaseTransformer } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
-import { OperationIdsByShardsKeyResponse, OperationTypeResponse, StageProfilingResponse, StatusesResponse, StringResponse } from '../structs/InternalStruct';
+import {
+    OperationIdsByShardsKeyResponse,
+    OperationTypeResponse,
+    StageProfilingResponse,
+    StatusesResponse,
+    StringResponse,
+} from '../structs/InternalStruct';
 
 export class OperationTracker {
-    readonly TERMINATED_STATUS = 'executedInTON';
-    readonly BRIDGE_TERMINATED_STATUS = 'executedInTAC';
-
     readonly network: Network;
     readonly customLiteSequencerEndpoints: string[];
 
@@ -38,8 +41,8 @@ export class OperationTracker {
             try {
                 const response = await axios.get<OperationTypeResponse>(`${endpoint}/operation-type`, {
                     params: {
-                        operationId
-                    }
+                        operationId,
+                    },
                 });
                 return response.data.response || '';
             } catch (error) {
@@ -56,13 +59,10 @@ export class OperationTracker {
                     shardsKey: transactionLinker.shardsKey,
                     caller: transactionLinker.caller,
                     shardCount: transactionLinker.shardCount,
-                    timestamp: transactionLinker.timestamp
+                    timestamp: transactionLinker.timestamp,
                 };
 
-                const response = await axios.post<StringResponse>(
-                    `${endpoint}/ton/operation-id`, 
-                    requestBody,
-                );
+                const response = await axios.post<StringResponse>(`${endpoint}/ton/operation-id`, requestBody);
                 return response.data.response || '';
             } catch (error) {
                 console.error(`Failed to get OperationId with ${endpoint}:`, error);
@@ -162,9 +162,7 @@ export class OperationTracker {
         return currentStatus;
     }
 
-    async getSimplifiedOperationStatus(
-        transactionLinker: TransactionLinker,
-    ): Promise<SimplifiedStatuses> {
+    async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
         const operationId = await this.getOperationId(transactionLinker);
         if (operationId == '') {
             return SimplifiedStatuses.OperationIdNotFound;
@@ -173,7 +171,7 @@ export class OperationTracker {
         const operationType = await this.getOperationType(operationId);
 
         if (operationType == OperationType.PENDING || operationType == OperationType.UNKNOWN) {
-            return SimplifiedStatuses.Pending
+            return SimplifiedStatuses.Pending;
         }
 
         if (operationType == OperationType.ROLLBACK) {

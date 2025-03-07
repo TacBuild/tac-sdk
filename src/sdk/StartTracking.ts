@@ -1,4 +1,10 @@
-import { ExecutionStages, Network, TransactionLinker, OperationType } from '../structs/Struct';
+import {
+    ExecutionStages,
+    ExecutionStagesTableData,
+    Network,
+    OperationType,
+    TransactionLinker,
+} from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
 import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
@@ -7,7 +13,13 @@ export async function startTracking(
     transactionLinker: TransactionLinker,
     network: Network,
     customLiteSequencerEndpoints?: string[],
-): Promise<void> {
+    delay: number = 10,
+    maxIterationCount = MAX_ITERATION_COUNT,
+    returnValue: boolean = false,
+): Promise<void | {
+    profilingData: ExecutionStages;
+    tableData: ExecutionStagesTableData[];
+}> {
     const tracker = new OperationTracker(network, customLiteSequencerEndpoints);
 
     console.log('Start tracking operation');
@@ -17,14 +29,14 @@ export async function startTracking(
     console.log('timestamp: ', transactionLinker.timestamp);
 
     let operationId = '';
-    let currentStatus = '';
     let iteration = 0; // number of iterations
+    let operationType = '';
     let ok = true; // finished successfully
     let errorMessage: string | null;
 
     while (true) {
         ++iteration;
-        if (iteration >= MAX_ITERATION_COUNT) {
+        if (iteration >= maxIterationCount) {
             ok = false;
             errorMessage = 'maximum number of iterations has been exceeded';
             break;
@@ -41,44 +53,44 @@ export async function startTracking(
                 console.log('get operationId error');
             }
         } else {
-            console.log('request operationStatus');
+            console.log('request operationType');
 
             try {
-                const status = await tracker.getOperationStatus(operationId);
-                currentStatus = status.stage;
-            } catch (err) {
-                console.log('get status error:', err);
-            }
-
-            try {
-                const operationType = await tracker.getOperationType(operationId)
+                operationType = await tracker.getOperationType(operationId);
                 if (operationType != OperationType.PENDING && operationType != OperationType.UNKNOWN) {
                     break;
                 }
             } catch (err) {
-                console.log('failed to get operation type:', err)
+                console.log('failed to get operation type:', err);
             }
 
             console.log('operationId:', operationId);
-            console.log('status: ', currentStatus);
+            console.log('operationType:', operationType);
             console.log('time: ', Math.floor(+new Date() / 1000));
         }
-        await sleep(10 * 1000);
+        await sleep(delay * 1000);
     }
 
-    console.log("Tracking finished")
+    console.log('Tracking finished');
     if (!ok) {
         console.log(errorMessage!);
     }
-    
-    const stages = await tracker.getStageProfiling(operationId);
-    formatExecutionStages(stages);
+
+    const profilingData = await tracker.getStageProfiling(operationId);
+    const tableData = formatExecutionStages(profilingData);
+
+    if (returnValue) {
+        return { profilingData, tableData };
+    }
+
+    console.log(profilingData.operationType);
+    console.table(tableData);
 }
 
-const formatExecutionStages = (stages: ExecutionStages) => {
+function formatExecutionStages(stages: ExecutionStages): ExecutionStagesTableData[] {
     const { operationType, ...stagesData } = stages;
 
-    const tableData = Object.entries(stagesData).map(([stage, data]) => ({
+    return Object.entries(stagesData).map(([stage, data]) => ({
         Stage: stage,
         Exists: data.exists ? 'Yes' : 'No',
         Success: data.exists && data.stageData ? (data.stageData.success ? 'Yes' : 'No') : '-',
@@ -90,16 +102,11 @@ const formatExecutionStages = (stages: ExecutionStages) => {
             data.stageData.transactions.length > 0
                 ? data.stageData.transactions.map((t) => t.hash).join(', ')
                 : '-',
-        'Note Content':
-            data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.content : '-',
-        'Error Name':
-            data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.errorName : '-',
-        'Internal Msg':
+        NoteContent: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.content : '-',
+        ErrorName: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.errorName : '-',
+        InternalMsg:
             data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalMsg : '-',
-        'Bytes Error':
+        BytesError:
             data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalBytesError : '-',
     }));
-
-    console.log(`Operation Type: ${operationType}`);
-    console.table(tableData);
-};
+}

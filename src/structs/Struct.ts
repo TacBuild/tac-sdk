@@ -26,19 +26,18 @@ export enum Network {
     Mainnet = 'mainnet',
 }
 
-
 export enum BlockchainType {
-	TAC = "TAC",
-	TON = "TON",
+    TAC = 'TAC',
+    TON = 'TON',
 }
 
 export enum OperationType {
-	PENDING     = "PENDING",
-	TON_TAC_TON = "TON-TAC-TON",
-	ROLLBACK    = "ROLLBACK",
-	TON_TAC     = "TON-TAC",
-	TAC_TON     = "TAC-TON",
-	UNKNOWN     = "UNKNOWN",
+    PENDING = 'PENDING',
+    TON_TAC_TON = 'TON-TAC-TON',
+    ROLLBACK = 'ROLLBACK',
+    TON_TAC = 'TON-TAC',
+    TAC_TON = 'TAC-TON',
+    UNKNOWN = 'UNKNOWN',
 }
 
 export type TACParams = {
@@ -203,7 +202,7 @@ export type StageData = {
 };
 
 export type StatusInfo = StageData & {
-    stage: string;
+    stage: StageName;
 };
 
 export type ProfilingStageData = {
@@ -211,14 +210,29 @@ export type ProfilingStageData = {
     stageData: StageData | null;
 };
 
+export enum StageName {
+    CollectedInTAC = 'collectedInTAC',
+    IncludedInTACConsensus = 'includedInTACConsensus',
+    ExecutedInTAC = 'executedInTAC',
+    CollectedInTON = 'collectedInTON',
+    IncludedInTONConsensus = 'includedInTONConsensus',
+    ExecutedInTON = 'executedInTON',
+}
+
 export type ExecutionStages = {
-    operationType:  OperationType;
-    collectedInTAC: ProfilingStageData;
-    includedInTACConsensus: ProfilingStageData;
-    executedInTAC: ProfilingStageData;
-    collectedInTON: ProfilingStageData;
-    includedInTONConsensus: ProfilingStageData;
-    executedInTON: ProfilingStageData;
+    operationType: OperationType;
+} & Record<StageName, ProfilingStageData>;
+
+export type ExecutionStagesTableData = {
+    Stage: string;
+    Exists: string;
+    Success: string;
+    Timestamp: string;
+    Transactions: string;
+    NoteContent: string;
+    ErrorName: string;
+    InternalMsg: string;
+    BytesError: string;
 };
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;

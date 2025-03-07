@@ -1,19 +1,36 @@
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
 ## [Unreleased]
+
 ### Added
-- Added `OperationType` struct.
 
-- `OperationType` added in the `ExecutionStages`
+- `OperationType` type
 
-- `getOperationType` method added. (`PENDIN`, `TON_TAC_TON`...)
+- `ExecutionStagesTableData` type
+
+- `StageName` enum
+
+- `getOperationType` in `OperationTracker` retrieves the `OperationType` for `operationId`
 
 
 ### Changed
-- The stage names have been changed.
+
+- The stage names have been changed
+
+- `OperationType` added in the `ExecutionStages`
+
+- `ExecutionStages` structure
+
+- Added return value in method `sendShardTransaction` in `TonConnectSender`
+
+- Added `forceSend` option in method `sendCrossChainTransaction` in `TacSdk`
+
+- startTracking has been improved. Added optional parameters and return values
 
 ### Removed
+
 - Deleted `isBridgeOperation`(now it can be determined with `getOperationType`)
 
 ## [0.5.0] - 2025-03-03
