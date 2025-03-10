@@ -16,16 +16,16 @@ import { unknownWalletError } from '../errors';
 import { Network } from '../structs/Struct';
 import { DEFAULT_SUBWALLET_ID, DEFAULT_TIMEOUT, HighloadWalletV3 } from '../wrappers/HighloadWalletV3';
 
-export type WalletVersion = 'v2r1' | 'v2r2' | 'v3r1' | 'v3r2' | 'v4' | 'v5r1' | 'highloadV3';
+export type WalletVersion = 'V2R1' | 'V2R2' | 'V3R1' | 'V3R2' | 'V4' | 'V5R1' | 'HIGHLOAD_V3';
 
 export const wallets = {
-    v2r1: WalletContractV2R1,
-    v2r2: WalletContractV2R2,
-    v3r1: WalletContractV3R1,
-    v3r2: WalletContractV3R2,
-    v4: WalletContractV4,
-    v5r1: WalletContractV5R1,
-    highloadV3: HighloadWalletV3,
+    V2R1: WalletContractV2R1,
+    V2R2: WalletContractV2R2,
+    V3R1: WalletContractV3R1,
+    V3R2: WalletContractV3R2,
+    V4: WalletContractV4,
+    V5R1: WalletContractV5R1,
+    HIGHLOAD_V3: HighloadWalletV3,
 };
 
 export class SenderFactory {
@@ -36,13 +36,13 @@ export class SenderFactory {
                   version: WalletVersion;
                   mnemonic: string;
                   options?: {
-                    v5r1?: {
-                        subwalletNumber?: number;
-                    },
-                    highloadV3?: {
-                        subwalletId?: number;
-                        timeout?: number;
-                    }
+                      v5r1?: {
+                          subwalletNumber?: number;
+                      };
+                      highloadV3?: {
+                          subwalletId?: number;
+                          timeout?: number;
+                      };
                   };
               }
             | { tonConnect: TonConnectUI },
@@ -65,15 +65,19 @@ export class SenderFactory {
             timeout: undefined, // for highload v3
         };
 
-        if (params.version === 'v5r1') {
+        if (params.version === 'V5R1') {
             // manual setup of wallet id required to support wallet w5 both on mainnet and testnet
             config.walletId = {
-                networkGlobalId: params.network === Network.Testnet ? -3 : -239,
-                context: { walletVersion: 'v5r1', workchain: 0, subwalletNumber: params.options?.v5r1?.subwalletNumber ?? 0 },
+                networkGlobalId: params.network === Network.TESTNET ? -3 : -239,
+                context: {
+                    walletVersion: 'V5R1',
+                    workchain: 0,
+                    subwalletNumber: params.options?.v5r1?.subwalletNumber ?? 0,
+                },
             };
         }
 
-        if (params.version === 'highloadV3') {
+        if (params.version === 'HIGHLOAD_V3') {
             config.subwalletId = params.options?.highloadV3?.subwalletId ?? DEFAULT_SUBWALLET_ID;
             config.timeout = params.options?.highloadV3?.timeout ?? DEFAULT_TIMEOUT;
         }

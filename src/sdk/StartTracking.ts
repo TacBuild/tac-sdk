@@ -1,4 +1,11 @@
-import { ExecutionStages, Network, TransactionLinker } from '../structs/Struct';
+import {
+    ExecutionStages,
+    ExecutionStagesTableData,
+    Network,
+    OperationType,
+    TrackingOperationResult,
+    TransactionLinker,
+} from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
 import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
@@ -6,9 +13,11 @@ import { sleep } from './Utils';
 export async function startTracking(
     transactionLinker: TransactionLinker,
     network: Network,
-    isBridgeOperation: boolean = false,
     customLiteSequencerEndpoints?: string[],
-): Promise<void> {
+    delay: number = 10,
+    maxIterationCount = MAX_ITERATION_COUNT,
+    returnValue: boolean = false,
+): Promise<void | TrackingOperationResult> {
     const tracker = new OperationTracker(network, customLiteSequencerEndpoints);
 
     console.log('Start tracking operation');
@@ -18,91 +27,84 @@ export async function startTracking(
     console.log('timestamp: ', transactionLinker.timestamp);
 
     let operationId = '';
-    let currentStatus = '';
     let iteration = 0; // number of iterations
+    let operationType = '';
     let ok = true; // finished successfully
     let errorMessage: string | null;
 
     while (true) {
         ++iteration;
-        if (iteration >= MAX_ITERATION_COUNT) {
+        if (iteration >= maxIterationCount) {
             ok = false;
             errorMessage = 'maximum number of iterations has been exceeded';
             break;
         }
 
         console.log();
-        const finalStatus = isBridgeOperation ? tracker.BRIDGE_TERMINATED_STATUS : tracker.TERMINATED_STATUS;
-        if (currentStatus == finalStatus) {
-            break;
-        }
 
         if (operationId == '') {
             console.log('request operationId');
 
             try {
                 operationId = await tracker.getOperationId(transactionLinker);
-            } catch {
+            } catch (err) {
                 console.log('get operationId error');
             }
         } else {
-            console.log('request operationStatus');
+            console.log('request operationType');
 
             try {
-                const status = await tracker.getOperationStatuses([operationId]);
-                currentStatus = status[operationId].stage;
-
-                if (!status[operationId].success) {
-                    if (status[operationId].transactions != null && status[operationId].transactions!.length > 0) {
-                        console.log('transactionHash: ', status[operationId].transactions![0]);
-                    }
-                    console.log(status[operationId]);
-                    ok = false;
-                    errorMessage = status[operationId].note != null ? status[operationId].note!.errorName : '';
+                operationType = await tracker.getOperationType(operationId);
+                if (operationType != OperationType.PENDING && operationType != OperationType.UNKNOWN) {
                     break;
                 }
             } catch (err) {
-                console.log('get status error:', err);
+                console.log('failed to get operation type:', err);
             }
 
             console.log('operationId:', operationId);
-            console.log('status: ', currentStatus);
+            console.log('operationType:', operationType);
             console.log('time: ', Math.floor(+new Date() / 1000));
         }
-        await sleep(10 * 1000);
+        await sleep(delay * 1000);
     }
 
+    console.log('Tracking finished');
     if (!ok) {
-        console.log(`Finished with error: ${errorMessage!}`);
-    } else {
-        console.log('Tracking successfully finished');
+        console.log(errorMessage!);
     }
-    const stages = await tracker.getStageProfiling(operationId);
-    formatExecutionStages(stages);
+
+    const profilingData = await tracker.getStageProfiling(operationId);
+    const tableData = formatExecutionStages(profilingData);
+
+    if (returnValue) {
+        return { profilingData, tableData };
+    }
+
+    console.log(profilingData.operationType);
+    console.table(tableData);
 }
 
-const formatExecutionStages = (stages: ExecutionStages) => {
-    const tableData = Object.entries(stages).map(([stage, data]) => ({
-        Stage: stage,
-        Exists: data.exists ? 'Yes' : 'No',
-        Success: data.exists && data.stageData ? (data.stageData.success ? 'Yes' : 'No') : '-',
-        Timestamp: data.exists && data.stageData ? new Date(data.stageData.timestamp * 1000).toLocaleString() : '-',
-        Transactions:
+function formatExecutionStages(stages: ExecutionStages): ExecutionStagesTableData[] {
+    const { operationType, ...stagesData } = stages;
+
+    return Object.entries(stagesData).map(([stage, data]) => ({
+        stage: stage,
+        exists: data.exists ? 'Yes' : 'No',
+        success: data.exists && data.stageData ? (data.stageData.success ? 'Yes' : 'No') : '-',
+        timestamp: data.exists && data.stageData ? new Date(data.stageData.timestamp * 1000).toLocaleString() : '-',
+        transactions:
             data.exists &&
             data.stageData &&
             data.stageData.transactions != null &&
             data.stageData.transactions.length > 0
                 ? data.stageData.transactions.map((t) => t.hash).join(', ')
                 : '-',
-        'Note Content':
-            data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.content : '-',
-        'Error Name':
-            data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.errorName : '-',
-        'Internal Msg':
+        noteContent: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.content : '-',
+        errorName: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.errorName : '-',
+        internalMsg:
             data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalMsg : '-',
-        'Bytes Error':
+        bytesError:
             data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalBytesError : '-',
     }));
-
-    console.table(tableData);
-};
+}

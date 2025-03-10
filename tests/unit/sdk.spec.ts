@@ -191,7 +191,7 @@ describe('TacSDK', () => {
                 contractOpener: sandboxOpener(blockchain),
                 settingsAddress: settings.address.toString(),
             },
-            network: Network.Testnet,
+            network: Network.TESTNET,
         });
 
         initialState = blockchain.snapshot();
@@ -303,7 +303,7 @@ describe('TacSDK', () => {
 
             let fee = 0;
             const rawSender = await SenderFactory.getSender({
-                network: Network.Testnet,
+                network: Network.TESTNET,
                 version,
                 mnemonic: mnemonic.join(' '),
             });

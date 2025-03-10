@@ -15,15 +15,29 @@ export interface ContractOpener {
 }
 
 export enum SimplifiedStatuses {
-    Pending,
-    Failed,
-    Successful,
-    OperationIdNotFound,
+    PENDING = 'PENDING',
+    FAILED = 'FAILED',
+    SUCCESSFUL = 'SUCCESSFUL',
+    OPERATION_ID_NOT_FOUND = 'OPERATION_ID_NOT_FOUND',
 }
 
 export enum Network {
-    Testnet = 'testnet',
-    Mainnet = 'mainnet',
+    TESTNET = 'testnet',
+    MAINNET = 'mainnet',
+}
+
+export enum BlockchainType {
+    TAC = 'TAC',
+    TON = 'TON',
+}
+
+export enum OperationType {
+    PENDING = 'PENDING',
+    TON_TAC_TON = 'TON-TAC-TON',
+    ROLLBACK = 'ROLLBACK',
+    TON_TAC = 'TON-TAC',
+    TAC_TON = 'TAC-TON',
+    UNKNOWN = 'UNKNOWN',
 }
 
 export type TACParams = {
@@ -152,24 +166,34 @@ export type TransactionLinker = {
     sendTransactionResult?: unknown;
 };
 
-export type EVMSimulationRequest = {
-    evmCallParams: {
+export type TACSimulationRequest = {
+    tacCallParams: {
         arguments: string;
         methodName: string;
         target: string;
     };
     extraData: string;
     feeAssetAddress: string;
-    shardsKey: number;
-    tvmAssets: {
+    shardsKey: string;
+    tonAssets: {
         amount: string;
         tokenAddress: string;
     }[];
-    tvmCaller: string;
+    tonCaller: string;
 };
+
+export enum StageName {
+    COLLECTED_IN_TAC = 'COLLECTED_IN_TAC',
+    INCLUDED_IN_TAC_CONSENSUS = 'INCLUDED_IN_TAC_CONSENSUS',
+    EXECUTED_IN_TAC = 'EXECUTED_IN_TAC',
+    COLLECTED_IN_TON = 'COLLECTED_IN_TON',
+    INCLUDED_IN_TON_CONSENSUS = 'INCLUDED_IN_TON_CONSENSUS',
+    EXECUTED_IN_TON = 'EXECUTED_IN_TON',
+}
 
 export type TransactionData = {
     hash: string;
+    blockchainType: BlockchainType;
 };
 
 export type NoteInfo = {
@@ -187,7 +211,7 @@ export type StageData = {
 };
 
 export type StatusInfo = StageData & {
-    stage: string;
+    stage: StageName;
 };
 
 export type ProfilingStageData = {
@@ -196,11 +220,24 @@ export type ProfilingStageData = {
 };
 
 export type ExecutionStages = {
-    evmMerkleMsgCollected: ProfilingStageData;
-    evmMerkleRootSet: ProfilingStageData;
-    evmMerkleMsgExecuted: ProfilingStageData;
-    tvmMerkleMsgCollected: ProfilingStageData;
-    tvmMerkleMsgExecuted: ProfilingStageData;
+    operationType: OperationType;
+} & Record<StageName, ProfilingStageData>;
+
+export type ExecutionStagesTableData = {
+    stage: string;
+    exists: string;
+    success: string;
+    timestamp: string;
+    transactions: string;
+    noteContent: string;
+    errorName: string;
+    internalMsg: string;
+    bytesError: string;
+};
+
+export type TrackingOperationResult = {
+    profilingData: ExecutionStages;
+    tableData: ExecutionStagesTableData[];
 };
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
@@ -213,7 +250,7 @@ export type OperationIds = {
 
 export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
-export type EVMSimulationResults = {
+export type TACSimulationResults = {
     estimatedGas: bigint;
     estimatedJettonFeeAmount: string;
     feeParams: {

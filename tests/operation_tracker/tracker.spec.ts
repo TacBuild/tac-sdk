@@ -1,7 +1,19 @@
-import { Network, OperationTracker, ProfilingStageData, SimplifiedStatuses } from '../../src';
+import {
+    Network,
+    OperationTracker,
+    OperationType,
+    ProfilingStageData,
+    SimplifiedStatuses,
+    TransactionLinker,
+} from '../../src';
 
 describe('Operation Tracker', () => {
     let tracker: OperationTracker;
+
+    let operationIds: string[];
+    let shardsKeys: string[];
+    let caller: string;
+    let transactionLinker: TransactionLinker;
 
     function validateProfilingStageData(stage: ProfilingStageData) {
         expect(typeof stage).toBe('object');
@@ -20,17 +32,25 @@ describe('Operation Tracker', () => {
     }
 
     beforeAll(async () => {
-        tracker = new OperationTracker(Network.Testnet, ['http://localhost:8080']);
-    });
+        tracker = new OperationTracker(Network.TESTNET, ['http://localhost:8080']);
 
-    it('getOperationId', async () => {
-        const transactionLinker = {
-            shardsKey: '1739908831',
-            caller: 'EQDoF2OkxsI3gc5jAuxlqozN9H_SgEOUCopMa1yU4djLaXuL',
+        operationIds = [
+            '0x5205e851dd805e6cd13eda408abe4a26831a092f260df442a31828e7db581abf',
+            '0xb57a72384293ebd7966bbd183d6e3ff8daa5bee0843e45f661ee082910a35de8',
+        ];
+
+        shardsKeys = ['6232672141576619690', '1739908831'];
+        caller = 'EQDoF2OkxsI3gc5jAuxlqozN9H_SgEOUCopMa1yU4djLaXuL';
+
+        transactionLinker = {
+            shardsKey: shardsKeys[0],
+            caller: caller,
             shardCount: 2,
             timestamp: 1739908682,
         };
+    });
 
+    it('getOperationId', async () => {
         const result = await tracker.getOperationId(transactionLinker);
         expect(result).not.toBeNull();
         expect(result).not.toEqual('');
@@ -38,9 +58,6 @@ describe('Operation Tracker', () => {
     });
 
     it('getOperationIdsByShardsKeys', async () => {
-        const shardsKeys = ['6232672141576619690', '1739908831'];
-        const caller = 'EQDoF2OkxsI3gc5jAuxlqozN9H_SgEOUCopMa1yU4djLaXuL';
-
         const result = await tracker.getOperationIdsByShardsKeys(shardsKeys, caller);
         expect(result).not.toBeNull();
         expect(result).not.toEqual('');
@@ -54,10 +71,17 @@ describe('Operation Tracker', () => {
         console.log(result);
     });
 
-    it('getOperationStatus', async () => {
-        const operationId = '0x5205e851dd805e6cd13eda408abe4a26831a092f260df442a31828e7db581abf';
+    it('getOperationType', async () => {
+        const result = await tracker.getOperationType(operationIds[0]);
 
-        const result = await tracker.getOperationStatus(operationId);
+        expect(typeof result).toBe('string');
+        expect(Object.values(OperationType)).toContain(result);
+
+        console.log(result);
+    });
+
+    it('getOperationStatus', async () => {
+        const result = await tracker.getOperationStatus(operationIds[0]);
 
         expect(typeof result).toBe('object');
         expect(typeof result.success).toBe('boolean');
@@ -70,23 +94,11 @@ describe('Operation Tracker', () => {
     });
 
     it('getSimplifiedOperationStatus', async () => {
-        const transactionLinker = {
-            shardsKey: '1739908831',
-            caller: 'EQDoF2OkxsI3gc5jAuxlqozN9H_SgEOUCopMa1yU4djLaXuL',
-            shardCount: 2,
-            timestamp: 1739908682,
-        };
-
         const result = await tracker.getSimplifiedOperationStatus(transactionLinker);
         console.log(SimplifiedStatuses[result]);
     });
 
     it('getOperationStatuses', async () => {
-        const operationIds = [
-            '0x5205e851dd805e6cd13eda408abe4a26831a092f260df442a31828e7db581abf',
-            '0xb57a72384293ebd7966bbd183d6e3ff8daa5bee0843e45f661ee082910a35de8',
-        ];
-
         const result = await tracker.getOperationStatuses(operationIds);
 
         expect(Object.keys(result)).toHaveLength(operationIds.length);
@@ -105,18 +117,19 @@ describe('Operation Tracker', () => {
     });
 
     it('getStageProfiling', async () => {
-        const operationId = '0x5205e851dd805e6cd13eda408abe4a26831a092f260df442a31828e7db581abf';
-
-        const result = await tracker.getStageProfiling(operationId);
+        const result = await tracker.getStageProfiling(operationIds[0]);
 
         expect(typeof result).toBe('object');
+        expect(typeof result.operationType).toBe('string');
+        expect(Object.values(OperationType)).toContain(result.operationType);
 
         const executionStages = [
-            result.evmMerkleMsgCollected,
-            result.evmMerkleRootSet,
-            result.evmMerkleMsgExecuted,
-            result.tvmMerkleMsgCollected,
-            result.tvmMerkleMsgExecuted,
+            result.COLLECTED_IN_TAC,
+            result.INCLUDED_IN_TAC_CONSENSUS,
+            result.EXECUTED_IN_TAC,
+            result.COLLECTED_IN_TON,
+            result.INCLUDED_IN_TON_CONSENSUS,
+            result.EXECUTED_IN_TON,
         ];
 
         executionStages.forEach((stage) => {
@@ -127,24 +140,22 @@ describe('Operation Tracker', () => {
     });
 
     it('getStageProfilings', async () => {
-        const operationIds = [
-            '0x5205e851dd805e6cd13eda408abe4a26831a092f260df442a31828e7db581abf',
-            '0xb57a72384293ebd7966bbd183d6e3ff8daa5bee0843e45f661ee082910a35de8',
-        ];
-
         const result = await tracker.getStageProfilings(operationIds);
 
         expect(Object.keys(result)).toHaveLength(operationIds.length);
+        expect(typeof result.operationType).toBe('string');
+        expect(Object.values(OperationType)).toContain(result.operationType);
 
         for (const operationId of operationIds) {
             expect(typeof result[operationId]).toBe('object');
 
             const executionStages = [
-                result[operationId].evmMerkleMsgCollected,
-                result[operationId].evmMerkleRootSet,
-                result[operationId].evmMerkleMsgExecuted,
-                result[operationId].tvmMerkleMsgCollected,
-                result[operationId].tvmMerkleMsgExecuted,
+                result[operationId].COLLECTED_IN_TAC,
+                result[operationId].INCLUDED_IN_TAC_CONSENSUS,
+                result[operationId].EXECUTED_IN_TAC,
+                result[operationId].COLLECTED_IN_TON,
+                result[operationId].INCLUDED_IN_TON_CONSENSUS,
+                result[operationId].EXECUTED_IN_TON,
             ];
 
             executionStages.forEach((stage) => {

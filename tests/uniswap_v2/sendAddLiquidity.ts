@@ -8,12 +8,12 @@ const UNISWAPV2_PROXY_ADDRESS = '0x14Ad9182F54903dFD8215CA2c1aD0F9A47Ac7Edb';
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
-const WALLET_VERSION = 'v3r2';
+const WALLET_VERSION = 'V3R2';
 const TVM_MNEMONICS = '';
 
 async function addLiquidity() {
     const sdkParams: SDKParams = {
-        network: Network.Testnet,
+        network: Network.TESTNET,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
@@ -48,7 +48,7 @@ async function addLiquidity() {
     };
 
     const sender = await SenderFactory.getSender({
-        network: Network.Testnet,
+        network: Network.TESTNET,
         version: WALLET_VERSION,
         mnemonic: TVM_MNEMONICS,
     });
@@ -74,7 +74,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result, Network.Testnet);
+        await startTracking(result, Network.TESTNET);
     } catch (error) {
         console.error('Error during transaction:', error);
     }

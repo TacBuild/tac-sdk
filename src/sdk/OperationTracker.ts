@@ -9,16 +9,20 @@ import {
     OperationIdsByShardsKey,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    OperationType,
 } from '../structs/Struct';
 import { operationFetchError, statusFetchError, emptyArrayError, profilingFetchError } from '../errors';
 import { toCamelCaseTransformer } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
-import { OperationIdsByShardsKeyResponse, StageProfilingResponse, StatusesResponse } from '../structs/InternalStruct';
+import {
+    OperationIdsByShardsKeyResponse,
+    OperationTypeResponse,
+    StageProfilingResponse,
+    StatusesResponse,
+    StringResponse,
+} from '../structs/InternalStruct';
 
 export class OperationTracker {
-    readonly TERMINATED_STATUS = 'TVMMerkleMessageExecuted';
-    readonly BRIDGE_TERMINATED_STATUS = 'EVMMerkleMessageExecuted';
-
     readonly network: Network;
     readonly customLiteSequencerEndpoints: string[];
 
@@ -27,22 +31,38 @@ export class OperationTracker {
 
         this.customLiteSequencerEndpoints =
             customLiteSequencerEndpoints ??
-            (this.network === Network.Testnet
+            (this.network === Network.TESTNET
                 ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
                 : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
+    }
+
+    async getOperationType(operationId: string): Promise<OperationType> {
+        for (const endpoint of this.customLiteSequencerEndpoints) {
+            try {
+                const response = await axios.get<OperationTypeResponse>(`${endpoint}/operation-type`, {
+                    params: {
+                        operationId,
+                    },
+                });
+                return response.data.response || '';
+            } catch (error) {
+                console.error(`Failed to get operationType with ${endpoint}:`, error);
+            }
+        }
+        throw operationFetchError;
     }
 
     async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
-                const response = await axios.get(`${endpoint}/operation-id`, {
-                    params: {
-                        shardsKey: transactionLinker.shardsKey,
-                        caller: transactionLinker.caller,
-                        shardCount: transactionLinker.shardCount,
-                        timestamp: transactionLinker.timestamp,
-                    },
-                });
+                const requestBody = {
+                    shardsKey: transactionLinker.shardsKey,
+                    caller: transactionLinker.caller,
+                    shardCount: transactionLinker.shardCount,
+                    timestamp: transactionLinker.timestamp,
+                };
+
+                const response = await axios.post<StringResponse>(`${endpoint}/ton/operation-id`, requestBody);
                 return response.data.response || '';
             } catch (error) {
                 console.error(`Failed to get OperationId with ${endpoint}:`, error);
@@ -142,26 +162,22 @@ export class OperationTracker {
         return currentStatus;
     }
 
-    async getSimplifiedOperationStatus(
-        transactionLinker: TransactionLinker,
-        isBridgeOperation: boolean = false,
-    ): Promise<SimplifiedStatuses> {
+    async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
         const operationId = await this.getOperationId(transactionLinker);
         if (operationId == '') {
-            return SimplifiedStatuses.OperationIdNotFound;
+            return SimplifiedStatuses.OPERATION_ID_NOT_FOUND;
         }
 
-        const status = await this.getOperationStatus(operationId);
+        const operationType = await this.getOperationType(operationId);
 
-        if (!status.success) {
-            return SimplifiedStatuses.Failed;
+        if (operationType == OperationType.PENDING || operationType == OperationType.UNKNOWN) {
+            return SimplifiedStatuses.PENDING;
         }
 
-        const finalStatus = isBridgeOperation ? this.BRIDGE_TERMINATED_STATUS : this.TERMINATED_STATUS;
-        if (status.stage == finalStatus) {
-            return SimplifiedStatuses.Successful;
+        if (operationType == OperationType.ROLLBACK) {
+            return SimplifiedStatuses.FAILED;
         }
 
-        return SimplifiedStatuses.Pending;
+        return SimplifiedStatuses.SUCCESSFUL;
     }
 }

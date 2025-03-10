@@ -11,13 +11,13 @@ const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
 const UNISWAPV2_PROXY_ADDRESS = '0x14Ad9182F54903dFD8215CA2c1aD0F9A47Ac7Edb';
 
-const WALLET_VERSION = 'v3r2';
+const WALLET_VERSION = 'V3R2';
 const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
 
 const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, tokenAddress: string) => {
     // create TacSdk
     const sdkParams: SDKParams = {
-        network: Network.Testnet,
+        network: Network.TESTNET,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
@@ -50,7 +50,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
 
     // create sender abstraction
     const sender = await SenderFactory.getSender({
-        network: Network.Testnet,
+        network: Network.TESTNET,
         version: WALLET_VERSION,
         mnemonic,
     });
@@ -76,7 +76,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result, Network.Testnet);
+        await startTracking(result, Network.TESTNET);
     } catch (error) {
         console.error('Error during transaction:', error);
     }
