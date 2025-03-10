@@ -17,7 +17,7 @@ function intToIP(int: number) {
 }
 
 async function getDefaultLiteServers(network: Network): Promise<LiteServer[]> {
-    const url = network === Network.Testnet ? testnet.DEFAULT_LITESERVERS : mainnet.DEFAULT_LITESERVERS;
+    const url = network === Network.TESTNET ? testnet.DEFAULT_LITESERVERS : mainnet.DEFAULT_LITESERVERS;
     const resp = await fetch(url);
     const liteClients = await resp.json();
     return liteClients.liteservers;

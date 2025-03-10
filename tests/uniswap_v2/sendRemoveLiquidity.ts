@@ -10,12 +10,12 @@ const TVM_LP_ADDRESS = '';
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
-const WALLET_VERSION = 'v3r2';
+const WALLET_VERSION = 'V3R2';
 const TVM_MNEMONICS = process.env.TVM_MNEMONICS || '';
 
 async function removeLiquidity() {
     const sdkParams: SDKParams = {
-        network: Network.Testnet,
+        network: Network.TESTNET,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
@@ -46,7 +46,7 @@ async function removeLiquidity() {
     };
 
     const sender = await SenderFactory.getSender({
-        network: Network.Testnet,
+        network: Network.TESTNET,
         version: WALLET_VERSION,
         mnemonic: TVM_MNEMONICS,
     });
@@ -70,7 +70,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result, Network.Testnet);
+        await startTracking(result, Network.TESTNET);
     } catch (error) {
         console.error('Error during transaction:', error);
     }

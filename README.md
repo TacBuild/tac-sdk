@@ -47,17 +47,17 @@ To track an operation, you first need to obtain its `operationId`. The `operatio
 
 After obtaining the `operationId`, you can check the operation’s status by using `OperationTracker.getOperationStatus(operationId: string)`. The following statuses may be returned:
 
-1. **EVMMerkleMessageCollected:** The validator has collected all events for a single sharded message. For simple transfers (e.g., a token swap), this status indicates that the message is fully gathered.
-2. **EVMMerkleRootSet:** The EVM message has been added to the Merkle tree, and subsequent roots will reflect this addition.
-3. **EVMMerkleMessageExecuted:** The collected message has been executed on the EVM side.
-4. **TVMMerkleMessageCollected:** After execution on EVM, a return message event is generated, which will then be executed on the TVM side.
-5. **TVMMerkleRootSet:** The TVM message has been added to the Merkle tree, updating future roots accordingly.
-6. **TVMMerkleMessageExecuted:** The TVM Merkle message has been successfully executed on the TVM CrossChainLayer.
+1. **COLLECTED_IN_TAC:** The sequencer has collected all events for a single sharded message. For simple transfers (e.g., a token swap), this status indicates that the message is fully gathered.
+2. **INCLUDED_IN_TAC_CONSENSUS:** The EVM message has been added to the Merkle tree, and subsequent roots will reflect this addition.
+3. **EXECUTED_IN_TAC:** The collected message has been executed on the EVM side.
+4. **COLLECTED_IN_TON:** After execution on EVM, a return message event is generated, which will then be executed on the TVM side.
+5. **INCLUDED_IN_TON_CONSENSUS:** The TVM message has been added to the Merkle tree, updating future roots accordingly.
+6. **EXECUTED_IN_TON:** The TVM Merkle message has been successfully executed on the TVM CrossChainLayer.
 
 If an issue occurs, the error message will also be included in response.
 
 ### Terminal State
-- **TVMMerkleMessageExecuted**: Indicates that the operation has completed its full cycle from TVM to EVM and back.
+- **EXECUTED_IN_TON**: Indicates that the operation has completed its full cycle from TVM to EVM and back.
 
 ---
 
@@ -81,7 +81,7 @@ import { TacSdk } from '@tonappchain/sdk';
 import { Network } from '@tonappchain/sdk';
 
 const sdkParams: SDKParams = {
-  network: Network.Testnet
+  network: Network.TESTNET
   // you can also customize TAC and TON params here
 }; 
 const tacSdk = await TacSdk.create(sdkParams);
@@ -97,7 +97,7 @@ import { TacSdk, Network, liteClientOpener } from '@tonappchain/sdk';
 const liteClientServers = [<liteClientServer1>, <liteClientServer1>, ...];
 
 const sdkParams: SDKParams = {
-  network: Network.Testnet,
+  network: Network.TESTNET,
   TONParams: {
     contractOpener: await liteClientOpener({ liteservers : liteClientServers }),
   },
@@ -114,15 +114,15 @@ tacSdk.closeConnections();
 
 Optionally, you can provide @ton/ton TonClient (public endpoints will be used by default):
 
-- **Mainnet**: https://toncenter.com/api/v2/jsonRPC
-- **Testnet**: https://testnet.toncenter.com/api/v2/jsonRPC
+- **MAINNET**: https://toncenter.com/api/v2/jsonRPC
+- **TESTNET**: https://testnet.toncenter.com/api/v2/jsonRPC
 
 ```typescript
 import { TacSdk, Network } from '@tonappchain/sdk';
 import { TonClient } from '@ton/ton';
 
 const sdk = await TacSdk.create({
-  network: Network.Testnet,
+  network: Network.TESTNET,
   delay: 1,
   TONParams: {
     contractOpener: new TonClient({
@@ -159,6 +159,7 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - **`evmTargetAddress`**: Target address on the EVM network.
   - **`methodName`** *(optional)*: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
   - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method. You need to specify all arguments except the first one (TACHeader bytes). The TACHeader logic will be specified below
+  - **`forceSend`** *(optional)*: Parameter indicates that the transaction should be sent even if simulation returned an error. Default `false`
 
 - **`sender`**: A `SenderAbstraction` object, such as:
   - **`TonConnectSender`**: For TonConnect integration.
@@ -384,7 +385,7 @@ This function provides a more detailed view of a user's Jetton balance, includin
 - **`AddressError`**: invalid token address provided.
 
 
-### Function: `simulateEVMMessage`
+### Function: `simulateTACMessage`
 
 This function will simulate the EVM message on the TAC side.
 
@@ -394,21 +395,21 @@ The ability to simulate the EVM message is crucial for testing and debugging cro
 
 #### **Parameters**
 
-- **`evmCallParams`**: An object defining the EVM-specific logic:
+- **`tacCallParams`**: An object defining the EVM-specific logic:
   - **`target`**: Target address on the EVM network.
   - **`methodName`**: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
   - **`arguments`**: Encoded parameters for the EVM method.
 - **`extraData`**: Unstrusted Extra Data provided by executor.
 - **`feeAssetAddress`**: TVM Fee Asset Address, empty string for native TON.
 - **`shardedId`**: Sharded ID.
-- **`tvmAssets`**: An array of objects, each specifying the Assets details:
+- **`tonAssets`**: An array of objects, each specifying the Assets details:
   - **`tokenAddress`**: Address of the Asset.
   - **`amount`**: Amount of Assets to be transferred.
-- **`tvmCaller`**: TVM Caller wallet address.
+- **`tonCaller`**: TVM Caller wallet address.
 
 #### **Returns**
 
-- **`Promise<EVMSimulationResults>`**:
+- **`Promise<TACSimulationResults>`**:
   - A promise that resolves to detailed information about the execution of the given message, including:
     - **`estimatedGas`**: The estimated gas required for the message.
     - **`estimatedJettonFeeAmount`**: The estimated fee amount in Jettons.
@@ -464,7 +465,7 @@ The `RawSender` class allows direct interaction with the blockchain using a raw 
 ```typescript
 const walletVersion = 'v4';
 const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
-const network = Network.Testnet; // or Network.Mainnet
+const network = Network.TESTNET; // or Network.MAINNET
 const sender = await SenderFactory.getSender({
     version: walletVersion,
     mnemonic,
@@ -475,13 +476,13 @@ const sender = await SenderFactory.getSender({
 - **Supported wallet versions**:
 ```
 export type WalletVersion =
-    | "v2r1"
-    | "v2r2"
-    | "v3r1"
-    | "v3r2"
-    | "v4"
-    | "v5r1"
-    | "highloadV3";
+    | "V2R1"
+    | "V2R2"
+    | "V3R1"
+    | "V3R2"
+    | "V4"
+    | "V5R1"
+    | "HIGHLOAD_V3";
 ```
 
 - **Possible exceptions**:
@@ -509,7 +510,7 @@ To use the `OperationTracker` class, initialize it with the required parameters 
 import { OperationTracker, Network } from '@tonappchain/sdk';
 
 const tracker = new OperationTracker(
-  network: Network.Testnet,
+  network: Network.TESTNET,
   // customLiteSequencerEndpoints: ["custom.com"]
 );
 ```
@@ -533,7 +534,7 @@ Use the `getOperationId(transactionLinker)` method with the `transactionLinker` 
 #### **Usage**:
   ```typescript
   const tracker = new OperationTracker(
-        network: Network.Testnet
+        network: Network.TESTNET
   );
   const operationId = await tracker.getOperationId(transactionLinker);
   console.log('Operation ID:', operationId);
@@ -550,29 +551,35 @@ Retrieves the current status of an operation using its `operationId`.
 #### **Parameters**:
   - `operationId`: The identifier obtained from `getOperationId`.
 
-#### **Returns**:
-- **`Promise<StatusInfo>`**:
-  - A structure representing the operation's status, including:
-    - `status`:
-      - `EVMMerkleMessageCollected`: Validator has collected all events for a single sharded message.
-      - `EVMMerkleRootSet`: The EVM message has been added to the Merkle tree.
-      - `EVMMerkleMessageExecuted`: The collected message has been executed on the EVM side.
-      - `TVMMerkleMessageCollected`: After EVM execution, a return message event is generated for TVM execution.
-      - `TVMMerkleRootSet`: The TVM message has been added to the Merkle tree.
-      - `TVMMerkleMessageExecuted`: The operation is fully executed across TVM and EVM.
-    - `errorMessage`: The error message if the operation failed.
-    - `operationId`: The identifier of the operation.
-  (error requests will be processed in future version)
+#### **Returns**:  
+- **`Promise<StatusInfo>`**:  
+  A structure representing the operation's status, including:  
+  - **`stage`** A value of type `StageName` (enum) which can be one of:
+    - `StageName.COLLECTED_IN_TAC` ('COLLECTED_IN_TAC')
+    - `StageName.INCLUDED_IN_TAC_CONSENSUS` ('INCLUDED_IN_TAC_CONSENSUS') 
+    - `StageName.EXECUTED_IN_TAC` ('EXECUTED_IN_TAC')
+    - `StageName.COLLECTED_IN_TON` ('COLLECTED_IN_TON')
+    - `StageName.INCLUDED_IN_TON_CONSENSUS` ('INCLUDED_IN_TON_CONSENSUS')
+    - `StageName.EXECUTED_IN_TON` ('EXECUTED_IN_TON')
+  - **`success`** (`boolean`): Indicates if the stage completed successfully.  
+  - **`timestamp`** (`number`): UNIX timestamp of the stage’s completion.  
+  - **`transactions`**: An array of `TransactionData` objects or null. Each transaction contains:
+    - **`hash`**: A string with the transaction hash.
+    - **`blockchainType`**: A `BlockchainType` indicating the blockchain (`TAC`, `TON`).
+  - **`note`**: An object of type `NoteInfo` or null containing error/debug information:
+    - **`content`**: A string with additional details.
+    - **`errorName`**: A string representing the error name.
+    - **`internalMsg`**: A string with an internal message.
+    - **`internalBytesError`**: A string with internal error details in bytes.
+
+
 #### **Usage**:
   ```typescript
   const tracker = new OperationTracker(
-        network: Network.Testnet
+        network: Network.TESTNET
   );
-  const { status, errorMessage } = await tracker.getOperationStatus(operationId);
-  if (errorMessage) {
-      console.log('Error:', status);
-  }
-  console.log('Operation Status:', status);
+  const status = await tracker.getOperationStatus(operationId);
+  console.log('Stage:', status.stage)
   ```
 
 ---
@@ -581,21 +588,20 @@ Retrieves the current status of an operation using its `operationId`.
 
 Use the `getSimplifiedOperationStatus(transactionLinker)` method for an easy-to-interpret status.
 
-#### Method: `getSimplifiedOperationStatus(transactionLinker: TransactionLinker, isBridgeOperation: boolean = false): Promise<SimplifiedStatuses>`
+#### Method: `getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses>`
 
 Fetches a simplified operation status using the `transactionLinker`.
 
 #### **Parameters**:
   - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainTransaction` function.
-  - `isBridgeOperation` *(optional)*: If your operation should only execute on EVM side without returning to TVM set `isBridgeOperation` to **true**. TAC protocol can just bridge the assets.
 
 #### **Returns**:
 - **`Promise<SimplifiedStatuses>`**:
   - A simplified status from the `SimplifiedStatuses` enum:
-    - **`Pending`**: The operation is still in progress.
-    - **`Successful`**: The operation has successfully completed.
-    - **`OperationIdNotFound`**: The operation ID could not be found.
-    - **`Failed`**: The operation failed.
+    - **`PENDING`**: The operation is still in progress.
+    - **`SUCCESSFUL`**: The operation has successfully completed.
+    - **`OPERATION_ID_NOT_FOUND`**: The operation ID could not be found.
+    - **`FAILED`**: The operation failed.
 
 #### **Usage**
 Here operationId will be always requested(not optimal).
@@ -605,8 +611,24 @@ const simplifiedStatus = await tracker.getSimpifiedOperationStatus(transactionLi
 console.log('Simplified Status:', simplifiedStatus);
 ```
 
----
 ### Other functions
+#### **Method: `getOperationType(operationId: string): Promise<OperationType>`**
+
+Retrieves the current type of operation using its `operationId`.
+
+#### **Parameters**:
+  - `operationId`: The identifier obtained from `getOperationType`.
+
+#### **Returns**:  
+- **`Promise<OperationType>`**:  
+- A type from the `operationType` enum:
+  - **`PENDING`**: The operation is still in progress.
+  - **`TON_TAC_TON`**: The operation has successfully completed in TON-TAC-TON.
+  - **`ROLLBACK`**: The operation failed and there was an asset rollback.
+  - **`TON_TAC`**: The operation has successfully completed in TON-TAC.
+  - **`TAC_TON`**: The operation has successfully completed in TAC-TON.
+  - **`UNKNOWN`**: unknown operation type.
+
 
 #### Method: `getOperationIdsByShardsKeys(shardsKeys: string[], caller: string): Promise<OperationIdsByShardsKey>`
 
@@ -666,17 +688,22 @@ Fetches the current status information for multiple operations based on their op
 
 Track the execution of crosschain operation with `startTracking` method
 
-#### Method: `async startTracking(transactionLinker: TransactionLinker, network: network, isBridgeOperation: boolean = false, customLiteSequencerEndpoints?: string[]): Promise<void>`
+#### Method: `async function startTracking(transactionLinker: TransactionLinker, network: Network, customLiteSequencerEndpoints?: string[], delay: number = 10, maxIterationCount = MAX_ITERATION_COUNT, returnValue: boolean = false): Promise<void | { profilingData: ExecutionStages; tableData: ExecutionStagesTableData[]; }>`
 
 #### **Parameters**:
   - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainTransaction` function.
   - `network`: TON network (`Network` type).
-  - `isBridgeOperation` *(optional)*: If your operation should only execute on EVM side without returning to TVM set `isBridgeOperation` to **true**. TAC protocol can just bridge the assets.
   - `customLiteSequencerEndpoints` *(optional)*: specify custom lite sequencer API URL for sending requests there.
+  - `delay` *(optional)*: specify custom delay after requests there.
+  - `maxIterationCount` *(optional)*: specify custom max iteration count there.
+  - `returnValue` *(optional)*: specify whether to return the data to you after tracking. When `false` will write to the console. Default is `false`
 
 #### **Returns**:
-- void:
-  - Will stop requesting status once the final status of crosschain operation has been reached.
+- Will stop requesting status once the final status of crosschain operation has been reached.
+- if returnValue is `false` return `Promise<void>`
+- if `true` return `Promise<TrackingOperationResult>` with value:
+  - **`profilingData`**: `ExecutionStages` - execution stages profiling data;
+  - **`tableData`**: `ExecutionStagesTableData[]` - execution stages profiling data in table format;
 
 #### **Possible exceptions**
 
@@ -685,7 +712,7 @@ Track the execution of crosschain operation with `startTracking` method
 #### **Usage**
 Here operationId will be always requested(not optimal).
 ```typescript
-await startTracking(transactionLinker, network.Testnet);
+await startTracking(transactionLinker, network.TESTNET);
 ```
 
 ---
@@ -696,13 +723,13 @@ await startTracking(transactionLinker, network.Testnet);
 Represents TON network type you want to use.
 ```typescript
 export enum Network {
-    Testnet = 'testnet',
-    Mainnet = 'mainnet'
+    TESTNET = 'TESTNET',
+    MAINNET = 'MAINNET'
 }
 ```
 
-- **`Testnet`**: Represents the testnet TON network.
-- **`Mainnet`**: Represents the mainnet TON network.
+- **`TESTNET`**: Represents the testnet TON network.
+- **`MAINNET`**: Represents the mainnet TON network.
 
 
 ### `SDKParams (Type)`
@@ -770,7 +797,7 @@ Represents a proxy message to a TAC.
 - **`evmTargetAddress`**: Target address on the EVM network.
 - **`methodName`** *(optional)*: Method name to be called on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
 - **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
-- **`gasLimit`** *(optional)*: `gasLimit` is a parameter that will be passed on the TAC side. The executor must allocate at least gasLimit gas for executing the transaction on the TAC side. If this parameter is not specified, it will be calculated using the `simulateEVMMessage` method(prefered).
+- **`gasLimit`** *(optional)*: `gasLimit` is a parameter that will be passed on the TAC side. The executor must allocate at least gasLimit gas for executing the transaction on the TAC side. If this parameter is not specified, it will be calculated using the `simulateTACMessage` method(prefered).
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the crosschain transaction.
 
@@ -842,17 +869,17 @@ This structure is designed to help track the entire execution path of a operatio
 ### `SimplifiedStatuses (Enum)`
 ```typescript
 export enum SimplifiedStatuses {
-    Pending,
-    Failed,
-    Successful,
-    OperationIdNotFound,
+    PENDING = 'PENDING',
+    FAILED = 'FAILED',
+    SUCCESSFUL = 'SUCCESSFUL',
+    OPERATION_ID_NOT_FOUND = 'OPERATION_ID_NOT_FOUND',
 }
 ```
 Represents the simplified operation statuses.
-- **`Pending`**: The operation in progress.
-- **`Failed`**: The operation has failed.
-- **`Successful`**: The operation was executed successfully.
-- **`OperationIdNotFound`**: The operation ID was not found.
+- **`PENDING`**: The operation in progress.
+- **`FAILED`**: The operation has failed.
+- **`SUCCESSFUL`**: The operation was executed successfully.
+- **`OPERATION_ID_NOT_FOUND`**: The operation ID was not found.
 
 
 ### `ContractOpener (Interface)`
@@ -871,11 +898,11 @@ export interface ContractOpener {
 ```
 
 
-### `EVMSimulationRequest`
+### `TACSimulationRequest`
 
 ```typescript
-export type EVMSimulationRequest = {
-    evmCallParams: {
+export type TACSimulationRequest = {
+    tacCallParams: {
         arguments: string;
         methodName: string;
         target: string;
@@ -883,27 +910,39 @@ export type EVMSimulationRequest = {
     extraData: string;
     feeAssetAddress: string;
     shardsKey: number;
-    tvmAssets: {
+    tonAssets: {
         amount: string;
         tokenAddress: string;
     }[];
-    tvmCaller: string;
+    tonCaller: string;
 };
 ```
 
-Represents a request to simulate an EVM message.
+Represents a request to simulate an TAC message.
 
-- **`evmCallParams`**: An object containing parameters for the EVM call.
-  - **`arguments`**: Encoded arguments for the EVM method.
-  - **`methodName`**: Name of the method to be called on the target EVM contract.
-  - **`target`**: The target address on the EVM network.
-- **`extraData`**: Additional non-root data to be included in EVM call.
+- **`tacCallParams`**: An object containing parameters for the TAC call.
+  - **`arguments`**: Encoded arguments for the TAC method.
+  - **`methodName`**: Name of the method to be called on the target TAC contract.
+  - **`target`**: The target address on the TAC network.
+- **`extraData`**: Additional non-root data to be included in TAC call.
 - **`feeAssetAddress`**: Address of the asset used to cover fees; empty string if using native TON.
 - **`shardsKey`**: Key identifying shards for the operation.
-- **`tvmAssets`**: An array of assets involved in the transaction.
+- **`tonAssets`**: An array of assets involved in the transaction.
   - **`amount`**: Amount of the asset to be transferred.
   - **`tokenAddress`**: Address of the token.
-- **`tvmCaller`**: Address of the caller in the TVM.
+- **`tonCaller`**: Address of the caller in the TON.
+
+
+### `BlockchainType`
+
+```typescript
+export enum BlockchainType {
+    TAC = 'TAC',
+    TON = 'TON',
+}
+```
+
+Represents blockchain type.
 
 
 ### `TransactionData`
@@ -911,21 +950,23 @@ Represents a request to simulate an EVM message.
 ```typescript
 export type TransactionData = {
     hash: string;
+    blockchainType: BlockchainType;
 };
 ```
 
 Represents transaction details.
 - **`hash`**: The hash of the transaction.
+- **`blockchainType`**: The type of the blockchain (`TON` or `TAC`).
 
 
 ### `NoteInfo`
 
 ```typescript
 export type NoteInfo = {
-  content: string;
-  errorName: string;
-  internalMsg: string;
-  internalBytesError: string;
+    content: string;
+    errorName: string;
+    internalMsg: string;
+    internalBytesError: string;
 };
 ```
 
@@ -937,14 +978,30 @@ Provides detailed information about any notes or errors encountered during opera
 - **`internalBytesError`**: Detailed bytes error information.
 
 
+### `StageName`
+
+```typescript
+export enum StageName {
+    COLLECTED_IN_TAC = 'COLLECTED_IN_TAC',
+    INCLUDED_IN_TAC_CONSENSUS = 'INCLUDED_IN_TAC_CONSENSUS',
+    EXECUTED_IN_TAC = 'EXECUTED_IN_TAC',
+    COLLECTED_IN_TON = 'COLLECTED_IN_TON',
+    INCLUDED_IN_TON_CONSENSUS = 'INCLUDED_IN_TON_CONSENSUS',
+    EXECUTED_IN_TON = 'EXECUTED_IN_TON',
+}
+```
+
+Represents stage in TAC protocol.
+
+
 ### `StageData`
 
 ```typescript
 export type StageData = {
-  success: boolean;
-  timestamp: number;
-  transactions: TransactionData[] | null;
-  note: NoteInfo | null;
+    success: boolean;
+    timestamp: number;
+    transactions: TransactionData[] | null;
+    note: NoteInfo | null;
 };
 ```
 
@@ -962,23 +1019,47 @@ Represents data for a specific stage of operation execution.
 
 ```typescript
 export type StatusInfo = StageData & {
-  stage: string;
+    stage: StageName;
 };
 ```
 
 Combines `StageData` with an additional stage identifier.
 
-- **`stage`**: Name of the current stage.
-
+- **`stage`**: Current stage in `StageName` enum.
 - **Other Properties from `StageData`**
+
+### `OperationType`
+
+```typescript
+export enum OperationType {
+	PENDING     = "PENDING",
+	TON_TAC_TON = "TON-TAC-TON",
+	ROLLBACK    = "ROLLBACK",
+	TON_TAC     = "TON-TAC",
+	TAC_TON     = "TAC-TON",
+	UNKNOWN     = "UNKNOWN",
+}
+```
+
+Provides information about transaction.
+
+- **`PENDING`**: The transaction is still processing and has not yet reached a final state.
+- **`TON_TAC_TON`**:  
+  The transaction succeeded fully:  
+  - Executed on **TAC** (successfully interacted with dapp)
+  - Processed a `roundTrip` message (e.g., a cross-chain callback - bridging back received assets).
+- **`ROLLBACK`**: The transaction failed on TAC, and funds were rolled back to their original on TON (e.g., tokens returned to the sender).
+- **`TON_TAC`**: The transaction was fully executed on TAC. (successfully interacted with dapp or assets were bridged)
+- **`TAC_TON`**: The cross-chain bridge operation from TAC to TON has completed successfully (e.g., tokens bridged to TON).
+- **`UNKNOWN`**: The status could not be determined (e.g., due to network errors, invalid operation ID, or outdated data).
 
 
 ### `ProfilingStageData`
 
 ```typescript
 export type ProfilingStageData = {
-  exists: boolean;
-  stageData: StageData | null;
+    exists: boolean;
+    stageData: StageData | null;
 };
 
 ```
@@ -986,7 +1067,6 @@ export type ProfilingStageData = {
 Provides profiling information for a specific stage.
 
 - **`exists`**: Indicates whether profiling data exists for the stage.
-
 - **`stageData`** *(optional)*: Detailed data of the stage. `null` if none.
 
 
@@ -994,21 +1074,37 @@ Provides profiling information for a specific stage.
 
 ```typescript
 export type ExecutionStages = {
-  evmMerkleMsgCollected: ProfilingStageData;
-  evmMerkleRootSet: ProfilingStageData;
-  evmMerkleMsgExecuted: ProfilingStageData;
-  tvmMerkleMsgCollected: ProfilingStageData;
-  tvmMerkleMsgExecuted: ProfilingStageData;
-};
+  operationType: OperationType;
+} & Record<StageName, ProfilingStageData>;
+
 ```
 
 Represents the profiling data for all execution stages within an operation.
+- **`operationType`**.
+- **`COLLECTED_IN_TAC`**.
+- **`INCLUDED_IN_TAC_CONSENSUS`**.
+- **`EXECUTED_IN_TAC`**.
+- **`COLLECTED_IN_TON`**.
+- **`INCLUDED_IN_TON_CONSENSUS`**.
+- **`EXECUTED_IN_TON`**.
 
-- **`evmMerkleMsgCollected`**: Profiling data for the EVM Merkle message collection stage.
-- **`evmMerkleRootSet`**: Profiling data for setting the EVM Merkle root.
-- **`evmMerkleMsgExecuted`**: Profiling data for executing the EVM Merkle message.
-- **`tvmMerkleMsgCollected`**: Profiling data for the TVM Merkle message collection stage.
-- **`tvmMerkleMsgExecuted`**: Profiling data for executing the TVM Merkle message.
+### `ExecutionStagesTableData`
+
+```typescript
+export type ExecutionStagesTableData = {
+    stage: string;
+    exists: string;
+    success: string;
+    timestamp: string;
+    transactions: string;
+    noteContent: string;
+    errorName: string;
+    internalMsg: string;
+    bytesError: string;
+};
+```
+
+Represents the profiling data for all execution stages in table format.
 
 
 ### `ExecutionStagesByOperationId`
@@ -1064,47 +1160,47 @@ Provides extended information about a user's Jetton balance.
 - **`decimals`** *(optional)*: The number of decimals for the Jetton token. Present only if `exists` is `true`.
 
 
-### `EVMSimulationResults`
+### `TACSimulationResults`
 
 ```typescript
-export type EVMSimulationResults = {
-  estimatedGas: bigint;
-  estimatedJettonFeeAmount: string;
-  feeParams: {
-    currentBaseFee: string;
-    isEip1559: boolean;
-    suggestedGasPrice: string;
-    suggestedGasTip: string;
-  };
-  message: string;
-  outMessages:
-          | {
-    callerAddress: string;
-    operationId: string;
-    payload: string;
-    queryId: number;
-    targetAddress: string;
-    tokensBurned: {
-      amount: string;
-      tokenAddress: string;
-    }[];
-    tokensLocked: {
-      amount: string;
-      tokenAddress: string;
-    }[];
-  }[]
-          | null;
-  simulationError: string;
-  simulationStatus: boolean;
-  debugInfo: {
-    from: string;
-    to: string;
-    callData: string;
-    blockNumber: number;
-  };
+export type TACSimulationResults = {
+    estimatedGas: bigint;
+    estimatedJettonFeeAmount: string;
+    feeParams: {
+      currentBaseFee: string;
+      isEip1559: boolean;
+      suggestedGasPrice: string;
+      suggestedGasTip: string;
+    };
+    message: string;
+    outMessages:
+            | {
+      callerAddress: string;
+      operationId: string;
+      payload: string;
+      queryId: number;
+      targetAddress: string;
+      tokensBurned: {
+        amount: string;
+        tokenAddress: string;
+      }[];
+      tokensLocked: {
+        amount: string;
+        tokenAddress: string;
+      }[];
+    }[]
+            | null;
+    simulationError: string;
+    simulationStatus: boolean;
+    debugInfo: {
+      from: string;
+      to: string;
+      callData: string;
+      blockNumber: number;
+    };
 };
 ```
-Provides EVM simulation results.
+Provides TAC simulation results.
 
   - **`estimatedGas`**: The estimated gas required for the message.
   - **`estimatedJettonFeeAmount`**: The estimated fee amount in Jettons.
@@ -1172,7 +1268,7 @@ const assets: AssetBridgingData[] = [
 ];
 
 const sdkParams: SDKParams = {
-    network: Network.Testnet
+    network: Network.TESTNET
 };
 const tacSdk = await TacSdk.create(sdkParams);
 
