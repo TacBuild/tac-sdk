@@ -47,17 +47,17 @@ To track an operation, you first need to obtain its `operationId`. The `operatio
 
 After obtaining the `operationId`, you can check the operation’s status by using `OperationTracker.getOperationStatus(operationId: string)`. The following statuses may be returned:
 
-1. **CollectedInTAC:** The sequencer has collected all events for a single sharded message. For simple transfers (e.g., a token swap), this status indicates that the message is fully gathered.
-2. **IncludedInTACConsensus:** The EVM message has been added to the Merkle tree, and subsequent roots will reflect this addition.
-3. **ExecutedInTAC:** The collected message has been executed on the EVM side.
-4. **CollectedInTON:** After execution on EVM, a return message event is generated, which will then be executed on the TVM side.
-5. **IncludedInTONConsensus:** The TVM message has been added to the Merkle tree, updating future roots accordingly.
-6. **ExecutedInTON:** The TVM Merkle message has been successfully executed on the TVM CrossChainLayer.
+1. **COLLECTED_IN_TAC:** The sequencer has collected all events for a single sharded message. For simple transfers (e.g., a token swap), this status indicates that the message is fully gathered.
+2. **INCLUDED_IN_TAC_CONSENSUS:** The EVM message has been added to the Merkle tree, and subsequent roots will reflect this addition.
+3. **EXECUTED_IN_TAC:** The collected message has been executed on the EVM side.
+4. **COLLECTED_IN_TON:** After execution on EVM, a return message event is generated, which will then be executed on the TVM side.
+5. **INCLUDED_IN_TON_CONSENSUS:** The TVM message has been added to the Merkle tree, updating future roots accordingly.
+6. **EXECUTED_IN_TON:** The TVM Merkle message has been successfully executed on the TVM CrossChainLayer.
 
 If an issue occurs, the error message will also be included in response.
 
 ### Terminal State
-- **TVMMerkleMessageExecuted**: Indicates that the operation has completed its full cycle from TVM to EVM and back.
+- **EXECUTED_IN_TON**: Indicates that the operation has completed its full cycle from TVM to EVM and back.
 
 ---
 
@@ -81,7 +81,7 @@ import { TacSdk } from '@tonappchain/sdk';
 import { Network } from '@tonappchain/sdk';
 
 const sdkParams: SDKParams = {
-  network: Network.Testnet
+  network: Network.TESTNET
   // you can also customize TAC and TON params here
 }; 
 const tacSdk = await TacSdk.create(sdkParams);
@@ -97,7 +97,7 @@ import { TacSdk, Network, liteClientOpener } from '@tonappchain/sdk';
 const liteClientServers = [<liteClientServer1>, <liteClientServer1>, ...];
 
 const sdkParams: SDKParams = {
-  network: Network.Testnet,
+  network: Network.TESTNET,
   TONParams: {
     contractOpener: await liteClientOpener({ liteservers : liteClientServers }),
   },
@@ -114,15 +114,15 @@ tacSdk.closeConnections();
 
 Optionally, you can provide @ton/ton TonClient (public endpoints will be used by default):
 
-- **Mainnet**: https://toncenter.com/api/v2/jsonRPC
-- **Testnet**: https://testnet.toncenter.com/api/v2/jsonRPC
+- **MAINNET**: https://toncenter.com/api/v2/jsonRPC
+- **TESTNET**: https://testnet.toncenter.com/api/v2/jsonRPC
 
 ```typescript
 import { TacSdk, Network } from '@tonappchain/sdk';
 import { TonClient } from '@ton/ton';
 
 const sdk = await TacSdk.create({
-  network: Network.Testnet,
+  network: Network.TESTNET,
   delay: 1,
   TONParams: {
     contractOpener: new TonClient({
@@ -395,7 +395,7 @@ The ability to simulate the EVM message is crucial for testing and debugging cro
 
 #### **Parameters**
 
-- **`TACCallParams`**: An object defining the EVM-specific logic:
+- **`tacCallParams`**: An object defining the EVM-specific logic:
   - **`target`**: Target address on the EVM network.
   - **`methodName`**: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
   - **`arguments`**: Encoded parameters for the EVM method.
@@ -465,7 +465,7 @@ The `RawSender` class allows direct interaction with the blockchain using a raw 
 ```typescript
 const walletVersion = 'v4';
 const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
-const network = Network.Testnet; // or Network.Mainnet
+const network = Network.TESTNET; // or Network.MAINNET
 const sender = await SenderFactory.getSender({
     version: walletVersion,
     mnemonic,
@@ -476,13 +476,13 @@ const sender = await SenderFactory.getSender({
 - **Supported wallet versions**:
 ```
 export type WalletVersion =
-    | "v2r1"
-    | "v2r2"
-    | "v3r1"
-    | "v3r2"
-    | "v4"
-    | "v5r1"
-    | "highloadV3";
+    | "V2R1"
+    | "V2R2"
+    | "V3R1"
+    | "V3R2"
+    | "V4"
+    | "V5R1"
+    | "HIGHLOAD_V3";
 ```
 
 - **Possible exceptions**:
@@ -510,7 +510,7 @@ To use the `OperationTracker` class, initialize it with the required parameters 
 import { OperationTracker, Network } from '@tonappchain/sdk';
 
 const tracker = new OperationTracker(
-  network: Network.Testnet,
+  network: Network.TESTNET,
   // customLiteSequencerEndpoints: ["custom.com"]
 );
 ```
@@ -534,7 +534,7 @@ Use the `getOperationId(transactionLinker)` method with the `transactionLinker` 
 #### **Usage**:
   ```typescript
   const tracker = new OperationTracker(
-        network: Network.Testnet
+        network: Network.TESTNET
   );
   const operationId = await tracker.getOperationId(transactionLinker);
   console.log('Operation ID:', operationId);
@@ -555,12 +555,12 @@ Retrieves the current status of an operation using its `operationId`.
 - **`Promise<StatusInfo>`**:  
   A structure representing the operation's status, including:  
   - **`stage`** A value of type `StageName` (enum) which can be one of:
-    - `StageName.CollectedInTAC` ('collectedInTAC')
-    - `StageName.IncludedInTACConsensus` ('includedInTACConsensus') 
-    - `StageName.ExecutedInTAC` ('executedInTAC')
-    - `StageName.CollectedInTON` ('collectedInTON')
-    - `StageName.IncludedInTONConsensus` ('includedInTONConsensus')
-    - `StageName.ExecutedInTON` ('executedInTON')
+    - `StageName.COLLECTED_IN_TAC` ('COLLECTED_IN_TAC')
+    - `StageName.INCLUDED_IN_TAC_CONSENSUS` ('INCLUDED_IN_TAC_CONSENSUS') 
+    - `StageName.EXECUTED_IN_TAC` ('EXECUTED_IN_TAC')
+    - `StageName.COLLECTED_IN_TON` ('COLLECTED_IN_TON')
+    - `StageName.INCLUDED_IN_TON_CONSENSUS` ('INCLUDED_IN_TON_CONSENSUS')
+    - `StageName.EXECUTED_IN_TON` ('EXECUTED_IN_TON')
   - **`success`** (`boolean`): Indicates if the stage completed successfully.  
   - **`timestamp`** (`number`): UNIX timestamp of the stage’s completion.  
   - **`transactions`**: An array of `TransactionData` objects or null. Each transaction contains:
@@ -576,7 +576,7 @@ Retrieves the current status of an operation using its `operationId`.
 #### **Usage**:
   ```typescript
   const tracker = new OperationTracker(
-        network: Network.Testnet
+        network: Network.TESTNET
   );
   const status = await tracker.getOperationStatus(operationId);
   console.log('Stage:', status.stage)
@@ -598,10 +598,10 @@ Fetches a simplified operation status using the `transactionLinker`.
 #### **Returns**:
 - **`Promise<SimplifiedStatuses>`**:
   - A simplified status from the `SimplifiedStatuses` enum:
-    - **`Pending`**: The operation is still in progress.
-    - **`Successful`**: The operation has successfully completed.
-    - **`OperationIdNotFound`**: The operation ID could not be found.
-    - **`Failed`**: The operation failed.
+    - **`PENDING`**: The operation is still in progress.
+    - **`SUCCESSFUL`**: The operation has successfully completed.
+    - **`OPERATION_ID_NOT_FOUND`**: The operation ID could not be found.
+    - **`FAILED`**: The operation failed.
 
 #### **Usage**
 Here operationId will be always requested(not optimal).
@@ -712,7 +712,7 @@ Track the execution of crosschain operation with `startTracking` method
 #### **Usage**
 Here operationId will be always requested(not optimal).
 ```typescript
-await startTracking(transactionLinker, network.Testnet);
+await startTracking(transactionLinker, network.TESTNET);
 ```
 
 ---
@@ -723,13 +723,13 @@ await startTracking(transactionLinker, network.Testnet);
 Represents TON network type you want to use.
 ```typescript
 export enum Network {
-    Testnet = 'testnet',
-    Mainnet = 'mainnet'
+    TESTNET = 'TESTNET',
+    MAINNET = 'MAINNET'
 }
 ```
 
-- **`Testnet`**: Represents the testnet TON network.
-- **`Mainnet`**: Represents the mainnet TON network.
+- **`TESTNET`**: Represents the testnet TON network.
+- **`MAINNET`**: Represents the mainnet TON network.
 
 
 ### `SDKParams (Type)`
@@ -869,17 +869,17 @@ This structure is designed to help track the entire execution path of a operatio
 ### `SimplifiedStatuses (Enum)`
 ```typescript
 export enum SimplifiedStatuses {
-    Pending,
-    Failed,
-    Successful,
-    OperationIdNotFound,
+    PENDING = 'PENDING',
+    FAILED = 'FAILED',
+    SUCCESSFUL = 'SUCCESSFUL',
+    OPERATION_ID_NOT_FOUND = 'OPERATION_ID_NOT_FOUND',
 }
 ```
 Represents the simplified operation statuses.
-- **`Pending`**: The operation in progress.
-- **`Failed`**: The operation has failed.
-- **`Successful`**: The operation was executed successfully.
-- **`OperationIdNotFound`**: The operation ID was not found.
+- **`PENDING`**: The operation in progress.
+- **`FAILED`**: The operation has failed.
+- **`SUCCESSFUL`**: The operation was executed successfully.
+- **`OPERATION_ID_NOT_FOUND`**: The operation ID was not found.
 
 
 ### `ContractOpener (Interface)`
@@ -949,8 +949,8 @@ Represents blockchain type.
 
 ```typescript
 export type TransactionData = {
-  hash: string;
-  blockchainType: BlockchainType;
+    hash: string;
+    blockchainType: BlockchainType;
 };
 ```
 
@@ -963,10 +963,10 @@ Represents transaction details.
 
 ```typescript
 export type NoteInfo = {
-  content: string;
-  errorName: string;
-  internalMsg: string;
-  internalBytesError: string;
+    content: string;
+    errorName: string;
+    internalMsg: string;
+    internalBytesError: string;
 };
 ```
 
@@ -982,12 +982,12 @@ Provides detailed information about any notes or errors encountered during opera
 
 ```typescript
 export enum StageName {
-  CollectedInTAC = 'collectedInTAC',
-  IncludedInTACConsensus = 'includedInTACConsensus',
-  ExecutedInTAC = 'executedInTAC',
-  CollectedInTON = 'collectedInTON',
-  IncludedInTONConsensus = 'includedInTONConsensus',
-  ExecutedInTON = 'executedInTON',
+    COLLECTED_IN_TAC = 'COLLECTED_IN_TAC',
+    INCLUDED_IN_TAC_CONSENSUS = 'INCLUDED_IN_TAC_CONSENSUS',
+    EXECUTED_IN_TAC = 'EXECUTED_IN_TAC',
+    COLLECTED_IN_TON = 'COLLECTED_IN_TON',
+    INCLUDED_IN_TON_CONSENSUS = 'INCLUDED_IN_TON_CONSENSUS',
+    EXECUTED_IN_TON = 'EXECUTED_IN_TON',
 }
 ```
 
@@ -998,10 +998,10 @@ Represents stage in TAC protocol.
 
 ```typescript
 export type StageData = {
-  success: boolean;
-  timestamp: number;
-  transactions: TransactionData[] | null;
-  note: NoteInfo | null;
+    success: boolean;
+    timestamp: number;
+    transactions: TransactionData[] | null;
+    note: NoteInfo | null;
 };
 ```
 
@@ -1019,7 +1019,7 @@ Represents data for a specific stage of operation execution.
 
 ```typescript
 export type StatusInfo = StageData & {
-  stage: StageName;
+    stage: StageName;
 };
 ```
 
@@ -1058,8 +1058,8 @@ Provides information about transaction.
 
 ```typescript
 export type ProfilingStageData = {
-  exists: boolean;
-  stageData: StageData | null;
+    exists: boolean;
+    stageData: StageData | null;
 };
 
 ```
@@ -1081,26 +1081,26 @@ export type ExecutionStages = {
 
 Represents the profiling data for all execution stages within an operation.
 - **`operationType`**.
-- **`collectedInTAC`**.
-- **`includedInTACConsensus`**.
-- **`executedInTAC`**.
-- **`collectedInTON`**.
-- **`includedInTONConsensus`**.
-- **`executedInTON`**.
+- **`COLLECTED_IN_TAC`**.
+- **`INCLUDED_IN_TAC_CONSENSUS`**.
+- **`EXECUTED_IN_TAC`**.
+- **`COLLECTED_IN_TON`**.
+- **`INCLUDED_IN_TON_CONSENSUS`**.
+- **`EXECUTED_IN_TON`**.
 
 ### `ExecutionStagesTableData`
 
 ```typescript
 export type ExecutionStagesTableData = {
-  Stage: string;
-  Exists: string;
-  Success: string;
-  Timestamp: string;
-  Transactions: string;
-  NoteContent: string;
-  ErrorName: string;
-  InternalMsg: string;
-  BytesError: string;
+    stage: string;
+    exists: string;
+    success: string;
+    timestamp: string;
+    transactions: string;
+    noteContent: string;
+    errorName: string;
+    internalMsg: string;
+    bytesError: string;
 };
 ```
 
@@ -1164,40 +1164,40 @@ Provides extended information about a user's Jetton balance.
 
 ```typescript
 export type TACSimulationResults = {
-  estimatedGas: bigint;
-  estimatedJettonFeeAmount: string;
-  feeParams: {
-    currentBaseFee: string;
-    isEip1559: boolean;
-    suggestedGasPrice: string;
-    suggestedGasTip: string;
-  };
-  message: string;
-  outMessages:
-          | {
-    callerAddress: string;
-    operationId: string;
-    payload: string;
-    queryId: number;
-    targetAddress: string;
-    tokensBurned: {
-      amount: string;
-      tokenAddress: string;
-    }[];
-    tokensLocked: {
-      amount: string;
-      tokenAddress: string;
-    }[];
-  }[]
-          | null;
-  simulationError: string;
-  simulationStatus: boolean;
-  debugInfo: {
-    from: string;
-    to: string;
-    callData: string;
-    blockNumber: number;
-  };
+    estimatedGas: bigint;
+    estimatedJettonFeeAmount: string;
+    feeParams: {
+      currentBaseFee: string;
+      isEip1559: boolean;
+      suggestedGasPrice: string;
+      suggestedGasTip: string;
+    };
+    message: string;
+    outMessages:
+            | {
+      callerAddress: string;
+      operationId: string;
+      payload: string;
+      queryId: number;
+      targetAddress: string;
+      tokensBurned: {
+        amount: string;
+        tokenAddress: string;
+      }[];
+      tokensLocked: {
+        amount: string;
+        tokenAddress: string;
+      }[];
+    }[]
+            | null;
+    simulationError: string;
+    simulationStatus: boolean;
+    debugInfo: {
+      from: string;
+      to: string;
+      callData: string;
+      blockNumber: number;
+    };
 };
 ```
 Provides TAC simulation results.
@@ -1268,7 +1268,7 @@ const assets: AssetBridgingData[] = [
 ];
 
 const sdkParams: SDKParams = {
-    network: Network.Testnet
+    network: Network.TESTNET
 };
 const tacSdk = await TacSdk.create(sdkParams);
 

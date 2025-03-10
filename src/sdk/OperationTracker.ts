@@ -31,7 +31,7 @@ export class OperationTracker {
 
         this.customLiteSequencerEndpoints =
             customLiteSequencerEndpoints ??
-            (this.network === Network.Testnet
+            (this.network === Network.TESTNET
                 ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
                 : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
     }
@@ -165,19 +165,19 @@ export class OperationTracker {
     async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
         const operationId = await this.getOperationId(transactionLinker);
         if (operationId == '') {
-            return SimplifiedStatuses.OperationIdNotFound;
+            return SimplifiedStatuses.OPERATION_ID_NOT_FOUND;
         }
 
         const operationType = await this.getOperationType(operationId);
 
         if (operationType == OperationType.PENDING || operationType == OperationType.UNKNOWN) {
-            return SimplifiedStatuses.Pending;
+            return SimplifiedStatuses.PENDING;
         }
 
         if (operationType == OperationType.ROLLBACK) {
-            return SimplifiedStatuses.Failed;
+            return SimplifiedStatuses.FAILED;
         }
 
-        return SimplifiedStatuses.Successful;
+        return SimplifiedStatuses.SUCCESSFUL;
     }
 }

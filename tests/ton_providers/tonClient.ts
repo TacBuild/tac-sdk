@@ -3,7 +3,7 @@ import { TonClient } from '@ton/ton';
 
 async function main() {
     const sdk = await TacSdk.create({
-        network: Network.Testnet,
+        network: Network.TESTNET,
         delay: 1,
         TONParams: {
             contractOpener: new TonClient({

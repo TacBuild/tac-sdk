@@ -2,9 +2,9 @@ import { liteClientOpener, Network, TacSdk } from '../../src';
 
 async function main() {
     const sdk = await TacSdk.create({
-        network: Network.Testnet,
+        network: Network.TESTNET,
         TONParams: {
-            contractOpener: await liteClientOpener({ network: Network.Testnet }),
+            contractOpener: await liteClientOpener({ network: Network.TESTNET }),
         },
     });
 

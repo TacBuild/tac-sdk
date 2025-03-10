@@ -24,8 +24,8 @@ export type ShardTransaction = {
 };
 
 export enum AssetOpType {
-    JettonBurn = 'JettonBurn',
-    JettonTransfer = 'JettonTransfer',
+    JETTON_BURN = 'JETTON_BURN',
+    JETTON_TRANSFER = 'JETTON_TRANSFER',
 }
 
 export type RandomNumberByTimestamp = {

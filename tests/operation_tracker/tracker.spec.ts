@@ -32,7 +32,7 @@ describe('Operation Tracker', () => {
     }
 
     beforeAll(async () => {
-        tracker = new OperationTracker(Network.Testnet, ['http://localhost:8080']);
+        tracker = new OperationTracker(Network.TESTNET, ['http://localhost:8080']);
 
         operationIds = [
             '0x5205e851dd805e6cd13eda408abe4a26831a092f260df442a31828e7db581abf',
@@ -124,12 +124,12 @@ describe('Operation Tracker', () => {
         expect(Object.values(OperationType)).toContain(result.operationType);
 
         const executionStages = [
-            result.collectedInTAC,
-            result.includedInTACConsensus,
-            result.executedInTAC,
-            result.collectedInTON,
-            result.includedInTONConsensus,
-            result.executedInTON,
+            result.COLLECTED_IN_TAC,
+            result.INCLUDED_IN_TAC_CONSENSUS,
+            result.EXECUTED_IN_TAC,
+            result.COLLECTED_IN_TON,
+            result.INCLUDED_IN_TON_CONSENSUS,
+            result.EXECUTED_IN_TON,
         ];
 
         executionStages.forEach((stage) => {
@@ -150,12 +150,12 @@ describe('Operation Tracker', () => {
             expect(typeof result[operationId]).toBe('object');
 
             const executionStages = [
-                result[operationId].collectedInTAC,
-                result[operationId].includedInTACConsensus,
-                result[operationId].executedInTAC,
-                result[operationId].collectedInTON,
-                result[operationId].includedInTONConsensus,
-                result[operationId].executedInTON,
+                result[operationId].COLLECTED_IN_TAC,
+                result[operationId].INCLUDED_IN_TAC_CONSENSUS,
+                result[operationId].EXECUTED_IN_TAC,
+                result[operationId].COLLECTED_IN_TON,
+                result[operationId].INCLUDED_IN_TON_CONSENSUS,
+                result[operationId].EXECUTED_IN_TON,
             ];
 
             executionStages.forEach((stage) => {

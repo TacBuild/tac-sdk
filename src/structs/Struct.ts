@@ -15,15 +15,15 @@ export interface ContractOpener {
 }
 
 export enum SimplifiedStatuses {
-    Pending,
-    Failed,
-    Successful,
-    OperationIdNotFound,
+    PENDING = 'PENDING',
+    FAILED = 'FAILED',
+    SUCCESSFUL = 'SUCCESSFUL',
+    OPERATION_ID_NOT_FOUND = 'OPERATION_ID_NOT_FOUND',
 }
 
 export enum Network {
-    Testnet = 'testnet',
-    Mainnet = 'mainnet',
+    TESTNET = 'testnet',
+    MAINNET = 'mainnet',
 }
 
 export enum BlockchainType {
@@ -183,12 +183,12 @@ export type TACSimulationRequest = {
 };
 
 export enum StageName {
-    CollectedInTAC = 'collectedInTAC',
-    IncludedInTACConsensus = 'includedInTACConsensus',
-    ExecutedInTAC = 'executedInTAC',
-    CollectedInTON = 'collectedInTON',
-    IncludedInTONConsensus = 'includedInTONConsensus',
-    ExecutedInTON = 'executedInTON',
+    COLLECTED_IN_TAC = 'COLLECTED_IN_TAC',
+    INCLUDED_IN_TAC_CONSENSUS = 'INCLUDED_IN_TAC_CONSENSUS',
+    EXECUTED_IN_TAC = 'EXECUTED_IN_TAC',
+    COLLECTED_IN_TON = 'COLLECTED_IN_TON',
+    INCLUDED_IN_TON_CONSENSUS = 'INCLUDED_IN_TON_CONSENSUS',
+    EXECUTED_IN_TON = 'EXECUTED_IN_TON',
 }
 
 export type TransactionData = {
@@ -224,15 +224,15 @@ export type ExecutionStages = {
 } & Record<StageName, ProfilingStageData>;
 
 export type ExecutionStagesTableData = {
-    Stage: string;
-    Exists: string;
-    Success: string;
-    Timestamp: string;
-    Transactions: string;
-    NoteContent: string;
-    ErrorName: string;
-    InternalMsg: string;
-    BytesError: string;
+    stage: string;
+    exists: string;
+    success: string;
+    timestamp: string;
+    transactions: string;
+    noteContent: string;
+    errorName: string;
+    internalMsg: string;
+    bytesError: string;
 };
 
 export type TrackingOperationResult = {

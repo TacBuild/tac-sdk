@@ -9,25 +9,25 @@ const UNISWAPV2_PROXY_ADDRESS = ''; // uniswap proxy address
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1'; // TKA
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK'; // TKB
 
-const WALLET_VERSION = 'v3r2';
+const WALLET_VERSION = 'V3R2';
 const TVM_MNEMONICS = ''; // mnemonic
 
 async function addLiquidity() {
     const sdkParams: SDKParams = {
-        network: Network.Testnet,
+        network: Network.TESTNET,
         TACParams: {
-            provider: new ethers.JsonRpcProvider("https://turin.rpc.tac.build/"),
-            settingsAddress: "", // set local tac settings
+            provider: new ethers.JsonRpcProvider('https://turin.rpc.tac.build/'),
+            settingsAddress: '', // set local tac settings
         },
         TONParams: {
-            settingsAddress: "",
+            settingsAddress: '',
         },
         customLiteSequencerEndpoints: ['http://localhost:8080'],
     };
     const tacSdk = await TacSdk.create(sdkParams);
-    const EVM_TKA_ADDRESS = ""; // hardcode paired evm address for TKA (or calculate them)
+    const EVM_TKA_ADDRESS = ''; // hardcode paired evm address for TKA (or calculate them)
     console.log(EVM_TKA_ADDRESS);
-    const EVM_TKB_ADDRESS = ""; // hardcode paired evm address for TKB (or calculate them)
+    const EVM_TKB_ADDRESS = ''; // hardcode paired evm address for TKB (or calculate them)
     console.log(EVM_TKB_ADDRESS);
     const amountA = 1;
     const amountB = 2;
@@ -56,7 +56,7 @@ async function addLiquidity() {
     };
 
     const sender = await SenderFactory.getSender({
-        network: Network.Testnet,
+        network: Network.TESTNET,
         version: WALLET_VERSION,
         mnemonic: TVM_MNEMONICS,
     });
@@ -80,7 +80,7 @@ async function main() {
         const result = await addLiquidity();
         console.log('Transaction successful:', result);
         // start tracking transaction status
-        await startTracking(result, Network.Testnet, ['http://localhost:8080']);
+        await startTracking(result, Network.TESTNET, ['http://localhost:8080']);
     } catch (error) {
         console.error('Error during transaction:', error);
     }

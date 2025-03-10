@@ -80,12 +80,12 @@ export class TacSdk {
     static async create(sdkParams: SDKParams): Promise<TacSdk> {
         const network = sdkParams.network;
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
-        const artifacts = network === Network.Testnet ? testnet : mainnet;
+        const artifacts = network === Network.TESTNET ? testnet : mainnet;
         const TONParams = await this.prepareTONParams(network, delay, artifacts, sdkParams.TONParams);
         const TACParams = await this.prepareTACParams(artifacts, sdkParams.TACParams);
         const liteSequencerEndpoints =
             sdkParams.customLiteSequencerEndpoints ??
-            (network === Network.Testnet
+            (network === Network.TESTNET
                 ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
                 : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
         return new TacSdk(network, delay, artifacts, TONParams, TACParams, liteSequencerEndpoints);
@@ -269,7 +269,7 @@ export class TacSdk {
         await sleep(this.delay * 1000);
 
         if (!this.TONParams.jettonMinterCode.equals(givenMinterCode)) {
-            return AssetOpType.JettonTransfer;
+            return AssetOpType.JETTON_TRANSFER;
         }
 
         const givenMinter = this.TONParams.contractOpener.open(new JettonMaster(address(asset.address)));
@@ -288,10 +288,10 @@ export class TacSdk {
         );
 
         if (!expectedMinterAddress.equals(givenMinter.address)) {
-            return AssetOpType.JettonTransfer;
+            return AssetOpType.JETTON_TRANSFER;
         }
 
-        return AssetOpType.JettonBurn;
+        return AssetOpType.JETTON_BURN;
     }
 
     private async aggregateJettons(assets?: RawAssetBridgingData[]): Promise<{
@@ -338,7 +338,7 @@ export class TacSdk {
 
         let payload: Cell;
         switch (opType) {
-            case AssetOpType.JettonBurn:
+            case AssetOpType.JETTON_BURN:
                 payload = this.getJettonBurnPayload(
                     {
                         notificationReceiverAddress: this.TONParams.crossChainLayerAddress,
@@ -348,7 +348,7 @@ export class TacSdk {
                     crossChainTonAmount,
                 );
                 break;
-            case AssetOpType.JettonTransfer:
+            case AssetOpType.JETTON_TRANSFER:
                 payload = this.getJettonTransferPayload(jetton, caller, evmData, crossChainTonAmount);
                 break;
         }

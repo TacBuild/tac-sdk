@@ -89,22 +89,22 @@ function formatExecutionStages(stages: ExecutionStages): ExecutionStagesTableDat
     const { operationType, ...stagesData } = stages;
 
     return Object.entries(stagesData).map(([stage, data]) => ({
-        Stage: stage,
-        Exists: data.exists ? 'Yes' : 'No',
-        Success: data.exists && data.stageData ? (data.stageData.success ? 'Yes' : 'No') : '-',
-        Timestamp: data.exists && data.stageData ? new Date(data.stageData.timestamp * 1000).toLocaleString() : '-',
-        Transactions:
+        stage: stage,
+        exists: data.exists ? 'Yes' : 'No',
+        success: data.exists && data.stageData ? (data.stageData.success ? 'Yes' : 'No') : '-',
+        timestamp: data.exists && data.stageData ? new Date(data.stageData.timestamp * 1000).toLocaleString() : '-',
+        transactions:
             data.exists &&
             data.stageData &&
             data.stageData.transactions != null &&
             data.stageData.transactions.length > 0
                 ? data.stageData.transactions.map((t) => t.hash).join(', ')
                 : '-',
-        NoteContent: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.content : '-',
-        ErrorName: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.errorName : '-',
-        InternalMsg:
+        noteContent: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.content : '-',
+        errorName: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.errorName : '-',
+        internalMsg:
             data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalMsg : '-',
-        BytesError:
+        bytesError:
             data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalBytesError : '-',
     }));
 }

@@ -21,6 +21,8 @@ All notable changes to this project will be documented in this file.
 
 - The stage names have been changed
 
+- Changed namings in enums 
+
 - `OperationType` added in the `ExecutionStages`
 
 - `ExecutionStages` structure
