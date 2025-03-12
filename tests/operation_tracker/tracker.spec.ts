@@ -32,21 +32,21 @@ describe('Operation Tracker', () => {
     }
 
     beforeAll(async () => {
-        tracker = new OperationTracker(Network.TESTNET, ['http://localhost:8080']);
+        tracker = new OperationTracker(Network.TESTNET);
 
         operationIds = [
-            '0x5205e851dd805e6cd13eda408abe4a26831a092f260df442a31828e7db581abf',
-            '0xb57a72384293ebd7966bbd183d6e3ff8daa5bee0843e45f661ee082910a35de8',
+            '0x33e2ee58e3e8d48f064915a062adb02dcc062c0533fb429c7f703ba3e1fe33fb',
+            '0xf84541ae62dddffdb11cb85fd05be18a41bd2e3b1f01b0774f6378d42c6025b7',
         ];
 
-        shardsKeys = ['6232672141576619690', '1739908831'];
+        shardsKeys = ['1741795319', '1741794988'];
         caller = 'EQDoF2OkxsI3gc5jAuxlqozN9H_SgEOUCopMa1yU4djLaXuL';
 
         transactionLinker = {
             shardsKey: shardsKeys[0],
             caller: caller,
             shardCount: 2,
-            timestamp: 1739908682,
+            timestamp: 1741795215,
         };
     });
 
@@ -143,11 +143,11 @@ describe('Operation Tracker', () => {
         const result = await tracker.getStageProfilings(operationIds);
 
         expect(Object.keys(result)).toHaveLength(operationIds.length);
-        expect(typeof result.operationType).toBe('string');
-        expect(Object.values(OperationType)).toContain(result.operationType);
 
         for (const operationId of operationIds) {
             expect(typeof result[operationId]).toBe('object');
+            expect(typeof result[operationId].operationType).toBe('string');
+            expect(Object.values(OperationType)).toContain(result[operationId].operationType);
 
             const executionStages = [
                 result[operationId].collectedInTAC,
