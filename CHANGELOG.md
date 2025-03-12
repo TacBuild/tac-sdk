@@ -8,6 +8,16 @@ All notable changes to this project will be documented in this file.
 
 - `StageName` value namings
 
+- `StageName` value namings
+
+- `startTracking` has been improved. Added optional parameters
+
+### Removed
+
+- `ExecutionStagesTableData` type
+
+- `TrackingOperationResult` type
+
 ## [0.5.1] - 2025-03-10
 
 ### Added
@@ -37,7 +47,7 @@ All notable changes to this project will be documented in this file.
 
 - Added `forceSend` option in method `sendCrossChainTransaction` in `TacSdk`
 
-- startTracking has been improved. Added optional parameters and return values
+- `startTracking` has been improved. Added optional parameters and return values
 
 ### Removed
 

@@ -223,23 +223,6 @@ export type ExecutionStages = {
     operationType: OperationType;
 } & Record<StageName, ProfilingStageData>;
 
-export type ExecutionStagesTableData = {
-    stage: string;
-    exists: string;
-    success: string;
-    timestamp: string;
-    transactions: string;
-    noteContent: string;
-    errorName: string;
-    internalMsg: string;
-    bytesError: string;
-};
-
-export type TrackingOperationResult = {
-    profilingData: ExecutionStages;
-    tableData: ExecutionStagesTableData[];
-};
-
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
 
 export type StatusInfosByOperationId = Record<string, StatusInfo>;
