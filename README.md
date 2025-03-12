@@ -688,22 +688,22 @@ Fetches the current status information for multiple operations based on their op
 
 Track the execution of crosschain operation with `startTracking` method
 
-#### Method: `async function startTracking(transactionLinker: TransactionLinker, network: Network, customLiteSequencerEndpoints?: string[], delay: number = 10, maxIterationCount = MAX_ITERATION_COUNT, returnValue: boolean = false): Promise<void | { profilingData: ExecutionStages; tableData: ExecutionStagesTableData[]; }>`
+#### Method: `async function startTracking(transactionLinker: TransactionLinker, network: Network, options?: { customLiteSequencerEndpoints?: string[]; delay?: number; maxIterationCount?: number; returnValue?: boolean; tableView?: boolean; }): Promise<void | ExecutionStages>`
 
 #### **Parameters**:
   - `transactionLinker`: A `TransactionLinker` object returned from `sendCrossChainTransaction` function.
   - `network`: TON network (`Network` type).
-  - `customLiteSequencerEndpoints` *(optional)*: specify custom lite sequencer API URL for sending requests there.
-  - `delay` *(optional)*: specify custom delay after requests there.
-  - `maxIterationCount` *(optional)*: specify custom max iteration count there.
-  - `returnValue` *(optional)*: specify whether to return the data to you after tracking. When `false` will write to the console. Default is `false`
+  - `options` *(optional)*:
+    - `customLiteSequencerEndpoints` *(optional)*: specify custom lite sequencer API URL for sending requests there. Default is `undefined`
+    - `delay` *(optional)*: specify custom delay after requests there. Default is `10`
+    - `maxIterationCount` *(optional)*: specify custom max iteration count there. Default is `120`
+    - `returnValue` *(optional)*: specify whether to return the data to you after tracking. When `false` will write to the console. Default is `false`
+    - `tableView` *(optional)*: specify data display in the table. Default is `true`
 
 #### **Returns**:
 - Will stop requesting status once the final status of crosschain operation has been reached.
 - if returnValue is `false` return `Promise<void>`
-- if `true` return `Promise<TrackingOperationResult>` with value:
-  - **`profilingData`**: `ExecutionStages` - execution stages profiling data;
-  - **`tableData`**: `ExecutionStagesTableData[]` - execution stages profiling data in table format;
+- if `true` return `Promise<ExecutionStages>` - execution stages profiling data.
 
 #### **Possible exceptions**
 
@@ -1028,6 +1028,7 @@ Combines `StageData` with an additional stage identifier.
 - **`stage`**: Current stage in `StageName` enum.
 - **Other Properties from `StageData`**
 
+
 ### `OperationType`
 
 ```typescript
@@ -1087,24 +1088,6 @@ Represents the profiling data for all execution stages within an operation.
 - **`COLLECTED_IN_TON`**.
 - **`INCLUDED_IN_TON_CONSENSUS`**.
 - **`EXECUTED_IN_TON`**.
-
-### `ExecutionStagesTableData`
-
-```typescript
-export type ExecutionStagesTableData = {
-    stage: string;
-    exists: string;
-    success: string;
-    timestamp: string;
-    transactions: string;
-    noteContent: string;
-    errorName: string;
-    internalMsg: string;
-    bytesError: string;
-};
-```
-
-Represents the profiling data for all execution stages in table format.
 
 
 ### `ExecutionStagesByOperationId`

@@ -1,23 +1,28 @@
-import {
-    ExecutionStages,
-    ExecutionStagesTableData,
-    Network,
-    OperationType,
-    TrackingOperationResult,
-    TransactionLinker,
-} from '../structs/Struct';
+import { ExecutionStages, Network, OperationType, TransactionLinker } from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
 import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
+import Table from 'cli-table3';
 
 export async function startTracking(
     transactionLinker: TransactionLinker,
     network: Network,
-    customLiteSequencerEndpoints?: string[],
-    delay: number = 10,
-    maxIterationCount = MAX_ITERATION_COUNT,
-    returnValue: boolean = false,
-): Promise<void | TrackingOperationResult> {
+    options?: {
+        customLiteSequencerEndpoints?: string[];
+        delay?: number;
+        maxIterationCount?: number;
+        returnValue?: boolean;
+        tableView?: boolean;
+    },
+): Promise<void | ExecutionStages> {
+    const {
+        customLiteSequencerEndpoints,
+        delay = 10,
+        maxIterationCount = MAX_ITERATION_COUNT,
+        returnValue = false,
+        tableView = true,
+    } = options || {};
+
     const tracker = new OperationTracker(network, customLiteSequencerEndpoints);
 
     console.log('Start tracking operation');
@@ -30,7 +35,7 @@ export async function startTracking(
     let iteration = 0; // number of iterations
     let operationType = '';
     let ok = true; // finished successfully
-    let errorMessage: string | null;
+    let errorMessage: string = '';
 
     while (true) {
         ++iteration;
@@ -71,21 +76,27 @@ export async function startTracking(
 
     console.log('Tracking finished');
     if (!ok) {
-        console.log(errorMessage!);
+        if (returnValue) {
+            throw Error(errorMessage);
+        }
+        console.log(errorMessage);
     }
 
     const profilingData = await tracker.getStageProfiling(operationId);
-    const tableData = formatExecutionStages(profilingData);
 
     if (returnValue) {
-        return { profilingData, tableData };
+        return profilingData;
     }
 
     console.log(profilingData.operationType);
-    console.table(tableData);
+    if (tableView) {
+        printExecutionStagesTable(profilingData);
+    } else {
+        console.log(formatExecutionStages(profilingData));
+    }
 }
 
-function formatExecutionStages(stages: ExecutionStages): ExecutionStagesTableData[] {
+function formatExecutionStages(stages: ExecutionStages) {
     const { operationType, ...stagesData } = stages;
 
     return Object.entries(stagesData).map(([stage, data]) => ({
@@ -98,7 +109,7 @@ function formatExecutionStages(stages: ExecutionStages): ExecutionStagesTableDat
             data.stageData &&
             data.stageData.transactions != null &&
             data.stageData.transactions.length > 0
-                ? data.stageData.transactions.map((t) => t.hash).join(', ')
+                ? data.stageData.transactions.map((t) => t.hash).join(' \n')
                 : '-',
         noteContent: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.content : '-',
         errorName: data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.errorName : '-',
@@ -107,4 +118,40 @@ function formatExecutionStages(stages: ExecutionStages): ExecutionStagesTableDat
         bytesError:
             data.exists && data.stageData && data.stageData.note != null ? data.stageData.note.internalBytesError : '-',
     }));
+}
+
+function printExecutionStagesTable(stages: ExecutionStages): void {
+    const table = new Table({
+        head: [
+            'Stage',
+            'Exists',
+            'Success',
+            'Timestamp',
+            'Transactions',
+            'NoteContent',
+            'ErrorName',
+            'InternalMsg',
+            'BytesError',
+        ],
+        colWidths: [30, 8, 9, 13, 70, 13, 13, 13, 13],
+        wordWrap: true,
+    });
+
+    const tableData = formatExecutionStages(stages);
+
+    tableData.forEach((row) => {
+        table.push([
+            row.stage,
+            row.exists,
+            row.success,
+            row.timestamp,
+            row.transactions,
+            row.noteContent,
+            row.errorName,
+            row.internalMsg,
+            row.bytesError,
+        ]);
+    });
+
+    console.log(table.toString());
 }

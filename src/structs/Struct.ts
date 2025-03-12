@@ -183,12 +183,12 @@ export type TACSimulationRequest = {
 };
 
 export enum StageName {
-    COLLECTED_IN_TAC = 'COLLECTED_IN_TAC',
-    INCLUDED_IN_TAC_CONSENSUS = 'INCLUDED_IN_TAC_CONSENSUS',
-    EXECUTED_IN_TAC = 'EXECUTED_IN_TAC',
-    COLLECTED_IN_TON = 'COLLECTED_IN_TON',
-    INCLUDED_IN_TON_CONSENSUS = 'INCLUDED_IN_TON_CONSENSUS',
-    EXECUTED_IN_TON = 'EXECUTED_IN_TON',
+    COLLECTED_IN_TAC = 'collectedInTAC',
+    INCLUDED_IN_TAC_CONSENSUS = 'includedInTACConsensus',
+    EXECUTED_IN_TAC = 'executedInTAC',
+    COLLECTED_IN_TON = 'collectedInTON',
+    INCLUDED_IN_TON_CONSENSUS = 'includedInTONConsensus',
+    EXECUTED_IN_TON = 'executedInTON',
 }
 
 export type TransactionData = {
@@ -222,23 +222,6 @@ export type ProfilingStageData = {
 export type ExecutionStages = {
     operationType: OperationType;
 } & Record<StageName, ProfilingStageData>;
-
-export type ExecutionStagesTableData = {
-    stage: string;
-    exists: string;
-    success: string;
-    timestamp: string;
-    transactions: string;
-    noteContent: string;
-    errorName: string;
-    internalMsg: string;
-    bytesError: string;
-};
-
-export type TrackingOperationResult = {
-    profilingData: ExecutionStages;
-    tableData: ExecutionStagesTableData[];
-};
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
 
