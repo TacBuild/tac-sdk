@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- fixed bug with V5 wallet
+
+
 ## [0.5.2] - 2025-03-12 
 
 ### Changed

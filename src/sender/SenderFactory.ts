@@ -70,7 +70,7 @@ export class SenderFactory {
             config.walletId = {
                 networkGlobalId: params.network === Network.TESTNET ? -3 : -239,
                 context: {
-                    walletVersion: 'V5R1',
+                    walletVersion: 'v5r1',
                     workchain: 0,
                     subwalletNumber: params.options?.v5r1?.subwalletNumber ?? 0,
                 },
