@@ -16,6 +16,7 @@ import {
     UserWalletBalanceExtended,
     TACSimulationResults,
     TACSimulationRequest,
+    FeeInfo,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -52,6 +53,7 @@ import {
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
+import { CrossChainLayer } from '@tonappchain/artifacts/dist/src/ton/wrappers';
 
 export class TacSdk {
     readonly network: Network;
@@ -360,10 +362,16 @@ export class TacSdk {
     private async generateCrossChainMessages(
         caller: string,
         evmData: Cell,
+
         aggregatedData: {
             jettons: JettonBridgingData[];
             crossChainTonAmount: bigint;
         },
+
+        isRoundTrip: boolean,
+        protocolFee: bigint,
+        evmExecutorFee: bigint,
+        tvmExecutorFee: bigint,
     ): Promise<ShardMessage[]> {
         let crossChainTonAmount = aggregatedData.crossChainTonAmount;
 
@@ -371,13 +379,15 @@ export class TacSdk {
             return [
                 {
                     address: this.TONParams.crossChainLayerAddress,
-                    value: crossChainTonAmount + TRANSACTION_TON_AMOUNT,
+                    value: crossChainTonAmount + protocolFee + evmExecutorFee + tvmExecutorFee + TRANSACTION_TON_AMOUNT,
                     payload: this.getTonTransferPayload(caller, evmData, crossChainTonAmount),
                 },
             ];
         }
 
         const messages: ShardMessage[] = [];
+        let isFee = true
+
         for (const jetton of aggregatedData.jettons) {
             const payload = await this.generatePayload(jetton, caller, evmData, crossChainTonAmount);
             await sleep(this.delay * 1000);
@@ -439,18 +449,22 @@ export class TacSdk {
         );
     }
 
-    private async getGasLimit(
+    private async getFeeInfo(
         evmProxyMsg: EvmProxyMsg,
         transactionLinker: TransactionLinker,
         rawAssets: RawAssetBridgingData[],
+        evmTrustedExecutors: string[],
+        isRoundTrip?: boolean,
         forceSend: boolean = false,
-    ): Promise<bigint> {
+    ): Promise<FeeInfo> {
+
         const tacSimulationBody: TACSimulationRequest = {
             tacCallParams: {
                 arguments: evmProxyMsg.encodedParameters ?? '0x',
                 methodName: formatSolidityMethodName(evmProxyMsg.methodName),
                 target: evmProxyMsg.evmTargetAddress,
             },
+            evmValidExecutors: evmTrustedExecutors,
             extraData: '0x',
             feeAssetAddress: '',
             shardsKey: transactionLinker.shardsKey,
@@ -465,18 +479,58 @@ export class TacSdk {
 
         if (!tacSimulationResult.simulationStatus) {
             if (forceSend) {
-                return 0n;
+                return {
+                    IsRoundTrip: false,
+                    GasLimit: 0n,
+                    ProtocolFee: toNano("0.1"),
+                    EVMExecutorFee: 0n,
+                    TVMExecutorFee: 0n,
+                };
             }
             throw tacSimulationResult;
         }
 
-        return (BigInt(tacSimulationResult.estimatedGas) * 120n) / 100n;
+        isRoundTrip = isRoundTrip ?? (tacSimulationResult.outMessages != null)
+
+        const crossChainLayer = this.TONParams.contractOpener.open(new CrossChainLayer(Address.parse(this.TONParams.crossChainLayerAddress)));
+        const fullStateCCL = await crossChainLayer.getFullData();
+        const gasPrice = 50n; // TODO request from node but always returns null
+        const gasLimit = (BigInt(tacSimulationResult.estimatedGas) * 120n) / 100n;
+
+        let tvmExecutorFee = 0n;
+        if (isRoundTrip == false) {
+            const minUnlockExecutionFee = toNano("0.1");
+            const minMintExecutionFee = toNano("0.1");
+            if (tacSimulationResult.outMessages != null) {
+                for (const message of tacSimulationResult.outMessages) {
+                    tvmExecutorFee += BigInt(message.tokensBurned.length) * minUnlockExecutionFee;
+                    tvmExecutorFee += BigInt(message.tokensLocked.length) * minMintExecutionFee;
+                }
+            }
+        }
+
+        const protocolFee = BigInt(fullStateCCL.feeAmount!) + BigInt(isRoundTrip) * BigInt(fullStateCCL.feeAmount!) // TODO tacProtocolFee, tonProtocolFee (publish new npm with artifacts)
+
+        const feeInfo: FeeInfo = {
+            IsRoundTrip: isRoundTrip,
+            GasLimit: gasLimit,
+            ProtocolFee: protocolFee,
+            EVMExecutorFee: gasLimit * gasPrice, // TODO convert that to TON
+            TVMExecutorFee: tvmExecutorFee,
+        }
+
+        return feeInfo;
     }
 
     async sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
         assets?: AssetBridgingData[],
+        isRoundTrip?: boolean,
+        evmValidExecutors?: string[],
+        evmExecutorFee?: bigint,
+        tvmValidExecutors?: string[],
+        tvmExecutorFee?: bigint,
         forceSend: boolean = false,
     ): Promise<TransactionLinker> {
         const rawAssets = await this.convertAssetsToRawFormat(assets);
@@ -486,13 +540,31 @@ export class TacSdk {
         const caller = sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
 
-        const gasLimit = await this.getGasLimit(evmProxyMsg, transactionLinker, rawAssets, forceSend);
-
-        if (evmProxyMsg.gasLimit == 0n || evmProxyMsg.gasLimit == undefined) {
-            evmProxyMsg.gasLimit = gasLimit;
+        const evmTrustedExecutors = ["0x440E079445AA9586bf99971d5f57BF09E2B9A403"]
+        const tvmTrustedExecutor = ["EQD2-g7N1U8W0E4gzMPDX398lbW96s_mlHTPXHwaZyKiDoSZ"]
+        if (evmValidExecutors == undefined || evmValidExecutors.length == 0) {
+            evmValidExecutors = evmTrustedExecutors
         }
 
-        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg);
+        if (tvmValidExecutors == undefined || tvmValidExecutors.length == 0) {
+            tvmValidExecutors = tvmTrustedExecutor
+        }
+
+        const feeInfo = await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmTrustedExecutors, isRoundTrip, forceSend);
+
+        if (evmProxyMsg.gasLimit == 0n || evmProxyMsg.gasLimit == undefined) {
+            evmProxyMsg.gasLimit = feeInfo.GasLimit;
+        }
+
+        if (evmExecutorFee == undefined) {
+            evmExecutorFee = feeInfo.EVMExecutorFee;
+        }
+
+        if (!feeInfo.IsRoundTrip && tvmExecutorFee == undefined) {
+            tvmExecutorFee = feeInfo.TVMExecutorFee;
+        }
+
+        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg, evmValidExecutors!, tvmValidExecutors!);
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData);
         await sleep(this.delay * 1000);
 

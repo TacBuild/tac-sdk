@@ -172,9 +172,11 @@ export type TACSimulationRequest = {
         methodName: string;
         target: string;
     };
+    evmValidExecutors: string[],
     extraData: string;
     feeAssetAddress: string;
     shardsKey: string;
+    
     tonAssets: {
         amount: string;
         tokenAddress: string;
@@ -269,3 +271,11 @@ export type TACSimulationResults = {
         blockNumber: number;
     };
 };
+
+export type FeeInfo = {
+    IsRoundTrip: boolean,
+    GasLimit: bigint,
+    ProtocolFee: bigint,
+    EVMExecutorFee: bigint,
+    TVMExecutorFee: bigint,
+}
