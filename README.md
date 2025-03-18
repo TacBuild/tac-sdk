@@ -982,12 +982,12 @@ Provides detailed information about any notes or errors encountered during opera
 
 ```typescript
 export enum StageName {
-    COLLECTED_IN_TAC = 'COLLECTED_IN_TAC',
-    INCLUDED_IN_TAC_CONSENSUS = 'INCLUDED_IN_TAC_CONSENSUS',
-    EXECUTED_IN_TAC = 'EXECUTED_IN_TAC',
-    COLLECTED_IN_TON = 'COLLECTED_IN_TON',
-    INCLUDED_IN_TON_CONSENSUS = 'INCLUDED_IN_TON_CONSENSUS',
-    EXECUTED_IN_TON = 'EXECUTED_IN_TON',
+  COLLECTED_IN_TAC = 'collectedInTAC',
+  INCLUDED_IN_TAC_CONSENSUS = 'includedInTACConsensus',
+  EXECUTED_IN_TAC = 'executedInTAC',
+  COLLECTED_IN_TON = 'collectedInTON',
+  INCLUDED_IN_TON_CONSENSUS = 'includedInTONConsensus',
+  EXECUTED_IN_TON = 'executedInTON',
 }
 ```
 
@@ -1082,12 +1082,12 @@ export type ExecutionStages = {
 
 Represents the profiling data for all execution stages within an operation.
 - **`operationType`**.
-- **`COLLECTED_IN_TAC`**.
-- **`INCLUDED_IN_TAC_CONSENSUS`**.
-- **`EXECUTED_IN_TAC`**.
-- **`COLLECTED_IN_TON`**.
-- **`INCLUDED_IN_TON_CONSENSUS`**.
-- **`EXECUTED_IN_TON`**.
+- **`collectedInTAC`**.
+- **`includedInTACConsensus`**.
+- **`executedInTAC`**.
+- **`collectedInTON`**.
+- **`includedInTONConsensus`**.
+- **`executedInTON`**.
 
 
 ### `ExecutionStagesByOperationId`
