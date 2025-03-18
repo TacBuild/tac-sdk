@@ -1,5 +1,6 @@
 import type { Contract, ContractProvider, Sender } from '@ton/ton';
 import { Address, beginCell, Cell, contractAddress, SendMode } from '@ton/ton';
+import { FeeData } from 'ethers';
 
 export type JettonWalletData = {
     balance: bigint;
@@ -41,6 +42,7 @@ export class JettonWallet implements Contract {
         jettonAmount: bigint,
         receiverAddress?: string,
         crossChainTonAmount?: bigint,
+        feeData?: Cell | null,
         crossChainPayload?: Cell | null,
         queryId?: number,
     ) {
@@ -54,6 +56,7 @@ export class JettonWallet implements Contract {
             body.storeMaybeRef(
                 beginCell()
                     .storeCoins(crossChainTonAmount ?? 0n)
+                    .storeMaybeRef(feeData)
                     .storeMaybeRef(crossChainPayload)
                     .endCell(),
             );
@@ -73,6 +76,7 @@ export class JettonWallet implements Contract {
             jettonAmount: bigint;
             receiverAddress?: string;
             crossChainTonAmount?: bigint;
+            feeData?: Cell | null; 
             crossChainPayload?: Cell | null;
         },
     ) {
@@ -80,6 +84,7 @@ export class JettonWallet implements Contract {
             opts.jettonAmount,
             opts.receiverAddress,
             opts.crossChainTonAmount,
+            opts.feeData,
             opts.crossChainPayload,
             opts.queryId,
         );
@@ -97,6 +102,7 @@ export class JettonWallet implements Contract {
         responseAddress: string | null,
         forwardTonAmount?: bigint,
         crossChainTonAmount?: bigint,
+        feeData?: Cell | null,
         crossChainPayload?: Cell | null,
         queryId?: number,
     ) {
@@ -109,6 +115,7 @@ export class JettonWallet implements Contract {
             .storeMaybeRef(null)
             .storeCoins((forwardTonAmount || 0n) + (crossChainTonAmount || 0n))
             .storeCoins(crossChainTonAmount ?? 0n)
+            .storeMaybeRef(feeData)
             .storeMaybeRef(crossChainPayload)
             .endCell();
     }
