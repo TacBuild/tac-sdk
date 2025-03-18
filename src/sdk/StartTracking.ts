@@ -52,9 +52,7 @@ export async function startTracking(
 
             try {
                 operationId = await tracker.getOperationId(transactionLinker);
-            } catch (err) {
-                console.log('get operationId error');
-            }
+            } catch (err) {}
         } else {
             console.log('request operationType');
 

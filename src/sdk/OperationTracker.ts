@@ -53,20 +53,33 @@ export class OperationTracker {
     }
 
     async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
+        const requestBody = {
+            shardsKey: transactionLinker.shardsKey,
+            caller: transactionLinker.caller,
+            shardCount: transactionLinker.shardCount,
+            timestamp: transactionLinker.timestamp,
+        };
+
+        let operationId: string | undefined = undefined;
+
         for (const endpoint of this.customLiteSequencerEndpoints) {
             try {
-                const requestBody = {
-                    shardsKey: transactionLinker.shardsKey,
-                    caller: transactionLinker.caller,
-                    shardCount: transactionLinker.shardCount,
-                    timestamp: transactionLinker.timestamp,
-                };
-
                 const response = await axios.post<StringResponse>(`${endpoint}/ton/operation-id`, requestBody);
                 return response.data.response || '';
             } catch (error) {
+                if (axios.isAxiosError(error)) {
+                    if (error.response?.status === 404) {
+                        console.warn(`404 Not Found: ${endpoint}/ton/operation-id`);
+                        operationId = '';
+                        continue;
+                    }
+                }
                 console.error(`Failed to get OperationId with ${endpoint}:`, error);
             }
+        }
+
+        if (operationId !== undefined) {
+            return operationId;
         }
         throw operationFetchError;
     }

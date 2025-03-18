@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.4] - 2025-03-18
+
+### Changed
+
+- due to an API change, updated the `operationId` retrieval. An empty string will be returned for 404 errors
+
+
+## [0.5.3] - 2025-03-12
+
+### Changed
+
+- fixed bug with V5 wallet
+
+
 ## [0.5.2] - 2025-03-12 
 
 ### Changed
