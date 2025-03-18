@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- due to an API change, updated the `operationId` retrieval. An empty string will be returned for 404 errors
+
+
 ## [0.5.3] - 2025-03-12
 
 ### Changed
