@@ -1,4 +1,4 @@
-# TAC-SDK
+# TAC SDK
 
 [![Version npm](https://img.shields.io/npm/v/@tonappchain/sdk.svg?logo=npm)](https://www.npmjs.com/package/@tonappchain/sdk)
 
