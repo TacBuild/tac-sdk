@@ -41,7 +41,7 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
         shardsKey: transactionLinker.shardsKey,
         shardCount: transactionLinker.shardCount,
         evmValidExecutors: evmValidExecutors,
-        tvmValidExecutors: tvmValidExecutors,// 
+        tvmValidExecutors: tvmValidExecutors,
     });
 
     return beginCell().storeStringTail(json).endCell();

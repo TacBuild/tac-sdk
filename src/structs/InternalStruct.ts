@@ -1,7 +1,7 @@
 import { Cell } from '@ton/ton';
 import {
     ContractOpener,
-    TACSimulationResults,
+    TACSimulationResult,
     ExecutionStagesByOperationId,
     Network,
     OperationIdsByShardsKey,
@@ -55,6 +55,8 @@ export type InternalTACParams = {
     provider: AbstractProvider;
     settingsAddress: string;
     tokenUtilsAddress: string;
+    trustedTACExecutors: string[],
+    trustedTONExecutors: string[],
     abiCoder: ethers.AbiCoder;
     crossChainLayerABI: Interface | InterfaceAbi;
     crossChainLayerAddress: string;
@@ -74,4 +76,4 @@ export type OperationIdsByShardsKeyResponse = ResponseBase<OperationIdsByShardsK
 
 export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
 
-export type TACSimulationResponse = ResponseBase<TACSimulationResults>;
+export type TACSimulationResponse = ResponseBase<TACSimulationResult>;

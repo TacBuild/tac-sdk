@@ -1,34 +1,34 @@
+import 'dotenv/config';
+
 import { ethers } from 'ethers';
 
 import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
 
 import { toNano } from '@ton/ton';
 
-const UNISWAPV2_PROXY_ADDRESS = ''; // uniswap proxy address
+const UNISWAPV2_PROXY_ADDRESS = '0x5AdB0bcFAA45E3BCd932541375ba56D647E037A9'; // uniswap proxy address
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1'; // TKA
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK'; // TKB
 
 const WALLET_VERSION = 'V3R2';
-const TVM_MNEMONICS = ''; // mnemonic
 
 async function addLiquidity() {
     const sdkParams: SDKParams = {
         network: Network.TESTNET,
         TACParams: {
             provider: new ethers.JsonRpcProvider('https://turin.rpc.tac.build/'),
-            settingsAddress: '', // set local tac settings
+            settingsAddress: '0xB03Bb7C6df3122F11Dc9Ba584af0CFa4655Cc1a8', // set local tac settings
         },
         TONParams: {
-            settingsAddress: '',
+            settingsAddress: 'EQAAh-xg6kkOQFD9UT0kpX7aJripF2ZbC_0bUVOBn-TBdG5C',
         },
         customLiteSequencerEndpoints: ['http://localhost:8080'],
     };
     const tacSdk = await TacSdk.create(sdkParams);
-    const EVM_TKA_ADDRESS = ''; // hardcode paired evm address for TKA (or calculate them)
-    console.log(EVM_TKA_ADDRESS);
-    const EVM_TKB_ADDRESS = ''; // hardcode paired evm address for TKB (or calculate them)
-    console.log(EVM_TKB_ADDRESS);
+    const EVM_TKA_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKA_ADDRESS);
+    const EVM_TKB_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKB_ADDRESS);
+
     const amountA = 1;
     const amountB = 2;
 
@@ -55,10 +55,11 @@ async function addLiquidity() {
         encodedParameters,
     };
 
+    const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
     const sender = await SenderFactory.getSender({
         network: Network.TESTNET,
         version: WALLET_VERSION,
-        mnemonic: TVM_MNEMONICS,
+        mnemonic: mnemonic,
     });
 
     const jettons: AssetBridgingData[] = [
@@ -80,7 +81,9 @@ async function main() {
         const result = await addLiquidity();
         console.log('Transaction successful:', result);
         // start tracking transaction status
-        await startTracking(result, Network.TESTNET, ['http://localhost:8080']);
+        await startTracking(result, Network.TESTNET, { 
+            customLiteSequencerEndpoints: ['http://localhost:8080']
+        });           
     } catch (error) {
         console.error('Error during transaction:', error);
     }

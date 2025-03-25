@@ -235,7 +235,7 @@ export type OperationIds = {
 
 export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
-export type TACSimulationResults = {
+export type TACSimulationResult = {
     estimatedGas: bigint;
     estimatedJettonFeeAmount: string;
     feeParams: {

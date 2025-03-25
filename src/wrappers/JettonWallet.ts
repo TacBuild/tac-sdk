@@ -1,6 +1,5 @@
 import type { Contract, ContractProvider, Sender } from '@ton/ton';
 import { Address, beginCell, Cell, contractAddress, SendMode } from '@ton/ton';
-import { FeeData } from 'ethers';
 
 export type JettonWalletData = {
     balance: bigint;
