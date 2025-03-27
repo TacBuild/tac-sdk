@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] 
+
+### Changed
+
+- fixed bug with crossChainTonAmount in generating jetton payload
+
 ## [0.5.4] - 2025-03-18
 
 ### Changed
