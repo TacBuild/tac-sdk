@@ -27,6 +27,7 @@ export class JettonMaster implements Contract {
         const data = beginCell()
             .storeCoins(0)
             .storeAddress(config.crossChainLayerAddress)
+            .storeAddress(null)
             .storeRef(beginCell().endCell())
             .storeRef(config.walletCode)
             .storeStringTail(config.evmTokenAddress)
