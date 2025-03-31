@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.6] - 2025-03-31
+
+### Changed
+
+- changed tvm jetton minter stateInit 
+
+
 ## [0.5.5] - 2025-03-27 
 
 ### Changed
