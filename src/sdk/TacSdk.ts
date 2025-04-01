@@ -281,6 +281,7 @@ export class TacSdk {
             beginCell()
                 .storeCoins(0)
                 .storeAddress(address(this.TONParams.crossChainLayerAddress))
+                .storeAddress(null)
                 .storeRef(beginCell().endCell())
                 .storeRef(this.TONParams.jettonWalletCode)
                 .storeStringTail(l2Address)
