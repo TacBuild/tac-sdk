@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+
+- changed tvm jetton minter stateInit in `getJettonOpType`
+
+
 ## [0.5.6] - 2025-03-31
 
 ### Changed
