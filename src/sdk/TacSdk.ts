@@ -53,9 +53,11 @@ import {
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
-import { CrossChainLayer } from '@tonappchain/artifacts/dist/src/ton/wrappers';
+import { CrossChainLayer as CrossChainLayerTON } from '@tonappchain/artifacts/dist/src/ton/wrappers';
 import { OutMessageV1Struct } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/Structs.sol/IStructsInterface';
-// import { CrossChainLayer } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/CrossChainLayer';
+import { CrossChainLayer__factory as CrossChainLayerFactoryTAC } from '@tonappchain/artifacts/l2-evm/typechain-types/factories/contracts/L2/CrossChainLayer__factory';
+import { TokenUtils__factory as TokenUtilsFactoryTAC } from "@tonappchain/artifacts/l2-evm/typechain-types/factories/contracts/L2/TokenUtils__factory";
+import { Settings__factory as SettingsFactoryTAC } from "@tonappchain/artifacts/l2-evm/typechain-types/factories/contracts/L2/Settings__factory";
 
 export class TacSdk {
     readonly network: Network;
@@ -132,20 +134,20 @@ export class TacSdk {
         const provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
 
         const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
-        const settings = new ethers.Contract(
-            settingsAddress,
-            TACParams?.settingsABI ?? artifacts.tac.compilationArtifacts.Settings.abi,
-            provider,
-        );
+        const settings = SettingsFactoryTAC.connect(settingsAddress, provider);
 
         const crossChainLayerABI =
             TACParams?.crossChainLayerABI ?? artifacts.tac.compilationArtifacts.CrossChainLayer.abi;
         const crossChainLayerAddress = await settings.getAddressSetting(
             keccak256(toUtf8Bytes('CrossChainLayerAddress')),
         );
+        const crossChainLayer = CrossChainLayerFactoryTAC.connect(crossChainLayerAddress, provider);
         await sleep(delay * 1000);
         const tokenUtilsAddress = await settings.getAddressSetting(keccak256(toUtf8Bytes('TokenUtilsAddress')));
+        const tokenUtils = 
         await sleep(delay * 1000);
+
+
         const trustedTACExecutors = await settings.getTrustedEVMExecutors();
         await sleep(delay * 1000);
         const trustedTONExecutors = await settings.getTrustedTVMExecutors();
@@ -505,7 +507,7 @@ export class TacSdk {
         forceSend: boolean = false,
     ): Promise<{feeInfo: FeeInfo, simulation: TACSimulationResult}> {
 
-        const crossChainLayer = this.TONParams.contractOpener.open(new CrossChainLayer(Address.parse(this.TONParams.crossChainLayerAddress)));
+        const crossChainLayer = this.TONParams.contractOpener.open(new CrossChainLayerTON(Address.parse(this.TONParams.crossChainLayerAddress)));
         const fullStateCCL = await crossChainLayer.getFullData();
         
         const tacSimulationBody: TACSimulationRequest = {

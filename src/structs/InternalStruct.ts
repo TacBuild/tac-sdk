@@ -10,6 +10,9 @@ import {
     OperationType,
 } from './Struct';
 import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
+import { CrossChainLayer as CrossChainLayerTAC } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/CrossChainLayer';
+import { Settings as SettingsTAC } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/Settings';
+import { TokenUtils as TokenUtilsTAC } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/TokenUtils';
 
 export type ShardMessage = {
     address: string;
@@ -53,8 +56,9 @@ export type InternalTONParams = {
 
 export type InternalTACParams = {
     provider: AbstractProvider;
-    settingsAddress: string;
-    tokenUtilsAddress: string;
+    crossChainLayer: CrossChainLayerTAC;
+    settings: SettingsTAC;
+    tokenUtils: TokenUtilsTAC;
     trustedTACExecutors: string[],
     trustedTONExecutors: string[],
     abiCoder: ethers.AbiCoder;
