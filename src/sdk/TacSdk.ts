@@ -186,12 +186,7 @@ export class TacSdk {
     }
 
     async nativeTACAddress(): Promise<string> {
-        const crossChainLayer = new ethers.Contract(
-            await this.TACParams.crossChainLayer.getAddress(),
-            this.TACParams.crossChainLayerABI,
-            this.TACParams.provider,
-        );
-        return crossChainLayer.NATIVE_TOKEN_ADDRESS.staticCall();
+        return this.TACParams.crossChainLayer.NATIVE_TOKEN_ADDRESS.staticCall();
     }
 
     async getUserJettonWalletAddress(userAddress: string, tokenAddress: string): Promise<string> {
