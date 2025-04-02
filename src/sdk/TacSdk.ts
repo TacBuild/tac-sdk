@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Address, address, beginCell, Cell, toNano } from '@ton/ton';
-import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
+import { ContractRunner, ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
 import type { SenderAbstraction } from '../sender';
 
 // import structs
@@ -134,7 +134,9 @@ export class TacSdk {
         const provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
 
         const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
-        const settings = SettingsFactoryTAC.connect(settingsAddress, provider);
+        const contractRunner: ContractRunner = provider;
+
+        const settings = SettingsFactoryTAC.connect(settingsAddress, contractRunner);
 
         const crossChainLayerABI =
             TACParams?.crossChainLayerABI ?? artifacts.tac.compilationArtifacts.CrossChainLayer.abi;
@@ -143,10 +145,10 @@ export class TacSdk {
         );
         const crossChainLayer = CrossChainLayerFactoryTAC.connect(crossChainLayerAddress, provider);
         await sleep(delay * 1000);
-        const tokenUtilsAddress = await settings.getAddressSetting(keccak256(toUtf8Bytes('TokenUtilsAddress')));
-        const tokenUtils = 
-        await sleep(delay * 1000);
 
+        const tokenUtilsAddress = await settings.getAddressSetting(keccak256(toUtf8Bytes('TokenUtilsAddress')));
+        const tokenUtils = TokenUtilsFactoryTAC.connect(tokenUtilsAddress, provider);
+        await sleep(delay * 1000);
 
         const trustedTACExecutors = await settings.getTrustedEVMExecutors();
         await sleep(delay * 1000);
@@ -159,13 +161,13 @@ export class TacSdk {
 
         return {
             provider,
-            settingsAddress,
-            tokenUtilsAddress,
+            settings,
+            tokenUtils,
+            crossChainLayer,
             trustedTACExecutors,
             trustedTONExecutors,
             abiCoder: new ethers.AbiCoder(),
             crossChainLayerABI,
-            crossChainLayerAddress,
             crossChainLayerTokenABI,
             crossChainLayerTokenBytecode,
         };
@@ -179,9 +181,9 @@ export class TacSdk {
         return 'NONE';
     }
 
-    get nativeTACAddress(): Promise<string> {
+    async nativeTACAddress(): Promise<string> {
         const crossChainLayer = new ethers.Contract(
-            this.TACParams.crossChainLayerAddress,
+            await this.TACParams.crossChainLayer.getAddress(),
             this.TACParams.crossChainLayerABI,
             this.TACParams.provider,
         );
@@ -546,7 +548,7 @@ export class TacSdk {
 
         isRoundTrip = isRoundTrip ?? (tacSimulationResult.outMessages != null)
 
-        const gasPrice = 10n; // TODO request from node but always returns null
+        const gasPrice = 10n; // TODO request from node but it always returns null
         const gasLimit = (BigInt(tacSimulationResult.estimatedGas) * 120n) / 100n;
 
         let tvmExecutorFee = 0n;
@@ -685,11 +687,11 @@ export class TacSdk {
 
 
     // }
-    getTrustedTACExecutors(): string[] {
+    get getTrustedTACExecutors(): string[] {
         return this.TACParams.trustedTACExecutors;
     }
 
-    getTrustedTONExecutors(): string[] {
+    get getTrustedTONExecutors(): string[] {
         return this.TACParams.trustedTONExecutors;
     }
 
@@ -713,9 +715,9 @@ export class TacSdk {
 
         return calculateEVMTokenAddress(
             this.TACParams.abiCoder,
-            this.TACParams.tokenUtilsAddress,
+            await this.TACParams.tokenUtils.getAddress(),
             this.TACParams.crossChainLayerTokenBytecode,
-            this.TACParams.crossChainLayerAddress,
+            await this.TACParams.crossChainLayer.getAddress(),
             tvmTokenAddress,
         );
     }

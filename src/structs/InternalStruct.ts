@@ -63,7 +63,6 @@ export type InternalTACParams = {
     trustedTONExecutors: string[],
     abiCoder: ethers.AbiCoder;
     crossChainLayerABI: Interface | InterfaceAbi;
-    crossChainLayerAddress: string;
     crossChainLayerTokenABI: Interface | InterfaceAbi;
     crossChainLayerTokenBytecode: string;
 };
