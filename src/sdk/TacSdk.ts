@@ -54,6 +54,8 @@ import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
 import { CrossChainLayer } from '@tonappchain/artifacts/dist/src/ton/wrappers';
+import { OutMessageV1Struct } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/Structs.sol/IStructsInterface';
+// import { CrossChainLayer } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/CrossChainLayer';
 
 export class TacSdk {
     readonly network: Network;
@@ -146,7 +148,7 @@ export class TacSdk {
         await sleep(delay * 1000);
         const trustedTACExecutors = await settings.getTrustedEVMExecutors();
         await sleep(delay * 1000);
-        const trustedTONExecutors = await settings.getTrustedEVMExecutors();
+        const trustedTONExecutors = await settings.getTrustedTVMExecutors();
 
         const crossChainLayerTokenABI =
             TACParams?.crossChainLayerTokenABI ?? artifacts.tac.compilationArtifacts.CrossChainLayerToken.abi;
@@ -503,6 +505,9 @@ export class TacSdk {
         forceSend: boolean = false,
     ): Promise<{feeInfo: FeeInfo, simulation: TACSimulationResult}> {
 
+        const crossChainLayer = this.TONParams.contractOpener.open(new CrossChainLayer(Address.parse(this.TONParams.crossChainLayerAddress)));
+        const fullStateCCL = await crossChainLayer.getFullData();
+        
         const tacSimulationBody: TACSimulationRequest = {
             tacCallParams: {
                 arguments: evmProxyMsg.encodedParameters ?? '0x',
@@ -539,8 +544,6 @@ export class TacSdk {
 
         isRoundTrip = isRoundTrip ?? (tacSimulationResult.outMessages != null)
 
-        const crossChainLayer = this.TONParams.contractOpener.open(new CrossChainLayer(Address.parse(this.TONParams.crossChainLayerAddress)));
-        const fullStateCCL = await crossChainLayer.getFullData();
         const gasPrice = 10n; // TODO request from node but always returns null
         const gasLimit = (BigInt(tacSimulationResult.estimatedGas) * 120n) / 100n;
 
@@ -593,14 +596,26 @@ export class TacSdk {
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
         assets?: AssetBridgingData[],
-        isRoundTrip?: boolean,
-        protocolFee?: bigint,
-        evmValidExecutors?: string[],
-        evmExecutorFee?: bigint,
-        tvmValidExecutors?: string[],
-        tvmExecutorFee?: bigint,
-        forceSend: boolean = false,
+        options?: {
+            forceSend?: boolean,
+            isRoundTrip?: boolean,
+            protocolFee?: bigint,
+            evmValidExecutors?: string[],
+            evmExecutorFee?: bigint,
+            tvmValidExecutors?: string[],
+            tvmExecutorFee?: bigint,
+        }
     ): Promise<TransactionLinker> {
+        let {
+            forceSend = false,
+            isRoundTrip = undefined,
+            protocolFee = undefined,
+            evmValidExecutors = [],
+            evmExecutorFee = undefined,
+            tvmValidExecutors = [],
+            tvmExecutorFee = undefined
+        } = options || {};
+
         const rawAssets = await this.convertAssetsToRawFormat(assets);
         const aggregatedData = await this.aggregateJettons(rawAssets);
         const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
@@ -608,12 +623,12 @@ export class TacSdk {
         const caller = sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
 
-        if (evmValidExecutors == undefined || evmValidExecutors.length == 0) {
-            evmValidExecutors = this.TACParams.trustedTACExecutors
+        if (evmValidExecutors.length == 0) {
+            evmValidExecutors = this.TACParams.trustedTACExecutors;
         }
 
-        if (tvmValidExecutors == undefined || tvmValidExecutors.length == 0) {
-            tvmValidExecutors = this.TACParams.trustedTONExecutors
+        if (tvmValidExecutors.length == 0) {
+            tvmValidExecutors = this.TACParams.trustedTONExecutors;
         }
 
         const {feeInfo} = await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, isRoundTrip, forceSend);
@@ -654,6 +669,20 @@ export class TacSdk {
         return { sendTransactionResult, ...transactionLinker };
     }
 
+    // async sendMessage(
+    //     assets: AssetBridgingData[],
+    //     tonTarget: string,
+    //     shardsKey?: bigint,
+    // ) {
+    //     const outMessage: OutMessageV1Struct = {
+    //         shardsKey: 5n,
+    //         tvmTarget: senderAddress,
+    //         tvmPayload: '',
+    //         toBridge: [],
+    //     };
+
+
+    // }
     getTrustedTACExecutors(): string[] {
         return this.TACParams.trustedTACExecutors;
     }
@@ -665,6 +694,7 @@ export class TacSdk {
     async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
         if (tvmTokenAddress !== this.nativeTONAddress) {
             validateTVMAddress(tvmTokenAddress);
+            tvmTokenAddress = Address.parse(tvmTokenAddress).toString({ bounceable: true });
 
             const { code: givenMinterCodeBOC } = await this.TONParams.contractOpener.getContractState(
                 address(tvmTokenAddress),

@@ -87,6 +87,7 @@ export async function startTracking(
     }
 
     console.log(profilingData.operationType);
+    console.log(profilingData.metaInfo);
     if (tableView) {
         printExecutionStagesTable(profilingData);
     } else {
@@ -95,7 +96,7 @@ export async function startTracking(
 }
 
 function formatExecutionStages(stages: ExecutionStages) {
-    const { operationType, ...stagesData } = stages;
+    const { operationType, metaInfo, ...stagesData } = stages;
 
     return Object.entries(stagesData).map(([stage, data]) => ({
         stage: stage,

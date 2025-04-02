@@ -221,8 +221,28 @@ export type ProfilingStageData = {
     stageData: StageData | null;
 };
 
+export type InitialCaller = {
+    initialCallerAddress: string;
+    blockNumber: BlockchainType;
+};
+
+export type GeneralFeeInfo = {
+    protocolFee: string;
+    executorFee: string;
+    tokenFeeSymbol: BlockchainType;
+}
+
+export type MetaInfo = {
+    initialCaller: InitialCaller;
+    tacValidExecutors: string[];
+    tonValidExecutors: string[];
+    tacFeeInfo: GeneralFeeInfo;
+    tonFeeInfo: GeneralFeeInfo;
+};
+
 export type ExecutionStages = {
     operationType: OperationType;
+    metaInfo: MetaInfo; 
 } & Record<StageName, ProfilingStageData>;
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
