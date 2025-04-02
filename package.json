@@ -22,6 +22,7 @@
     "@ton/ton": "15.1.0",
     "@tonappchain/artifacts": "0.0.16-v2",
     "@tonappchain/ton-lite-client": "3.0.6",
+    "@tonappchain/evm-ccl": "0.9.16-peregudov.sv",
     "@tonconnect/ui": "^2.0.11",
     "bn.js": "^5.2.1",
     "cli-table3": "^0.6.5",

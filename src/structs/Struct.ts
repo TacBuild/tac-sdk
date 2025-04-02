@@ -151,6 +151,11 @@ export type UserWalletBalanceExtended =
           exists: false;
       };
 
+export type TacToken = {
+    l2Address: string;
+    amount: string;
+};
+
 export type EvmProxyMsg = {
     evmTargetAddress: string;
     methodName?: string;

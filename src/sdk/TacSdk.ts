@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Address, address, beginCell, Cell, toNano } from '@ton/ton';
-import { ContractRunner, ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
+import { Wallet, ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
 import type { SenderAbstraction } from '../sender';
 
 // import structs
@@ -17,6 +17,7 @@ import {
     TACSimulationResult,
     TACSimulationRequest,
     FeeInfo,
+    TacToken,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -54,10 +55,14 @@ import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
 import { CrossChainLayer as CrossChainLayerTON } from '@tonappchain/artifacts/dist/src/ton/wrappers';
-import { OutMessageV1Struct } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/Structs.sol/IStructsInterface';
-import { CrossChainLayer__factory as CrossChainLayerFactoryTAC } from '@tonappchain/artifacts/l2-evm/typechain-types/factories/contracts/L2/CrossChainLayer__factory';
-import { TokenUtils__factory as TokenUtilsFactoryTAC } from "@tonappchain/artifacts/l2-evm/typechain-types/factories/contracts/L2/TokenUtils__factory";
-import { Settings__factory as SettingsFactoryTAC } from "@tonappchain/artifacts/l2-evm/typechain-types/factories/contracts/L2/Settings__factory";
+
+import { OutMessageV1Struct } from '@tonappchain/evm-ccl/dist/typechain-types/contracts/L2/Structs.sol/IStructsInterface';
+import { encodeOutMessageV1 } from '@tonappchain/evm-ccl/dist/scripts/utils/merkleTreeUtils'; 
+
+import { CrossChainLayer__factory as CrossChainLayerFactoryTAC } from '@tonappchain/evm-ccl/dist/typechain-types/factories/contracts/L2/CrossChainLayer__factory';
+import { TokenUtils__factory as TokenUtilsFactoryTAC } from '@tonappchain/evm-ccl/dist/typechain-types/factories/contracts/L2/TokenUtils__factory';
+import { Settings__factory as SettingsFactoryTAC } from '@tonappchain/evm-ccl/dist/typechain-types/factories/contracts/L2/Settings__factory';
+import { ERC20__factory as ERC20FactoryTAC } from '@tonappchain/evm-ccl/dist/typechain-types/factories/@openzeppelin/contracts/token/ERC20/ERC20__factory';
 
 export class TacSdk {
     readonly network: Network;
@@ -134,9 +139,8 @@ export class TacSdk {
         const provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
 
         const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
-        const contractRunner: ContractRunner = provider;
 
-        const settings = SettingsFactoryTAC.connect(settingsAddress, contractRunner);
+        const settings = SettingsFactoryTAC.connect(settingsAddress, provider);
 
         const crossChainLayerABI =
             TACParams?.crossChainLayerABI ?? artifacts.tac.compilationArtifacts.CrossChainLayer.abi;
@@ -411,6 +415,14 @@ export class TacSdk {
         return payload;
     }
 
+    async getTACUSDPrice(): Promise<number> {
+        return 0.5;
+    }
+
+    async getTONUSDPrice(): Promise<number> {
+        return 5.5;
+    }
+
     private async generateCrossChainMessages(
         caller: string,
         evmData: Cell,
@@ -673,20 +685,52 @@ export class TacSdk {
         return { sendTransactionResult, ...transactionLinker };
     }
 
-    // async sendMessage(
-    //     assets: AssetBridgingData[],
-    //     tonTarget: string,
-    //     shardsKey?: bigint,
-    // ) {
-    //     const outMessage: OutMessageV1Struct = {
-    //         shardsKey: 5n,
-    //         tvmTarget: senderAddress,
-    //         tvmPayload: '',
-    //         toBridge: [],
-    //     };
+    async bridgeTokensToTON(
+        signer: Wallet,
+        value: bigint,
+        tonTarget: string,
+        assets?: TacToken[],
+    ): Promise<string> {
+        if (assets == undefined) {
+            assets = [];
+        }
+        const crossChainLayerAddress = await this.TACParams.crossChainLayer.getAddress();
+        for (const asset of assets) {
+            const tokenContract = ERC20FactoryTAC.connect(asset.l2Address, this.TACParams.provider);
+    
+            const tx = await tokenContract.connect(signer).approve(crossChainLayerAddress, asset.amount);
+            await tx.wait();
+        }
+    
+        const shardsKey = BigInt(Math.round(Math.random() * 1e18));
+        const protocolFee = await this.TACParams.crossChainLayer.getProtocolFee();
 
+        const tvmExecutorFeeInTON = (toNano("0.05") * BigInt(assets.length + 2) + toNano("0.1")) * 120n / 100n;
+        const tonToTacRate = await this.getTONUSDPrice() / await this.getTACUSDPrice();
+        const scale = 10 ** 9;
+        const tonToTacRateScaled = BigInt(Math.round(tonToTacRate * scale));
+        const tvmExecutorFeeInTAC = tonToTacRateScaled * tvmExecutorFeeInTON;
 
-    // }
+        const outMessage: OutMessageV1Struct = {
+            shardsKey: shardsKey,
+            tvmTarget: tonTarget,
+            tvmPayload: '',
+            tvmProtocolFee: protocolFee,
+            tvmExecutorFee: tvmExecutorFeeInTAC,
+            tvmValidExecutors: this.TACParams.trustedTONExecutors,
+            toBridge: assets,
+        };
+
+        const encodedOutMessage = encodeOutMessageV1(outMessage);
+        const outMsgVersion = 1n;
+
+        const totalValue = value + BigInt(outMessage.tvmProtocolFee) + BigInt(outMessage.tvmExecutorFee);
+
+        const tx = await this.TACParams.crossChainLayer.connect(signer).sendMessage(outMsgVersion, encodedOutMessage, { value: totalValue });
+        await tx.wait();
+        return tx.hash;
+    }
+
     get getTrustedTACExecutors(): string[] {
         return this.TACParams.trustedTACExecutors;
     }

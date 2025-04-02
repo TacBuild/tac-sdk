@@ -10,9 +10,9 @@ import {
     OperationType,
 } from './Struct';
 import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
-import { CrossChainLayer as CrossChainLayerTAC } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/CrossChainLayer';
-import { Settings as SettingsTAC } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/Settings';
-import { TokenUtils as TokenUtilsTAC } from '@tonappchain/artifacts/l2-evm/typechain-types/contracts/L2/TokenUtils';
+import { CrossChainLayer as CrossChainLayerTAC } from '@tonappchain/evm-ccl/dist/typechain-types/contracts/L2/CrossChainLayer';
+import { Settings as SettingsTAC } from '@tonappchain/evm-ccl/dist/typechain-types/contracts/L2/Settings';
+import { TokenUtils as TokenUtilsTAC } from '@tonappchain/evm-ccl/dist/typechain-types/contracts/L2/TokenUtils';
 
 export type ShardMessage = {
     address: string;
