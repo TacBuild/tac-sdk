@@ -563,17 +563,19 @@ export class TacSdk {
         const gasPrice = 10n; // TODO request from node but it always returns null
         const gasLimit = (BigInt(tacSimulationResult.estimatedGas) * 120n) / 100n;
 
-        let tvmExecutorFee = 0n;
+        let tonExecutorFee = 0n;
         if (isRoundTrip == true) {
-            const minUnlockExecutionFee = toNano("0.2");
-            const minMintExecutionFee = toNano("0.2");
+            const minUnlockExecutionFee = toNano("0.05");
+            const minMintExecutionFee = toNano("0.05");
+            tonExecutorFee += toNano("0.1");
+
             if (tacSimulationResult.outMessages != null) {
                 for (const message of tacSimulationResult.outMessages) {
                     if (message.tokensBurned != null) {
-                        tvmExecutorFee += BigInt(message.tokensBurned.length) * minUnlockExecutionFee;
+                        tonExecutorFee += BigInt(message.tokensBurned.length + 1) * minMintExecutionFee;
                     }
                     if (message.tokensLocked != null) {
-                        tvmExecutorFee += BigInt(message.tokensLocked.length) * minMintExecutionFee;
+                        tonExecutorFee += BigInt(message.tokensLocked.length + 1) * minUnlockExecutionFee;
                     }
                 }
             }
@@ -586,7 +588,7 @@ export class TacSdk {
             GasLimit: gasLimit,
             ProtocolFee: protocolFee,
             EVMExecutorFee: gasLimit * gasPrice, // TODO convert that to TON
-            TVMExecutorFee: tvmExecutorFee,
+            TVMExecutorFee: tonExecutorFee,
         }
 
         return {feeInfo: feeInfo, simulation: tacSimulationResult};
