@@ -555,9 +555,15 @@ export class TacSdk {
 
         isRoundTrip = isRoundTrip ?? (tacSimulationResult.outMessages != null)
 
-        const gasPrice = 10n; // TODO request from node but it always returns null
+        const gasPriceGwei = BigInt(10n); // TODO request from node but it always returns null
         const gasLimit = (BigInt(tacSimulationResult.estimatedGas) * 120n) / 100n;
 
+        const tacToTonRate = await this.getTACUSDPrice() / await this.getTONUSDPrice();
+        const rateBigInt = BigInt(Math.floor(tacToTonRate * 1e9));
+        
+        const executorFeeInGwei = gasPriceGwei * gasLimit;
+        const executorFeeInTON = executorFeeInGwei * rateBigInt / (10n ** 9n); // no need to scale to TON because we calculate in gwei
+        
         let tonExecutorFee = 0n;
         if (isRoundTrip == true) {
             const minUnlockExecutionFee = toNano("0.05");
@@ -582,7 +588,7 @@ export class TacSdk {
             IsRoundTrip: isRoundTrip,
             GasLimit: gasLimit,
             ProtocolFee: protocolFee,
-            EVMExecutorFee: gasLimit * gasPrice, // TODO convert that to TON
+            EVMExecutorFee: executorFeeInTON,
             TVMExecutorFee: tonExecutorFee,
         }
 
