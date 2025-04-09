@@ -16,10 +16,10 @@ async function bridgeTAC() {
         network: Network.TESTNET,
         TACParams: {
             provider: provider,
-            settingsAddress: '0x4A12Ebd5058d3770F1780A3Bd4eE2faBDcB93c67', // set local tac settings
+            settingsAddress: '0xEB8E6E7632Aa97b8e93d663407C8dbD0B5112946', // set local tac settings
         },
         TONParams: {
-            settingsAddress: 'EQCjQ_L3BmRCu4sGuI2pY6cmM1Lx5J0tLhftcfLTIN-PpJNz', // set local ton settings
+            settingsAddress: 'EQCdbUTIKIbA4fx12LP1-23YsQh7oeSpN4noPhni2HOUTysc', // set local ton settings
         },
         customLiteSequencerEndpoints: ['http://localhost:8080'],
     };

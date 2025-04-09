@@ -537,14 +537,13 @@ export class TacSdk {
         };
 
         const tacSimulationResult = await this.simulateTACMessage(tacSimulationBody);
-
         if (!tacSimulationResult.simulationStatus) {
             if (forceSend) {
                 return {
                     feeInfo: {
                         IsRoundTrip: false,
                         GasLimit: 0n,
-                        ProtocolFee: toNano("0.1"),
+                        ProtocolFee: BigInt(toNano(fullStateCCL.tacProtocolFee!)),
                         EVMExecutorFee: 0n,
                         TVMExecutorFee: 0n,
                     }, 
@@ -555,6 +554,8 @@ export class TacSdk {
 
         isRoundTrip = isRoundTrip ?? (tacSimulationResult.outMessages != null)
 
+        const minExecutorFee = toNano("0.01");
+
         const gasPriceGwei = BigInt(10n); // TODO request from node but it always returns null
         const gasLimit = (BigInt(tacSimulationResult.estimatedGas) * 120n) / 100n;
 
@@ -562,21 +563,21 @@ export class TacSdk {
         const rateBigInt = BigInt(Math.floor(tacToTonRate * 1e9));
         
         const executorFeeInGwei = gasPriceGwei * gasLimit;
-        const executorFeeInTON = executorFeeInGwei * rateBigInt / (10n ** 9n); // no need to scale to TON because we calculate in gwei
-        
-        let tonExecutorFee = 0n;
+        const tacExecutorFeeInTON = executorFeeInGwei * rateBigInt / (10n ** 9n) + minExecutorFee; // no need to scale to TON because we calculate in gwei
+
+        let tonExecutorFeeInTON = 0n;
         if (isRoundTrip == true) {
-            const minUnlockExecutionFee = toNano("0.05");
-            const minMintExecutionFee = toNano("0.05");
-            tonExecutorFee += toNano("0.1");
+            const minUnlockExecutionFee = toNano("0.065"); // TODO unlock token
+            const minMintExecutionFee = toNano("0.065"); // TODO mint token
+            tonExecutorFeeInTON += toNano("0.04") + minExecutorFee; //TODO highload transfer + minExecutorFee
 
             if (tacSimulationResult.outMessages != null) {
                 for (const message of tacSimulationResult.outMessages) {
                     if (message.tokensBurned != null) {
-                        tonExecutorFee += BigInt(message.tokensBurned.length + 1) * minMintExecutionFee;
+                        tonExecutorFeeInTON += BigInt(message.tokensBurned.length + 1) * minMintExecutionFee; // +1 because of 
                     }
                     if (message.tokensLocked != null) {
-                        tonExecutorFee += BigInt(message.tokensLocked.length + 1) * minUnlockExecutionFee;
+                        tonExecutorFeeInTON += BigInt(message.tokensLocked.length + 1) * minUnlockExecutionFee;
                     }
                 }
             }
@@ -588,8 +589,8 @@ export class TacSdk {
             IsRoundTrip: isRoundTrip,
             GasLimit: gasLimit,
             ProtocolFee: protocolFee,
-            EVMExecutorFee: executorFeeInTON,
-            TVMExecutorFee: tonExecutorFee,
+            EVMExecutorFee: tacExecutorFeeInTON,
+            TVMExecutorFee: tonExecutorFeeInTON,
         }
 
         return {feeInfo: feeInfo, simulation: tacSimulationResult};
@@ -634,7 +635,6 @@ export class TacSdk {
             tvmValidExecutors = [],
             tvmExecutorFee = undefined
         } = options || {};
-
         const rawAssets = await this.convertAssetsToRawFormat(assets);
         const aggregatedData = await this.aggregateJettons(rawAssets);
         const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
