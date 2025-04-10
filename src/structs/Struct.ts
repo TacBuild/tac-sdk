@@ -297,8 +297,8 @@ export type TACSimulationResult = {
         | null;
     simulationError: string;
     simulationStatus: boolean;
-    suggestedTonExecutionFee: bigint;
-    MinExecutorFeeInTon: bigint;
+    suggestedTonExecutionFee: string;
+    minExecutorFeeInTon: string;
     debugInfo: {
         from: string;
         to: string;

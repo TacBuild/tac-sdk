@@ -553,11 +553,11 @@ export class TacSdk {
         const rateBigInt = BigInt(Math.floor(tacToTonRate * 1e9));
         
         const executorFeeInGwei = gasPriceGwei * gasLimit;
-        const tacExecutorFeeInTON = executorFeeInGwei * rateBigInt / (10n ** 9n) + tacSimulationResult.MinExecutorFeeInTon; // no need to scale to TON because we calculate in gwei
+        const tacExecutorFeeInTON = executorFeeInGwei * rateBigInt / BigInt(10n ** 9n) + BigInt(tacSimulationResult.minExecutorFeeInTon); // no need to scale to TON because we calculate in gwei
 
         let tonExecutorFeeInTON = 0n;
         if (isRoundTrip == true) {
-            tonExecutorFeeInTON = tacSimulationResult.suggestedTonExecutionFee;
+            tonExecutorFeeInTON = BigInt(tacSimulationResult.suggestedTonExecutionFee);
         }
 
         const protocolFee = BigInt(toNano(fullStateCCL.tacProtocolFee!)) + BigInt(isRoundTrip) * BigInt(toNano(fullStateCCL.tonProtocolFee!))
@@ -696,7 +696,7 @@ export class TacSdk {
         if (tvmExecutorFee != undefined) {
             tvmExecutorFeeInTON = tvmExecutorFee;
         } else {
-            tvmExecutorFeeInTON = (toNano("0.065") * BigInt(assets.length + 1 + Number(value != 0n)) + toNano("0.1")) * 120n / 100n; // TODO calc that
+            tvmExecutorFeeInTON = (toNano("0.065") * BigInt(assets.length + 1 + Number(value != 0n)) + toNano("0.2")) * 120n / 100n; // TODO calc that
         }
         const tonToTacRate = await this.getTONUSDPrice() / await this.getTACUSDPrice();
         const scale = 10 ** 9;
