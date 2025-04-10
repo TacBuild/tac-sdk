@@ -1,7 +1,7 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers, isAddress as isEthereumAddress } from 'ethers';
 
-import { EvmProxyMsg, TransactionLinker } from '../structs/Struct';
+import { EvmProxyMsg, TransactionLinker, ValidExecutors } from '../structs/Struct';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import { evmAddressError, invalidMethodNameError, tvmAddressError } from '../errors';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
@@ -26,7 +26,7 @@ export async function calculateContractAddress(code: Cell, data: Cell): Promise<
     return new Address(0, stateInit.hash());
 }
 
-export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyMsg: EvmProxyMsg, evmValidExecutors: string[], tvmValidExecutors: string[]): Cell {
+export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyMsg: EvmProxyMsg, validExecutors: ValidExecutors): Cell {
     const evmArguments = evmProxyMsg.encodedParameters
         ? Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64')
         : null;
@@ -40,8 +40,8 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
         },
         shardsKey: transactionLinker.shardsKey,
         shardCount: transactionLinker.shardCount,
-        evmValidExecutors: evmValidExecutors,
-        tvmValidExecutors: tvmValidExecutors,
+        evmValidExecutors: validExecutors.tac,
+        tvmValidExecutors: validExecutors.ton,
     });
 
     return beginCell().storeStringTail(json).endCell();

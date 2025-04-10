@@ -151,11 +151,6 @@ export type UserWalletBalanceExtended =
           exists: false;
       };
 
-export type TacToken = {
-    l2Address: string;
-    amount: string;
-};
-
 export type EvmProxyMsg = {
     evmTargetAddress: string;
     methodName?: string;
@@ -226,23 +221,36 @@ export type ProfilingStageData = {
     stageData: StageData | null;
 };
 
-export type InitialCaller = {
-    initialCallerAddress: string;
-    blockNumber: BlockchainType;
+export type InitialCallerInfo = {
+    address: string;
+    blockchainType: BlockchainType;
 };
+
+export type ValidExecutors = {
+    tac: string[];
+    ton: string[];
+};
+
+export enum TokenSymbol {
+    TAC_SYMBOL = 'TAC',
+    TON_SYMBOL = 'TON',
+}
 
 export type GeneralFeeInfo = {
     protocolFee: string;
     executorFee: string;
-    tokenFeeSymbol: BlockchainType;
+    tokenFeeSymbol: TokenSymbol;
+}
+
+export type FeeInfo = {
+	tac: GeneralFeeInfo;
+	ton: GeneralFeeInfo;
 }
 
 export type MetaInfo = {
-    initialCaller: InitialCaller;
-    tacValidExecutors: string[];
-    tonValidExecutors: string[];
-    tacFeeInfo: GeneralFeeInfo;
-    tonFeeInfo: GeneralFeeInfo;
+    initialCaller: InitialCallerInfo;
+    validExecutors: ValidExecutors;
+    feeInfo: FeeInfo;
 };
 
 export type ExecutionStages = {
@@ -289,6 +297,8 @@ export type TACSimulationResult = {
         | null;
     simulationError: string;
     simulationStatus: boolean;
+    suggestedTonExecutionFee: bigint;
+    MinExecutorFeeInTon: bigint;
     debugInfo: {
         from: string;
         to: string;
@@ -297,10 +307,11 @@ export type TACSimulationResult = {
     };
 };
 
-export type FeeInfo = {
+export type FeeParams = {
     IsRoundTrip: boolean,
     GasLimit: bigint,
     ProtocolFee: bigint,
     EVMExecutorFee: bigint,
     TVMExecutorFee: bigint,
 }
+
