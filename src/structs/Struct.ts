@@ -308,10 +308,19 @@ export type TACSimulationResult = {
 };
 
 export type FeeParams = {
-    IsRoundTrip: boolean,
-    GasLimit: bigint,
-    ProtocolFee: bigint,
-    EVMExecutorFee: bigint,
-    TVMExecutorFee: bigint,
+    isRoundTrip: boolean,
+    gasLimit: bigint,
+    protocolFee: bigint,
+    evmExecutorFee: bigint,
+    tvmExecutorFee: bigint,
 }
 
+export type CrossChainTransactionOptions = {
+    forceSend?: boolean;
+    isRoundTrip?: boolean;
+    protocolFee?: bigint;
+    evmValidExecutors?: string[];
+    evmExecutorFee?: bigint;
+    tvmValidExecutors?: string[];
+    tvmExecutorFee?: bigint;
+}

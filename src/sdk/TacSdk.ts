@@ -18,6 +18,7 @@ import {
     TACSimulationRequest,
     FeeParams,
     ValidExecutors,
+    CrossChainTransactionOptions,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -270,11 +271,11 @@ export class TacSdk {
     private generateFeeData(feeParams: FeeParams | undefined): Cell | null {
         if (feeParams != null) {
             let feeDataBuilder = beginCell()
-                    .storeBit(feeParams.IsRoundTrip)
-                    .storeCoins(feeParams.ProtocolFee)
-                    .storeCoins(feeParams.EVMExecutorFee);
-            if (feeParams.IsRoundTrip) {
-                feeDataBuilder.storeCoins(feeParams.TVMExecutorFee);
+                    .storeBit(feeParams.isRoundTrip)
+                    .storeCoins(feeParams.protocolFee)
+                    .storeCoins(feeParams.evmExecutorFee);
+            if (feeParams.isRoundTrip) {
+                feeDataBuilder.storeCoins(feeParams.tvmExecutorFee);
             }
             return feeDataBuilder.endCell();
         } else {
@@ -422,7 +423,7 @@ export class TacSdk {
         feeParams: FeeParams,
     ): Promise<ShardMessage[]> {
         let crossChainTonAmount = aggregatedData.crossChainTonAmount;
-        let feeTonAmount = feeParams.ProtocolFee + feeParams.EVMExecutorFee + feeParams.TVMExecutorFee;
+        let feeTonAmount = feeParams.protocolFee + feeParams.evmExecutorFee + feeParams.tvmExecutorFee;
 
         if (aggregatedData.jettons.length == 0) {
             return [
@@ -533,11 +534,11 @@ export class TacSdk {
             if (forceSend) {
                 return {
                     feeParams: {
-                        IsRoundTrip: false,
-                        GasLimit: 0n,
-                        ProtocolFee: BigInt(toNano(fullStateCCL.tacProtocolFee!)),
-                        EVMExecutorFee: 0n,
-                        TVMExecutorFee: 0n,
+                        isRoundTrip: false,
+                        gasLimit: 0n,
+                        protocolFee: BigInt(toNano(fullStateCCL.tacProtocolFee!)),
+                        evmExecutorFee: 0n,
+                        tvmExecutorFee: 0n,
                     }, 
                     simulation: tacSimulationResult};
             }
@@ -563,11 +564,11 @@ export class TacSdk {
         const protocolFee = BigInt(toNano(fullStateCCL.tacProtocolFee!)) + BigInt(isRoundTrip) * BigInt(toNano(fullStateCCL.tonProtocolFee!))
 
         const feeParams: FeeParams = {
-            IsRoundTrip: isRoundTrip,
-            GasLimit: gasLimit,
-            ProtocolFee: protocolFee,
-            EVMExecutorFee: tacExecutorFeeInTON,
-            TVMExecutorFee: tonExecutorFeeInTON,
+            isRoundTrip: isRoundTrip,
+            gasLimit: gasLimit,
+            protocolFee: protocolFee,
+            evmExecutorFee: tacExecutorFeeInTON,
+            tvmExecutorFee: tonExecutorFeeInTON,
         }
 
         return {feeParams: feeParams, simulation: tacSimulationResult};
@@ -593,15 +594,7 @@ export class TacSdk {
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
         assets?: AssetBridgingData[],
-        options?: {
-            forceSend?: boolean,
-            isRoundTrip?: boolean,
-            protocolFee?: bigint,
-            evmValidExecutors?: string[],
-            evmExecutorFee?: bigint,
-            tvmValidExecutors?: string[],
-            tvmExecutorFee?: bigint,
-        }
+        options?: CrossChainTransactionOptions,
     ): Promise<TransactionLinker> {
         let {
             forceSend = false,
@@ -612,6 +605,7 @@ export class TacSdk {
             tvmValidExecutors = [],
             tvmExecutorFee = undefined
         } = options || {};
+    
         const rawAssets = await this.convertAssetsToRawFormat(assets);
         const aggregatedData = await this.aggregateJettons(rawAssets);
         const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
@@ -630,19 +624,19 @@ export class TacSdk {
         const {feeParams} = await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, forceSend, isRoundTrip);
 
         if (evmProxyMsg.gasLimit == undefined) {
-            evmProxyMsg.gasLimit = feeParams.GasLimit;
+            evmProxyMsg.gasLimit = feeParams.gasLimit;
         }
 
         if (evmExecutorFee != undefined) {
-            feeParams.EVMExecutorFee = evmExecutorFee;
+            feeParams.evmExecutorFee = evmExecutorFee;
         }
 
-        if (!feeParams.IsRoundTrip && tvmExecutorFee != undefined) {
-            feeParams.TVMExecutorFee = tvmExecutorFee;
+        if (!feeParams.isRoundTrip && tvmExecutorFee != undefined) {
+            feeParams.tvmExecutorFee = tvmExecutorFee;
         }
 
         if (protocolFee != undefined) {
-            feeParams.ProtocolFee = protocolFee;
+            feeParams.protocolFee = protocolFee;
         }
 
         const validExecutors: ValidExecutors = {
