@@ -36,9 +36,9 @@ describe('TacSDK', () => {
     let crossChainLayer: SandboxContract<testnet.ton.wrappers.CrossChainLayer>;
     let admin: SandboxContract<TreasuryContract>;
     let sequencerMultisig: SandboxContract<TreasuryContract>;
-    let feeAmount: number;
-    let feeSupply: number;
-    let merkleRoot: bigint;
+    let tacProtocolFee: number;
+    let tonProtocolFee: number; 
+    let protocolFeeSupply: number;
     let epochDelay: number;
     let nextVotingTime: number;
     let currEpoch: number;
@@ -65,9 +65,10 @@ describe('TacSDK', () => {
                     prevEpoch,
                     adminAddress: admin.address.toString(),
                     executorCode: ExecutorCode,
-                    feeAmount,
-                    feeSupply,
-                    merkleRoot,
+                    tacProtocolFee,
+                    tonProtocolFee,
+                    protocolFeeSupply,
+                    merkleRoots: [],
                     epochDelay,
                     nextVotingTime,
                     sequencerMultisigAddress: sequencerMultisig.address.toString(),
@@ -172,9 +173,9 @@ describe('TacSDK', () => {
         admin = await blockchain.treasury('admin');
         user = await blockchain.treasury('user');
         sequencerMultisig = await blockchain.treasury('sequencerMultisig');
-        feeAmount = 0.1;
-        feeSupply = 0;
-        merkleRoot = 0n;
+        tacProtocolFee = 0.01;
+        tonProtocolFee = 0.02;
+        protocolFeeSupply = 0;
         epochDelay = 0;
         nextVotingTime = 0;
         nextVotingTime = 0;
@@ -301,7 +302,6 @@ describe('TacSDK', () => {
 
             const mnemonic: string[] = await mnemonicNew(24, '');
 
-            let fee = 0;
             const rawSender = await SenderFactory.getSender({
                 network: Network.TESTNET,
                 version,
@@ -316,8 +316,7 @@ describe('TacSDK', () => {
                 success: true,
                 op: CrossChainLayerOpCodes.anyone_l1MsgToL2,
             });
-            fee += feeAmount;
-            expect((await crossChainLayer.getFullData()).feeSupply).toBe(+fee.toFixed(1));
+            expect((await crossChainLayer.getFullData()).protocolFeeSupply).toBe(tacProtocolFee);
         },
     );
 });
