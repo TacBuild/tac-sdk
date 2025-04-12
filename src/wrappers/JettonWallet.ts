@@ -112,7 +112,7 @@ export class JettonWallet implements Contract {
             .storeAddress(Address.parse(to))
             .storeAddress(responseAddress ? Address.parse(responseAddress) : null)
             .storeMaybeRef(null)
-            .storeCoins((forwardTonAmount || 0n) + (crossChainTonAmount || 0n))
+            .storeCoins((forwardTonAmount || 0n))
             .storeCoins(crossChainTonAmount ?? 0n)
             .storeMaybeRef(feeData)
             .storeMaybeRef(crossChainPayload)
