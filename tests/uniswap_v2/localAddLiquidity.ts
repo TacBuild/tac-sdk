@@ -6,7 +6,7 @@ import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, star
 
 import { toNano } from '@ton/ton';
 
-const UNISWAPV2_PROXY_ADDRESS = '0xE72ee3E91Eb6173281E117DC041eF7AB0AAcf7c2'; // uniswap proxy address
+const UNISWAPV2_PROXY_ADDRESS = '0x70C3bFF36C7fF5632FA3d1Ead8A1c00cE8aDa1f4'; // uniswap proxy address
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1'; // TKA
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK'; // TKB
@@ -18,7 +18,7 @@ async function addLiquidity() {
         network: Network.TESTNET,
         TACParams: {
             provider: new ethers.JsonRpcProvider('https://turin.rpc.tac.build/'),
-            settingsAddress: '0xEB8E6E7632Aa97b8e93d663407C8dbD0B5112946', // set local tac settings
+            settingsAddress: '0xB44C6235a5e12dbAb2C3c2383EFAb5De28f8F656', // set local tac settings
         },
         TONParams: {
             settingsAddress: 'EQCdbUTIKIbA4fx12LP1-23YsQh7oeSpN4noPhni2HOUTysc', // set local ton settings

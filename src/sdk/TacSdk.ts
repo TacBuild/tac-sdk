@@ -534,9 +534,9 @@ export class TacSdk {
             if (forceSend) {
                 return {
                     feeParams: {
-                        isRoundTrip: false,
+                        isRoundTrip: isRoundTrip ?? false,
                         gasLimit: 0n,
-                        protocolFee: BigInt(toNano(fullStateCCL.tacProtocolFee!)),
+                        protocolFee: BigInt(toNano(fullStateCCL.tacProtocolFee!)) + BigInt(isRoundTrip ?? false) * BigInt(toNano(fullStateCCL.tonProtocolFee!)),
                         evmExecutorFee: 0n,
                         tvmExecutorFee: 0n,
                     }, 
@@ -561,6 +561,7 @@ export class TacSdk {
             tonExecutorFeeInTON = BigInt(tacSimulationResult.suggestedTonExecutionFee);
         }
 
+        console.log(isRoundTrip);
         const protocolFee = BigInt(toNano(fullStateCCL.tacProtocolFee!)) + BigInt(isRoundTrip) * BigInt(toNano(fullStateCCL.tonProtocolFee!))
 
         const feeParams: FeeParams = {
@@ -631,7 +632,7 @@ export class TacSdk {
             feeParams.evmExecutorFee = evmExecutorFee;
         }
 
-        if (!feeParams.isRoundTrip && tvmExecutorFee != undefined) {
+        if (feeParams.isRoundTrip && tvmExecutorFee != undefined) {
             feeParams.tvmExecutorFee = tvmExecutorFee;
         }
 
@@ -696,7 +697,7 @@ export class TacSdk {
         const scale = 10 ** 9;
         const tonToTacRateScaled = BigInt(Math.round(tonToTacRate * scale));
         const tvmExecutorFeeInTAC = tonToTacRateScaled * tvmExecutorFeeInTON;
-          
+
         const outMessage: OutMessageV1Struct = {
             shardsKey: shardsKey,
             tvmTarget: tonTarget,
