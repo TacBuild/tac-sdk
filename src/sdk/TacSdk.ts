@@ -577,7 +577,7 @@ export class TacSdk {
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
         assets?: AssetBridgingData[],
-    ): Promise<{feeParams: FeeParams, simulation: TACSimulationResult}> {
+    ): Promise<ExecutionFeeEstimationResult> {
         const rawAssets = await this.convertAssetsToRawFormat(assets);
         const aggregatedData = await this.aggregateJettons(rawAssets);
         const transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
