@@ -324,3 +324,8 @@ export type CrossChainTransactionOptions = {
     tvmValidExecutors?: string[];
     tvmExecutorFee?: bigint;
 }
+
+export type ExecutionFeeEstimationResult = {
+    feeParams: FeeParams, 
+    simulation: TACSimulationResult,
+}
