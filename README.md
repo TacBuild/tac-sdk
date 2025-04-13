@@ -982,6 +982,7 @@ Represents a request to simulate an TAC message.
   - **`arguments`**: Encoded arguments for the TAC method.
   - **`methodName`**: Name of the method to be called on the target TAC contract.
   - **`target`**: The target address on the TAC network.
+- **`evmValidExecutors`**: valid executors.
 - **`extraData`**: Additional non-root data to be included in TAC call.
 - **`feeAssetAddress`**: Address of the asset used to cover fees; empty string if using native TON.
 - **`shardsKey`**: Key identifying shards for the operation.
