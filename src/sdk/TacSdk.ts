@@ -57,14 +57,6 @@ import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
 
-import { OutMessageV1Struct } from '@tonappchain/evm-ccl/dist/typechain-types/contracts/L2/Structs.sol/IStructsInterface';
-import { encodeOutMessageV1 } from '@tonappchain/evm-ccl/dist/scripts/utils/merkleTreeUtils'; 
-
-import { CrossChainLayer__factory as CrossChainLayerFactoryTAC } from '@tonappchain/evm-ccl/dist/typechain-types/factories/contracts/L2/CrossChainLayer__factory';
-import { TokenUtils__factory as TokenUtilsFactoryTAC } from '@tonappchain/evm-ccl/dist/typechain-types/factories/contracts/L2/TokenUtils__factory';
-import { Settings__factory as SettingsFactoryTAC } from '@tonappchain/evm-ccl/dist/typechain-types/factories/contracts/L2/Settings__factory';
-import { ERC20__factory as ERC20FactoryTAC } from '@tonappchain/evm-ccl/dist/typechain-types/factories/@openzeppelin/contracts/token/ERC20/ERC20__factory';
-
 export class TacSdk {
     readonly network: Network;
     readonly delay: number;
@@ -141,17 +133,17 @@ export class TacSdk {
 
         const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
 
-        const settings = SettingsFactoryTAC.connect(settingsAddress, provider);
+        const settings = artifacts.tac.wrappers.SettingsFactoryTAC.connect(settingsAddress, provider);
         const crossChainLayerABI =
             TACParams?.crossChainLayerABI ?? artifacts.tac.compilationArtifacts.CrossChainLayer.abi;
         const crossChainLayerAddress = await settings.getAddressSetting(
             keccak256(toUtf8Bytes('CrossChainLayerAddress')),
         );
-        const crossChainLayer = CrossChainLayerFactoryTAC.connect(crossChainLayerAddress, provider);
+        const crossChainLayer = artifacts.tac.wrappers.CrossChainLayerFactoryTAC.connect(crossChainLayerAddress, provider);
         await sleep(delay * 1000);
 
         const tokenUtilsAddress = await settings.getAddressSetting(keccak256(toUtf8Bytes('TokenUtilsAddress')));
-        const tokenUtils = TokenUtilsFactoryTAC.connect(tokenUtilsAddress, provider);
+        const tokenUtils = artifacts.tac.wrappers.TokenUtilsFactoryTAC.connect(tokenUtilsAddress, provider);
         await sleep(delay * 1000);
 
         const trustedTACExecutors = await settings.getTrustedEVMExecutors();
@@ -676,7 +668,7 @@ export class TacSdk {
         }
         const crossChainLayerAddress = await this.TACParams.crossChainLayer.getAddress();
         for (const asset of assets) {
-            const tokenContract = ERC20FactoryTAC.connect(asset.address!, this.TACParams.provider);
+            const tokenContract = this.artifacts.tac.wrappers.ERC20FactoryTAC.connect(asset.address!, this.TACParams.provider);
     
             const tx = await tokenContract.connect(signer).approve(crossChainLayerAddress, asset.rawAmount);
             await tx.wait();
@@ -696,7 +688,7 @@ export class TacSdk {
         const tonToTacRateScaled = BigInt(Math.round(tonToTacRate * scale));
         const tvmExecutorFeeInTAC = tonToTacRateScaled * tvmExecutorFeeInTON;
 
-        const outMessage: OutMessageV1Struct = {
+        const outMessage = {
             shardsKey: shardsKey,
             tvmTarget: tonTarget,
             tvmPayload: '',
@@ -709,7 +701,7 @@ export class TacSdk {
               })),
         };
 
-        const encodedOutMessage = encodeOutMessageV1(outMessage);
+        const encodedOutMessage = this.artifacts.tac.utils.encodeOutMessageV1(outMessage);
         const outMsgVersion = 1n;
 
         const totalValue = value + BigInt(outMessage.tvmProtocolFee) + BigInt(outMessage.tvmExecutorFee);
