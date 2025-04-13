@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Fee support for crosschain transactions.
+- New methods for requesting execution fees and simulation `getTransactionSimulationInfo`.
+- Added `metaInfo` field to the `ExecutionStages`.
+- Added advanced options to `sendCrossChainTransaction`.
+
+### Changed
+
+- `getEVMTokenAddress` now automatically normalizes addresses to `EQ` form.
+
 ## [0.5.7] - 2025-04-01
 
 ### Changed
