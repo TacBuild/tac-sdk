@@ -159,7 +159,6 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - **`evmTargetAddress`**: Target address on the EVM network.
   - **`methodName`** *(optional)*: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
   - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method. You need to specify all arguments except the first one (TACHeader bytes). The TACHeader logic will be specified below
-  - **`forceSend`** *(optional)*: Parameter indicates that the transaction should be sent even if simulation returned an error. Default `false`
 
 - **`sender`**: A `SenderAbstraction` object, such as:
   - **`TonConnectSender`**: For TonConnect integration.
@@ -170,6 +169,8 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
   - **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
   - **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
+
+- **`options`** *(optional)*: `CrossChainTransactionOptions` struct. 
 
 > **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 
@@ -191,6 +192,35 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 2. Prepares shard messages and encodes the necessary payloads.
 3. Bridges Jettons by sending shard transactions to the appropriate smart contracts.
 4. Incorporates EVM logic into the payload for interaction with the TAC.
+
+---
+#### Function: `getTransactionSimulationInfo`
+
+Performs a complete simulation of a crosschain transaction to estimate fees and gather execution-related metadata.  
+This method processes asset data, aggregates Jettons if needed, and builds a transaction linker to simulate a full transaction execution flow.
+
+**Returns** a `Promise<ExecutionFeeEstimationResult>` containing the estimated fees and relevant execution simulation details.
+
+---
+
+#### **Parameters**
+
+- **`evmProxyMsg`**:  
+  An `EvmProxyMsg` object defining the TAC-side call parameters.  
+
+- **`sender`**:  
+  A `SenderAbstraction` instance representing the originator of the transaction.  
+
+- **`assets`** *(optional)*:  
+  An array of `AssetBridgingData` representing the tokens to bridge.  
+
+---
+
+#### **Returns**
+
+- A `Promise<ExecutionFeeEstimationResult>` containing:
+  - `feeParams`: Computed fee parameters for the transaction.
+  - `simulation`: Detailed simulation result, including estimated gas usage, required fees, and executor payments.
 
 ---
 ### TACHeader 
@@ -263,6 +293,31 @@ The address could be used in *getTVMTokenAddress* to calculate address of TAC wr
 - **`Promise<string>`**:
   - A promise that resolves to the computed EVM token address as a string.
 
+### `getTrustedTACExecutors`
+
+```ts
+get getTrustedTACExecutors(): string[] {
+    return this.TACParams.trustedTACExecutors;
+}
+```
+
+Returns the list of trusted executor addresses for the TAC (EVM-compatible) network.  
+These executors are authorized to process crosschain messages originating from or targeting the TAC side.
+
+---
+
+### `getTrustedTONExecutors`
+
+```ts
+get getTrustedTONExecutors(): string[] {
+    return this.TACParams.trustedTONExecutors;
+}
+```
+
+Returns the list of trusted executor addresses for the TON network.  
+These executors are authorized to process crosschain messages originating from or targeting the TON side.
+
+---
 
 ### Function: `getEVMTokenAddress`
 
@@ -409,7 +464,7 @@ The ability to simulate the EVM message is crucial for testing and debugging cro
 
 #### **Returns**
 
-- **`Promise<TACSimulationResults>`**:
+- **`Promise<TACSimulationResult>`**:
   - A promise that resolves to detailed information about the execution of the given message, including:
     - **`estimatedGas`**: The estimated gas required for the message.
     - **`estimatedJettonFeeAmount`**: The estimated fee amount in Jettons.
@@ -431,6 +486,8 @@ The ability to simulate the EVM message is crucial for testing and debugging cro
       - **`tokensLocked`**: The tokens locked.
     - **`simulationError`**: Any error encountered during the simulation.
     - **`simulationStatus`**: The status of the simulation.
+    - **`suggestedTonExecutionFee`**: Suggested fee (in TON) that should be attached to ensure successful execution on the TON network.  
+    - **`minExecutorFeeInTon`**: The minimum required executor fee (in TON) for the transaction to be accepted and executed on the TON side.  
     - **`debugInfo`**: Debugging information.
       - **`from`**: The sender address.
       - **`to`**: The recipient address.
@@ -907,6 +964,7 @@ export type TACSimulationRequest = {
         methodName: string;
         target: string;
     };
+    evmValidExecutors: string[];
     extraData: string;
     feeAssetAddress: string;
     shardsKey: number;
@@ -958,6 +1016,43 @@ Represents transaction details.
 - **`hash`**: The hash of the transaction.
 - **`blockchainType`**: The type of the blockchain (`TON` or `TAC`).
 
+### `CrossChainTransactionOptions`
+An optional configuration object for customizing advanced crosschain transaction behavior.
+
+```ts
+export type CrossChainTransactionOptions = {
+    forceSend?: boolean;
+    isRoundTrip?: boolean;
+    protocolFee?: bigint;
+    evmValidExecutors?: string[];
+    evmExecutorFee?: bigint;
+    tvmValidExecutors?: string[];
+    tvmExecutorFee?: bigint;
+};
+```
+
+- **forceSend** *(optional)*:  
+  If true, the transaction will be sent even if the simulation phase detects potential issues or failures.  
+  **Default**: false
+
+- **isRoundTrip** *(optional)*:  
+  Indicates whether the transaction involves a round-trip execution (e.g., a return message from TAC to TON).  
+  **Default**: will be determined by simulation. 
+
+- **protocolFee** *(optional)*:  
+  An optional override for the protocol fee in bigint. If not specified, the SDK calculates this automatically based on network parameters.
+
+- **evmValidExecutors** *(optional)*:  
+  A list of EVM executor addresses that are allowed to execute this transaction on the TAC.
+
+- **evmExecutorFee** *(optional)*:  
+  Fee in bigint to be paid (in TON token) to the executor on the EVM side for executing the transaction.
+
+- **tvmValidExecutors** *(optional)*:  
+  A list of TVM (TON) executor addresses that are authorized to execute the message on the TON network.
+
+- **tvmExecutorFee** *(optional)*:  
+  Fee in bigint to be paid (in TON token) to the executor on the TON side.
 
 ### `NoteInfo`
 
@@ -977,6 +1072,34 @@ Provides detailed information about any notes or errors encountered during opera
 - **`internalMsg`**: Internal message related to the note or error.
 - **`internalBytesError`**: Detailed bytes error information.
 
+### `FeeParams`
+
+```ts
+export type FeeParams = {
+    isRoundTrip: boolean,
+    gasLimit: bigint,
+    protocolFee: bigint,
+    evmExecutorFee: bigint,
+    tvmExecutorFee: bigint,
+};
+```
+
+Represents the calculated fee parameters used for crosschain transaction execution.
+
+- **`isRoundTrip`**:  
+  Indicates whether the transaction is expected to perform a round-trip (e.g., from TAC to TON and back to TAC).
+
+- **`gasLimit`**:  
+  Estimated gas limit for the EVM-side transaction execution.
+
+- **`protocolFee`**:  
+  Fee charged by the protocol for facilitating the crosschain message.
+
+- **`evmExecutorFee`**:  
+  Fee (in TON) to be paid to the executor responsible for handling execution on the EVM side.
+
+- **`tvmExecutorFee`**:  
+  Fee (in TON) to be paid to the executor responsible for handling execution on the TON side.
 
 ### `StageName`
 
@@ -1054,6 +1177,80 @@ Provides information about transaction.
 - **`TAC_TON`**: The cross-chain bridge operation from TAC to TON has completed successfully (e.g., tokens bridged to TON).
 - **`UNKNOWN`**: The status could not be determined (e.g., due to network errors, invalid operation ID, or outdated data).
 
+### `MetaInfo`
+
+```ts
+export type MetaInfo = {
+    initialCaller: InitialCallerInfo;
+    validExecutors: ValidExecutors;
+    feeInfo: FeeInfo;
+};
+```
+
+Holds metadata associated with a crosschain transaction, including the initiating party, allowed executors, and detailed fee information.
+
+- **`initialCaller`**:  
+  Information about the original sender of the transaction, including address and source blockchain.
+
+- **`validExecutors`**:  
+  Specifies the list of executor addresses authorized to handle execution on TAC and TON.
+
+- **`feeInfo`**:  
+  Object containing detailed information about fees required for the transaction execution.
+
+
+### `InitialCallerInfo`
+
+```ts
+export type InitialCallerInfo = {
+    address: string;
+    blockchainType: BlockchainType;
+};
+```
+
+Represents the originator of the transaction.
+
+- **`address`**:  
+  The address of the caller that initiated the crosschain transaction.
+
+- **`blockchainType`**:  
+  The blockchain network (`TON` or `TAC`) where the caller originated from.
+
+
+### `ValidExecutors`
+
+```ts
+export type ValidExecutors = {
+    tac: string[];
+    ton: string[];
+};
+```
+
+Specifies the set of executor addresses that are permitted to execute the transaction.
+
+- **`tac`**:  
+  A list of allowed executor addresses on the TAC (EVM) network.
+
+- **`ton`**:  
+  A list of allowed executor addresses on the TON network.
+
+
+### `TokenSymbol`
+
+```ts
+export enum TokenSymbol {
+    TAC_SYMBOL = 'TAC',
+    TON_SYMBOL = 'TON',
+}
+```
+
+Enumeration of supported token symbols.
+
+- **`TAC_SYMBOL`**:  
+  Represents the native token on the TAC (EVM-compatible) network.
+
+- **`TON_SYMBOL`**:  
+  Represents the native token on the TON network.
 
 ### `ProfilingStageData`
 
@@ -1076,12 +1273,14 @@ Provides profiling information for a specific stage.
 ```typescript
 export type ExecutionStages = {
   operationType: OperationType;
+  metaInfo: MetaInfo;
 } & Record<StageName, ProfilingStageData>;
 
 ```
 
 Represents the profiling data for all execution stages within an operation.
 - **`operationType`**.
+- **`metaInfo`**.
 - **`collectedInTAC`**.
 - **`includedInTACConsensus`**.
 - **`executedInTAC`**.
@@ -1143,10 +1342,10 @@ Provides extended information about a user's Jetton balance.
 - **`decimals`** *(optional)*: The number of decimals for the Jetton token. Present only if `exists` is `true`.
 
 
-### `TACSimulationResults`
+### `TACSimulationResult`
 
 ```typescript
-export type TACSimulationResults = {
+export type TACSimulationResult = {
     estimatedGas: bigint;
     estimatedJettonFeeAmount: string;
     feeParams: {
@@ -1175,6 +1374,8 @@ export type TACSimulationResults = {
             | null;
     simulationError: string;
     simulationStatus: boolean;
+    suggestedTonExecutionFee: string;
+    minExecutorFeeInTon: string;
     debugInfo: {
       from: string;
       to: string;
