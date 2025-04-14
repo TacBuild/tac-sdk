@@ -79,31 +79,31 @@ The TAC SDK enables you to create frontends that:
 
 ### Data Models
 
-- **[`Enums`](./models/enums.md)**: Key enumerations used by the SDK.
-  - [`Network`](./models/enums.md#network): `TESTNET` or `MAINNET`.
-  - [`SimplifiedStatuses`](./models/enums.md#simplifiedstatuses): `PENDING`, `FAILED`, `SUCCESSFUL`, `OPERATION_ID_NOT_FOUND`.
-  - [`OperationType`](./models/enums.md#operationtype): Detailed operation types (`PENDING`, `TON_TAC_TON`, `ROLLBACK`, etc.).
-  - [`StageName`](./models/enums.md#stagename): Identifiers for tracking stages (`COLLECTED_IN_TAC`, `EXECUTED_IN_TAC`, etc.).
+- **[`Enums`](./docs/models/enums.md)**: Key enumerations used by the SDK.
+  - [`Network`](./docs/models/enums.md#network): `TESTNET` or `MAINNET`.
+  - [`SimplifiedStatuses`](./docs/models/enums.md#simplifiedstatuses): `PENDING`, `FAILED`, `SUCCESSFUL`, `OPERATION_ID_NOT_FOUND`.
+  - [`OperationType`](./docs/models/enums.md#operationtype): Detailed operation types (`PENDING`, `TON_TAC_TON`, `ROLLBACK`, etc.).
+  - [`StageName`](./docs/models/enums.md#stagename): Identifiers for tracking stages (`COLLECTED_IN_TAC`, `EXECUTED_IN_TAC`, etc.).
 
-- **[`Structs`](./models/structs.md)**: Core data structures.
-  - [`AssetBridgingData`](./models/structs.md#assetbridgingdata): Specifies assets to bridge (TON or Jettons).
-  - [`EvmProxyMsg`](./models/structs.md#evmproxymsg): Defines the target EVM call details.
-  - [`TransactionLinker`](./models/structs.md#transactionlinker): Identifies a cross-chain operation.
-  - [`SDKParams`](./models/structs.md#sdkparams): Configuration for `TacSdk.create`.
-  - [`TACSimulationRequest`](./models/structs.md#tacsimulationrequest): Input for simulating TAC calls.
-  - [`TACSimulationResults`](./models/structs.md#tacsimulationresults): Output from TAC simulation.
-  - [`ExecutionStages`](./models/structs.md#executionstages): Detailed profiling data for an operation.
-  - [`StatusInfo`](./models/structs.md#statusinfo): Status details for a single stage.
+- **[`Structs`](./docs/models/structs.md)**: Core data structures.
+  - [`AssetBridgingData`](./docs/models/structs.md#assetbridgingdata): Specifies assets to bridge (TON or Jettons).
+  - [`EvmProxyMsg`](./docs/models/structs.md#evmproxymsg): Defines the target EVM call details.
+  - [`TransactionLinker`](./docs/models/structs.md#transactionlinker): Identifies a cross-chain operation.
+  - [`SDKParams`](./docs/models/structs.md#sdkparams): Configuration for `TacSdk.create`.
+  - [`TACSimulationRequest`](./docs/models/structs.md#tacsimulationrequest): Input for simulating TAC calls.
+  - [`TACSimulationResults`](./docs/models/structs.md#tacsimulationresults): Output from TAC simulation.
+  - [`ExecutionStages`](./docs/models/structs.md#executionstages): Detailed profiling data for an operation.
+  - [`StatusInfo`](./docs/models/structs.md#statusinfo): Status details for a single stage.
   - *(See file for more...)*
 
-- **[`Interfaces`](./models/interfaces.md)**: TypeScript interfaces defining contracts.
-  - [`ContractOpener`](./models/interfaces.md#contractopener): Interface for TON connection handlers.
-  - [`SenderAbstraction`](./models/interfaces.md#senderabstraction): Interface for transaction senders.
-  - [`WalletInstance`](./models/interfaces.md#walletinstance): Interface required for wallets used by `RawSender`.
+- **[`Interfaces`](./docs/models/interfaces.md)**: TypeScript interfaces defining contracts.
+  - [`ContractOpener`](./docs/models/interfaces.md#contractopener): Interface for TON connection handlers.
+  - [`SenderAbstraction`](./docs/models/interfaces.md#senderabstraction): Interface for transaction senders.
+  - [`WalletInstance`](./docs/models/interfaces.md#walletinstance): Interface required for wallets used by `RawSender`.
 
-- **[`Errors`](./models/errors.md)**: Custom error types.
-  - [`ErrorWithStatusCode`](./models/errors.md#errorwithstatuscode): Base error class with an error code.
-  - [`ContractError`](./models/errors.md#contracterror), [`FetchError`](./models/errors.md#fetcherror), [`AddressError`](./models/errors.md#addresserror), etc.: Specific error categories.
-  - [Pre-defined Instances](./models/errors.md#pre-defined-error-instances): Specific error instances for common issues (e.g., `evmAddressError`, `simulationError`).
+- **[`Errors`](./docs/models/errors.md)**: Custom error types.
+  - [`ErrorWithStatusCode`](./docs/models/errors.md#errorwithstatuscode): Base error class with an error code.
+  - [`ContractError`](./docs/models/errors.md#contracterror), [`FetchError`](./docs/models/errors.md#fetcherror), [`AddressError`](./docs/models/errors.md#addresserror), etc.: Specific error categories.
+  - [Pre-defined Instances](./docs/models/errors.md#pre-defined-error-instances): Specific error instances for common issues (e.g., `evmAddressError`, `simulationError`).
 
 Navigate through the linked files for full details on parameters, return types, examples, and more.
