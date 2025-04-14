@@ -34,7 +34,7 @@ The TAC SDK enables you to create frontends that:
 - Handle tokens across both chains
 - Create a seamless user experience for TON users
 
-![TAC SDK](https://mintlify.s3.us-west-1.amazonaws.com/tac-92ab2768/images/build/frontend-1.png)
+![TAC SDK](./tac-sdk.png)
 
 
 ## Available Resources
