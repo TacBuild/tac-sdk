@@ -4,6 +4,21 @@
 
 **TAC-SDK** is an SDK for facilitating crosschain operations from TVM (TON Virtual Machine) to EVM-compatible blockchains. It is designed to simplify crosschain interactions for EVM developers by enabling transactions from TVM to EVM with minimal configuration.
 
+## Available Resources
+
+- **SDK Components**: 
+  - [`TacSdk`](./sdks/tac_sdk.md): The main class for initiating cross-chain transactions and interacting with tokens.
+  - [`OperationTracker`](./sdks/operation_tracker.md): Tools for tracking the status and progress of cross-chain operations.
+  - [`Senders`](./sdks/senders.md): Abstractions and implementations for sending TON transactions (e.g., via TonConnect or raw keys).
+  - [`Utilities`](./sdks/utilities.md): Helper functions for tasks like operation tracking and network connections.
+
+- **Data Models**: 
+  - [`Enums`](./models/enums.md): Enumerations used for network types, statuses, etc.
+  - [`Structs`](./models/structs.md): Core data structures used for parameters, results, and configurations.
+  - [`Interfaces`](./models/interfaces.md): TypeScript interfaces defining contracts for key components.
+  - [`Errors`](./models/errors.md): Custom error types thrown by the SDK.
+
+
 ## Overview
 
 This SDK allows EVM developers to perform crosschain operations without needing an in-depth understanding of TON. By specifying the following details, the SDK will generate the necessary transactions:
