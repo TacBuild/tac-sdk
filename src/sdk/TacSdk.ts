@@ -394,14 +394,6 @@ export class TacSdk {
         return payload;
     }
 
-    async getTACUSDPrice(): Promise<number> {
-        return 0.5;
-    }
-
-    async getTONUSDPrice(): Promise<number> {
-        return 5.5;
-    }
-
     private async generateCrossChainMessages(
         caller: string,
         evmData: Cell,
@@ -538,15 +530,6 @@ export class TacSdk {
 
         isRoundTrip = isRoundTrip ?? (tacSimulationResult.outMessages != null)
 
-        const gasPriceGwei = BigInt(10n); // TODO request from node but it always returns null
-        const gasLimit = (BigInt(tacSimulationResult.estimatedGas) * 120n) / 100n;
-
-        const tacToTonRate = await this.getTACUSDPrice() / await this.getTONUSDPrice();
-        const rateBigInt = BigInt(Math.floor(tacToTonRate * 1e9));
-        
-        const executorFeeInGwei = gasPriceGwei * gasLimit;
-        const tacExecutorFeeInTON = executorFeeInGwei * rateBigInt / BigInt(10n ** 9n) + BigInt(tacSimulationResult.minExecutorFeeInTon); // no need to scale to TON because we calculate in gwei
-
         let tonExecutorFeeInTON = 0n;
         if (isRoundTrip == true) {
             tonExecutorFeeInTON = BigInt(tacSimulationResult.suggestedTonExecutionFee);
@@ -556,9 +539,9 @@ export class TacSdk {
 
         const feeParams: FeeParams = {
             isRoundTrip: isRoundTrip,
-            gasLimit: gasLimit,
+            gasLimit: tacSimulationResult.estimatedGas,
             protocolFee: protocolFee,
-            evmExecutorFee: tacExecutorFeeInTON,
+            evmExecutorFee: BigInt(tacSimulationResult.suggestedTacExecutionFee),
             tvmExecutorFee: tonExecutorFeeInTON,
         }
 
@@ -683,9 +666,9 @@ export class TacSdk {
         } else {
             tvmExecutorFeeInTON = ((toNano("0.065") + toNano("0.05")) * BigInt(assets.length + 1 + Number(value != 0n)) + toNano("0.2")) * 120n / 100n; // TODO calc that
         }
-        const tonToTacRate = await this.getTONUSDPrice() / await this.getTACUSDPrice();
-        const scale = 10 ** 9;
-        const tonToTacRateScaled = BigInt(Math.round(tonToTacRate * scale));
+        const tonToTacRate = 100n;
+        const scale = 10n ** 9n;
+        const tonToTacRateScaled = tonToTacRate * scale;
         const tvmExecutorFeeInTAC = tonToTacRateScaled * tvmExecutorFeeInTON;
 
         const outMessage = {

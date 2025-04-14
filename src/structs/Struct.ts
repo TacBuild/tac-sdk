@@ -270,7 +270,6 @@ export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
 export type TACSimulationResult = {
     estimatedGas: bigint;
-    estimatedJettonFeeAmount: string;
     feeParams: {
         currentBaseFee: string;
         isEip1559: boolean;
@@ -298,7 +297,7 @@ export type TACSimulationResult = {
     simulationError: string;
     simulationStatus: boolean;
     suggestedTonExecutionFee: string;
-    minExecutorFeeInTon: string;
+    suggestedTacExecutionFee: string;
     debugInfo: {
         from: string;
         to: string;
