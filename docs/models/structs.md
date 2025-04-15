@@ -20,7 +20,6 @@ This file documents the primary data structures (types and interfaces often refe
     - [`ExecutionStages`](#executionstages)
     - [`StatusInfosByOperationId`](#statusinfosbyoperationid)
     - [`ExecutionStagesByOperationId`](#executionstagesbyoperationid)
-    - [`OperationIdsByShardsKey`](#operationidsbyshardskey)
     - [`TransactionData`](#transactiondata)
     - [`NoteInfo`](#noteinfo)
     - [`StageData`](#stagedata)
@@ -99,6 +98,43 @@ Represents a proxy message to a TAC.
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the crosschain transaction.
 
+### `CrossChainTransactionOptions`
+An optional configuration object for customizing advanced crosschain transaction behavior.
+
+```ts
+export type CrossChainTransactionOptions = {
+    forceSend?: boolean;
+    isRoundTrip?: boolean;
+    protocolFee?: bigint;
+    evmValidExecutors?: string[];
+    evmExecutorFee?: bigint;
+    tvmValidExecutors?: string[];
+    tvmExecutorFee?: bigint;
+};
+```
+
+- **forceSend** *(optional)*:  
+  If true, the transaction will be sent even if the simulation phase detects potential issues or failures.  
+  **Default**: false
+
+- **isRoundTrip** *(optional)*:  
+  Indicates whether the transaction involves a round-trip execution (e.g., a return message from TAC to TON).  
+  **Default**: will be determined by simulation. 
+
+- **protocolFee** *(optional)*:  
+  An optional override for the protocol fee in bigint. If not specified, the SDK calculates this automatically based on network parameters.
+
+- **evmValidExecutors** *(optional)*:  
+  A list of EVM executor addresses that are allowed to execute this transaction on the TAC.
+
+- **evmExecutorFee** *(optional)*:  
+  Fee in bigint to be paid (in TON token) to the executor on the EVM side for executing the transaction.
+
+- **tvmValidExecutors** *(optional)*:  
+  A list of TVM (TON) executor addresses that are authorized to execute the message on the TON network.
+
+- **tvmExecutorFee** *(optional)*:  
+  Fee in bigint to be paid (in TON token) to the executor on the TON side.
 
 ### `AssetBridgingData (Type)`
 
@@ -212,44 +248,6 @@ export type TransactionData = {
 Represents transaction details.
 - **`hash`**: The hash of the transaction.
 - **`blockchainType`**: The type of the blockchain (`TON` or `TAC`).
-
-### `CrossChainTransactionOptions`
-An optional configuration object for customizing advanced crosschain transaction behavior.
-
-```ts
-export type CrossChainTransactionOptions = {
-    forceSend?: boolean;
-    isRoundTrip?: boolean;
-    protocolFee?: bigint;
-    evmValidExecutors?: string[];
-    evmExecutorFee?: bigint;
-    tvmValidExecutors?: string[];
-    tvmExecutorFee?: bigint;
-};
-```
-
-- **forceSend** *(optional)*:  
-  If true, the transaction will be sent even if the simulation phase detects potential issues or failures.  
-  **Default**: false
-
-- **isRoundTrip** *(optional)*:  
-  Indicates whether the transaction involves a round-trip execution (e.g., a return message from TAC to TON).  
-  **Default**: will be determined by simulation. 
-
-- **protocolFee** *(optional)*:  
-  An optional override for the protocol fee in bigint. If not specified, the SDK calculates this automatically based on network parameters.
-
-- **evmValidExecutors** *(optional)*:  
-  A list of EVM executor addresses that are allowed to execute this transaction on the TAC.
-
-- **evmExecutorFee** *(optional)*:  
-  Fee in bigint to be paid (in TON token) to the executor on the EVM side for executing the transaction.
-
-- **tvmValidExecutors** *(optional)*:  
-  A list of TVM (TON) executor addresses that are authorized to execute the message on the TON network.
-
-- **tvmExecutorFee** *(optional)*:  
-  Fee in bigint to be paid (in TON token) to the executor on the TON side.
 
 ### `NoteInfo`
 
@@ -416,15 +414,6 @@ export type ExecutionStages = {
 ```
 
 Represents the profiling data for all execution stages within an operation.
-- **`operationType`**.
-- **`metaInfo`**.
-- **`collectedInTAC`**.
-- **`includedInTACConsensus`**.
-- **`executedInTAC`**.
-- **`collectedInTON`**.
-- **`includedInTONConsensus`**.
-- **`executedInTON`**.
-
 
 ### `ExecutionStagesByOperationId`
 
@@ -442,12 +431,6 @@ export type StatusInfosByOperationId = Record<string, StatusInfo>;
 ```
 
 Maps each `operationId` to its respective `statusInfo`.
-
-
-### `OperationIdsByShardsKeyResponse`
-
-Maps each `operationId[]` to its respective `shardsKey`.
-
 
 ### `UserWalletBalanceExtended`
 
@@ -484,7 +467,6 @@ Provides extended information about a user's Jetton balance.
 ```typescript
 export type TACSimulationResult = {
     estimatedGas: bigint;
-    estimatedJettonFeeAmount: string;
     feeParams: {
       currentBaseFee: string;
       isEip1559: boolean;
@@ -512,7 +494,7 @@ export type TACSimulationResult = {
     simulationError: string;
     simulationStatus: boolean;
     suggestedTonExecutionFee: string;
-    minExecutorFeeInTon: string;
+    suggestedTacExecutionFee: string;
     debugInfo: {
       from: string;
       to: string;
@@ -524,7 +506,6 @@ export type TACSimulationResult = {
 Provides TAC simulation results.
 
   - **`estimatedGas`**: The estimated gas required for the message.
-  - **`estimatedJettonFeeAmount`**: The estimated fee amount in Jettons.
   - **`feeParams`**: The parameters related to the fee.
     - **`currentBaseFee`**: The current base fee.
     - **`isEip1559`**: Indicates if EIP-1559 is applied.
@@ -543,9 +524,39 @@ Provides TAC simulation results.
     - **`tokensLocked`**: The tokens locked.
   - **`simulationError`**: Any error encountered during the simulation.
   - **`simulationStatus`**: The status of the simulation.
+  - **`suggestedTonExecutionFee`**: Suggested fee (in TON) that should be attached to ensure successful execution on the TON network. 
+  - **`suggestedTacExecutionFee`**: Suggested fee (in TON) that should be attached to ensure successful execution on the TAC network.  
   - **`debugInfo`**: Debugging information.
     - **`from`**: The sender address.
     - **`to`**: The recipient address.
     - **`callData`**: The call data.
     - **`blockNumber`**: The block number.
 ---
+### `GeneralFeeInfo`
+
+```typescript
+export type GeneralFeeInfo = {
+    protocolFee: string;
+    executorFee: string;
+    tokenFeeSymbol: TokenSymbol;
+};
+```
+Represents the fee structure for a blockchain protocol.
+- **`protocolFee`**: The fee amount charged by the protocol itself.
+- **`executorFee`**: The fee amount paid to the transaction executor.
+- **`tokenFeeSymbol`**: The symbol/identifier of the token used to pay fees.
+
+
+### `FeeInfo`
+
+```ts
+export type FeeInfo = {
+    tac: GeneralFeeInfo;
+    ton: GeneralFeeInfo;
+};
+```
+Contains fee information for both TAC and TON blockchain networks.
+
+- **`tac`**: Complete fee structure for transactions on the TAC blockchain.
+- **`ton`**: Complete fee structure for transactions on the TON blockchain.
+
