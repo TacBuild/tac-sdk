@@ -5,10 +5,8 @@ Senders are responsible for signing and broadcasting the TON-side transactions g
 **Table of Contents**
 
 - [SDK Senders](#sdk-senders)
-  - [`SenderAbstraction` (Interface)](#senderabstraction-interface)
   - [`TonConnectSender`](#tonconnectsender)
   - [`RawSender`](#rawsender)
-  - [`SenderFactory`](#senderfactory)
 
 ## Sending TON Transactions: Two Approaches
 
