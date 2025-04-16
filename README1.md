@@ -53,7 +53,6 @@ The TAC SDK enables you to create frontends that:
   - [`getUserJettonWalletAddress`](./docs/sdks/tac_sdk.md#getuserjettonwalletaddress): Calculates a user's Jetton wallet address.
   - [`nativeTONAddress (getter)`](./docs/sdks/tac_sdk.md#nativetonaddress-getter): Placeholder address for native TON.
   - [`nativeTACAddress (getter)`](./docs/sdks/tac_sdk.md#nativetacaddress-getter): Gets the native asset address on the TAC chain.
-  - [`closeConnections`](./docs/sdks/tac_sdk.md#closeconnections): Closes underlying network connections.
   - *(See file for more...)*
 
 - **[`OperationTracker`](./docs/sdks/operation_tracker.md)**: Tools for monitoring cross-chain operation status.
@@ -64,11 +63,8 @@ The TAC SDK enables you to create frontends that:
   - *(See file for more...)*
 
 - **[`Senders`](./docs/sdks/senders.md)**: Handles signing and sending TON transactions.
-  - [`SenderFactory`](./docs/sdks/senders.md#senderfactory): Utility to easily create `TonConnectSender` or `RawSender`.
   - [`TonConnectSender`](./docs/sdks/senders.md#tonconnectsender): Implements sending via TonConnect UI.
   - [`RawSender`](./docs/sdks/senders.md#rawsender): Implements sending using a raw private key.
-  - [`SenderAbstraction`](./docs/sdks/senders.md#senderabstraction-interface) (Interface): Defines the contract for senders.
-  - *(See file for more...)*
 
 - **[`Utilities`](./docs/sdks/utilities.md)**: Helper functions and interfaces.
   - [`startTracking`](./docs/sdks/utilities.md#starttracking): Utility function to poll and log operation status to the console.
