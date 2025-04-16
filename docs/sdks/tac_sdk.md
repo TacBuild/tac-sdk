@@ -126,7 +126,15 @@ Provides detailed fee breakdowns and gas estimates.
 getEVMTokenAddress(tvmTokenAddress: string): Promise<string>
 ```
 
-Returns the EVM counterpart for a given TVM token address.
+#### **Purpose**
+
+The ability to compute the EVM address is crucial, in evmProxyMsg you almost always requires the token addresses on the EVM network as parameters. By precomputing the corresponding EVM addresses for TVM tokens, users can ensure that the transaction parameters are correctly configured before executing crosschain operations.
+
+For example, when adding liquidity, you need to specify the addresses of the tokens on the EVM network that you intend to add. Without the ability to compute these addresses in advance, configuring the transaction would be error-prone and could lead to failures. This function will bridge this gap, making the process seamless and reliable.
+
+#### **Returns**
+
+Returns the EVM paired address for a given TVM token address.
 
 ---
 
