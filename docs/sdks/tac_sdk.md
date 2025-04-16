@@ -54,18 +54,51 @@ sendCrossChainTransaction(
 ): Promise<TransactionLinker>
 ```
 
-Initiates a crosschain transaction from TON to TAC.
+This function facilitates crosschain operations by bridging data and assets from TON for interaction with TAC. Creates a transaction on the TON side that is sent to the TAC protocol address. This starts the crosschain operation. Works with TON native coin transfer and/or it handles the required logic for burning or transferring jettons based on the Jetton type(wrapped by our s-c CrossChainLayer or not).
 
-**Returns:** `TransactionLinker`  
-Structure that links the TON transaction to its EVM-side execution. Useful for tracking and post-processing.
+#### **Purpose**
 
-**Interfaces Used:**
+The `sendCrossChainTransaction` method is the core functionality of the `TacSdk` class, enabling the bridging of assets (or just data) to execute crosschain operations seamlessly.
 
-- **EvmProxyMsg**: defines the EVM destination and method.
-- **SenderAbstraction**: abstract class for sending transactions.
-- **AssetBridgingData**: structure containing asset address, amount, decimals.
-- **CrossChainTransactionOptions**: extra flags like executor fees and forceSend.
+#### **Parameters**
 
+- **`evmProxyMsg`**: An `EvmProxyMsg` object defining the EVM-specific logic:
+  - **`evmTargetAddress`**: Target address on the EVM network.
+  - **`methodName`** *(optional)*: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
+  - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method. You need to specify all arguments except the first one (TACHeader bytes). The TACHeader logic will be specified below
+
+- **`sender`**: A `SenderAbstraction` object, such as:
+  - **`TonConnectSender`**: For TonConnect integration.
+  - **`RawSender`**: For raw wallet transactions using a mnemonic.
+  
+- **`assets`** *(optional)*: An array of `AssetBridgingData` objects, each specifying the Assets details:
+  - **`address`** *(optional)*: Address of the Asset.
+  - **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
+  - **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
+  - **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
+
+- **`options`** *(optional)*: `CrossChainTransactionOptions` struct. 
+
+> **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
+
+> **Note:** If you don't specify methodName and encodedParameters and specify assets this will mean bridge any assets to evmTargetAddress (be sure to specify assets when doing this).
+
+#### **Returns**
+
+- **`Promise<TransactionLinker>`**:
+  - A `TransactionLinker` object for linking TON transaction and crosschain operation as well as for tracking crosschain operation status
+
+#### **Possible exceptions**
+
+- **`ContractError`**: contract for given jetton is not deployed on TVM side.
+- **`AddressError`**: invalid token address provided.
+
+#### **Functionality**
+
+1. Determines whether each Jetton requires a **burn** or **transfer** operation based on its type.
+2. Prepares shard messages and encodes the necessary payloads.
+3. Bridges Jettons by sending shard transactions to the appropriate smart contracts.
+4. Incorporates EVM logic into the payload for interaction with the TAC.
 ---
 
 ### `getTransactionSimulationInfo`
