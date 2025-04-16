@@ -97,8 +97,9 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 1. Determines whether each Jetton requires a **burn** or **transfer** operation based on its type.
 2. Prepares shard messages and encodes the necessary payloads.
-3. Bridges Jettons by sending shard transactions to the appropriate smart contracts.
-4. Incorporates EVM logic into the payload for interaction with the TAC.
+3. Simulates the transaction and estimates execution fees. If the simulation fails (e.g., due to gas or logic errors on TAC), the SDK throws an exception with the simulation result and does not send the message.
+4. Bridges Jettons by sending shard transactions to the appropriate smart contracts.
+5. Incorporates EVM logic into the payload for interaction with the TAC.
 ---
 
 ### `getTransactionSimulationInfo`
