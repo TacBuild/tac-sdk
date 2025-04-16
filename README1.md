@@ -34,9 +34,6 @@ The TAC SDK enables you to create frontends that:
 - Handle tokens across both chains
 - Create a seamless user experience for TON users
 
-![TAC SDK](./tac-sdk.png)
-
-
 ## Available Resources
 
 
