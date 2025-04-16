@@ -83,18 +83,6 @@ Simulates the full transaction lifecycle and estimates fees.
 **Returns:** `ExecutionFeeEstimationResult`  
 Provides detailed fee breakdowns and gas estimates.
 
-**Structure: `ExecutionFeeEstimationResult`**
-```ts
-interface ExecutionFeeEstimationResult {
-  feeParams: {
-    evmExecutorFee: bigint;
-    tvmExecutorFee: bigint;
-    protocolFee: bigint;
-  };
-  simulation: TACSimulationResult;
-}
-```
-
 ---
 
 ## Token Address Helpers
