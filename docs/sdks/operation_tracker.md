@@ -8,6 +8,7 @@
 - [Tracking by Transaction Link](#tracking-by-transaction-link)
   - [`getOperationId`](#getoperationid)
   - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
+  - [`startTracking`](#starttracking)
 - [Detailed Operation Info](#detailed-operation-info)
   - [`getOperationStatus`](#getoperationstatus)
   - [`getOperationStatuses`](#getoperationstatuses)
@@ -76,6 +77,72 @@ Returns simplified status of the operation: `PENDING`, `SUCCESSFUL`, `FAILED`, `
 
 ---
 
+### `startTracking`
+
+```ts
+startTracking(
+  transactionLinker: TransactionLinker,
+  network: Network,
+  options?: {
+    customLiteSequencerEndpoints?: string[];
+    delay?: number;
+    maxIterationCount?: number;
+    returnValue?: boolean;
+    tableView?: boolean;
+  }
+): Promise<void | ExecutionStages>
+```
+
+Polls status repeatedly until the operation reaches final state.
+
+- `delay`: polling interval in seconds (default: 10)
+- `maxIterationCount`: max retries (default: 120)
+- `returnValue = true`: return execution data instead of printing
+
+---
+
+
+### `startTracking`
+
+```ts
+startTracking(
+  transactionLinker: TransactionLinker,
+  network: Network,
+  options?: {
+    customLiteSequencerEndpoints?: string[];
+    delay?: number;
+    maxIterationCount?: number;
+    returnValue?: boolean;
+    tableView?: boolean;
+  }
+): Promise<void | ExecutionStages>
+```
+
+Tracks a crosschain operation end-to-end by polling the status using the transaction linker.  
+It will continue until a final state (success or failure) is reached.
+
+#### Parameters:
+- `transactionLinker`: Result of `sendCrossChainTransaction(...)`
+- `network`: `Network.TESTNET` or `Network.MAINNET`
+- `options` *(optional)*:
+  - `customLiteSequencerEndpoints`: override default sequencer URL
+  - `delay`: polling interval in seconds (default: 10)
+  - `maxIterationCount`: max polling attempts (default: 120)
+  - `returnValue`: if `true`, returns profiling data instead of logging (default: `false`)
+  - `tableView`: if `true`, logs formatted table output (default: `true`)
+
+#### Returns:
+- `Promise<void>` if `returnValue` is `false`
+- `Promise<ExecutionStages>` if `returnValue` is `true`
+
+#### Possible exceptions:
+- `FetchError`: if operation status or ID could not be fetched from sequencer
+
+#### Example:
+```ts
+await startTracking(transactionLinker, Network.TESTNET);
+```
+
 ## Detailed Operation Info
 
 ### `getOperationStatus`
@@ -122,6 +189,23 @@ Returns detailed breakdown of each stage in the operation lifecycle.
 Useful for debugging or understanding delays in cross-chain flow.
 
 **Returns:** `ExecutionStages`
+
+```ts
+interface ExecutionStages {
+  [stage in StageName]?: {
+    success: boolean;
+    timestamp: number;
+  };
+}
+```
+
+Each `StageName` can include:
+- `COLLECTED_IN_TON`
+- `INCLUDED_IN_TON_CONSENSUS`
+- `EXECUTED_IN_TON`
+- `COLLECTED_IN_TAC`
+- `INCLUDED_IN_TAC_CONSENSUS`
+- `EXECUTED_IN_TAC`
 
 ---
 
