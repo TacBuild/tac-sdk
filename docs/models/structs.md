@@ -1,29 +1,59 @@
+
+# SDK Data Structures (Structs)
+
+This file documents the primary data structures (types and interfaces often referred to as structs) used for configuration, data transfer, and results within the TAC SDK.
+
+## Table of Contents
+
+### Core Configuration
+- [`SDKParams`](#sdkparams-type)
+- [`TONParams`](#tonparams-type)
+- [`TACParams`](#tacparams-type)
+
+### Crosschain Transaction
+- [`EvmProxyMsg`](#evmproxymsg-type)
+- [`CrossChainTransactionOptions`](#crosschaintransactionoptions)
+- [`AssetBridgingData`](#assetbridgingdata-type)
+
+### Transaction Tracking
+- [`TransactionLinker`](#transactionlinker-type)
+
+### Simulation Structures
+- [`TACSimulationRequest`](#tacsimulationrequest)
+- [`TACSimulationResult`](#tacsimulationresult)
+
+### Execution & Status
+- [`TransactionData`](#transactiondata)
+- [`NoteInfo`](#noteinfo)
+- [`FeeParams`](#feeparams)
+- [`StageData`](#stagedata)
+- [`StatusInfo`](#statusinfo)
+- [`ProfilingStageData`](#profilingstagedata)
+- [`ExecutionStages`](#executionstages)
+- [`ExecutionStagesByOperationId`](#executionstagesbyoperationid)
+- [`StatusInfosByOperationId`](#statusinfosbyoperationid)
+
+### Metadata & Fees
+- [`MetaInfo`](#metainfo)
+- [`InitialCallerInfo`](#initialcallerinfo)
+- [`ValidExecutors`](#validexecutors)
+- [`GeneralFeeInfo`](#generalfeeinfo)
+- [`FeeInfo`](#feeinfo)
+
+### Jetton Wallet
+- [`UserWalletBalanceExtended`](#userwalletbalanceextended)
+
 # SDK Data Structures (Structs)
 
 This file documents the primary data structures (types and interfaces often referred to as structs) used for configuration, data transfer, and results within the TAC SDK.
 
 **Table of Contents**
 
-- [SDK Data Structures (Structs)](#sdk-data-structures-structs)
-  - [Core Data Structures](#core-data-structures)
-    - [`AssetBridgingData`](#assetbridgingdata)
-    - [`EvmProxyMsg`](#evmproxymsg)
-    - [`TransactionLinker`](#transactionlinker)
-    - [`UserWalletBalanceExtended`](#userwalletbalanceextended)
-    - [`SDKParams`](#sdkparams)
-    - [`TONParams`](#tonparams)
-    - [`TACParams`](#tacparams)
-  - [Simulation \& Tracking Structures](#simulation--tracking-structures)
-    - [`TACSimulationRequest`](#tacsimulationrequest)
-    - [`TACSimulationResult`](#tacsimulationresult)
-    - [`StatusInfo`](#statusinfo)
-    - [`ExecutionStages`](#executionstages)
-    - [`StatusInfosByOperationId`](#statusinfosbyoperationid)
-    - [`ExecutionStagesByOperationId`](#executionstagesbyoperationid)
-    - [`TransactionData`](#transactiondata)
-    - [`NoteInfo`](#noteinfo)
-    - [`StageData`](#stagedata)
-    - [`ProfilingStageData`](#profilingstagedata)
+- [Core Data Structures](#core-data-structures)
+- [Simulation & Tracking Structures](#simulation--tracking-structures)
+- [Execution & Status Structures](#execution--status-structures)
+- [Metadata & Fee Structures](#metadata--fee-structures)
+- [Jetton Structures](#jetton-structures)
 
 ## Core Data Structures
 
