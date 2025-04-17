@@ -8,6 +8,7 @@ import {
     RawAssetBridgingData,
     StatusInfosByOperationId,
     OperationType,
+    AssetType,
 } from './Struct';
 import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
 import { mainnet, testnet } from '@tonappchain/artifacts';
@@ -27,6 +28,8 @@ export type ShardTransaction = {
 export enum AssetOpType {
     JETTON_BURN = 'JETTON_BURN',
     JETTON_TRANSFER = 'JETTON_TRANSFER',
+    NFT_BURN = 'NFT_BURN',
+    NFT_TRANSFER = 'NFT_TRANSFER',
 }
 
 export type RandomNumberByTimestamp = {
@@ -35,6 +38,7 @@ export type RandomNumberByTimestamp = {
 };
 
 export type JettonBridgingData = RawAssetBridgingData & {
+    type: AssetType.FT;
     address: string;
 };
 
@@ -44,12 +48,34 @@ export type JettonBurnData = JettonBridgingData & {
     notificationReceiverAddress: string;
 };
 
+export type NFTBridgingData = RawAssetBridgingData & {
+    type: AssetType.NFT;
+    address: string;
+}
+
+export type NFTTransferData = NFTBridgingData & {
+    to: string;
+    responseAddress: string;
+    evmData: Cell;
+    crossChainTonAmount?: bigint;
+    feeData?: Cell;
+};
+
+export type NFTBurnData = NFTBridgingData & {
+    notificationReceiverAddress: string;
+    evmData: Cell;
+    crossChainTonAmount?: bigint;
+    feeData?: Cell;
+}
+
 export type InternalTONParams = {
     contractOpener: ContractOpener;
     jettonProxyAddress: string;
+    nftProxyAddress: string;
     crossChainLayerAddress: string;
     jettonMinterCode: Cell;
     jettonWalletCode: Cell;
+    nftItemCode: Cell;
 };
 
 export type InternalTACParams = {

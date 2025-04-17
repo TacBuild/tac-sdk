@@ -111,12 +111,18 @@ export type SDKParams = {
     customLiteSequencerEndpoints?: string[];
 };
 
+export enum AssetType {
+    NFT = 'NFT',
+    FT = 'FT',
+}
+
 export type WithAddress = {
     /**
      * Address of TAC or TON token.
      * Empty if sending native TON coin.
      */
     address?: string;
+    type: AssetType;
 };
 
 export type RawAssetBridgingData = {
