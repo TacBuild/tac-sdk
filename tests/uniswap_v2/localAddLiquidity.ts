@@ -27,9 +27,7 @@ async function addLiquidity() {
     };
     const tacSdk = await TacSdk.create(sdkParams);
     const EVM_TKA_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKA_ADDRESS);
-    const EVM_TKB_ADDRESS = "0x21e01Df24989b55118DA6c5047AA868218622cEF"; // await tacSdk.getEVMTokenAddress(TVM_TKB_ADDRESS);
-    console.log(EVM_TKA_ADDRESS);
-    console.log(EVM_TKB_ADDRESS);
+    const EVM_TKB_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKB_ADDRESS);
     const amountA = 1;
     const amountB = 2;
 
