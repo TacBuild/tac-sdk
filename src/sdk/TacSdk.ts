@@ -110,9 +110,9 @@ export class TacSdk {
         await sleep(delay * 1000);
         const crossChainLayerAddress = await settings.getAddressSetting('CrossChainLayerAddress');
         await sleep(delay * 1000);
-        const jettonMinterCode = await settings.getCellSetting('JETTON_MINTER_CODE');
+        const jettonMinterCode = await settings.getCellSetting('JettonMinterCode');
         await sleep(delay * 1000);
-        const jettonWalletCode = await settings.getCellSetting('JETTON_WALLET_CODE');
+        const jettonWalletCode = await settings.getCellSetting('JettonWalletCode');
         await sleep(delay * 1000);
 
         return {
@@ -508,6 +508,7 @@ export class TacSdk {
             tonAssets: rawAssets.map((asset) => ({
                 amount: asset.rawAmount.toString(),
                 tokenAddress: asset.address || '',
+                assetType: "ft",
             })),
             tonCaller: transactionLinker.caller,
         };

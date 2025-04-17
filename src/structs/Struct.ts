@@ -180,6 +180,7 @@ export type TACSimulationRequest = {
     tonAssets: {
         amount: string;
         tokenAddress: string;
+        assetType: string;
     }[];
     tonCaller: string;
 };
