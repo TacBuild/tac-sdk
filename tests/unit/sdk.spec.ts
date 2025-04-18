@@ -1,11 +1,20 @@
 import '@ton/test-utils';
 
-import { address, beginCell, Cell, Dictionary, toNano } from '@ton/ton';
+import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
 import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
-import { AssetBridgingData, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
+import {
+    AssetBridgingData,
+    AssetType,
+    EvmProxyMsg,
+    Network,
+    SenderFactory,
+    TacSdk,
+    wallets,
+    WalletVersion,
+} from '../../src';
 
 import { testnet } from '@tonappchain/artifacts';
 import { sandboxOpener } from '../../src/adapters/contractOpener';
@@ -18,6 +27,8 @@ describe('TacSDK', () => {
         JettonWalletCompiled,
         JettonProxyCompiled,
         SettingsCompiled,
+        NFTCollectionCompiled,
+        NFTItemCompiled,
     } = testnet.ton.compilationArtifacts;
     const { CrossChainLayer, CrossChainLayerOpCodes, JettonMinter, JettonProxy, Settings } = testnet.ton.wrappers;
 
@@ -27,6 +38,8 @@ describe('TacSDK', () => {
     const JettonWalletCode = Cell.fromHex(JettonWalletCompiled.hex);
     const JettonProxyCode = Cell.fromHex(JettonProxyCompiled.hex);
     const SettingsCode = Cell.fromHex(SettingsCompiled.hex);
+    const NFTCollectionCode = Cell.fromHex(NFTCollectionCompiled.hex);
+    const NFTItemCode = Cell.fromHex(NFTItemCompiled.hex);
 
     let blockchain: Blockchain;
     let initialState: BlockchainSnapshot;
@@ -37,7 +50,7 @@ describe('TacSDK', () => {
     let admin: SandboxContract<TreasuryContract>;
     let sequencerMultisig: SandboxContract<TreasuryContract>;
     let tacProtocolFee: number;
-    let tonProtocolFee: number; 
+    let tonProtocolFee: number;
     let protocolFeeSupply: number;
     let epochDelay: number;
     let nextVotingTime: number;
@@ -134,12 +147,20 @@ describe('TacSDK', () => {
             value: beginCell().storeAddress(crossChainLayer.address).endCell(),
         });
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
-            key: getKeyFromString('JETTON_MINTER_CODE'),
+            key: getKeyFromString('JettonMinterCode'),
             value: JettonMinterCode,
         });
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
-            key: getKeyFromString('JETTON_WALLET_CODE'),
+            key: getKeyFromString('JettonWalletCode'),
             value: JettonWalletCode,
+        });
+        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+            key: getKeyFromString('NFTCollectionCode'),
+            value: NFTCollectionCode,
+        });
+        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+            key: getKeyFromString('NFTItemCode'),
+            value: NFTItemCode,
         });
     };
 
@@ -227,24 +248,27 @@ describe('TacSDK', () => {
             {
                 /** TON */
                 amount: 1,
+                type: AssetType.FT,
             },
             {
                 /** ETH address */
                 address: evmRandomAddress,
                 amount: amountTokenForEVMAddress,
                 decimals: decimalsForEVMAddress,
+                type: AssetType.FT,
             },
             {
                 /** TON address */
                 address: tvmRandomAddress,
                 rawAmount: amountTokenForTVMAddress,
+                type: AssetType.FT,
             },
         ];
 
         const expectedTVMAddressForEVM = await sdk.getTVMTokenAddress(evmRandomAddress);
 
         const rawAssets = await sdk['convertAssetsToRawFormat'](assets);
-        const jettonAssets = await sdk['aggregateJettons'](rawAssets);
+        const jettonAssets = await sdk['aggregateTokens'](rawAssets);
         expect(jettonAssets.jettons.length).toBe(2);
         expect(jettonAssets.crossChainTonAmount).toBe(toNano(1));
         expect(jettonAssets.jettons).toContainEqual({ address: tvmRandomAddress, rawAmount: amountTokenForTVMAddress });
@@ -262,14 +286,17 @@ describe('TacSDK', () => {
         const assets: AssetBridgingData[] = [
             {
                 amount: amount1,
+                type: AssetType.FT,
             },
             {
                 address: tvmRandomAddress,
                 amount: amount2,
+                type: AssetType.FT,
                 decimals: decimals2,
             },
             {
                 address: tvmRandomAddress,
+                type: AssetType.FT,
                 rawAmount: amount3,
             },
         ];
@@ -297,6 +324,7 @@ describe('TacSDK', () => {
             const assets: AssetBridgingData[] = [
                 {
                     rawAmount: 2n,
+                    type: AssetType.FT,
                 },
             ];
 

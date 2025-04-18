@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
+import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
 import { toNano } from '@ton/ton';
 
 const UNISWAPV2_PROXY_ADDRESS = '0x14Ad9182F54903dFD8215CA2c1aD0F9A47Ac7Edb';
@@ -55,6 +55,7 @@ async function removeLiquidity() {
         {
             address: TVM_LP_ADDRESS,
             amount: amountLP,
+            type: AssetType.FT,
         },
     ];
 

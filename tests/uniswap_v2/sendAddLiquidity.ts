@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
+import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
 import { toNano } from '@ton/ton';
 
 const UNISWAPV2_PROXY_ADDRESS = '0x59C71E9156D3729858dcac1E8082770313089d9c';
@@ -57,10 +57,12 @@ async function addLiquidity() {
         {
             address: TVM_TKA_ADDRESS,
             amount: amountA,
+            type: AssetType.FT,
         },
         {
             address: TVM_TKB_ADDRESS,
             amount: amountB,
+            type: AssetType.FT,
         },
     ];
 

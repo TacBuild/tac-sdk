@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
+import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
 
 import { toNano } from '@ton/ton';
 
@@ -65,10 +65,12 @@ async function addLiquidity() {
         {
             address: TVM_TKA_ADDRESS,
             amount: amountA,
+            type: AssetType.FT,
         },
         {
             address: TVM_TKB_ADDRESS,
             amount: amountB,
+            type: AssetType.FT,
         },
     ];
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons);
