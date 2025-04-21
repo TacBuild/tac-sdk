@@ -217,10 +217,8 @@ Returns Jetton balance in raw `bigint` format.
 getUserJettonBalanceExtended(userAddress: string, tokenAddress: string): Promise<UserWalletBalanceExtended>
 ```
 
-#### **Returns**
-
-- **`Promise<TACSimulationResult>`**:
-  - A [`UserWalletBalanceExtended`](./../models/structs.md#userwalletbalanceextended) object with extended user balance data.
+#### **Returns** [`UserWalletBalanceExtended`](./../models/structs.md#userwalletbalanceextended)
+  - An object with extended user balance data.
 
 ---
 
