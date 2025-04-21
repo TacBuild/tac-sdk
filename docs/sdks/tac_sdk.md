@@ -37,7 +37,7 @@
 TacSdk.create(sdkParams: SDKParams): Promise<TacSdk>
 ```
 
-Creates an SDK instance. You can customize TON and TAC params via `TONParams` and `TACParams`.
+Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](./../models/structs.md#tonparams-type) and [`TACParams`](./../models/structs.md#tacparams-type).
 
 ---
 
@@ -62,31 +62,29 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 #### **Parameters**
 
-- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg) object defining the EVM-specific logic:
+- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM-specific logic:
   - **`evmTargetAddress`**: Target address on the EVM network.
   - **`methodName`** *(optional)*: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
   - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method. You need to specify all arguments except the first one (TACHeader bytes). The TACHeader logic will be specified below
 
-- **`sender`**: A `SenderAbstraction` object, such as:
+- **`sender`**: A [`SenderAbstraction`](./sender.md) object, such as:
   - **`TonConnectSender`**: For TonConnect integration.
   - **`RawSender`**: For raw wallet transactions using a mnemonic.
   
-- **`assets`** *(optional)*: An array of `AssetBridgingData` objects, each specifying the Assets details:
+- **`assets`** *(optional)*: An array of [`AssetBridgingData`](./../models/structs.md#assetbridgingdata-type) objects, each specifying the Assets details:
   - **`address`** *(optional)*: Address of the Asset.
   - **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
   - **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
   - **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
 
-- **`options`** *(optional)*: `CrossChainTransactionOptions` struct. 
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) struct. 
 
 > **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 
 > **Note:** If you don't specify methodName and encodedParameters and specify assets this will mean bridge any assets to evmTargetAddress (be sure to specify assets when doing this).
 
-#### **Returns**
-
-- **`Promise<TransactionLinker>`**:
-  - A `TransactionLinker` object for linking TON transaction and crosschain operation as well as for tracking crosschain operation status
+#### **Returns** [`TransactionLinker`](./../models/structs.md#transactionlinker-type)
+  - An object for linking TON transaction and crosschain operation as well as for tracking crosschain operation status
 
 #### **Possible exceptions**
 
@@ -114,8 +112,8 @@ getTransactionSimulationInfo(
 
 Simulates the full transaction lifecycle and estimates fees.
 
-**Returns:** `ExecutionFeeEstimationResult`  
-Provides detailed fee breakdowns and gas estimates.
+**Returns:** [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult-type)  
+- Provides detailed fee breakdowns and gas estimates.
 
 ---
 
@@ -219,21 +217,10 @@ Returns Jetton balance in raw `bigint` format.
 getUserJettonBalanceExtended(userAddress: string, tokenAddress: string): Promise<UserWalletBalanceExtended>
 ```
 
-Returns:
+#### **Returns**
 
-**Structure: `UserWalletBalanceExtended`**
-```ts
-type UserWalletBalanceExtended =
-  | {
-      exists: true;
-      rawAmount: bigint;
-      decimals: number;
-      amount: number;
-    }
-  | {
-      exists: false;
-    };
-```
+- **`Promise<TACSimulationResult>`**:
+  - A [`UserWalletBalanceExtended`](./../models/structs.md#userwalletbalanceextended) object with extended user balance data.
 
 ---
 
@@ -257,6 +244,9 @@ simulateTACMessage(
 ```
 
 Simulates EVM-side contract call with a TAC header and TON asset context.
+
+#### **Returns** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)
+  - Simulation result on TAC.
 
 ---
 
