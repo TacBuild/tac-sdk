@@ -29,14 +29,14 @@ It queries the Lite Sequencer for status updates, execution breakdowns, and oper
 
 ## How Tracking Works
 
-After calling `TacSdk.sendCrossChainTransaction(...)`, a `TransactionLinker` object is returned.  
+After calling `TacSdk.sendCrossChainTransaction(...)`, a [`TransactionLinker`](./../models/structs.md#transactionlinker-type) object is returned.  
 This linker allows tracking status of the operation through these steps:
 
 1. Use `getOperationId(linker)` to fetch the cross-chain operation ID.
 2. Use `getOperationStatus(...)` or `getSimplifiedOperationStatus(...)` to get the current state.
 3. For debugging or performance profiling, use `getStageProfiling(...)`.
 
-> For automated polling, use `startTracking()` which handles all the above and prints status updates.
+> For automated polling, use [`startTracking()`](./utilities.md#starttracking) which handles all the above and prints status updates.
 
 ---
 
@@ -72,7 +72,7 @@ Fetches the crosschain `operationId` based on a transaction linker.
 getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses>
 ```
 
-Returns simplified status of the operation: `PENDING`, `SUCCESSFUL`, `FAILED`, `OPERATION_ID_NOT_FOUND`.
+**Returns:** [`SimplifiedStatuses`](./../models/enums.md#simplifiedstatuses)
 
 ---
 
@@ -84,20 +84,8 @@ Returns simplified status of the operation: `PENDING`, `SUCCESSFUL`, `FAILED`, `
 getOperationStatus(operationId: string): Promise<StatusInfo>
 ```
 
-Returns latest status of a single operation.
-
-**Returns:** `StatusInfo`
-
-```ts
-interface StatusInfo {
-  stage: StageName;
-  success: boolean;
-  timestamp: number;
-  transactions: TransactionData[] | null;
-  note: NoteInfo | null;
-}
-```
-
+**Returns:** [`StatusInfo`](./../models/structs.md#statusinfo)
+  - Latest status of a single operation.
 ---
 
 ### `getOperationStatuses`
@@ -106,7 +94,8 @@ interface StatusInfo {
 getOperationStatuses(operationIds: string[]): Promise<StatusInfosByOperationId>
 ```
 
-Returns multiple operation statuses in one call.
+**Returns:** [`StatusInfo`](./../models/structs.md#statusinfosbyoperationId)
+ - Multiple operation statuses in one call.
 
 ---
 
@@ -118,27 +107,8 @@ Returns multiple operation statuses in one call.
 getStageProfiling(operationId: string): Promise<ExecutionStages>
 ```
 
-Returns detailed breakdown of each stage in the operation lifecycle.  
-Useful for debugging or understanding delays in cross-chain flow.
-
-**Returns:** `ExecutionStages`
-
-```ts
-interface ExecutionStages {
-  [stage in StageName]?: {
-    success: boolean;
-    timestamp: number;
-  };
-}
-```
-
-Each `StageName` can include:
-- `COLLECTED_IN_TON`
-- `INCLUDED_IN_TON_CONSENSUS`
-- `EXECUTED_IN_TON`
-- `COLLECTED_IN_TAC`
-- `INCLUDED_IN_TAC_CONSENSUS`
-- `EXECUTED_IN_TAC`
+**Returns:** [`ExecutionStages`](./../models/structs.md#executionstages)
+  - Detailed breakdown of each stage in the operation lifecycle. Useful for debugging or understanding delays in cross-chain flow.
 
 ---
 
@@ -148,7 +118,8 @@ Each `StageName` can include:
 getStageProfilings(operationIds: string[]): Promise<ExecutionStagesByOperationId>
 ```
 
-Returns profiling info for multiple operations in a single request.
+**Returns:** [`ExecutionStagesByOperationId`](./../models/structs.md#executionstagesbyoperationid)
+  - Profiling info for multiple operations in a single request.
 
 ---
 
@@ -160,18 +131,8 @@ Returns profiling info for multiple operations in a single request.
 getOperationType(operationId: string): Promise<OperationType>
 ```
 
-Returns operation classification:
-
-```ts
-enum OperationType {
-  PENDING,
-  TON_TAC,
-  TAC_TON,
-  TON_TAC_TON,
-  ROLLBACK,
-  UNKNOWN
-}
-```
+**Returns:** [`OperationType`](./../models/structs.md#operationtype)
+  - Operation classification.
 
 ---
 
@@ -181,4 +142,5 @@ enum OperationType {
 getOperationIdsByShardsKeys(shardsKeys: string[], caller: string): Promise<OperationIdsByShardsKey>
 ```
 
-Maps TON shard keys (with caller address) to operation IDs.
+**Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationddsbyshardskey)
+  - Maps TON shard keys (with caller address) to operation IDs.
