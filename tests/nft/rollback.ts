@@ -10,9 +10,9 @@ import {
     startTracking,
 } from '../../src';
 
-const NFT_ITEM_ADDRESS = 'kQBVl53XybtN96-XeT8tDl7bMLMfZxkZ9cAUxvmB5nXn0rGe';
+const NFT_ITEM_ADDRESS = 'kQAmOCz1vNEZBSlEpXUHZA7HEFvPaQG2OdF9A7FhI7hIwLv6';
 const WALLET_VERSION = 'V4';
-const EVM_SEND_NFT_TO = '0xdD2FD4581271e230360230F9337D5c0430Bf44C0';
+const TEST_PROXY_ADDRESS = '0xAB64ECF19075c7758694396D23638bA5baeAa83C';
 
 async function lock() {
     // lock nft first
@@ -30,9 +30,13 @@ async function lock() {
 
     const tacSdk = await TacSdk.create(sdkParams);
 
+    const abi = new ethers.AbiCoder();
+    const encodedParameters = abi.encode(['string'], ['test_rollback_error']);
+
     const evmProxyMsg: EvmProxyMsg = {
-        evmTargetAddress: EVM_SEND_NFT_TO,
-        methodName: '',
+        evmTargetAddress: TEST_PROXY_ADDRESS,
+        methodName: 'mockWithDefaultError',
+        encodedParameters,
     };
 
     const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
@@ -50,7 +54,9 @@ async function lock() {
         },
     ];
 
-    return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, nfts);
+    return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, nfts, {
+        forceSend: true,
+    });
 }
 
 async function main() {

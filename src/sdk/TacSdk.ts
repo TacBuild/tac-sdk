@@ -720,8 +720,8 @@ export class TacSdk {
 
         const aggregatedData = await this.aggregateTokens(rawAssets);
         
-        let transactionLinkerShardCount = aggregatedData.jettons.length == 0 ? 1 : aggregatedData.jettons.length;
-        transactionLinkerShardCount += aggregatedData.nfts.length;
+        const tokensLength = aggregatedData.jettons.length + aggregatedData.nfts.length;
+        let transactionLinkerShardCount = tokensLength == 0 ? 1 : tokensLength;
 
         const caller = sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
