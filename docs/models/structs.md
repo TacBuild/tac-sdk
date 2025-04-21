@@ -471,6 +471,8 @@ export type ExecutionStages = {
 ```
 
 Represents the profiling data for all execution stages within an operation.
+- [`StageName`](./enums.md#stagename)
+- [`OperationType`](./enums.md#operationtype)
 
 ### `ExecutionStagesByOperationId`
 
@@ -601,7 +603,7 @@ export type GeneralFeeInfo = {
 Represents the fee structure for a blockchain protocol.
 - **`protocolFee`**: The fee amount charged by the protocol itself.
 - **`executorFee`**: The fee amount paid to the transaction executor.
-- **`tokenFeeSymbol`**: The symbol/identifier of the token used to pay fees.
+- **`tokenFeeSymbol`**: The symbol/identifier of the [token](./enums.md#tokensymbol) used to pay fees.
 
 
 ### `FeeInfo`
