@@ -62,7 +62,7 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 #### **Parameters**
 
-- **`evmProxyMsg`**: An `EvmProxyMsg` object defining the EVM-specific logic:
+- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg) object defining the EVM-specific logic:
   - **`evmTargetAddress`**: Target address on the EVM network.
   - **`methodName`** *(optional)*: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
   - **`encodedParameters`** *(optional)*: Encoded parameters for the EVM method. You need to specify all arguments except the first one (TACHeader bytes). The TACHeader logic will be specified below
