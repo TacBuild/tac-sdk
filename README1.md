@@ -81,3 +81,66 @@ The TAC SDK enables you to create frontends that:
   - *(See file for more...)*
 
 Navigate through the linked files for full details on parameters, return types, examples, and more.
+
+## Usage
+
+```typescript
+import { TacSdk } from '@tonappchain/sdk';
+import { TonConnectUI } from '@tonconnect/ui';
+import { ethers } from 'ethers';
+
+// Create EVM payload for DappProxy
+const abi = new ethers.AbiCoder();
+const encodedParameters = abi.encode(
+    ['tuple(uint256,uint256,address[],address)'],
+    [
+        [
+            tokenAAmount,
+            tokenBAmount,
+            [EVMtokenAAddress, EVMtokenBAddress],
+            proxyDapp
+        ]
+    ]
+);
+const evmProxyMsg: EvmProxyMsg = {
+    evmTargetAddress: DappProxyAddress,
+    methodName: 'addLiquidity',
+    encodedParameters
+};
+
+// Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
+const assets: AssetBridgingData[] = [
+    {
+        address: TVMtokenAAddress,
+        amount: tokenAAmount
+    },
+    {
+        address: TVMtokenBAddress,
+        amount: tokenBAmount
+    }
+];
+
+const sdkParams: SDKParams = {
+    network: Network.TESTNET
+};
+const tacSdk = await TacSdk.create(sdkParams);
+
+//Send transaction via tonConnect or mnemonic
+const tonConnectUI = new TonConnectUI({
+    manifestUrl: config.tonconnectManifestUrl as string
+});
+const sender = await SenderFactory.getSender({
+    tonConnect: tonConnectUI
+});
+
+await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+
+tacSdk.closeConnections();
+```
+For a detailed example, see `test/sendSwap.ts` or `test/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
+
+---
+
+## License
+
+MIT
