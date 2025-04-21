@@ -21,6 +21,7 @@ This file documents the primary data structures (types and interfaces often refe
 ### Simulation Structures
 - [`TACSimulationRequest`](#tacsimulationrequest)
 - [`TACSimulationResult`](#tacsimulationresult)
+- [`ExecutionFeeEstimationResult`](#executionfeeestimationresult)
 
 ### Execution & Status
 - [`TransactionData`](#transactiondata)
@@ -265,6 +266,32 @@ Represents a request to simulate an TAC message.
   - **`tokenAddress`**: Address of the token.
 - **`tonCaller`**: Address of the caller in the TON.
 
+### `ExecutionFeeEstimationResult`
+
+```ts
+export type ExecutionFeeEstimationResult = {
+  feeParams: FeeParams;
+  simulation: TACSimulationResult;
+}
+```
+
+#### **Description**
+
+The result of a cross-chain transaction simulation, containing both the estimated fees and the outcome of the TAC-side message simulation.
+
+#### **Fields**
+
+- **`feeParams`**: [`FeeParams`](#feeparams)  
+
+- **`simulation`**: [`TACSimulationResult`](#tacsimulationresult)  
+
+#### **Purpose**
+
+Used to pre-evaluate:
+- whether the transaction will succeed on the TAC side,
+- how much fee is required in the chosen asset.
+
+Enables safe transaction previews before actual submission.
 
 ### `TransactionData`
 
