@@ -112,7 +112,7 @@ getTransactionSimulationInfo(
 
 Simulates the full transaction lifecycle and estimates fees.
 
-**Returns:** [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult-type)  
+**Returns:** [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult)  
 - Provides detailed fee breakdowns and gas estimates.
 
 ---
