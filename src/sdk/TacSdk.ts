@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { Address, address, beginCell, Cell, toNano } from '@ton/ton';
-import { Wallet, ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
+import { Address, address, beginCell, Cell, fromNano, toNano } from '@ton/ton';
+import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
 import type { SenderAbstraction } from '../sender';
 
 // import structs
@@ -61,6 +61,7 @@ import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
 import { NFTItem } from '@tonappchain/artifacts/dist/src/ton/wrappers';
+import { invalidAssetType } from '../errors/instances';
 
 export class TacSdk {
     readonly network: Network;
@@ -144,16 +145,19 @@ export class TacSdk {
 
         const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
 
+        //@ts-ignore
         const settings = artifacts.tac.wrappers.SettingsFactoryTAC.connect(settingsAddress, provider);
         const crossChainLayerABI =
             TACParams?.crossChainLayerABI ?? artifacts.tac.compilationArtifacts.CrossChainLayer.abi;
         const crossChainLayerAddress = await settings.getAddressSetting(
             keccak256(toUtf8Bytes('CrossChainLayerAddress')),
         );
+        //@ts-ignore
         const crossChainLayer = artifacts.tac.wrappers.CrossChainLayerFactoryTAC.connect(crossChainLayerAddress, provider);
         await sleep(delay * 1000);
 
         const tokenUtilsAddress = await settings.getAddressSetting(keccak256(toUtf8Bytes('TokenUtilsAddress')));
+        //@ts-ignore
         const tokenUtils = artifacts.tac.wrappers.TokenUtilsFactoryTAC.connect(tokenUtilsAddress, provider);
         await sleep(delay * 1000);
 
@@ -296,7 +300,7 @@ export class TacSdk {
             queryId,
             address(transferData.to ?? this.TONParams.nftProxyAddress),
             address(transferData.responseAddress),
-            NFT_TRANSFER_FORWARD_TON_AMOUNT + forwardFeeAmount + crossChainTonAmount,
+            Number(fromNano(NFT_TRANSFER_FORWARD_TON_AMOUNT + forwardFeeAmount + crossChainTonAmount)),
             forwardPayload,
         );
     }
@@ -592,14 +596,24 @@ export class TacSdk {
     private async convertAssetsToRawFormat(assets?: AssetBridgingData[]): Promise<RawAssetBridgingData[]> {
         return await Promise.all(
             (assets ?? []).map(async (asset) => {
-                const address = isEthereumAddress(asset.address)
-                    ? await this.getTVMTokenAddress(asset.address)
-                    : asset.address;
-                return {
-                    address,
-                    rawAmount: await this.getRawAmount(asset, address),
-                    type: asset.type,
-                };
+                if (asset.type === AssetType.FT) {
+                    const address = isEthereumAddress(asset.address)
+                        ? await this.getTVMTokenAddress(asset.address)
+                        : asset.address;
+                    return {
+                        address,
+                        rawAmount: await this.getRawAmount(asset, address),
+                        type: asset.type,
+                    };
+                }
+                if (asset.type === AssetType.NFT) {
+                    return {
+                        address: asset.address,
+                        rawAmount: 1n,
+                        type: asset.type,
+                    };
+                }
+                throw invalidAssetType;
             }),
         );
     }
@@ -613,7 +627,7 @@ export class TacSdk {
         isRoundTrip?: boolean,
     ): Promise<ExecutionFeeEstimationResult> {
 
-        const crossChainLayer = this.TONParams.contractOpener.open(new this.artifacts.ton.wrappers.CrossChainLayer(Address.parse(this.TONParams.crossChainLayerAddress)));
+        const crossChainLayer = this.TONParams.contractOpener.open(this.artifacts.ton.wrappers.CrossChainLayer.createFromAddress(Address.parse(this.TONParams.crossChainLayerAddress)));
         const fullStateCCL = await crossChainLayer.getFullData();
         
         const tacSimulationBody: TACSimulationRequest = {
@@ -629,7 +643,7 @@ export class TacSdk {
             tonAssets: rawAssets.map((asset) => ({
                 amount: asset.rawAmount.toString(),
                 tokenAddress: asset.address || '',
-                assetType: "ft",
+                assetType: asset.type.toLowerCase(),
             })),
             tonCaller: transactionLinker.caller,
         };

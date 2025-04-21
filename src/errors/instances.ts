@@ -45,3 +45,5 @@ export const simulationError = new FetchError('Failed to simulate EVM call', 112
 export const profilingFetchError = (msg: string) => new FetchError(`failed to fetch stage profiling: ${msg}`, 113);
 
 export const emptyArrayError = (msg: string) => new FetchError(`empty array: ${msg}`, 114);
+
+export const invalidAssetType = new FormatError('Invalid asset type', 115);
