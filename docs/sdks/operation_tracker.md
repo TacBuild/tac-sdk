@@ -94,7 +94,7 @@ getOperationStatus(operationId: string): Promise<StatusInfo>
 getOperationStatuses(operationIds: string[]): Promise<StatusInfosByOperationId>
 ```
 
-**Returns:** [`StatusInfo`](./../models/structs.md#statusinfosbyoperationId)
+**Returns:** [`StatusInfosByOperationId`](./../models/structs.md#statusinfosbyoperationId)
  - Multiple operation statuses in one call.
 
 ---
@@ -131,7 +131,7 @@ getStageProfilings(operationIds: string[]): Promise<ExecutionStagesByOperationId
 getOperationType(operationId: string): Promise<OperationType>
 ```
 
-**Returns:** [`OperationType`](./../models/structs.md#operationtype)
+**Returns:** [`OperationType`](./../models/enums.md#operationtype)
   - Operation classification.
 
 ---
