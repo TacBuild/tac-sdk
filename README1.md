@@ -82,6 +82,49 @@ The TAC SDK enables you to create frontends that:
 
 Navigate through the linked files for full details on parameters, return types, examples, and more.
 
+### TACHeader 
+> **Note:** The TAC protocol only knows how to send data to contracts that inherit from a TacProxy (TacProxyV1) contract. Such a contract must have a strictly defined signature of its methods. It is specified below:
+
+```
+function myProxyFunction(bytes calldata tacHeader, bytes calldata arguments) external onlyTacCCL {
+  // Function implementation 
+}
+```
+
+> **Note:** methodName in `evmProxyMsg` must be either a simple method name or a signature of the form MethodName(bytes,bytes)
+
+The first argument of methods must always be TACHeader. It is sent by protocol, augmented with data from executor.
+- **`bytes tacHeader`**: Encoded structure TacHeaderV1, containing:
+  - **`uint64 shardsKey`**: ID you can specify for yourself an inside message to the TVM contract on the TON network. 
+  - **`uint256 timestamp`**: The block timestamp on TON where the user's message was created. 
+  - **`bytes32 operationId`**: Unique identifier for the message created by the TAC infrastructure. 
+  - **`string tvmCaller`**: The TON user's wallet address that sent the message. 
+  - **`bytes extraData`**: Untrusted extra data, provided by executor with the current message if needed. Otherwise, it's an empty bytes array.
+
+You need to specify all the remaining data you need in tuple (bytes) in arguments. For example this is how arguments for addLiquidity method in UniswapV2 (a special proxy contract for it) will look like:
+
+```
+    const abi = new ethers.AbiCoder();
+    const encodedParameters = abi.encode(
+        ['tuple(address,address,uint256,uint256,uint256,uint256,address,uint256)'],
+        [
+            [
+                EVM_TOKEN_A_ADDRESS,
+                EVM_TOKEN_B_ADDRESS,
+                amountA,
+                amountB,
+                amountAMin, 
+                amountBMin,  
+                UNISWAPV2_PROXY_ADDRESS, 
+                deadline 
+            ]
+        ]
+    );
+```
+More details in [sendAddLiquidity.ts](tests/uniswap_v2/sendAddLiquidity.ts) and in other tests.
+
+---
+
 ## Usage
 
 ```typescript
