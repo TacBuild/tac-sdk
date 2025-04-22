@@ -49,9 +49,11 @@ export class RawSender implements SenderAbstraction {
                 sendMode: SendMode.PAY_GAS_SEPARATELY,
             });
         } else {
+            const results = [];
             for (const shardTx of shardTransactions) {
-                await this.sendShardTransaction(shardTx, delay, chain, contractOpener);
+                results.push(await this.sendShardTransaction(shardTx, delay, chain, contractOpener));
             }
+            return results;
         }
     }
 
