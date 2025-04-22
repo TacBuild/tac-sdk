@@ -21,6 +21,7 @@ import {
     CrossChainTransactionOptions,
     ExecutionFeeEstimationResult,
     AssetType,
+    CrosschainTx,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -775,6 +776,90 @@ export class TacSdk {
             this.TONParams.contractOpener,
         );
         return { sendTransactionResult, ...transactionLinker };
+    }
+
+    async sendCrossChainTransactions(
+        sender: SenderAbstraction,
+        txs: CrosschainTx[],
+    ): Promise<TransactionLinker[]> {
+        const transactions: ShardTransaction[] = [];
+        const transactionLinkers: TransactionLinker[] = [];
+        for (const { options, assets, evmProxyMsg } of txs) {
+
+            let {
+                forceSend = false,
+                isRoundTrip = undefined,
+                protocolFee = undefined,
+                evmValidExecutors = [],
+                evmExecutorFee = undefined,
+                tvmValidExecutors = [],
+                tvmExecutorFee = undefined
+            } = options || {};
+        
+            const rawAssets = await this.convertAssetsToRawFormat(assets);
+    
+            const aggregatedData = await this.aggregateTokens(rawAssets);
+            
+            const tokensLength = aggregatedData.jettons.length + aggregatedData.nfts.length;
+            let transactionLinkerShardCount = tokensLength == 0 ? 1 : tokensLength;
+    
+            const caller = sender.getSenderAddress();
+            const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
+            transactionLinkers.push(transactionLinker);
+
+            if (evmValidExecutors.length == 0) {
+                evmValidExecutors = this.TACParams.trustedTACExecutors;
+            }
+    
+            if (tvmValidExecutors.length == 0) {
+                tvmValidExecutors = this.TACParams.trustedTONExecutors;
+            }
+    
+            const { feeParams } = await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, forceSend, isRoundTrip);
+    
+            if (evmProxyMsg.gasLimit == undefined) {
+                evmProxyMsg.gasLimit = feeParams.gasLimit;
+            }
+    
+            if (evmExecutorFee != undefined) {
+                feeParams.evmExecutorFee = evmExecutorFee;
+            }
+    
+            if (feeParams.isRoundTrip && tvmExecutorFee != undefined) {
+                feeParams.tvmExecutorFee = tvmExecutorFee;
+            }
+    
+            if (protocolFee != undefined) {
+                feeParams.protocolFee = protocolFee;
+            }
+    
+            const validExecutors: ValidExecutors = {
+                tac: evmValidExecutors,
+                ton: tvmValidExecutors,
+            }
+    
+            const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg, validExecutors);
+            const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData, feeParams);
+            await sleep(this.delay * 1000);
+
+            const transaction: ShardTransaction = {
+                validUntil: +new Date() + 15 * 60 * 1000,
+                messages,
+                network: this.network,
+            }
+
+            transactions.push(transaction);
+        }
+
+        console.log('*****Sending transactions: ', transactions);
+        const sendTransactionResult = await sender.sendShardTransactions(
+            transactions,
+            this.delay,
+            this.network,
+            this.TONParams.contractOpener,
+        );
+
+        return transactionLinkers;
     }
 
     // TODO move to sdk.TAC, sdk.TON

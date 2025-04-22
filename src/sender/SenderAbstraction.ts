@@ -28,5 +28,11 @@ export interface SenderAbstraction {
         chain?: Network,
         contractOpener?: ContractOpener,
     ): Promise<unknown>;
+    sendShardTransactions(
+        shardTransactions: ShardTransaction[],
+        delay: number,
+        chain?: Network,
+        contractOpener?: ContractOpener,
+    ): Promise<unknown>;
     getSenderAddress(): string;
 }

@@ -178,11 +178,11 @@ export type TACSimulationRequest = {
         methodName: string;
         target: string;
     };
-    evmValidExecutors: string[];    
+    evmValidExecutors: string[];
     extraData: string;
     feeAssetAddress: string;
     shardsKey: string;
-    
+
     tonAssets: {
         amount: string;
         tokenAddress: string;
@@ -247,12 +247,12 @@ export type GeneralFeeInfo = {
     protocolFee: string;
     executorFee: string;
     tokenFeeSymbol: TokenSymbol;
-}
+};
 
 export type FeeInfo = {
-	tac: GeneralFeeInfo;
-	ton: GeneralFeeInfo;
-}
+    tac: GeneralFeeInfo;
+    ton: GeneralFeeInfo;
+};
 
 export type MetaInfo = {
     initialCaller: InitialCallerInfo;
@@ -262,7 +262,7 @@ export type MetaInfo = {
 
 export type ExecutionStages = {
     operationType: OperationType;
-    metaInfo: MetaInfo; 
+    metaInfo: MetaInfo;
 } & Record<StageName, ProfilingStageData>;
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
@@ -314,12 +314,12 @@ export type TACSimulationResult = {
 };
 
 export type FeeParams = {
-    isRoundTrip: boolean,
-    gasLimit: bigint,
-    protocolFee: bigint,
-    evmExecutorFee: bigint,
-    tvmExecutorFee: bigint,
-}
+    isRoundTrip: boolean;
+    gasLimit: bigint;
+    protocolFee: bigint;
+    evmExecutorFee: bigint;
+    tvmExecutorFee: bigint;
+};
 
 export type CrossChainTransactionOptions = {
     forceSend?: boolean;
@@ -329,9 +329,15 @@ export type CrossChainTransactionOptions = {
     evmExecutorFee?: bigint;
     tvmValidExecutors?: string[];
     tvmExecutorFee?: bigint;
-}
+};
 
 export type ExecutionFeeEstimationResult = {
-    feeParams: FeeParams, 
-    simulation: TACSimulationResult,
-}
+    feeParams: FeeParams;
+    simulation: TACSimulationResult;
+};
+
+export type CrosschainTx = {
+    evmProxyMsg: EvmProxyMsg;
+    assets?: AssetBridgingData[];
+    options?: CrossChainTransactionOptions;
+};
