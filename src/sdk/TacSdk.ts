@@ -701,12 +701,12 @@ export class TacSdk {
         return await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, false, undefined);
     }
 
-    async sendCrossChainTransaction(
+    private async prepareCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
-        sender: SenderAbstraction,
+        caller: string,
         assets?: AssetBridgingData[],
         options?: CrossChainTransactionOptions,
-    ): Promise<TransactionLinker> {
+    ): Promise<{ transaction: ShardTransaction; transactionLinker: TransactionLinker }> {
         let {
             forceSend = false,
             isRoundTrip = undefined,
@@ -716,15 +716,13 @@ export class TacSdk {
             tvmValidExecutors = [],
             tvmExecutorFee = undefined
         } = options || {};
-    
-        const rawAssets = await this.convertAssetsToRawFormat(assets);
 
+        const rawAssets = await this.convertAssetsToRawFormat(assets);
         const aggregatedData = await this.aggregateTokens(rawAssets);
-        
+
         const tokensLength = aggregatedData.jettons.length + aggregatedData.nfts.length;
         let transactionLinkerShardCount = tokensLength == 0 ? 1 : tokensLength;
 
-        const caller = sender.getSenderAddress();
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
 
         if (evmValidExecutors.length == 0) {
@@ -735,7 +733,7 @@ export class TacSdk {
             tvmValidExecutors = this.TACParams.trustedTONExecutors;
         }
 
-        const {feeParams} = await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, forceSend, isRoundTrip);
+        const { feeParams } = await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, forceSend, isRoundTrip);
 
         if (evmProxyMsg.gasLimit == undefined) {
             evmProxyMsg.gasLimit = feeParams.gasLimit;
@@ -768,6 +766,23 @@ export class TacSdk {
             network: this.network,
         };
 
+        return { transaction, transactionLinker };
+    }
+
+    async sendCrossChainTransaction(
+        evmProxyMsg: EvmProxyMsg,
+        sender: SenderAbstraction,
+        assets?: AssetBridgingData[],
+        options?: CrossChainTransactionOptions,
+    ): Promise<TransactionLinker> {
+        const caller = sender.getSenderAddress();
+        const { transaction, transactionLinker } = await this.prepareCrossChainTransaction(
+            evmProxyMsg,
+            caller,
+            assets,
+            options,
+        );
+
         console.log('*****Sending transaction: ', transaction);
         const sendTransactionResult = await sender.sendShardTransaction(
             transaction,
@@ -784,75 +799,21 @@ export class TacSdk {
     ): Promise<TransactionLinker[]> {
         const transactions: ShardTransaction[] = [];
         const transactionLinkers: TransactionLinker[] = [];
+        const caller = sender.getSenderAddress();
+
         for (const { options, assets, evmProxyMsg } of txs) {
-
-            let {
-                forceSend = false,
-                isRoundTrip = undefined,
-                protocolFee = undefined,
-                evmValidExecutors = [],
-                evmExecutorFee = undefined,
-                tvmValidExecutors = [],
-                tvmExecutorFee = undefined
-            } = options || {};
-        
-            const rawAssets = await this.convertAssetsToRawFormat(assets);
-    
-            const aggregatedData = await this.aggregateTokens(rawAssets);
-            
-            const tokensLength = aggregatedData.jettons.length + aggregatedData.nfts.length;
-            let transactionLinkerShardCount = tokensLength == 0 ? 1 : tokensLength;
-    
-            const caller = sender.getSenderAddress();
-            const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
-            transactionLinkers.push(transactionLinker);
-
-            if (evmValidExecutors.length == 0) {
-                evmValidExecutors = this.TACParams.trustedTACExecutors;
-            }
-    
-            if (tvmValidExecutors.length == 0) {
-                tvmValidExecutors = this.TACParams.trustedTONExecutors;
-            }
-    
-            const { feeParams } = await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, forceSend, isRoundTrip);
-    
-            if (evmProxyMsg.gasLimit == undefined) {
-                evmProxyMsg.gasLimit = feeParams.gasLimit;
-            }
-    
-            if (evmExecutorFee != undefined) {
-                feeParams.evmExecutorFee = evmExecutorFee;
-            }
-    
-            if (feeParams.isRoundTrip && tvmExecutorFee != undefined) {
-                feeParams.tvmExecutorFee = tvmExecutorFee;
-            }
-    
-            if (protocolFee != undefined) {
-                feeParams.protocolFee = protocolFee;
-            }
-    
-            const validExecutors: ValidExecutors = {
-                tac: evmValidExecutors,
-                ton: tvmValidExecutors,
-            }
-    
-            const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg, validExecutors);
-            const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData, feeParams);
-            await sleep(this.delay * 1000);
-
-            const transaction: ShardTransaction = {
-                validUntil: +new Date() + 15 * 60 * 1000,
-                messages,
-                network: this.network,
-            }
-
+            const { transaction, transactionLinker } = await this.prepareCrossChainTransaction(
+                evmProxyMsg,
+                caller,
+                assets,
+                options,
+            );
             transactions.push(transaction);
+            transactionLinkers.push(transactionLinker);
         }
 
         console.log('*****Sending transactions: ', transactions);
-        const sendTransactionResult = await sender.sendShardTransactions(
+        await sender.sendShardTransactions(
             transactions,
             this.delay,
             this.network,
