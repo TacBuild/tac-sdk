@@ -9,24 +9,16 @@ import {
     AssetType,
     startTracking,
 } from '../../src';
+import { localSDKParams } from '../utils';
 
-const NFT_ITEM_ADDRESS = 'kQAmOCz1vNEZBSlEpXUHZA7HEFvPaQG2OdF9A7FhI7hIwLv6';
+const NFT_ITEM_ADDRESS = '';
 const WALLET_VERSION = 'V4';
-const TEST_PROXY_ADDRESS = '0xAB64ECF19075c7758694396D23638bA5baeAa83C';
+const TEST_PROXY_ADDRESS = '';
+const EVM_SETTINGS_ADDRESS = '';
+const TVM_SETTINGS_ADDRESS = '';
 
 async function lock() {
-    // lock nft first
-    const sdkParams: SDKParams = {
-        network: Network.TESTNET,
-        TACParams: {
-            provider: new ethers.JsonRpcProvider('http://127.0.0.1:8545/'),
-            settingsAddress: '0x87B6a0ab90d826189cC004Dc2ff16E2b472309db', // set local tac settings
-        },
-        TONParams: {
-            settingsAddress: 'EQA7Z2R39FUUtCJOdmTrmjrNsNoJGjdSdWGiRfVW3WLRmZ1c', // set local ton settings
-        },
-        customLiteSequencerEndpoints: ['http://localhost:8080'],
-    };
+    const sdkParams = localSDKParams(EVM_SETTINGS_ADDRESS, TVM_SETTINGS_ADDRESS);
 
     const tacSdk = await TacSdk.create(sdkParams);
 
@@ -56,6 +48,9 @@ async function lock() {
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, nfts, {
         forceSend: true,
+        evmExecutorFee: 30_000_000n,
+        tvmExecutorFee: 300_000_000n,
+        isRoundTrip: true,
     });
 }
 

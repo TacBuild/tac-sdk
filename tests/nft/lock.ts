@@ -9,24 +9,16 @@ import {
     AssetType,
     startTracking,
 } from '../../src';
+import { localSDKParams } from '../utils';
 
-const NFT_ITEM_ADDRESS = 'kQBVl53XybtN96-XeT8tDl7bMLMfZxkZ9cAUxvmB5nXn0rGe';
+const NFT_ITEM_ADDRESS = '';
 const WALLET_VERSION = 'V4';
 const EVM_SEND_NFT_TO = '0xdD2FD4581271e230360230F9337D5c0430Bf44C0';
+const EVM_SETTINGS_ADDRESS = '';
+const TVM_SETTINGS_ADDRESS = '';
 
 async function lock() {
-    // lock nft first
-    const sdkParams: SDKParams = {
-        network: Network.TESTNET,
-        TACParams: {
-            provider: new ethers.JsonRpcProvider('http://127.0.0.1:8545/'),
-            settingsAddress: '0x87B6a0ab90d826189cC004Dc2ff16E2b472309db', // set local tac settings
-        },
-        TONParams: {
-            settingsAddress: 'EQA7Z2R39FUUtCJOdmTrmjrNsNoJGjdSdWGiRfVW3WLRmZ1c', // set local ton settings
-        },
-        customLiteSequencerEndpoints: ['http://localhost:8080'],
-    };
+    const sdkParams = localSDKParams(EVM_SETTINGS_ADDRESS, TVM_SETTINGS_ADDRESS);
 
     const tacSdk = await TacSdk.create(sdkParams);
 
@@ -55,11 +47,9 @@ async function lock() {
 
 async function main() {
     try {
-        // send transaction
         const result = await lock();
         console.log('Transaction successful:', result);
 
-        // start tracking transaction status
         await startTracking(result, Network.TESTNET, {
             customLiteSequencerEndpoints: ['http://localhost:8080'],
         });
