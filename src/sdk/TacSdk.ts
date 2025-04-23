@@ -146,19 +146,16 @@ export class TacSdk {
 
         const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
 
-        //@ts-ignore
         const settings = artifacts.tac.wrappers.SettingsFactoryTAC.connect(settingsAddress, provider);
         const crossChainLayerABI =
             TACParams?.crossChainLayerABI ?? artifacts.tac.compilationArtifacts.CrossChainLayer.abi;
         const crossChainLayerAddress = await settings.getAddressSetting(
             keccak256(toUtf8Bytes('CrossChainLayerAddress')),
         );
-        //@ts-ignore
         const crossChainLayer = artifacts.tac.wrappers.CrossChainLayerFactoryTAC.connect(crossChainLayerAddress, provider);
         await sleep(delay * 1000);
 
         const tokenUtilsAddress = await settings.getAddressSetting(keccak256(toUtf8Bytes('TokenUtilsAddress')));
-        //@ts-ignore
         const tokenUtils = artifacts.tac.wrappers.TokenUtilsFactoryTAC.connect(tokenUtilsAddress, provider);
         await sleep(delay * 1000);
 
