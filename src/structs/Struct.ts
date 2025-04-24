@@ -70,6 +70,16 @@ export type TACParams = {
      * bytecode of TAC CrossChainLayerToken contract. Use only for tests.
      */
     crossChainLayerTokenBytecode?: string;
+
+    /**
+     * ABI of TAC CrossChainLayerNFT contract. Use only for tests.
+     */
+    crossChainLayerNFTABI?: Interface | InterfaceAbi;
+
+    /**
+     * bytecode of TAC CrossChainLayerNFT contract. Use only for tests.
+     */
+    crossChainLayerNFTBytecode?: string;
 };
 
 export type TONParams = {
@@ -116,19 +126,34 @@ export enum AssetType {
     FT = 'FT',
 }
 
-export type WithAddress = {
+export type WithAddressFT = {
+    type: AssetType.FT;
     /**
      * Address of TAC or TON token.
      * Empty if sending native TON coin.
      */
     address?: string;
-    type: AssetType;
 };
 
-export type RawAssetBridgingData = {
+export type WithAddressNFT_Item = {
+    type: AssetType.NFT;
+    address: string;
+};
+
+export type WithAddressNFT_CollectionItem = {
+    type: AssetType.NFT;
+    collectionAddress: string;
+    itemIndex: bigint;
+};
+
+export type WithAddressNFT = WithAddressNFT_Item | WithAddressNFT_CollectionItem;
+
+export type WithAddress = WithAddressFT | WithAddressNFT;
+
+export type RawAssetBridgingData<NFTFormatRequired extends WithAddressNFT = WithAddressNFT_Item> = {
     /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
     rawAmount: bigint;
-} & WithAddress;
+} & (WithAddressFT | NFTFormatRequired);
 
 export type UserFriendlyAssetBridgingData = {
     /**

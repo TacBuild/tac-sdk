@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Address, address, beginCell, Cell, fromNano, toNano } from '@ton/ton';
+import { Address, address, beginCell, Cell, fromNano, OpenedContract, toNano } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress, Wallet } from 'ethers';
 import type { SenderAbstraction } from '../sender';
 
@@ -22,6 +22,7 @@ import {
     ExecutionFeeEstimationResult,
     AssetType,
     CrosschainTx,
+    WithAddressNFT_CollectionItem,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -43,7 +44,12 @@ import { JettonMaster } from '../wrappers/JettonMaster';
 import { JettonWallet } from '../wrappers/JettonWallet';
 // ton settings
 import { Settings } from '../wrappers/Settings';
-import { JETTON_TRANSFER_FORWARD_TON_AMOUNT, TRANSACTION_TON_AMOUNT, DEFAULT_DELAY, NFT_TRANSFER_FORWARD_TON_AMOUNT } from './Consts';
+import {
+    JETTON_TRANSFER_FORWARD_TON_AMOUNT,
+    TRANSACTION_TON_AMOUNT,
+    DEFAULT_DELAY,
+    NFT_TRANSFER_FORWARD_TON_AMOUNT,
+} from './Consts';
 import {
     buildEvmDataCell,
     calculateAmount,
@@ -61,8 +67,9 @@ import {
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
 import { orbsOpener4 } from '../adapters/contractOpener';
-import { NFTItem } from '@tonappchain/artifacts/dist/src/ton/wrappers';
+import { NFTCollection, NFTItem } from '@tonappchain/artifacts/dist/src/ton/wrappers';
 import { invalidAssetType } from '../errors/instances';
+import { SandboxContract } from '@ton/sandbox';
 
 export class TacSdk {
     readonly network: Network;
@@ -125,6 +132,8 @@ export class TacSdk {
         await sleep(delay * 1000);
         const nftItemCode = await settings.getCellSetting('NFTItemCode');
         await sleep(delay * 1000);
+        const nftCollectionCode = await settings.getCellSetting('NFTCollectionCode');
+        await sleep(delay * 1000);
 
         return {
             contractOpener,
@@ -134,6 +143,7 @@ export class TacSdk {
             jettonWalletCode,
             nftProxyAddress,
             nftItemCode,
+            nftCollectionCode,
         };
     }
 
@@ -152,7 +162,10 @@ export class TacSdk {
         const crossChainLayerAddress = await settings.getAddressSetting(
             keccak256(toUtf8Bytes('CrossChainLayerAddress')),
         );
-        const crossChainLayer = artifacts.tac.wrappers.CrossChainLayerFactoryTAC.connect(crossChainLayerAddress, provider);
+        const crossChainLayer = artifacts.tac.wrappers.CrossChainLayerFactoryTAC.connect(
+            crossChainLayerAddress,
+            provider,
+        );
         await sleep(delay * 1000);
 
         const tokenUtilsAddress = await settings.getAddressSetting(keccak256(toUtf8Bytes('TokenUtilsAddress')));
@@ -168,6 +181,11 @@ export class TacSdk {
         const crossChainLayerTokenBytecode =
             TACParams?.crossChainLayerTokenBytecode ?? artifacts.tac.compilationArtifacts.CrossChainLayerToken.bytecode;
 
+        const crossChainLayerNFTABI =
+            TACParams?.crossChainLayerNFTABI ?? artifacts.tac.compilationArtifacts.CrossChainLayerNFT.abi;
+        const crossChainLayerNFTBytecode =
+            TACParams?.crossChainLayerNFTBytecode ?? artifacts.tac.compilationArtifacts.CrossChainLayerNFT.bytecode;
+
         return {
             provider,
             settings,
@@ -179,6 +197,8 @@ export class TacSdk {
             crossChainLayerABI,
             crossChainLayerTokenABI,
             crossChainLayerTokenBytecode,
+            crossChainLayerNFTABI,
+            crossChainLayerNFTBytecode,
         };
     }
 
@@ -260,7 +280,12 @@ export class TacSdk {
         );
     }
 
-    private getJettonBurnPayload(jettonData: JettonBurnData, evmData: Cell, crossChainTonAmount: bigint, feeData?: Cell): Cell {
+    private getJettonBurnPayload(
+        jettonData: JettonBurnData,
+        evmData: Cell,
+        crossChainTonAmount: bigint,
+        feeData?: Cell,
+    ): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
         return JettonWallet.burnMessage(
             jettonData.rawAmount,
@@ -277,16 +302,16 @@ export class TacSdk {
 
         return NFTItem.burnMessage(
             queryId,
-            address(burnData.notificationReceiverAddress), 
-            burnData.crossChainTonAmount ?? 0, 
-            burnData.evmData, 
+            address(burnData.notificationReceiverAddress),
+            burnData.crossChainTonAmount ?? 0,
+            burnData.evmData,
             burnData.feeData,
         );
     }
 
     private getNFTTransferPayload(transferData: NFTTransferData, forwardFeeAmount: bigint): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
-        const crossChainTonAmount = transferData.crossChainTonAmount?? 0n;
+        const crossChainTonAmount = transferData.crossChainTonAmount ?? 0n;
         const forwardPayload = beginCell()
             .storeCoins(crossChainTonAmount)
             .storeMaybeRef(transferData.feeData)
@@ -306,9 +331,9 @@ export class TacSdk {
     private generateFeeData(feeParams?: FeeParams): Cell | undefined {
         if (feeParams) {
             let feeDataBuilder = beginCell()
-                    .storeBit(feeParams.isRoundTrip)
-                    .storeCoins(feeParams.protocolFee)
-                    .storeCoins(feeParams.evmExecutorFee);
+                .storeBit(feeParams.isRoundTrip)
+                .storeCoins(feeParams.protocolFee)
+                .storeCoins(feeParams.evmExecutorFee);
             if (feeParams.isRoundTrip) {
                 feeDataBuilder.storeCoins(feeParams.tvmExecutorFee);
             }
@@ -318,10 +343,15 @@ export class TacSdk {
         }
     }
 
-    private getTonTransferPayload(responseAddress: string, evmData: Cell, crossChainTonAmount: bigint, feeParams: FeeParams): Cell {
+    private getTonTransferPayload(
+        responseAddress: string,
+        evmData: Cell,
+        crossChainTonAmount: bigint,
+        feeParams: FeeParams,
+    ): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
         const feeData = this.generateFeeData(feeParams);
-        
+
         return beginCell()
             .storeUint(this.artifacts.ton.wrappers.CrossChainLayerOpCodes.anyone_l1MsgToL2, 32)
             .storeUint(queryId, 64)
@@ -333,7 +363,9 @@ export class TacSdk {
             .endCell();
     }
 
-    private async getJettonOpType(asset: JettonBridgingData): Promise<AssetOpType.JETTON_BURN | AssetOpType.JETTON_TRANSFER> {
+    private async getJettonOpType(
+        asset: JettonBridgingData,
+    ): Promise<AssetOpType.JETTON_BURN | AssetOpType.JETTON_TRANSFER> {
         const { code: givenMinterCodeBOC } = await this.TONParams.contractOpener.getContractState(
             address(asset.address),
         );
@@ -371,9 +403,7 @@ export class TacSdk {
     }
 
     private async getNFTOpType(asset: NFTBridgingData): Promise<AssetOpType.NFT_BURN | AssetOpType.NFT_TRANSFER> {
-        const { code: itemCodeBOC } = await this.TONParams.contractOpener.getContractState(
-            address(asset.address),
-        );
+        const { code: itemCodeBOC } = await this.TONParams.contractOpener.getContractState(address(asset.address));
         if (!itemCodeBOC) {
             throw emptyContractError;
         }
@@ -385,6 +415,20 @@ export class TacSdk {
         }
 
         return AssetOpType.NFT_BURN;
+    }
+
+    private async getNFTItemAddressTON(collectionAddress: string, itemIndex: bigint): Promise<string> {
+        validateTVMAddress(collectionAddress);
+        const nftCollection = this.TONParams.contractOpener.open(
+            NFTCollection.createFromAddress(address(collectionAddress)),
+        );
+        return (await nftCollection.getNFTAddressByIndex(itemIndex)).toString();
+    }
+
+    private async getNFTCollectionAddressTON(itemAddress: string): Promise<string> {
+        validateTVMAddress(itemAddress);
+        const nftItem = this.TONParams.contractOpener.open(NFTItem.createFromAddress(address(itemAddress)));
+        return (await nftItem.getNFTData()).collectionAddress.toString();
     }
 
     private async aggregateTokens(assets?: RawAssetBridgingData[]): Promise<{
@@ -417,11 +461,17 @@ export class TacSdk {
             type: AssetType.FT,
         }));
 
-        const nfts: NFTBridgingData[] = assets?.filter((asset) => !!asset.address && asset.type === AssetType.NFT).map(asset => ({
+        uniqueAssetsMap.clear();
+        for await (const asset of assets ?? []) {
+            if (asset.type !== AssetType.NFT) continue;
+            validateTVMAddress(asset.address);
+            uniqueAssetsMap.set(asset.address, 1n);
+        }
+        const nfts: NFTBridgingData[] = Array.from(uniqueAssetsMap.entries()).map(([address, rawAmount]) => ({
+            address,
+            rawAmount,
             type: AssetType.NFT,
-            address: asset.address!,
-            rawAmount: 1n,
-        })) ?? [];
+        }));
 
         return {
             jettons,
@@ -437,13 +487,13 @@ export class TacSdk {
         crossChainTonAmount: bigint,
         forwardFeeTonAmount: bigint,
         feeParams?: FeeParams,
-    ) {        
+    ) {
         const opType = await this.getJettonOpType(jetton);
         await sleep(this.delay * 1000);
 
         console.log(`***** Jetton ${jetton.address} requires ${opType} operation`);
 
-        const feeData = this.generateFeeData(feeParams)
+        const feeData = this.generateFeeData(feeParams);
 
         let payload: Cell;
         switch (opType) {
@@ -459,14 +509,28 @@ export class TacSdk {
                 );
                 break;
             case AssetOpType.JETTON_TRANSFER:
-                payload = this.getJettonTransferPayload(jetton, caller, evmData, crossChainTonAmount, forwardFeeTonAmount, feeData);
+                payload = this.getJettonTransferPayload(
+                    jetton,
+                    caller,
+                    evmData,
+                    crossChainTonAmount,
+                    forwardFeeTonAmount,
+                    feeData,
+                );
                 break;
         }
 
         return payload;
     }
 
-    private async generateNFTPayload(nft: NFTBridgingData, caller: string, evmData: Cell, crossChainTonAmount: bigint, forwardFeeTonAmount: bigint, feeParams?: FeeParams): Promise<Cell> {
+    private async generateNFTPayload(
+        nft: NFTBridgingData,
+        caller: string,
+        evmData: Cell,
+        crossChainTonAmount: bigint,
+        forwardFeeTonAmount: bigint,
+        feeParams?: FeeParams,
+    ): Promise<Cell> {
         const opType = await this.getNFTOpType(nft);
         await sleep(this.delay * 1000);
 
@@ -477,25 +541,26 @@ export class TacSdk {
         let payload: Cell;
         switch (opType) {
             case AssetOpType.NFT_BURN:
-                payload = this.getNFTBurnPayload(
-                    {
-                        notificationReceiverAddress: this.TONParams.crossChainLayerAddress,
-                        ...nft,
-                        evmData,
-                        crossChainTonAmount,
-                        feeData,
-                    },
-                );
-                break;
-            case AssetOpType.NFT_TRANSFER:
-                payload = this.getNFTTransferPayload({
-                    to: this.TONParams.nftProxyAddress,
-                    responseAddress: caller,
+                payload = this.getNFTBurnPayload({
+                    notificationReceiverAddress: this.TONParams.crossChainLayerAddress,
+                    ...nft,
                     evmData,
                     crossChainTonAmount,
                     feeData,
-                    ...nft,
-                }, forwardFeeTonAmount);
+                });
+                break;
+            case AssetOpType.NFT_TRANSFER:
+                payload = this.getNFTTransferPayload(
+                    {
+                        to: this.TONParams.nftProxyAddress,
+                        responseAddress: caller,
+                        evmData,
+                        crossChainTonAmount,
+                        feeData,
+                        ...nft,
+                    },
+                    forwardFeeTonAmount,
+                );
                 break;
         }
 
@@ -531,7 +596,14 @@ export class TacSdk {
 
         let currentFeeParams: FeeParams | undefined = feeParams;
         for (const jetton of aggregatedData.jettons) {
-            const payload = await this.generateJettonPayload(jetton, caller, evmData, crossChainTonAmount, feeTonAmount, currentFeeParams);
+            const payload = await this.generateJettonPayload(
+                jetton,
+                caller,
+                evmData,
+                crossChainTonAmount,
+                feeTonAmount,
+                currentFeeParams,
+            );
             await sleep(this.delay * 1000);
             const jettonWalletAddress = await this.getUserJettonWalletAddress(caller, jetton.address);
             await sleep(this.delay * 1000);
@@ -540,13 +612,20 @@ export class TacSdk {
                 value: crossChainTonAmount + feeTonAmount + TRANSACTION_TON_AMOUNT,
                 payload,
             });
-            
+
             crossChainTonAmount = 0n;
             feeTonAmount = 0n;
             currentFeeParams = undefined;
         }
         for (const nft of aggregatedData.nfts) {
-            const payload = await  this.generateNFTPayload(nft, caller, evmData, crossChainTonAmount, feeTonAmount, currentFeeParams);
+            const payload = await this.generateNFTPayload(
+                nft,
+                caller,
+                evmData,
+                crossChainTonAmount,
+                feeTonAmount,
+                currentFeeParams,
+            );
             await sleep(this.delay * 1000);
             messages.push({
                 address: nft.address,
@@ -604,7 +683,19 @@ export class TacSdk {
                         type: asset.type,
                     };
                 }
+
                 if (asset.type === AssetType.NFT) {
+                    if ('collectionAddress' in asset) {
+                        const address = isEthereumAddress(asset.collectionAddress)
+                            ? await this.getTVMNFTAddress(asset.collectionAddress, asset.itemIndex)
+                            : await this.getNFTItemAddressTON(asset.collectionAddress, asset.itemIndex);
+                        return {
+                            address,
+                            rawAmount: 1n,
+                            type: asset.type,
+                        };
+                    }
+                    validateTVMAddress(asset.address);
                     return {
                         address: asset.address,
                         rawAmount: 1n,
@@ -624,10 +715,13 @@ export class TacSdk {
         forceSend: boolean = false,
         isRoundTrip?: boolean,
     ): Promise<ExecutionFeeEstimationResult> {
-
-        const crossChainLayer = this.TONParams.contractOpener.open(this.artifacts.ton.wrappers.CrossChainLayer.createFromAddress(Address.parse(this.TONParams.crossChainLayerAddress)));
+        const crossChainLayer = this.TONParams.contractOpener.open(
+            this.artifacts.ton.wrappers.CrossChainLayer.createFromAddress(
+                Address.parse(this.TONParams.crossChainLayerAddress),
+            ),
+        );
         const fullStateCCL = await crossChainLayer.getFullData();
-        
+
         const tacSimulationBody: TACSimulationRequest = {
             tacCallParams: {
                 arguments: evmProxyMsg.encodedParameters ?? '0x',
@@ -653,23 +747,28 @@ export class TacSdk {
                     feeParams: {
                         isRoundTrip: isRoundTrip ?? false,
                         gasLimit: 0n,
-                        protocolFee: BigInt(toNano(fullStateCCL.tacProtocolFee!)) + BigInt(isRoundTrip ?? false) * BigInt(toNano(fullStateCCL.tonProtocolFee!)),
+                        protocolFee:
+                            BigInt(toNano(fullStateCCL.tacProtocolFee!)) +
+                            BigInt(isRoundTrip ?? false) * BigInt(toNano(fullStateCCL.tonProtocolFee!)),
                         evmExecutorFee: 0n,
                         tvmExecutorFee: 0n,
-                    }, 
-                    simulation: tacSimulationResult};
+                    },
+                    simulation: tacSimulationResult,
+                };
             }
             throw tacSimulationResult;
         }
 
-        isRoundTrip = isRoundTrip ?? (tacSimulationResult.outMessages != null)
+        isRoundTrip = isRoundTrip ?? tacSimulationResult.outMessages != null;
 
         let tonExecutorFeeInTON = 0n;
         if (isRoundTrip == true) {
             tonExecutorFeeInTON = BigInt(tacSimulationResult.suggestedTonExecutionFee);
         }
 
-        const protocolFee = BigInt(toNano(fullStateCCL.tacProtocolFee!)) + BigInt(isRoundTrip) * BigInt(toNano(fullStateCCL.tonProtocolFee!))
+        const protocolFee =
+            BigInt(toNano(fullStateCCL.tacProtocolFee!)) +
+            BigInt(isRoundTrip) * BigInt(toNano(fullStateCCL.tonProtocolFee!));
 
         const feeParams: FeeParams = {
             isRoundTrip: isRoundTrip,
@@ -677,9 +776,9 @@ export class TacSdk {
             protocolFee: protocolFee,
             evmExecutorFee: BigInt(tacSimulationResult.suggestedTacExecutionFee),
             tvmExecutorFee: tonExecutorFeeInTON,
-        }
+        };
 
-        return {feeParams: feeParams, simulation: tacSimulationResult};
+        return { feeParams: feeParams, simulation: tacSimulationResult };
     }
 
     async getTransactionSimulationInfo(
@@ -693,7 +792,7 @@ export class TacSdk {
 
         const transactionLinker = generateTransactionLinker(sender.getSenderAddress(), transactionLinkerShardCount);
 
-        const evmValidExecutors = this.TACParams.trustedTACExecutors
+        const evmValidExecutors = this.TACParams.trustedTACExecutors;
 
         return await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, false, undefined);
     }
@@ -711,7 +810,7 @@ export class TacSdk {
             evmValidExecutors = [],
             evmExecutorFee = undefined,
             tvmValidExecutors = [],
-            tvmExecutorFee = undefined
+            tvmExecutorFee = undefined,
         } = options || {};
 
         const rawAssets = await this.convertAssetsToRawFormat(assets);
@@ -730,7 +829,14 @@ export class TacSdk {
             tvmValidExecutors = this.TACParams.trustedTONExecutors;
         }
 
-        const { feeParams } = await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, forceSend, isRoundTrip);
+        const { feeParams } = await this.getFeeInfo(
+            evmProxyMsg,
+            transactionLinker,
+            rawAssets,
+            evmValidExecutors,
+            forceSend,
+            isRoundTrip,
+        );
 
         if (evmProxyMsg.gasLimit == undefined) {
             evmProxyMsg.gasLimit = feeParams.gasLimit;
@@ -751,7 +857,7 @@ export class TacSdk {
         const validExecutors: ValidExecutors = {
             tac: evmValidExecutors,
             ton: tvmValidExecutors,
-        }
+        };
 
         const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg, validExecutors);
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData, feeParams);
@@ -790,10 +896,7 @@ export class TacSdk {
         return { sendTransactionResult, ...transactionLinker };
     }
 
-    async sendCrossChainTransactions(
-        sender: SenderAbstraction,
-        txs: CrosschainTx[],
-    ): Promise<TransactionLinker[]> {
+    async sendCrossChainTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TransactionLinker[]> {
         const transactions: ShardTransaction[] = [];
         const transactionLinkers: TransactionLinker[] = [];
         const caller = sender.getSenderAddress();
@@ -810,12 +913,7 @@ export class TacSdk {
         }
 
         console.log('*****Sending transactions: ', transactions);
-        await sender.sendShardTransactions(
-            transactions,
-            this.delay,
-            this.network,
-            this.TONParams.contractOpener,
-        );
+        await sender.sendShardTransactions(transactions, this.delay, this.network, this.TONParams.contractOpener);
 
         return transactionLinkers;
     }
@@ -825,7 +923,7 @@ export class TacSdk {
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: RawAssetBridgingData[],
+        assets?: RawAssetBridgingData<WithAddressNFT_CollectionItem>[],
         tvmExecutorFee?: bigint,
     ): Promise<string> {
         if (assets == undefined) {
@@ -833,10 +931,23 @@ export class TacSdk {
         }
         const crossChainLayerAddress = await this.TACParams.crossChainLayer.getAddress();
         for (const asset of assets) {
-            const tokenContract = this.artifacts.tac.wrappers.ERC20FactoryTAC.connect(asset.address!, this.TACParams.provider);
-    
-            const tx = await tokenContract.connect(signer).approve(crossChainLayerAddress, asset.rawAmount);
-            await tx.wait();
+            if (asset.type == AssetType.FT) {
+                const tokenContract = this.artifacts.tac.wrappers.ERC20FactoryTAC.connect(
+                    asset.address!,
+                    this.TACParams.provider,
+                );
+
+                const tx = await tokenContract.connect(signer).approve(crossChainLayerAddress, asset.rawAmount);
+                await tx.wait();
+            }
+            if (asset.type == AssetType.NFT) {
+                const tokenContract = this.artifacts.tac.wrappers.ERC721FactoryTAC.connect(
+                    asset.collectionAddress,
+                    this.TACParams.provider,
+                );
+                const tx = await tokenContract.connect(signer).approve(crossChainLayerAddress, asset.itemIndex);
+                await tx.wait();
+            }
         }
 
         const shardsKey = BigInt(Math.round(Math.random() * 1e18));
@@ -846,7 +957,11 @@ export class TacSdk {
         if (tvmExecutorFee != undefined) {
             tvmExecutorFeeInTON = tvmExecutorFee;
         } else {
-            tvmExecutorFeeInTON = ((toNano("0.065") + toNano("0.05")) * BigInt(assets.length + 1 + Number(value != 0n)) + toNano("0.2")) * 120n / 100n; // TODO calc that
+            tvmExecutorFeeInTON =
+                (((toNano('0.065') + toNano('0.05')) * BigInt(assets.length + 1 + Number(value != 0n)) +
+                    toNano('0.2')) *
+                    120n) /
+                100n; // TODO calc that
         }
         const tonToTacRate = 100n;
         const scale = 10n ** 9n;
@@ -860,18 +975,29 @@ export class TacSdk {
             tvmProtocolFee: protocolFee,
             tvmExecutorFee: tvmExecutorFeeInTAC,
             tvmValidExecutors: this.TACParams.trustedTONExecutors,
-            toBridge: assets.map(asset => ({
-                l2Address: asset.address!,
-                amount: asset.rawAmount,
-              })),
+            toBridge: assets
+                .filter((asset) => asset.type === AssetType.FT)
+                .map((asset) => ({
+                    l2Address: asset.address!,
+                    amount: asset.rawAmount,
+                })),
+            toBridgeNFT: assets
+                .filter((asset) => asset.type === AssetType.NFT)
+                .map((asset) => ({
+                    l2Address: asset.collectionAddress,
+                    amount: 1n,
+                    tokenId: asset.itemIndex,
+                })),
         };
 
-        const encodedOutMessage = this.artifacts.tac.utils.encodeOutMessageV1(outMessage);
+        const encodedOutMessage = this.artifacts.tac.utils.encodeOutMessageV2(outMessage);
         const outMsgVersion = 1n;
 
         const totalValue = value + BigInt(outMessage.tvmProtocolFee) + BigInt(outMessage.tvmExecutorFee);
 
-        const tx = await this.TACParams.crossChainLayer.connect(signer).sendMessage(outMsgVersion, encodedOutMessage, { value: totalValue });
+        const tx = await this.TACParams.crossChainLayer
+            .connect(signer)
+            .sendMessage(outMsgVersion, encodedOutMessage, { value: totalValue });
         await tx.wait();
         return tx.hash;
     }
@@ -934,6 +1060,67 @@ export class TacSdk {
         });
 
         return jettonMaster.address.toString();
+    }
+
+    async getTVMNFTAddress(evmNFTAddress: string, tokenId: bigint): Promise<string> {
+        validateEVMAddress(evmNFTAddress);
+
+        let nftCollection: OpenedContract<NFTCollection> | SandboxContract<NFTCollection>;
+
+        const bytecode = await this.TACParams.provider.getCode(evmNFTAddress);
+        if (bytecode.includes(ethers.id('getInfo()').slice(2, 10))) {
+            const contract = new ethers.Contract(
+                evmNFTAddress,
+                this.TACParams.crossChainLayerNFTABI,
+                this.TACParams.provider,
+            );
+            const info = await contract.getInfo.staticCall();
+            nftCollection = this.TONParams.contractOpener.open(NFTCollection.createFromAddress(info.l1Address));
+        } else {
+            nftCollection = this.TONParams.contractOpener.open(
+                NFTCollection.createFromConfig(
+                    {
+                        ownerAddress: address(this.TONParams.crossChainLayerAddress),
+                        content: beginCell().endCell(),
+                        nftItemCode: this.TONParams.nftItemCode,
+                        originalAddress: evmNFTAddress,
+                    },
+                    this.TONParams.nftCollectionCode,
+                ),
+            );
+        }
+
+        return (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
+    }
+
+    async getEVMNFTAddress(tvmNFTAddress: string, addressType: 'collection' | 'item'): Promise<string> {
+        validateTVMAddress(tvmNFTAddress);
+        tvmNFTAddress = Address.parse(tvmNFTAddress).toString({ bounceable: true });
+
+        if (addressType == 'item') {
+            tvmNFTAddress = await this.getNFTCollectionAddressTON(tvmNFTAddress);
+            await sleep(this.delay * 1000);
+        }
+
+        const { code: givenNFTCollection } = await this.TONParams.contractOpener.getContractState(
+            address(tvmNFTAddress),
+        );
+        await sleep(this.delay * 1000);
+
+        if (givenNFTCollection && this.TONParams.nftCollectionCode.equals(Cell.fromBoc(givenNFTCollection)[0])) {
+            const nftCollection = this.TONParams.contractOpener.open(NFTCollection.createFromAddress(address(tvmNFTAddress)));
+            const l2Address = await nftCollection.getOriginalAddress();
+            await sleep(this.delay * 1000);
+            return l2Address.toString();
+        }
+        
+        return calculateEVMTokenAddress(
+            this.TACParams.abiCoder,
+            await this.TACParams.tokenUtils.getAddress(),
+            this.TACParams.crossChainLayerNFTBytecode,
+            await this.TACParams.crossChainLayer.getAddress(),
+            tvmNFTAddress,
+        );
     }
 
     async simulateTACMessage(req: TACSimulationRequest): Promise<TACSimulationResult> {

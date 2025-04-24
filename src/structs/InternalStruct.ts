@@ -76,6 +76,7 @@ export type InternalTONParams = {
     jettonMinterCode: Cell;
     jettonWalletCode: Cell;
     nftItemCode: Cell;
+    nftCollectionCode: Cell;
 };
 
 export type InternalTACParams = {
@@ -89,6 +90,8 @@ export type InternalTACParams = {
     crossChainLayerABI: Interface | InterfaceAbi;
     crossChainLayerTokenABI: Interface | InterfaceAbi;
     crossChainLayerTokenBytecode: string;
+    crossChainLayerNFTABI: Interface | InterfaceAbi;
+    crossChainLayerNFTBytecode: string;
 };
 
 export type ResponseBase<T> = { response: T };

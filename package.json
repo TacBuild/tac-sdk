@@ -20,7 +20,7 @@
     "@aws-crypto/sha256-js": "^5.2.0",
     "@orbs-network/ton-access": "^2.3.3",
     "@ton/ton": "15.1.0",
-    "@tonappchain/artifacts": "0.0.16-v2-L2-nft.2.0",
+    "@tonappchain/artifacts": "0.0.16-v2-L2-nft.4.0",
     "@tonappchain/ton-lite-client": "3.0.6",
     "@tonconnect/ui": "^2.0.11",
     "bn.js": "^5.2.1",
