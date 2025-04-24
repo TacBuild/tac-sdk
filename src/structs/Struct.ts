@@ -126,6 +126,11 @@ export enum AssetType {
     FT = 'FT',
 }
 
+export enum NFTAddressType {
+    ITEM = 'ITEM',
+    COLLECTION = 'COLLECTION',
+}
+
 export type WithAddressFT = {
     type: AssetType.FT;
     /**

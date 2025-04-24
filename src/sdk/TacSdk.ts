@@ -23,6 +23,7 @@ import {
     AssetType,
     CrosschainTx,
     WithAddressNFT_CollectionItem,
+    NFTAddressType,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -1062,7 +1063,7 @@ export class TacSdk {
         return jettonMaster.address.toString();
     }
 
-    async getTVMNFTAddress(evmNFTAddress: string, tokenId: bigint): Promise<string> {
+    async getTVMNFTAddress(evmNFTAddress: string, tokenId?: bigint): Promise<string> {
         validateEVMAddress(evmNFTAddress);
 
         let nftCollection: OpenedContract<NFTCollection> | SandboxContract<NFTCollection>;
@@ -1090,15 +1091,18 @@ export class TacSdk {
             );
         }
 
-        return (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
+        return tokenId == undefined
+            ? nftCollection.address.toString()
+            : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
     }
 
-    async getEVMNFTAddress(tvmNFTAddress: string, addressType: 'collection' | 'item'): Promise<string> {
+    async getEVMNFTAddress(tvmNFTAddress: string, addressType: NFTAddressType): Promise<string> {
         validateTVMAddress(tvmNFTAddress);
         tvmNFTAddress = Address.parse(tvmNFTAddress).toString({ bounceable: true });
 
-        if (addressType == 'item') {
+        if (addressType == NFTAddressType.ITEM) {
             tvmNFTAddress = await this.getNFTCollectionAddressTON(tvmNFTAddress);
+            addressType = NFTAddressType.COLLECTION;
             await sleep(this.delay * 1000);
         }
 
@@ -1108,12 +1112,14 @@ export class TacSdk {
         await sleep(this.delay * 1000);
 
         if (givenNFTCollection && this.TONParams.nftCollectionCode.equals(Cell.fromBoc(givenNFTCollection)[0])) {
-            const nftCollection = this.TONParams.contractOpener.open(NFTCollection.createFromAddress(address(tvmNFTAddress)));
+            const nftCollection = this.TONParams.contractOpener.open(
+                NFTCollection.createFromAddress(address(tvmNFTAddress)),
+            );
             const l2Address = await nftCollection.getOriginalAddress();
             await sleep(this.delay * 1000);
             return l2Address.toString();
         }
-        
+
         return calculateEVMTokenAddress(
             this.TACParams.abiCoder,
             await this.TACParams.tokenUtils.getAddress(),
