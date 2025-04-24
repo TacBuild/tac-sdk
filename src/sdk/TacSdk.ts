@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { Address, address, beginCell, Cell, fromNano, toNano } from '@ton/ton';
-import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress } from 'ethers';
+import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress, Wallet } from 'ethers';
 import type { SenderAbstraction } from '../sender';
 
 // import structs
@@ -818,6 +818,62 @@ export class TacSdk {
         );
 
         return transactionLinkers;
+    }
+
+    // TODO move to sdk.TAC, sdk.TON
+    async bridgeTokensToTON(
+        signer: Wallet,
+        value: bigint,
+        tonTarget: string,
+        assets?: RawAssetBridgingData[],
+        tvmExecutorFee?: bigint,
+    ): Promise<string> {
+        if (assets == undefined) {
+            assets = [];
+        }
+        const crossChainLayerAddress = await this.TACParams.crossChainLayer.getAddress();
+        for (const asset of assets) {
+            const tokenContract = this.artifacts.tac.wrappers.ERC20FactoryTAC.connect(asset.address!, this.TACParams.provider);
+    
+            const tx = await tokenContract.connect(signer).approve(crossChainLayerAddress, asset.rawAmount);
+            await tx.wait();
+        }
+
+        const shardsKey = BigInt(Math.round(Math.random() * 1e18));
+        const protocolFee = await this.TACParams.crossChainLayer.getProtocolFee();
+
+        let tvmExecutorFeeInTON = 0n;
+        if (tvmExecutorFee != undefined) {
+            tvmExecutorFeeInTON = tvmExecutorFee;
+        } else {
+            tvmExecutorFeeInTON = ((toNano("0.065") + toNano("0.05")) * BigInt(assets.length + 1 + Number(value != 0n)) + toNano("0.2")) * 120n / 100n; // TODO calc that
+        }
+        const tonToTacRate = 100n;
+        const scale = 10n ** 9n;
+        const tonToTacRateScaled = tonToTacRate * scale;
+        const tvmExecutorFeeInTAC = tonToTacRateScaled * tvmExecutorFeeInTON;
+
+        const outMessage = {
+            shardsKey: shardsKey,
+            tvmTarget: tonTarget,
+            tvmPayload: '',
+            tvmProtocolFee: protocolFee,
+            tvmExecutorFee: tvmExecutorFeeInTAC,
+            tvmValidExecutors: this.TACParams.trustedTONExecutors,
+            toBridge: assets.map(asset => ({
+                l2Address: asset.address!,
+                amount: asset.rawAmount,
+              })),
+        };
+
+        const encodedOutMessage = this.artifacts.tac.utils.encodeOutMessageV1(outMessage);
+        const outMsgVersion = 1n;
+
+        const totalValue = value + BigInt(outMessage.tvmProtocolFee) + BigInt(outMessage.tvmExecutorFee);
+
+        const tx = await this.TACParams.crossChainLayer.connect(signer).sendMessage(outMsgVersion, encodedOutMessage, { value: totalValue });
+        await tx.wait();
+        return tx.hash;
     }
 
     get getTrustedTACExecutors(): string[] {
