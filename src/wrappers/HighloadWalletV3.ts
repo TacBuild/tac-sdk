@@ -146,7 +146,7 @@ export class HighloadWalletV3 implements WalletInstance {
         value: bigint = 0n,
     ) {
         if (createdAt == undefined) {
-            createdAt = Math.floor(Date.now() / 1000) - 20; // -20 is used to pass check created_at <= now() in smart contract for sure
+            createdAt = Math.floor(Date.now() / 1000) - 40; // -40 is used to pass check created_at <= now() in smart contract for sure
         }
 
         return await this.sendExternalMessage(provider, secretKey, {
