@@ -14,7 +14,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`EvmProxyMsg`](#evmproxymsg-type)
 - [`CrossChainTransactionOptions`](#crosschaintransactionoptions)
 - [`AssetBridgingData`](#assetbridgingdata-type)
-
+- [`CrosschainTx`](#crosschaintx)
 ### Transaction Tracking
 - [`TransactionLinker`](#transactionlinker-type)
 
@@ -100,6 +100,8 @@ export type TACParams = {
     crossChainLayerABI?: Interface | InterfaceAbi;
     crossChainLayerTokenABI?: Interface | InterfaceAbi;
     crossChainLayerTokenBytecode?: string;
+    crossChainLayerNFTABI?: Interface | InterfaceAbi;
+    crossChainLayerNFTBytecode?: string;
 }
 ```
 
@@ -110,6 +112,8 @@ TAC Parameters for SDK:
 - **`crossChainLayerABI`** *(optional)*: TAC CCL contract ABI. Set for tests only
 - **`crossChainLayerTokenABI`** *(optional)*: TAC CCL Token contract ABI. Set for tests only
 - **`crossChainLayerTokenBytecode`** *(optional)*: TAC CCL Token contract bytecode. Set for tests only
+- **`crossChainLayerNFTABI`** *(optional)*: TAC CCL NFT contract ABI. Set for tests only
+- **`crossChainLayerNFTBytecode`** *(optional)*: TAC CCL NFT contract bytecode. Set for tests only
 
 
 ### `EvmProxyMsg (Type)`
@@ -172,7 +176,8 @@ export type CrossChainTransactionOptions = {
 This structure is used to specify the details of the Assets you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your crosschain transaction.
 
 ```typescript
-export type WithAddress = {
+export type WithAddressFT = {
+    type: AssetType.FT;
     /**
      * Address of TAC or TON token.
      * Empty if sending native TON coin.
@@ -180,10 +185,34 @@ export type WithAddress = {
     address?: string;
 };
 
-export type RawAssetBridgingData = {
+export type WithAddressNFT_Item = {
+    type: AssetType.NFT;
+    /**
+     * Address NFT item token.
+     */
+    address: string;
+};
+
+export type WithAddressNFT_CollectionItem = {
+    type: AssetType.NFT;
+    /**
+     * Address NFT collection.
+     */
+    collectionAddress: string;
+    /**
+     * Index of NFT item in collection.
+     */
+    itemIndex: bigint;
+};
+
+export type WithAddressNFT = WithAddressNFT_Item | WithAddressNFT_CollectionItem;
+
+export type WithAddress = WithAddressFT | WithAddressNFT;
+
+export type RawAssetBridgingData<NFTFormatRequired extends WithAddressNFT = WithAddressNFT_Item> = {
     /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
     rawAmount: bigint;
-} & WithAddress;
+} & & (WithAddressFT | NFTFormatRequired);
 
 export type UserFriendlyAssetBridgingData = {
     /**
@@ -203,12 +232,39 @@ export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridging
 ```
 
 Represents general data for Asset operations.
+
+For fungible tokens:
+- **`type`**: Type of the asset. Should be `AssetType.FT` for fungible tokens.
 - **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
 - **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
 - **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
 - **`address`** *(optional)*: TVM or EVM asset's address.
 
 > **Note:** If you need to transfer a native TON coin, do not specify address.
+
+For non-fungible tokens:
+- **`type`**: Type of the asset. Should be `AssetType.NFT` for non-fungible tokens.
+- **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transfered. Should be 1 for NFTs.
+- **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transfered. Should be 1 for NFTs.
+- **`address`** *(required if `collectionAddress` is not specified): TVM or EVM asset's address.
+- **`collectionAddress`** *(required if `address` is not specified): TVM or EVM asset's collection address.
+- **`itemIndex`** *(required if `address` is not specified): Index of the NFT item in the collection.
+
+
+### `CrosschainTx`
+
+```ts
+export type CrosschainTx = {
+    evmProxyMsg: EvmProxyMsg;
+    assets?: AssetBridgingData[];
+    options?: CrossChainTransactionOptions;
+};
+```
+
+Represents a crosschain transaction.
+- **`evmProxyMsg`**: The message to be sent to the TAC proxy.
+- **`assets`** *(optional)*: An array of assets involved in the transaction.
+- **`options`** *(optional)*: Additional options for the transaction.
 
 
 ### `TransactionLinker (Type)`
@@ -246,6 +302,7 @@ export type TACSimulationRequest = {
     tonAssets: {
         amount: string;
         tokenAddress: string;
+        assetType: string;
     }[];
     tonCaller: string;
 };
@@ -264,6 +321,7 @@ Represents a request to simulate an TAC message.
 - **`tonAssets`**: An array of assets involved in the transaction.
   - **`amount`**: Amount of the asset to be transferred.
   - **`tokenAddress`**: Address of the token.
+  - **`assetType`**: Type of the asset. Either fungible or non-fungible.
 - **`tonCaller`**: Address of the caller in the TON.
 
 ### `ExecutionFeeEstimationResult`
@@ -548,6 +606,14 @@ export type TACSimulationResult = {
         amount: string;
         tokenAddress: string;
       }[];
+      nftBurned: {
+        amount: string;
+        tokenAddress: string;
+      }[];
+      nftLocked: {
+        amount: string;
+        tokenAddress: string;
+      }[];
     }[]
             | null;
     simulationError: string;
@@ -581,6 +647,8 @@ Provides TAC simulation results.
       - **`amount`**: The amount of tokens burned.
       - **`tokenAddress`**: The address of the token.
     - **`tokensLocked`**: The tokens locked.
+    - **`nftBurned`**: The NFTs burned.
+    - **`nftLocked`**: The NFTs locked.
   - **`simulationError`**: Any error encountered during the simulation.
   - **`simulationStatus`**: The status of the simulation.
   - **`suggestedTonExecutionFee`**: Suggested fee (in TON) that should be attached to ensure successful execution on the TON network. 
@@ -618,4 +686,3 @@ Contains fee information for both TAC and TON blockchain networks.
 
 - **`tac`**: Complete fee structure for transactions on the TAC blockchain.
 - **`ton`**: Complete fee structure for transactions on the TON blockchain.
-

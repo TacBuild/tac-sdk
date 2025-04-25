@@ -97,3 +97,35 @@ Enumeration of supported token symbols.
 - **`TON_SYMBOL`**:  
   Represents the native token on the TON network.
 
+
+## ``AssetType``
+
+```ts
+export enum AssetType {
+    NFT = 'NFT',
+    FT = 'FT',
+}
+```
+
+Enumeration of supported asset types.
+- **`NFT`**:
+  Represents a non-fungible token (NFT).
+
+- **`FT`**:
+  Represents a fungible token (FT).
+
+## ``NFTAddressType``
+```ts
+export enum NFTAddressType {
+    ITEM = 'ITEM',
+    COLLECTION = 'COLLECTION',
+}
+```
+
+Identifies the type of a contract address belongs to.
+
+- **`ITEM`**:
+  Represents an NFT item contract.
+
+- **`COLLECTION`**:
+  Represents an NFT collection contract.

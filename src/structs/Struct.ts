@@ -142,12 +142,21 @@ export type WithAddressFT = {
 
 export type WithAddressNFT_Item = {
     type: AssetType.NFT;
+    /**
+     * Address NFT item token.
+     */
     address: string;
 };
 
 export type WithAddressNFT_CollectionItem = {
     type: AssetType.NFT;
+    /**
+     * Address NFT collection.
+     */
     collectionAddress: string;
+    /**
+     * Index of NFT item in collection.
+     */
     itemIndex: bigint;
 };
 
@@ -328,6 +337,14 @@ export type TACSimulationResult = {
               tokensLocked: {
                   amount: string;
                   tokenAddress: string;
+              }[];
+              nftBurned: {
+                amount: string;
+                tokenAddress: string;
+              }[];
+              nftLocked: {
+                amount: string;
+                tokenAddress: string;
               }[];
           }[]
         | null;

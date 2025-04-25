@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 - New methods for requesting execution fees and simulation `getTransactionSimulationInfo`.
 - Added `metaInfo` field to the `ExecutionStages`.
 - Added advanced options to `sendCrossChainTransaction`.
+- Methods to work with NFT items: bridging and gettings addresses.
+- Method to send multiple crosschain transactions at once: `sendCrossChainTransactions`.
 
 ### Changed
 

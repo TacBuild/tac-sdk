@@ -2,26 +2,50 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Creating an Instance of `TacSdk`](#creating-an-instance-of-tacsdk)
-- [Core Functions](#core-functions)
-  - [`sendCrossChainTransaction`](#sendcrosschaintransaction)
-  - [`getTransactionSimulationInfo`](#gettransactionsimulationinfo)
-- [Token Address Helpers](#token-address-helpers)
-  - [`getEVMTokenAddress`](#getevmtokenaddress)
-  - [`getTVMTokenAddress`](#gettvmtokenaddress)
-  - [`nativeTONAddress`](#nativetonaddress)
-  - [`nativeTACAddress`](#nativetacaddress)
-- [Executors](#executors)
-  - [`getTrustedTACExecutors`](#gettrustedtacexecutors)
-  - [`getTrustedTONExecutors`](#gettrustedtonexecutors)
-- [Jetton Helpers](#jetton-helpers)
-  - [`getUserJettonWalletAddress`](#getuserjettonwalletaddress)
-  - [`getUserJettonBalance`](#getuserjettonbalance)
-  - [`getUserJettonBalanceExtended`](#getuserjettonbalanceextended)
-- [Advanced](#advanced)
-  - [`simulateTACMessage`](#simulatetacmessage)
-  - [`closeConnections`](#closeconnections)
+- [TacSdk Class](#tacsdk-class)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Creating an Instance of `TacSdk`](#creating-an-instance-of-tacsdk)
+  - [Core Functions](#core-functions)
+    - [`sendCrossChainTransaction`](#sendcrosschaintransaction)
+      - [**Purpose**](#purpose)
+      - [**Parameters**](#parameters)
+      - [**Returns** `TransactionLinker`](#returns-transactionlinker)
+      - [**Possible exceptions**](#possible-exceptions)
+      - [**Functionality**](#functionality)
+    - [`getTransactionSimulationInfo`](#gettransactionsimulationinfo)
+    - [`sendCrossChainTransactions`](#sendcrosschaintransactions)
+      - [**Parameters**](#parameters-1)
+      - [**Returns** `Promise<TransactionLinker[]>`](#returns-promisetransactionlinker)
+  - [Token Address Helpers](#token-address-helpers)
+    - [`getEVMTokenAddress`](#getevmtokenaddress)
+      - [**Purpose**](#purpose-1)
+      - [**Returns**](#returns)
+    - [`getTVMTokenAddress`](#gettvmtokenaddress)
+    - [`nativeTONAddress`](#nativetonaddress)
+    - [`nativeTACAddress`](#nativetacaddress)
+  - [Executors](#executors)
+    - [`getTrustedTACExecutors`](#gettrustedtacexecutors)
+    - [`getTrustedTONExecutors`](#gettrustedtonexecutors)
+  - [NFT Helpers](#nft-helpers)
+    - [`getTVMNFTAddress`](#gettvmnftaddress)
+      - [**Parameters**](#parameters-2)
+      - [**Returns**](#returns-1)
+    - [`getEVMNFTAddress`](#getevmnftaddress)
+      - [**Parameters**](#parameters-3)
+      - [**Returns**](#returns-2)
+  - [Jetton Helpers](#jetton-helpers)
+    - [`getUserJettonWalletAddress`](#getuserjettonwalletaddress)
+    - [`getUserJettonBalance`](#getuserjettonbalance)
+    - [`getUserJettonBalanceExtended`](#getuserjettonbalanceextended)
+      - [**Returns** `UserWalletBalanceExtended`](#returns-userwalletbalanceextended)
+  - [Advanced](#advanced)
+    - [`simulateTACMessage`](#simulatetacmessage)
+      - [**Returns** `TACSimulationResult`](#returns-tacsimulationresult)
+    - [`bridgeTokensToTON`](#bridgetokenstoton)
+      - [**Parameters**](#parameters-4)
+      - [**Returns** `Promise<string>`](#returns-promisestring)
+    - [`closeConnections`](#closeconnections)
 
 ---
 
@@ -117,6 +141,24 @@ Simulates the full transaction lifecycle and estimates fees.
 
 ---
 
+### `sendCrossChainTransactions`
+
+```ts
+sendCrossChainTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TransactionLinker[]>
+```
+
+Sends multiple cross-chain transactions in a batch. This is useful for scenarios where multiple independent operations need to be initiated from TON to TAC.
+
+#### **Parameters**
+
+- **`sender`**: A [`SenderAbstraction`](./sender.md) object representing the user's wallet.
+- **`txs`**: An array of [`CrosschainTx`](./../models/structs.md#crosschaintx-type) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`.
+
+#### **Returns** `Promise<TransactionLinker[]>`
+  - An array of [`TransactionLinker`](./../models/structs.md#transactionlinker-type) objects, one for each transaction sent.
+
+---
+
 ## Token Address Helpers
 
 ### `getEVMTokenAddress`
@@ -189,6 +231,46 @@ Returns trusted TON executor addresses.
 
 ---
 
+## NFT Helpers
+
+### `getTVMNFTAddress`
+
+```ts
+getTVMNFTAddress(evmNFTAddress: string, tokenId?: bigint): Promise<string>
+```
+
+Returns the corresponding TVM NFT address (either the collection wrapper or a specific item wrapper) for a given EVM NFT address.
+
+#### **Parameters**
+
+- **`evmNFTAddress`**: The address of the NFT collection on the EVM (TAC) chain.
+- **`tokenId`** *(optional)*: The specific token ID within the EVM collection. If provided, the function returns the address of the corresponding TVM NFT item wrapper. If omitted, it returns the address of the TVM NFT collection.
+
+#### **Returns**
+
+Returns the calculated TVM NFT address as a string.
+
+---
+
+### `getEVMNFTAddress`
+
+```ts
+getEVMNFTAddress(tvmNFTAddress: string, addressType: NFTAddressType): Promise<string>
+```
+
+Returns the corresponding EVM NFT address for a given TVM NFT address (which can be either a collection wrapper or an item wrapper).
+
+#### **Parameters**
+
+- **`tvmNFTAddress`**: The address of the NFT on the TVM (TON) chain (can be a collection or item wrapper).
+- **`addressType`**: An enum [`NFTAddressType`](./../models/structs.md#nftaddresstype-enum) indicating whether the provided `tvmNFTAddress` refers to a collection (`NFTAddressType.COLLECTION`) or a specific item (`NFTAddressType.ITEM`).
+
+#### **Returns**
+
+Returns the EVM NFT collection address as a string.
+
+---
+
 ## Jetton Helpers
 
 ### `getUserJettonWalletAddress`
@@ -245,6 +327,35 @@ Simulates EVM-side contract call with a TAC header and TON asset context.
 
 #### **Returns** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)
   - Simulation result on TAC.
+
+---
+
+### `bridgeTokensToTON`
+
+```ts
+bridgeTokensToTON(
+  signer: Wallet, 
+  value: bigint, 
+  tonTarget: string, 
+  assets?: RawAssetBridgingData<WithAddressNFT_CollectionItem>[], 
+  tvmExecutorFee?: bigint
+): Promise<string>
+```
+
+Initiates a bridge operation from TAC back to TON. This function handles the necessary approvals and sends a message to the CrossChainLayer contract on TAC to transfer native TAC coin and/or specified assets (Tokens/NFTs) to a target address on TON.
+
+**Note:** This function requires an `ethers.Wallet` instance connected to the TAC network to sign the transaction.
+
+#### **Parameters**
+
+- **`signer`**: An `ethers.Wallet` instance for signing the transaction on the TAC chain.
+- **`value`**: The amount of native TAC coin (in wei) to bridge.
+- **`tonTarget`**: The target address on the TON network where the assets should be received.
+- **`assets`** *(optional)*: An array of [`RawAssetBridgingData`](./../models/structs.md#rawassetbridgingdata-type) objects specifying the tokens or NFTs to bridge. Uses raw amounts.
+- **`tvmExecutorFee`** *(optional)*: The fee (in TON) to pay the TVM executor for processing the message on the TON side. If not provided, a suggested fee is calculated.
+
+#### **Returns** `Promise<string>`
+  - The transaction hash of the bridging transaction submitted on the TAC chain.
 
 ---
 
