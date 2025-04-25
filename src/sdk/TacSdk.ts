@@ -426,10 +426,10 @@ export class TacSdk {
         return (await nftCollection.getNFTAddressByIndex(itemIndex)).toString();
     }
 
-    private async getNFTCollectionAddressTON(itemAddress: string): Promise<string> {
+    async getNFTData(itemAddress: string) {
         validateTVMAddress(itemAddress);
         const nftItem = this.TONParams.contractOpener.open(NFTItem.createFromAddress(address(itemAddress)));
-        return (await nftItem.getNFTData()).collectionAddress.toString();
+        return await nftItem.getNFTData();
     }
 
     private async aggregateTokens(assets?: RawAssetBridgingData[]): Promise<{
@@ -1101,7 +1101,7 @@ export class TacSdk {
         tvmNFTAddress = Address.parse(tvmNFTAddress).toString({ bounceable: true });
 
         if (addressType == NFTAddressType.ITEM) {
-            tvmNFTAddress = await this.getNFTCollectionAddressTON(tvmNFTAddress);
+            tvmNFTAddress = (await this.getNFTData(tvmNFTAddress)).collectionAddress.toString();
             addressType = NFTAddressType.COLLECTION;
             await sleep(this.delay * 1000);
         }
