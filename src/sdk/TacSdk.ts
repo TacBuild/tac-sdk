@@ -992,7 +992,7 @@ export class TacSdk {
         };
 
         const encodedOutMessage = this.artifacts.tac.utils.encodeOutMessageV2(outMessage);
-        const outMsgVersion = 1n;
+        const outMsgVersion = 2n;
 
         const totalValue = value + BigInt(outMessage.tvmProtocolFee) + BigInt(outMessage.tvmExecutorFee);
 
