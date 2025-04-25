@@ -1129,6 +1129,10 @@ export class TacSdk {
         );
     }
 
+    async isContractDeployedOnTVM(address: string): Promise<boolean> {
+        return (await this.TONParams.contractOpener.getContractState(Address.parse(address))).state === 'active';
+    }
+
     async simulateTACMessage(req: TACSimulationRequest): Promise<TACSimulationResult> {
         for (const endpoint of this.liteSequencerEndpoints) {
             try {
