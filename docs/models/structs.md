@@ -234,7 +234,7 @@ export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridging
 Represents general data for Asset operations.
 
 For fungible tokens:
-- **`type`**: Type of the asset. Should be `AssetType.FT` for fungible tokens.
+- **`type`**: Type of the asset. Should be [`AssetType.FT`](./enums.md#assettype) for fungible tokens.
 - **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
 - **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
 - **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
@@ -243,7 +243,7 @@ For fungible tokens:
 > **Note:** If you need to transfer a native TON coin, do not specify address.
 
 For non-fungible tokens:
-- **`type`**: Type of the asset. Should be `AssetType.NFT` for non-fungible tokens.
+- **`type`**: Type of the asset. Should be [`AssetType.NFT`](./enums.md#assettype) for non-fungible tokens.
 - **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transfered. Should be 1 for NFTs.
 - **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transfered. Should be 1 for NFTs.
 - **`address`** *(required if `collectionAddress` is not specified): TVM or EVM asset's address.
