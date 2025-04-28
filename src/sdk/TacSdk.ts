@@ -24,6 +24,7 @@ import {
     CrosschainTx,
     WithAddressNFT_CollectionItem,
     NFTAddressType,
+    NFTItemData,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -426,7 +427,7 @@ export class TacSdk {
         return (await nftCollection.getNFTAddressByIndex(itemIndex)).toString();
     }
 
-    async getNFTData(itemAddress: string) {
+    async getNFTItemData(itemAddress: string): Promise<NFTItemData> {
         validateTVMAddress(itemAddress);
         const nftItem = this.TONParams.contractOpener.open(NFTItem.createFromAddress(address(itemAddress)));
         return await nftItem.getNFTData();
@@ -1101,7 +1102,7 @@ export class TacSdk {
         tvmNFTAddress = Address.parse(tvmNFTAddress).toString({ bounceable: true });
 
         if (addressType == NFTAddressType.ITEM) {
-            tvmNFTAddress = (await this.getNFTData(tvmNFTAddress)).collectionAddress.toString();
+            tvmNFTAddress = (await this.getNFTItemData(tvmNFTAddress)).collectionAddress.toString();
             addressType = NFTAddressType.COLLECTION;
             await sleep(this.delay * 1000);
         }

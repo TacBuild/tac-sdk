@@ -1,5 +1,5 @@
 import { SandboxContract } from '@ton/sandbox';
-import type { Address, Contract, OpenedContract } from '@ton/ton';
+import type { Address, Cell, Contract, OpenedContract } from '@ton/ton';
 import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
 
 export interface ContractOpener {
@@ -339,12 +339,12 @@ export type TACSimulationResult = {
                   tokenAddress: string;
               }[];
               nftBurned: {
-                amount: string;
-                tokenAddress: string;
+                  amount: string;
+                  tokenAddress: string;
               }[];
               nftLocked: {
-                amount: string;
-                tokenAddress: string;
+                  amount: string;
+                  tokenAddress: string;
               }[];
           }[]
         | null;
@@ -387,4 +387,12 @@ export type CrosschainTx = {
     evmProxyMsg: EvmProxyMsg;
     assets?: AssetBridgingData[];
     options?: CrossChainTransactionOptions;
+};
+
+export type NFTItemData = {
+    init: boolean;
+    index: number;
+    collectionAddress: Address;
+    ownerAddress: Address | null;
+    content: Cell | null;
 };

@@ -44,6 +44,9 @@ This file documents the primary data structures (types and interfaces often refe
 ### Jetton Wallet
 - [`UserWalletBalanceExtended`](#userwalletbalanceextended)
 
+### NFT
+- [`NFTItemData`](#nftitemdata)
+
 # SDK Data Structures (Structs)
 
 This file documents the primary data structures (types and interfaces often referred to as structs) used for configuration, data transfer, and results within the TAC SDK.
@@ -578,6 +581,25 @@ Provides extended information about a user's Jetton balance.
 - **`rawAmount`** *(optional)*: The raw balance of the Jetton token. Present only if `exists` is `true`.
 - **`decimals`** *(optional)*: The number of decimals for the Jetton token. Present only if `exists` is `true`.
 
+### `NFTItemData`
+
+Provides information about NFT item.
+
+```typescript
+{
+    init: boolean;
+    index: number;
+    collectionAddress: Address;
+    ownerAddress: Address | null;
+    content: Cell | null;
+}
+```
+
+- **`init`**: Indicates whether item is active, i.e initialized by NFT collection and has not been burnt
+- **`index`**: Index of the item in collection
+- **`collectionAddress`**: Address of collection
+- **`ownerAddress`**: Address of the item owner
+- **`content`**: Content(metadata) of the item
 
 ### `TACSimulationResult`
 

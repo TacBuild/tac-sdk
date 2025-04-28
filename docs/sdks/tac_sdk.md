@@ -45,6 +45,15 @@
     - [`bridgeTokensToTON`](#bridgetokenstoton)
       - [**Parameters**](#parameters-4)
       - [**Returns** `Promise<string>`](#returns-promisestring)
+    - [`isContractDeployedOnTVM`](#iscontractdeployedontvm)
+      - [**Purpose**](#purpose-2)
+      - [**Parameters**](#parameters-5)
+      - [**Returns**](#returns-3)
+    - [`getNFTItemData`](#getnftitemdata)
+      - [**Purpose**](#purpose-3)
+      - [**Parameters**](#parameters-6)
+      - [**Returns**](#returns-4)
+      - [**Possible exceptions**](#possible-exceptions-1)
     - [`closeConnections`](#closeconnections)
 
 ---
@@ -358,6 +367,41 @@ Initiates a bridge operation from TAC back to TON. This function handles the nec
   - The transaction hash of the bridging transaction submitted on the TAC chain.
 
 ---
+
+### `isContractDeployedOnTVM`
+
+```ts
+isContractDeployedOnTVM(address: string): Promise<boolean>
+```
+
+#### **Purpose**
+Checks if a contract is deployed and active on the TVM chain.
+
+#### **Parameters**
+- **`address`**: The contract address to check on TVM chain.
+
+#### **Returns**
+`Promise<boolean>`
+- Returns `true` if the contract is active, `false` otherwise.
+
+### `getNFTItemData`
+
+```ts
+getNFTItemData(itemAddress: string): Promise<NFTItemData>
+```
+
+#### **Purpose**
+Retrieves NFT data from the TVM chain for a given NFT item address.
+
+#### **Parameters**
+- **`itemAddress`**: The address of the NFT item on TVM chain.
+
+#### **Returns**
+[`Promise<NFTItemData>`](./../models/structs.md#nftitemdata)
+- Returns the NFT data including collection, owner, and metadata information.
+
+#### **Possible exceptions**
+- **`AddressError`**: If the provided address is invalid.
 
 ### `closeConnections`
 
