@@ -737,7 +737,7 @@ export class TacSdk {
             tonAssets: rawAssets.map((asset) => ({
                 amount: asset.rawAmount.toString(),
                 tokenAddress: asset.address || '',
-                assetType: asset.type.toLowerCase(),
+                assetType: asset.type,
             })),
             tonCaller: transactionLinker.caller,
         };
