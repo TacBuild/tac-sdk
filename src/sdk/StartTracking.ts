@@ -45,8 +45,6 @@ export async function startTracking(
             break;
         }
 
-        console.log();
-
         if (operationId == '') {
             console.log('request operationId');
 
@@ -54,7 +52,6 @@ export async function startTracking(
                 operationId = await tracker.getOperationId(transactionLinker);
             } catch (err) {}
         } else {
-            console.log('request operationType');
 
             try {
                 operationType = await tracker.getOperationType(operationId);
@@ -65,9 +62,11 @@ export async function startTracking(
                 console.log('failed to get operation type:', err);
             }
 
-            console.log('operationId:', operationId);
-            console.log('operationType:', operationType);
-            console.log('time: ', Math.floor(+new Date() / 1000));
+            console.log(`
+                operationId: ${operationId}
+                operationType: ${operationType}
+                time: ${new Date().toISOString()} (${Math.floor(+new Date() / 1000)})
+            `);
         }
         await sleep(delay * 1000);
     }
