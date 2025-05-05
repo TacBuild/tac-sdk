@@ -56,7 +56,6 @@ import {
     buildEvmDataCell,
     calculateAmount,
     calculateContractAddress,
-    calculateEVMTokenAddress,
     calculateRawAmount,
     generateRandomNumberByTimestamp,
     generateTransactionLinker,
@@ -764,7 +763,7 @@ export class TacSdk {
         isRoundTrip = isRoundTrip ?? tacSimulationResult.outMessages != null;
 
         let tonExecutorFeeInTON = 0n;
-        if (isRoundTrip == true) {
+        if (isRoundTrip) {
             tonExecutorFeeInTON = BigInt(tacSimulationResult.suggestedTonExecutionFee);
         }
 
@@ -1030,13 +1029,7 @@ export class TacSdk {
             }
         }
 
-        return calculateEVMTokenAddress(
-            this.TACParams.abiCoder,
-            await this.TACParams.tokenUtils.getAddress(),
-            this.TACParams.crossChainLayerTokenBytecode,
-            await this.TACParams.crossChainLayer.getAddress(),
-            tvmTokenAddress,
-        );
+        return this.TACParams.tokenUtils.computeAddress(tvmTokenAddress);
     }
 
     async getTVMTokenAddress(evmTokenAddress: string): Promise<string> {
@@ -1121,13 +1114,7 @@ export class TacSdk {
             return l2Address.toString();
         }
 
-        return calculateEVMTokenAddress(
-            this.TACParams.abiCoder,
-            await this.TACParams.tokenUtils.getAddress(),
-            this.TACParams.crossChainLayerNFTBytecode,
-            await this.TACParams.crossChainLayer.getAddress(),
-            tvmNFTAddress,
-        );
+        return this.TACParams.tokenUtils.computeAddress(tvmNFTAddress);
     }
 
     async isContractDeployedOnTVM(address: string): Promise<boolean> {
