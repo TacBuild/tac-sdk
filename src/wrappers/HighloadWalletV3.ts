@@ -80,15 +80,13 @@ export class HighloadWalletV3 implements WalletInstance {
         const subwalletId = isActive ? await this.getSubwalletId(provider) : DEFAULT_SUBWALLET_ID;
         const timeout = isActive ? await this.getTimeout(provider) : DEFAULT_TIMEOUT;
 
-        const queryId = new HighloadQueryId();
-
         const actions: OutActionSendMsg[] = args.messages.map((msg) => ({
             type: 'sendMsg',
             mode: args.sendMode,
             outMsg: msg,
         }));
 
-        await this.sendBatch(provider, args.secretKey, actions, subwalletId, queryId, timeout);
+        await this.sendBatch(provider, args.secretKey, actions, subwalletId, timeout);
     }
 
     static create(config: HighloadWalletV3Config, code: Cell = HIGHLOAD_V3_CODE, workchain = 0) {
@@ -140,7 +138,6 @@ export class HighloadWalletV3 implements WalletInstance {
         secretKey: Buffer,
         messages: OutActionSendMsg[],
         subwallet: number,
-        queryId: HighloadQueryId,
         timeout: number,
         createdAt?: number,
         value: bigint = 0n,
@@ -148,6 +145,8 @@ export class HighloadWalletV3 implements WalletInstance {
         if (createdAt == undefined) {
             createdAt = Math.floor(Date.now() / 1000) - 40; // -40 is used to pass check created_at <= now() in smart contract for sure
         }
+
+        const queryId = HighloadQueryId.fromQueryId(BigInt(createdAt) % 8388608n);
 
         return await this.sendExternalMessage(provider, secretKey, {
             message: this.packActions(messages, value, queryId),

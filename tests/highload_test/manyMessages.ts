@@ -1,13 +1,11 @@
 import { ethers } from 'ethers';
 import {
-    SDKParams,
     TacSdk,
     Network,
     SenderFactory,
     EvmProxyMsg,
     AssetBridgingData,
     AssetType,
-    startTracking,
     CrosschainTx,
 } from '../../src';
 import { localSDKParams } from '../utils';
@@ -75,19 +73,18 @@ async function main() {
         },
     ];
 
-    // 20 Jetton transfers
-    const txs: CrosschainTx[] = Array.from({ length: 20 }, () => ({
+    // 5 Jetton transfers
+    const txs: CrosschainTx[] = Array.from({ length: 5 }, () => ({
         evmProxyMsg,
         assets: jettons,
     }));
 
-    // 20 TON transfers
-    evmProxyMsg = {
-        evmTargetAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
-    };
-    for (let i = 0; i < 20; i++) {
+    // 50 TON transfers
+    for (let i = 0; i < 50; i++) {
         txs.push({
-            evmProxyMsg,
+            evmProxyMsg: {
+                evmTargetAddress: `0x${Math.random().toString(16).slice(2).padEnd(40, '0')}`,
+            },
             assets: [{ amount: 0.001, type: AssetType.FT }],
         });
     }
