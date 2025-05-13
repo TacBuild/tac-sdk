@@ -346,7 +346,7 @@ bridgeTokensToTON(
   signer: Wallet, 
   value: bigint, 
   tonTarget: string, 
-  assets?: RawAssetBridgingData<WithAddressNFT_CollectionItem>[], 
+  assets?: RawAssetBridgingData<WithAddressNFTCollectionItem>[], 
   tvmExecutorFee?: bigint
 ): Promise<string>
 ```

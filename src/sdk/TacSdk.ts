@@ -22,7 +22,7 @@ import {
     ExecutionFeeEstimationResult,
     AssetType,
     CrosschainTx,
-    WithAddressNFT_CollectionItem,
+    WithAddressNFTCollectionItem,
     NFTAddressType,
     NFTItemData,
 } from '../structs/Struct';
@@ -64,6 +64,7 @@ import {
     validateEVMAddress,
     validateTVMAddress,
     formatSolidityMethodName,
+    generateFeeData,
 } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
@@ -329,21 +330,6 @@ export class TacSdk {
         );
     }
 
-    private generateFeeData(feeParams?: FeeParams): Cell | undefined {
-        if (feeParams) {
-            let feeDataBuilder = beginCell()
-                .storeBit(feeParams.isRoundTrip)
-                .storeCoins(feeParams.protocolFee)
-                .storeCoins(feeParams.evmExecutorFee);
-            if (feeParams.isRoundTrip) {
-                feeDataBuilder.storeCoins(feeParams.tvmExecutorFee);
-            }
-            return feeDataBuilder.endCell();
-        } else {
-            return undefined;
-        }
-    }
-
     private getTonTransferPayload(
         responseAddress: string,
         evmData: Cell,
@@ -351,7 +337,7 @@ export class TacSdk {
         feeParams: FeeParams,
     ): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
-        const feeData = this.generateFeeData(feeParams);
+        const feeData = generateFeeData(feeParams);
 
         return beginCell()
             .storeUint(this.artifacts.ton.wrappers.CrossChainLayerOpCodes.anyone_l1MsgToL2, 32)
@@ -494,7 +480,7 @@ export class TacSdk {
 
         console.log(`***** Jetton ${jetton.address} requires ${opType} operation`);
 
-        const feeData = this.generateFeeData(feeParams);
+        const feeData = generateFeeData(feeParams);
 
         let payload: Cell;
         switch (opType) {
@@ -537,7 +523,7 @@ export class TacSdk {
 
         console.log(`***** NFT ${nft.address} requires ${opType} operation`);
 
-        const feeData = this.generateFeeData(feeParams);
+        const feeData = generateFeeData(feeParams);
 
         let payload: Cell;
         switch (opType) {
@@ -924,7 +910,7 @@ export class TacSdk {
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: RawAssetBridgingData<WithAddressNFT_CollectionItem>[],
+        assets?: RawAssetBridgingData<WithAddressNFTCollectionItem>[],
         tvmExecutorFee?: bigint,
     ): Promise<string> {
         if (assets == undefined) {

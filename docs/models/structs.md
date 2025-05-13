@@ -188,7 +188,7 @@ export type WithAddressFT = {
     address?: string;
 };
 
-export type WithAddressNFT_Item = {
+export type WithAddressNFTItem = {
     type: AssetType.NFT;
     /**
      * Address NFT item token.
@@ -196,7 +196,7 @@ export type WithAddressNFT_Item = {
     address: string;
 };
 
-export type WithAddressNFT_CollectionItem = {
+export type WithAddressNFTCollectionItem = {
     type: AssetType.NFT;
     /**
      * Address NFT collection.
@@ -208,11 +208,11 @@ export type WithAddressNFT_CollectionItem = {
     itemIndex: bigint;
 };
 
-export type WithAddressNFT = WithAddressNFT_Item | WithAddressNFT_CollectionItem;
+export type WithAddressNFT = WithAddressNFTItem | WithAddressNFTCollectionItem;
 
 export type WithAddress = WithAddressFT | WithAddressNFT;
 
-export type RawAssetBridgingData<NFTFormatRequired extends WithAddressNFT = WithAddressNFT_Item> = {
+export type RawAssetBridgingData<NFTFormatRequired extends WithAddressNFT = WithAddressNFTItem> = {
     /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
     rawAmount: bigint;
 } & & (WithAddressFT | NFTFormatRequired);
