@@ -1100,7 +1100,7 @@ export class TacSdk {
             return l2Address.toString();
         }
 
-        return this.TACParams.tokenUtils.computeAddress(tvmNFTAddress);
+        return this.TACParams.tokenUtils.computeAddressERC721(tvmNFTAddress);
     }
 
     async isContractDeployedOnTVM(address: string): Promise<boolean> {
