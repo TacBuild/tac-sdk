@@ -1,13 +1,5 @@
 import { ethers } from 'ethers';
-import {
-    TacSdk,
-    Network,
-    SenderFactory,
-    EvmProxyMsg,
-    AssetBridgingData,
-    AssetType,
-    CrosschainTx,
-} from '../../src';
+import { TacSdk, Network, SenderFactory, EvmProxyMsg, AssetBridgingData, AssetType, CrosschainTx } from '../../src';
 import { localSDKParams } from '../utils';
 import { toNano } from '@ton/ton';
 
@@ -80,7 +72,7 @@ async function main() {
     }));
 
     // 50 TON transfers
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 300; i++) {
         txs.push({
             evmProxyMsg: {
                 evmTargetAddress: `0x${Math.random().toString(16).slice(2).padEnd(40, '0')}`,
