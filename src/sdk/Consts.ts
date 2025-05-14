@@ -10,3 +10,7 @@ export const DEFAULT_DELAY = 0;
 
 export const SOLIDITY_SIGNATURE_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*(\((bytes,bytes)\))?$/;
 export const SOLIDITY_METHOD_NAME_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+export const MAX_EXT_MSG_SIZE = 65535;
+export const MAX_HIGHLOAD_GROUP_MSG_NUM = 254;
+export const MAX_MSG_DEPTH = 512;

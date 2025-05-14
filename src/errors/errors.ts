@@ -76,3 +76,17 @@ export class EVMCallError extends ErrorWithStatusCode {
         this.name = 'EVMCallError';
     }
 }
+
+export class PrepareMessageGroupError extends ErrorWithStatusCode {
+    constructor(message: string, errorCode: number) {
+        super(message, errorCode);
+        this.name = 'PrepareMessageGroupError';
+    }
+}
+
+export class NoValidGroupFoundError extends ErrorWithStatusCode {
+    constructor(message: string, errorCode: number) {
+        super(message, errorCode);
+        this.name = 'NoValidGroupFoundError';
+    }
+}

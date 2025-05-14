@@ -68,6 +68,7 @@ export class HighloadWalletV3 implements WalletInstance {
             sendMode: SendMode;
             timeout?: number;
             subwalletId?: number;
+            createdAt?: number;
         },
     ): Promise<void> {
         if (!args.messages.length) {
@@ -86,7 +87,7 @@ export class HighloadWalletV3 implements WalletInstance {
             outMsg: msg,
         }));
 
-        await this.sendBatch(provider, args.secretKey, actions, subwalletId, timeout);
+        await this.sendBatch(provider, args.secretKey, actions, subwalletId, timeout, args.createdAt);
     }
 
     static create(config: HighloadWalletV3Config, code: Cell = HIGHLOAD_V3_CODE, workchain = 0) {
@@ -146,7 +147,7 @@ export class HighloadWalletV3 implements WalletInstance {
             createdAt = Math.floor(Date.now() / 1000) - 40; // -40 is used to pass check created_at <= now() in smart contract for sure
         }
 
-        const queryId = HighloadQueryId.fromQueryId(BigInt(createdAt) % 8388608n);
+        const queryId = this.getQueryIdFromCreatedAt(createdAt);
 
         return await this.sendExternalMessage(provider, secretKey, {
             message: this.packActions(messages, value, queryId),
@@ -156,6 +157,22 @@ export class HighloadWalletV3 implements WalletInstance {
             subwalletId: subwallet,
             timeout: timeout,
         });
+    }
+
+    getQueryIdFromCreatedAt(createdAt: number): HighloadQueryId {
+        return HighloadQueryId.fromQueryId(BigInt(createdAt) % 8388608n);
+    }
+
+    getExternalMessage(messages: MessageRelaxed[], sendMode: SendMode, value: bigint, queryId: HighloadQueryId): MessageRelaxed {
+        return this.packActions(
+            messages.map((msg) => ({
+                type: 'sendMsg',
+                mode: sendMode,
+                outMsg: msg,
+            })),
+            value,
+            queryId,
+        )
     }
 
     static createInternalTransferBody(opts: { actions: OutAction[] | Cell; queryId: HighloadQueryId }) {

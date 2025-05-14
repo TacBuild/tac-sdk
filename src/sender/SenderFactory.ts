@@ -12,6 +12,7 @@ import { mnemonicToWalletKey } from 'ton-crypto';
 import { RawSender } from './RawSender';
 import { SenderAbstraction } from './SenderAbstraction';
 import { TonConnectSender } from './TonConnectSender';
+import { BatchSender } from './BatchSender';
 import { unknownWalletError } from '../errors';
 import { Network } from '../structs/Struct';
 import { DEFAULT_SUBWALLET_ID, DEFAULT_TIMEOUT, HighloadWalletV3 } from '../wrappers/HighloadWalletV3';
@@ -83,6 +84,10 @@ export class SenderFactory {
         }
 
         const wallet = wallets[params.version].create(config);
+
+        if (params.version === 'HIGHLOAD_V3') {
+            return new BatchSender(wallet as HighloadWalletV3, keypair.secretKey);
+        }
 
         return new RawSender(wallet, keypair.secretKey);
     }

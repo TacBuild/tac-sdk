@@ -9,6 +9,8 @@ import {
     MetadataError,
     SettingError,
     EVMCallError,
+    NoValidGroupFoundError,
+    PrepareMessageGroupError,
 } from './errors';
 
 export const emptyContractError = new ContractError('unexpected empty contract code of given jetton.', 100);
@@ -47,3 +49,11 @@ export const profilingFetchError = (msg: string) => new FetchError(`failed to fe
 export const emptyArrayError = (msg: string) => new FetchError(`empty array: ${msg}`, 114);
 
 export const invalidAssetType = new FormatError('Invalid asset type', 115);
+
+export const prepareMessageGroupError = (isBocSizeValid: boolean, isDepthValid: boolean) =>
+    new PrepareMessageGroupError(
+        `Failed to prepare message group: BOC size valid: ${isBocSizeValid}, depth valid: ${isDepthValid}`,
+        116,
+    );
+
+export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 117);
