@@ -7,6 +7,8 @@ import { ContractOpener, Network } from '../structs/Struct';
 import { SenderAbstraction, sleep } from './SenderAbstraction';
 import { SendTransactionResponse } from '@tonconnect/sdk';
 
+const CHUNK_SIZE = 4; // TODO: how to detect that tonConnect connected to W5 and CHUNK_SIZE is 254?
+
 export class TonConnectSender implements SenderAbstraction {
     readonly tonConnect: TonConnectUI;
 
@@ -14,7 +16,29 @@ export class TonConnectSender implements SenderAbstraction {
         this.tonConnect = tonConnect;
     }
 
-    async sendShardTransactions(shardTransactions: ShardTransaction[], delay: number, chain?: Network, contractOpener?: ContractOpener): Promise<SendTransactionResponse[]> {
+    private async sendChunkedMessages(messages: SendTransactionRequest['messages'], validUntil: number, chain: Network): Promise<SendTransactionResponse[]> {
+        const responses: SendTransactionResponse[] = [];
+        
+        for (let i = 0; i < messages.length; i += CHUNK_SIZE) {
+            const chunk = messages.slice(i, i + CHUNK_SIZE);
+            const transaction: SendTransactionRequest = {
+                validUntil,
+                messages: chunk,
+                network: chain == Network.TESTNET ? CHAIN.TESTNET : CHAIN.MAINNET,
+            };
+            
+            const response = await this.tonConnect.sendTransaction(transaction);
+            responses.push(response);
+            
+            if (i + CHUNK_SIZE < messages.length) {
+                await sleep(1000);
+            }
+        }
+        
+        return responses;
+    }
+
+    async sendShardTransactions(shardTransactions: ShardTransaction[], delay: number, chain: Network, contractOpener?: ContractOpener): Promise<SendTransactionResponse[]> {
         const allMessages = [];
         let minValidUntil = 0;
         
@@ -29,15 +53,8 @@ export class TonConnectSender implements SenderAbstraction {
             minValidUntil = Math.min(minValidUntil, transaction.validUntil);
         }
 
-        const transaction: SendTransactionRequest = {
-            validUntil: minValidUntil,
-            messages: allMessages,
-            network: chain == Network.TESTNET ? CHAIN.TESTNET : CHAIN.MAINNET,
-        };
-
         await sleep(delay * 1000);
-        const response = await this.tonConnect.sendTransaction(transaction);
-        return [response];
+        return this.sendChunkedMessages(allMessages, minValidUntil, chain);
     }
 
     getSenderAddress(): string {
@@ -58,13 +75,8 @@ export class TonConnectSender implements SenderAbstraction {
             });
         }
 
-        const transaction: SendTransactionRequest = {
-            validUntil: shardTransaction.validUntil,
-            messages,
-            network: chain == Network.TESTNET ? CHAIN.TESTNET : CHAIN.MAINNET,
-        };
-
         await sleep(delay * 1000);
-        return this.tonConnect.sendTransaction(transaction);
+        const responses = await this.sendChunkedMessages(messages, shardTransaction.validUntil, chain);
+        return responses[0];
     }
 }
