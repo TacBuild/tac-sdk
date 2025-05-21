@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Address, address, beginCell, Cell, fromNano, OpenedContract, toNano } from '@ton/ton';
+import { Address, address, beginCell, Cell, fromNano, OpenedContract, toNano, TonClient } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress, Wallet } from 'ethers';
 import type { SenderAbstraction } from '../sender';
 
@@ -119,7 +119,7 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TONParams?: TONParams,
     ): Promise<InternalTONParams> {
-        const contractOpener = TONParams?.contractOpener ?? (await orbsOpener4(network));
+        const contractOpener = TONParams?.contractOpener ?? new TonClient({ endpoint: network == Network.TESTNET ? testnet.PUBLIC_RPC_ENDPOINT : mainnet.PUBLIC_RPC_ENDPOINT });
         const settingsAddress = TONParams?.settingsAddress ?? artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
         const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
 
@@ -963,14 +963,14 @@ export class TacSdk {
             tvmExecutorFee: tvmExecutorFeeInTAC,
             tvmValidExecutors: this.TACParams.trustedTONExecutors,
             toBridge: assets
-                .filter((asset): asset is RawAssetBridgingData<WithAddressNFT_CollectionItem> & WithAddressFT => 
+                .filter((asset): asset is RawAssetBridgingData<WithAddressNFTCollectionItem> & WithAddressFT => 
                     asset.type === AssetType.FT)
                 .map((asset) => ({
                     evmAddress: asset.address!,
                     amount: asset.rawAmount,
                 })),
             toBridgeNFT: assets
-                .filter((asset): asset is RawAssetBridgingData<WithAddressNFT_CollectionItem> & WithAddressNFT_CollectionItem => 
+                .filter((asset): asset is RawAssetBridgingData<WithAddressNFTCollectionItem> & WithAddressNFTCollectionItem => 
                     asset.type === AssetType.NFT)
                 .map((asset) => ({
                     evmAddress: asset.collectionAddress,
