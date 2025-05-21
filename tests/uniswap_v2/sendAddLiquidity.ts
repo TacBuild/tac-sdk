@@ -3,13 +3,13 @@ import { ethers } from 'ethers';
 import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
 import { toNano } from '@ton/ton';
 
-const UNISWAPV2_PROXY_ADDRESS = '0x59C71E9156D3729858dcac1E8082770313089d9c';
+const UNISWAPV2_PROXY_ADDRESS = '0xc5bd40D45334AcDdaA324aE6eBDdf847148B8d93';
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 const TVM_TKB_ADDRESS = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
 const WALLET_VERSION = 'V3R2';
-const TVM_MNEMONICS = '';
+const TVM_MNEMONICS = process.env.TVM_MNEMONICS || '';
 
 async function addLiquidity() {
     const sdkParams: SDKParams = {

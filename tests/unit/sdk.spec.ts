@@ -84,6 +84,7 @@ describe('TacSDK', () => {
                     merkleRoots: [],
                     epochDelay,
                     nextVotingTime,
+                    maxRootsSize: 10,
                     sequencerMultisigAddress: sequencerMultisig.address.toString(),
                 },
                 CrossChainLayerCode,
@@ -171,7 +172,7 @@ describe('TacSDK', () => {
                     adminAddress: crossChainLayer.address,
                     content: beginCell().endCell(),
                     jettonWalletCode: JettonWalletCode,
-                    l2TokenAddress: '0x1234',
+                    evmTokenAddress: '0x1234',
                     totalSupply: 0,
                 },
                 JettonMinterCode,
@@ -342,7 +343,7 @@ describe('TacSDK', () => {
                 from: address(rawSender.getSenderAddress()),
                 to: crossChainLayer.address,
                 success: true,
-                op: CrossChainLayerOpCodes.anyone_l1MsgToL2,
+                op: CrossChainLayerOpCodes.anyone_tvmMsgToEVM,
             });
             expect((await crossChainLayer.getFullData()).protocolFeeSupply).toBe(tacProtocolFee);
         },

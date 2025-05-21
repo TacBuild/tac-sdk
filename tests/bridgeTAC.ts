@@ -14,14 +14,6 @@ async function bridgeTAC() {
 
     const sdkParams: SDKParams = {
         network: Network.TESTNET,
-        TACParams: {
-            provider: provider,
-            settingsAddress: '0xB44C6235a5e12dbAb2C3c2383EFAb5De28f8F656', // set local tac settings
-        },
-        TONParams: {
-            settingsAddress: 'EQCdbUTIKIbA4fx12LP1-23YsQh7oeSpN4noPhni2HOUTysc', // set local ton settings
-        },
-        customLiteSequencerEndpoints: ['http://localhost:8080'],
     };
     const tacSdk = await TacSdk.create(sdkParams);
 

@@ -25,6 +25,7 @@ import {
     WithAddressNFTCollectionItem,
     NFTAddressType,
     NFTItemData,
+    WithAddressFT,
 } from '../structs/Struct';
 // import internal structs
 import {
@@ -318,8 +319,7 @@ export class TacSdk {
             .storeCoins(crossChainTonAmount)
             .storeMaybeRef(transferData.feeData)
             .storeMaybeRef(transferData.evmData)
-            .endCell()
-            .beginParse();
+            .endCell();
 
         return NFTItem.transferMessage(
             queryId,
@@ -340,7 +340,7 @@ export class TacSdk {
         const feeData = generateFeeData(feeParams);
 
         return beginCell()
-            .storeUint(this.artifacts.ton.wrappers.CrossChainLayerOpCodes.anyone_l1MsgToL2, 32)
+            .storeUint(this.artifacts.ton.wrappers.CrossChainLayerOpCodes.anyone_tvmMsgToEVM, 32)
             .storeUint(queryId, 64)
             .storeUint(this.artifacts.ton.wrappers.OperationType.tonTransfer, 32)
             .storeCoins(crossChainTonAmount)
@@ -367,7 +367,7 @@ export class TacSdk {
         }
 
         const givenMinter = this.TONParams.contractOpener.open(new JettonMaster(address(asset.address)));
-        const l2Address = await givenMinter.getL2Address();
+        const evmAddress = await givenMinter.getEVMAddress();
         await sleep(this.delay * 1000);
 
         const expectedMinterAddress = await calculateContractAddress(
@@ -378,7 +378,7 @@ export class TacSdk {
                 .storeAddress(null)
                 .storeRef(beginCell().endCell())
                 .storeRef(this.TONParams.jettonWalletCode)
-                .storeStringTail(l2Address)
+                .storeStringTail(evmAddress)
                 .endCell(),
         );
 
@@ -963,22 +963,25 @@ export class TacSdk {
             tvmExecutorFee: tvmExecutorFeeInTAC,
             tvmValidExecutors: this.TACParams.trustedTONExecutors,
             toBridge: assets
-                .filter((asset) => asset.type === AssetType.FT)
+                .filter((asset): asset is RawAssetBridgingData<WithAddressNFT_CollectionItem> & WithAddressFT => 
+                    asset.type === AssetType.FT)
                 .map((asset) => ({
-                    l2Address: asset.address!,
+                    evmAddress: asset.address!,
                     amount: asset.rawAmount,
                 })),
             toBridgeNFT: assets
-                .filter((asset) => asset.type === AssetType.NFT)
+                .filter((asset): asset is RawAssetBridgingData<WithAddressNFT_CollectionItem> & WithAddressNFT_CollectionItem => 
+                    asset.type === AssetType.NFT)
                 .map((asset) => ({
-                    l2Address: asset.collectionAddress,
+                    evmAddress: asset.collectionAddress,
                     amount: 1n,
                     tokenId: asset.itemIndex,
                 })),
         };
+        
 
-        const encodedOutMessage = this.artifacts.tac.utils.encodeOutMessageV2(outMessage);
-        const outMsgVersion = 2n;
+        const encodedOutMessage = this.artifacts.tac.utils.encodeOutMessageV1(outMessage);
+        const outMsgVersion = 1n;
 
         const totalValue = value + BigInt(outMessage.tvmProtocolFee) + BigInt(outMessage.tvmExecutorFee);
 
@@ -1009,9 +1012,9 @@ export class TacSdk {
 
             if (givenMinterCodeBOC && this.TONParams.jettonMinterCode.equals(Cell.fromBoc(givenMinterCodeBOC)[0])) {
                 const givenMinter = this.TONParams.contractOpener.open(new JettonMaster(address(tvmTokenAddress)));
-                const l2Address = await givenMinter.getL2Address();
+                const evmAddress = await givenMinter.getEVMAddress();
                 await sleep(this.delay * 1000);
-                return l2Address;
+                return evmAddress;
             }
         }
 
@@ -1030,7 +1033,7 @@ export class TacSdk {
                 this.TACParams.provider,
             );
             const info = await contract.getInfo.staticCall();
-            return info.l1Address;
+            return info.tvmAddress;
         }
 
         const jettonMaster = JettonMaster.createFromConfig({
@@ -1056,7 +1059,7 @@ export class TacSdk {
                 this.TACParams.provider,
             );
             const info = await contract.getInfo.staticCall();
-            nftCollection = this.TONParams.contractOpener.open(NFTCollection.createFromAddress(info.l1Address));
+            nftCollection = this.TONParams.contractOpener.open(NFTCollection.createFromAddress(info.tvmAddress));
         } else {
             nftCollection = this.TONParams.contractOpener.open(
                 NFTCollection.createFromConfig(
@@ -1095,9 +1098,9 @@ export class TacSdk {
             const nftCollection = this.TONParams.contractOpener.open(
                 NFTCollection.createFromAddress(address(tvmNFTAddress)),
             );
-            const l2Address = await nftCollection.getOriginalAddress();
+            const evmAddress = await nftCollection.getOriginalAddress();
             await sleep(this.delay * 1000);
-            return l2Address.toString();
+            return evmAddress.toString();
         }
 
         return this.TACParams.tokenUtils.computeAddressERC721(tvmNFTAddress);

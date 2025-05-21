@@ -91,9 +91,9 @@ export function calculateEVMTokenAddress(
     tokenUtilsAddress: string,
     crossChainLayerTokenBytecode: string,
     crossChainLayerAddress: string,
-    l1Address: string,
+    tvmAddress: string,
 ): string {
-    const salt = ethers.keccak256(ethers.solidityPacked(['string'], [l1Address]));
+    const salt = ethers.keccak256(ethers.solidityPacked(['string'], [tvmAddress]));
     const initCode = ethers.solidityPacked(
         ['bytes', 'bytes'],
         [crossChainLayerTokenBytecode, abiCoder.encode(['address'], [crossChainLayerAddress])],
