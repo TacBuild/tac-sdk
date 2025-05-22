@@ -649,6 +649,7 @@ export class TacSdk {
 
         const contract = this.TONParams.contractOpener.open(new JettonMaster(address(precalculatedAddress)));
         const { content } = await contract.getJettonData();
+        await sleep(this.delay * 1000);
         if (!content.metadata.decimals) {
             // if decimals not specified use default value 9
             return toNano(asset.amount);
@@ -676,6 +677,7 @@ export class TacSdk {
                         const address = isEthereumAddress(asset.collectionAddress)
                             ? await this.getTVMNFTAddress(asset.collectionAddress, asset.itemIndex)
                             : await this.getNFTItemAddressTON(asset.collectionAddress, asset.itemIndex);
+                        await sleep(this.delay * 1000);
                         return {
                             address,
                             rawAmount: 1n,
