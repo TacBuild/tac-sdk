@@ -399,7 +399,7 @@ The ability to simulate the EVM message is crucial for testing and debugging cro
   - **`target`**: Target address on the EVM network.
   - **`methodName`**: Method name to execute on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
   - **`arguments`**: Encoded parameters for the EVM method.
-- **`extraData`**: Unstrusted Extra Data provided by executor.
+- **`extraData`**: Untrusted Extra Data provided by executor.
 - **`feeAssetAddress`**: TVM Fee Asset Address, empty string for native TON.
 - **`shardedId`**: Sharded ID.
 - **`tonAssets`**: An array of objects, each specifying the Assets details:
@@ -797,7 +797,7 @@ Represents a proxy message to a TAC.
 - **`evmTargetAddress`**: Target address on the EVM network.
 - **`methodName`** *(optional)*: Method name to be called on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
 - **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
-- **`gasLimit`** *(optional)*: `gasLimit` is a parameter that will be passed on the TAC side. The executor must allocate at least gasLimit gas for executing the transaction on the TAC side. If this parameter is not specified, it will be calculated using the `simulateTACMessage` method(prefered).
+- **`gasLimit`** *(optional)*: `gasLimit` is a parameter that will be passed on the TAC side. The executor must allocate at least gasLimit gas for executing the transaction on the TAC side. If this parameter is not specified, it will be calculated using the `simulateTACMessage` method(preferred).
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the crosschain transaction.
 
