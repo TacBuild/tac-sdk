@@ -1162,7 +1162,7 @@ export class TacSdk {
         for (const endpoint of this.liteSequencerEndpoints) {
             try {
                 const response = await axios.post<TACSimulationResponse>(
-                    `${endpoint}/tac/simulator/simulate-message`,
+                    new URL('tac/simulator/simulate-message', endpoint).toString(),
                     req,
                     {
                         transformResponse: [toCamelCaseTransformer],
