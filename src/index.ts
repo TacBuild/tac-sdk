@@ -9,3 +9,4 @@ export { JettonWallet, JettonWalletOpCodes } from './wrappers/JettonWallet';
 export { HighloadWalletV3 } from './wrappers/HighloadWalletV3';
 export { orbsOpener, liteClientOpener } from './adapters/contractOpener';
 export * from './errors';
+export { readJettonMetadata } from './wrappers/ContentUtils';
