@@ -1,7 +1,7 @@
 import { fromNano, internal, MessageRelaxed, SendMode } from '@ton/ton';
 
 import type { ContractOpener } from '../structs/Struct';
-import type { ShardTransaction } from '../structs/InternalStruct';
+import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 import { SenderAbstraction, sleep } from './SenderAbstraction';
 import { MAX_HIGHLOAD_GROUP_MSG_NUM, MAX_EXT_MSG_SIZE, MAX_MSG_DEPTH } from '../sdk/Consts';
@@ -19,7 +19,7 @@ export class BatchSender implements SenderAbstraction {
         delay: number,
         _chain: Network,
         contractOpener: ContractOpener,
-    ): Promise<unknown> {
+    ): Promise<SendResult[]> {
         const allMessages: MessageRelaxed[] = [];
         let minValidUntil = Number.MAX_SAFE_INTEGER;
 
@@ -39,11 +39,27 @@ export class BatchSender implements SenderAbstraction {
 
         const groups = await this.prepareGroups(allMessages);
 
-        const results = [];
+        const results: SendResult[] = [];
+        let currentMessageIndex = 0;
+
         for (const group of groups) {
             await sleep(delay * 1000);
-            const result = await this.sendGroup(group, contractOpener);
-            results.push(result);
+            try {
+                const result = await this.sendGroup(group, contractOpener);
+                results.push({
+                    success: true,
+                    result,
+                    lastMessageIndex: currentMessageIndex + group.length - 1,
+                });
+            } catch (error) {
+                results.push({
+                    success: false,
+                    error: error as Error,
+                    lastMessageIndex: currentMessageIndex - 1,
+                });
+                break; // Stop sending after first error
+            }
+            currentMessageIndex += group.length;
         }
 
         return results;
@@ -112,7 +128,7 @@ export class BatchSender implements SenderAbstraction {
         delay: number,
         _chain: Network,
         contractOpener: ContractOpener,
-    ): Promise<unknown> {
+    ): Promise<SendResult> {
         const messages: MessageRelaxed[] = [];
         for (const message of shardTransaction.messages) {
             messages.push(
@@ -126,6 +142,11 @@ export class BatchSender implements SenderAbstraction {
         }
 
         await sleep(delay * 1000);
-        return this.sendGroup(messages, contractOpener);
+        const result = await this.sendGroup(messages, contractOpener);
+        return {
+            success: true,
+            result,
+            lastMessageIndex: shardTransaction.messages.length - 1,
+        };
     }
 }

@@ -2,7 +2,7 @@ import { Base64 } from '@tonconnect/protocol';
 import type { SendTransactionRequest } from '@tonconnect/ui';
 import { CHAIN, TonConnectUI } from '@tonconnect/ui';
 
-import type { ShardTransaction } from '../structs/InternalStruct';
+import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { ContractOpener, Network } from '../structs/Struct';
 import { SenderAbstraction, sleep } from './SenderAbstraction';
 import { SendTransactionResponse } from '@tonconnect/sdk';
@@ -20,8 +20,9 @@ export class TonConnectSender implements SenderAbstraction {
         messages: SendTransactionRequest['messages'],
         validUntil: number,
         chain: Network,
-    ): Promise<SendTransactionResponse[]> {
-        const responses: SendTransactionResponse[] = [];
+    ): Promise<SendResult[]> {
+        const responses: SendResult[] = [];
+        let currentMessageIndex = 0;
 
         const chunkSize =
             //@ts-ignore // 'find' checks that maxMessages is a property of the feature
@@ -36,8 +37,22 @@ export class TonConnectSender implements SenderAbstraction {
                 network: chain == Network.TESTNET ? CHAIN.TESTNET : CHAIN.MAINNET,
             };
 
-            const response = await this.tonConnect.sendTransaction(transaction);
-            responses.push(response);
+            try {
+                const response = await this.tonConnect.sendTransaction(transaction);
+                responses.push({
+                    success: true,
+                    result: response,
+                    lastMessageIndex: currentMessageIndex + chunk.length - 1,
+                });
+                currentMessageIndex += chunk.length;
+            } catch (error) {
+                responses.push({
+                    success: false,
+                    error: error as Error,
+                    lastMessageIndex: currentMessageIndex - 1,
+                });
+                break; // Stop sending after first error
+            }
 
             if (i + chunkSize < messages.length) {
                 await sleep(1000);
@@ -52,9 +67,9 @@ export class TonConnectSender implements SenderAbstraction {
         delay: number,
         chain: Network,
         contractOpener?: ContractOpener,
-    ): Promise<SendTransactionResponse[]> {
+    ): Promise<SendResult[]> {
         const allMessages = [];
-        let minValidUntil = 0;
+        let minValidUntil = Number.MAX_SAFE_INTEGER;
 
         for (const transaction of shardTransactions) {
             for (const message of transaction.messages) {
@@ -79,7 +94,7 @@ export class TonConnectSender implements SenderAbstraction {
         shardTransaction: ShardTransaction,
         delay: number,
         chain: Network,
-    ): Promise<SendTransactionResponse> {
+    ): Promise<SendResult> {
         const messages = [];
         for (const message of shardTransaction.messages) {
             messages.push({

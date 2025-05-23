@@ -52,7 +52,7 @@ export type JettonBurnData = JettonBridgingData & {
 export type NFTBridgingData = RawAssetBridgingData & {
     type: AssetType.NFT;
     address: string;
-}
+};
 
 export type NFTTransferData = NFTBridgingData & {
     to: string;
@@ -67,7 +67,7 @@ export type NFTBurnData = NFTBridgingData & {
     evmData: Cell;
     crossChainTonAmount?: bigint;
     feeData?: Cell;
-}
+};
 
 export type InternalTONParams = {
     contractOpener: ContractOpener;
@@ -85,8 +85,8 @@ export type InternalTACParams = {
     crossChainLayer: testnet.tac.wrappers.CrossChainLayerTAC | mainnet.tac.wrappers.CrossChainLayerTAC;
     settings: testnet.tac.wrappers.SettingsTAC | testnet.tac.wrappers.SettingsTAC;
     tokenUtils: testnet.tac.wrappers.TokenUtilsTAC | mainnet.tac.wrappers.TokenUtilsTAC;
-    trustedTACExecutors: string[],
-    trustedTONExecutors: string[],
+    trustedTACExecutors: string[];
+    trustedTONExecutors: string[];
     abiCoder: ethers.AbiCoder;
     crossChainLayerABI: Interface | InterfaceAbi;
     crossChainLayerTokenABI: Interface | InterfaceAbi;
@@ -110,3 +110,10 @@ export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
 export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
 
 export type SuggestedTONExecutorFeeResponse = ResponseBase<SuggestedTONExecutorFee>;
+
+export interface SendResult {
+    success: boolean;
+    result?: unknown;
+    error?: Error;
+    lastMessageIndex?: number;
+}

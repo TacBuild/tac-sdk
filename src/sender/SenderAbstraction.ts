@@ -1,7 +1,7 @@
 import type { Contract, ContractProvider, MessageRelaxed, SendMode } from '@ton/ton';
 
 import type { ContractOpener } from '../structs/Struct';
-import type { ShardTransaction } from '../structs/InternalStruct';
+import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -27,12 +27,12 @@ export interface SenderAbstraction {
         delay: number,
         chain?: Network,
         contractOpener?: ContractOpener,
-    ): Promise<unknown>;
+    ): Promise<SendResult>;
     sendShardTransactions(
         shardTransactions: ShardTransaction[],
         delay: number,
         chain?: Network,
         contractOpener?: ContractOpener,
-    ): Promise<unknown>;
+    ): Promise<SendResult[]>;
     getSenderAddress(): string;
 }
