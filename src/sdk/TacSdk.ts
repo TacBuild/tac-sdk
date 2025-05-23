@@ -16,6 +16,7 @@ import {
     UserWalletBalanceExtended,
     TACSimulationResult,
     TACSimulationRequest,
+    SuggestedTONExecutorFee,
     FeeParams,
     ValidExecutors,
     CrossChainTransactionOptions,
@@ -38,6 +39,7 @@ import {
     ShardMessage,
     ShardTransaction,
     TACSimulationResponse,
+    SuggestedTONExecutorFeeResponse,
     NFTBurnData,
     NFTTransferData,
     NFTBridgingData,
@@ -52,6 +54,7 @@ import {
     TRANSACTION_TON_AMOUNT,
     DEFAULT_DELAY,
     NFT_TRANSFER_FORWARD_TON_AMOUNT,
+    TAC_SYMBOL,
 } from './Consts';
 import {
     buildEvmDataCell,
@@ -786,6 +789,35 @@ export class TacSdk {
         return await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, false, undefined);
     }
 
+    async getTVMExecutorFeeInfo(
+        assets: AssetBridgingData[],
+        feeSymbol: String,
+    ): Promise<SuggestedTONExecutorFee> {
+        const rawAssets = await this.convertAssetsToRawFormat(assets);
+        const requestBody = {
+            tonAssets: rawAssets.map((asset) => ({
+                amount: asset.rawAmount.toString(),
+                tokenAddress: asset.address || '',
+                assetType: asset.type,
+            })),
+            feeSymbol: feeSymbol,
+        };
+
+        for (const endpoint of this.liteSequencerEndpoints) {
+            try {
+                const response = await axios.post<SuggestedTONExecutorFeeResponse>(
+                    `${endpoint}/ton/calculator/ton-executor-fee`,
+                    requestBody,
+                );
+
+                return response.data.response;
+            } catch (error) {
+                console.error(`Error while calulating tvm executor fee ${endpoint}:`, error);
+            }
+        }
+        throw simulationError;
+    }
+
     private async prepareCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         caller: string,
@@ -918,6 +950,36 @@ export class TacSdk {
         if (assets == undefined) {
             assets = [];
         }
+        let tonAssets: AssetBridgingData[] = [];
+        for (const asset of assets) {
+            if (asset.type == AssetType.FT) {
+                const tvmAddress = await this.getTVMTokenAddress(asset.address!);
+                tonAssets.push({
+                    address: tvmAddress,
+                    rawAmount: asset.rawAmount,
+                    type: AssetType.FT,
+                });
+            } else {
+                const nftItemAddress = await this.getTVMNFTAddress(asset.collectionAddress, asset.itemIndex);
+                tonAssets.push({
+                    address: nftItemAddress,
+                    amount: 1,
+                    type: AssetType.NFT,
+                });
+            }
+        }
+
+        if (value > 0) {
+            const tvmAddress = await this.getTVMTokenAddress(await this.nativeTACAddress())
+            tonAssets.push({
+                address: tvmAddress,
+                rawAmount: value,
+                type: AssetType.FT,
+            })
+        }
+
+        const suggestedTONExecutorFee = await this.getTVMExecutorFeeInfo(tonAssets, TAC_SYMBOL);
+
         const crossChainLayerAddress = await this.TACParams.crossChainLayer.getAddress();
         for (const asset of assets) {
             if (asset.type == AssetType.FT) {
@@ -942,27 +1004,12 @@ export class TacSdk {
         const shardsKey = BigInt(Math.round(Math.random() * 1e18));
         const protocolFee = await this.TACParams.crossChainLayer.getProtocolFee();
 
-        let tvmExecutorFeeInTON = 0n;
-        if (tvmExecutorFee != undefined) {
-            tvmExecutorFeeInTON = tvmExecutorFee;
-        } else {
-            tvmExecutorFeeInTON =
-                (((toNano('0.065') + toNano('0.05')) * BigInt(assets.length + 1 + Number(value != 0n)) +
-                    toNano('0.2')) *
-                    120n) /
-                100n; // TODO calc that
-        }
-        const tonToTacRate = 100n;
-        const scale = 10n ** 9n;
-        const tonToTacRateScaled = tonToTacRate * scale;
-        const tvmExecutorFeeInTAC = tonToTacRateScaled * tvmExecutorFeeInTON;
-
         const outMessage = {
             shardsKey: shardsKey,
             tvmTarget: tonTarget,
             tvmPayload: '',
             tvmProtocolFee: protocolFee,
-            tvmExecutorFee: tvmExecutorFeeInTAC,
+            tvmExecutorFee: tvmExecutorFee ?? BigInt(suggestedTONExecutorFee.inTAC),
             tvmValidExecutors: this.TACParams.trustedTONExecutors,
             toBridge: assets
                 .filter((asset): asset is RawAssetBridgingData<WithAddressNFTCollectionItem> & WithAddressFT => 
@@ -980,7 +1027,6 @@ export class TacSdk {
                     tokenId: asset.itemIndex,
                 })),
         };
-        
 
         const encodedOutMessage = this.artifacts.tac.utils.encodeOutMessageV1(outMessage);
         const outMsgVersion = 1n;

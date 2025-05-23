@@ -360,6 +360,11 @@ export type TACSimulationResult = {
     };
 };
 
+export type SuggestedTONExecutorFee = {
+    inTAC: string;
+    inTON: string;
+};
+
 export type FeeParams = {
     isRoundTrip: boolean;
     gasLimit: bigint;

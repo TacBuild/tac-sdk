@@ -9,6 +9,7 @@ import {
     StatusInfosByOperationId,
     OperationType,
     AssetType,
+    SuggestedTONExecutorFee,
 } from './Struct';
 import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
 import { mainnet, testnet } from '@tonappchain/artifacts';
@@ -107,3 +108,5 @@ export type OperationIdsByShardsKeyResponse = ResponseBase<OperationIdsByShardsK
 export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
 
 export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
+
+export type SuggestedTONExecutorFeeResponse = ResponseBase<SuggestedTONExecutorFee>;
