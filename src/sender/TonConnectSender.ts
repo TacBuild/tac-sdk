@@ -5,7 +5,6 @@ import { CHAIN, TonConnectUI } from '@tonconnect/ui';
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { ContractOpener, Network } from '../structs/Struct';
 import { SenderAbstraction, sleep } from './SenderAbstraction';
-import { SendTransactionResponse } from '@tonconnect/sdk';
 
 const CHUNK_SIZE = 4;
 
@@ -66,7 +65,7 @@ export class TonConnectSender implements SenderAbstraction {
         shardTransactions: ShardTransaction[],
         delay: number,
         chain: Network,
-        contractOpener?: ContractOpener,
+        _contractOpener?: ContractOpener,
     ): Promise<SendResult[]> {
         const allMessages = [];
         let minValidUntil = Number.MAX_SAFE_INTEGER;
