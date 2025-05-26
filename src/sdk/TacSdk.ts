@@ -122,7 +122,7 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TONParams?: TONParams,
     ): Promise<InternalTONParams> {
-        const contractOpener = TONParams?.contractOpener ?? new TonClient({ endpoint: network == Network.TESTNET ? testnet.PUBLIC_RPC_ENDPOINT : mainnet.PUBLIC_RPC_ENDPOINT });
+        const contractOpener = TONParams?.contractOpener ?? new TonClient({ endpoint: network == Network.TESTNET ? testnet.TON_RPC_ENDPOINT_BY_TAC : mainnet.TON_PUBLIC_RPC_ENDPOINT });
         const settingsAddress = TONParams?.settingsAddress ?? artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
         const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
 
