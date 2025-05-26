@@ -2,28 +2,31 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [How Tracking Works](#how-tracking-works)
-- [Getting Started](#getting-started)
-- [Tracking by Transaction Link](#tracking-by-transaction-link)
-  - [`getOperationId`](#getoperationid)
-  - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
-- [Detailed Operation Info](#detailed-operation-info)
-  - [`getOperationStatus`](#getoperationstatus)
-  - [`getOperationStatuses`](#getoperationstatuses)
-- [Execution Profiling](#execution-profiling)
-  - [`getStageProfiling`](#getstageprofiling)
-  - [`getStageProfilings`](#getstageprofilings)
-- [Other Metadata](#other-metadata)
-  - [`getOperationType`](#getoperationtype)
-  - [`getOperationIdsByShardsKeys`](#getoperationidsbyshardskeys)
+- [OperationTracker Class](#operationtracker-class)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [How Tracking Works](#how-tracking-works)
+  - [Getting Started](#getting-started)
+  - [Architecture](#architecture)
+  - [Tracking by Transaction Link](#tracking-by-transaction-link)
+    - [`getOperationId`](#getoperationid)
+    - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
+  - [Detailed Operation Info](#detailed-operation-info)
+    - [`getOperationStatus`](#getoperationstatus)
+    - [`getOperationStatuses`](#getoperationstatuses)
+  - [Execution Profiling](#execution-profiling)
+    - [`getStageProfiling`](#getstageprofiling)
+    - [`getStageProfilings`](#getstageprofilings)
+  - [Other Metadata](#other-metadata)
+    - [`getOperationType`](#getoperationtype)
+    - [`getOperationIdsByShardsKeys`](#getoperationidsbyshardskeys)
 
 ---
 
 ## Overview
 
 `OperationTracker` allows monitoring the lifecycle of cross-chain transactions between TON and TAC.  
-It queries the Lite Sequencer for status updates, execution breakdowns, and operation IDs associated with TON transactions.
+It queries multiple Lite Sequencer endpoints for status updates, execution breakdowns, and operation IDs associated with TON transactions, providing automatic failover if one endpoint fails.
 
 ---
 
@@ -54,6 +57,23 @@ const tracker = new OperationTracker(
 
 ---
 
+## Architecture
+
+`OperationTracker` uses multiple `LiteSequencerClient` instances internally to provide high availability and automatic failover:
+
+1. Each endpoint is wrapped in its own `LiteSequencerClient`
+2. Requests are tried on each client in sequence until one succeeds
+3. If all clients fail, an error is thrown
+
+This architecture provides:
+- Automatic failover if an endpoint is down
+- Load distribution across multiple endpoints
+- Consistent interface regardless of endpoint availability
+
+For more details about the underlying client, see [`LiteSequencerClient`](./lite_sequencer_client.md).
+
+---
+
 ## Tracking by Transaction Link
 
 ### `getOperationId`
@@ -62,7 +82,7 @@ const tracker = new OperationTracker(
 getOperationId(transactionLinker: TransactionLinker): Promise<string>
 ```
 
-Fetches the crosschain `operationId` based on a transaction linker.
+Fetches the crosschain `operationId` based on a transaction linker. Tries each endpoint in sequence until successful.
 
 ---
 
@@ -91,7 +111,7 @@ getOperationStatus(operationId: string): Promise<StatusInfo>
 ### `getOperationStatuses`
 
 ```ts
-getOperationStatuses(operationIds: string[]): Promise<StatusInfosByOperationId>
+getOperationStatuses(operationIds: string[], chunkSize?: number): Promise<StatusInfosByOperationId>
 ```
 
 **Returns:** [`StatusInfosByOperationId`](./../models/structs.md#statusinfosbyoperationId)
@@ -115,7 +135,7 @@ getStageProfiling(operationId: string): Promise<ExecutionStages>
 ### `getStageProfilings`
 
 ```ts
-getStageProfilings(operationIds: string[]): Promise<ExecutionStagesByOperationId>
+getStageProfilings(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesByOperationId>
 ```
 
 **Returns:** [`ExecutionStagesByOperationId`](./../models/structs.md#executionstagesbyoperationid)
@@ -139,8 +159,12 @@ getOperationType(operationId: string): Promise<OperationType>
 ### `getOperationIdsByShardsKeys`
 
 ```ts
-getOperationIdsByShardsKeys(shardsKeys: string[], caller: string): Promise<OperationIdsByShardsKey>
+getOperationIdsByShardsKeys(
+  shardsKeys: string[],
+  caller: string,
+  chunkSize?: number
+): Promise<OperationIdsByShardsKey>
 ```
 
-**Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationddsbyshardskey)
+**Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey)
   - Maps TON shard keys (with caller address) to operation IDs.
