@@ -27,11 +27,14 @@ export class LiteSequencerClient {
 
     async getOperationType(operationId: string): Promise<OperationType> {
         try {
-            const response = await axios.get<OperationTypeResponse>(`${this.endpoint}/operation-type`, {
-                params: {
-                    operationId,
+            const response = await axios.get<OperationTypeResponse>(
+                new URL('operation-type', this.endpoint).toString(),
+                {
+                    params: {
+                        operationId,
+                    },
                 },
-            });
+            );
             return response.data.response || '';
         } catch (error) {
             console.error(`Failed to get operationType with ${this.endpoint}:`, error);
@@ -48,12 +51,15 @@ export class LiteSequencerClient {
         };
 
         try {
-            const response = await axios.post<StringResponse>(`${this.endpoint}/ton/operation-id`, requestBody);
+            const response = await axios.post<StringResponse>(
+                new URL('ton/operation-id', this.endpoint).toString(),
+                requestBody,
+            );
             return response.data.response || '';
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 if (error.response?.status === 404) {
-                    console.warn(`404 Not Found: ${this.endpoint}/ton/operation-id`);
+                    console.warn(`404 Not Found: ${new URL('ton/operation-id', this.endpoint).toString()}`);
                     return '';
                 }
             }
@@ -76,7 +82,7 @@ export class LiteSequencerClient {
                 shardsKeys,
                 async (chunk) => {
                     const response = await axios.post<OperationIdsByShardsKeyResponse>(
-                        `${this.endpoint}/operation-ids-by-shards-keys`,
+                        new URL('operation-ids-by-shards-keys', this.endpoint).toString(),
                         {
                             shardsKeys: chunk,
                             caller: caller,
@@ -107,7 +113,7 @@ export class LiteSequencerClient {
                 operationIds,
                 async (chunk) => {
                     const response = await axios.post<StageProfilingResponse>(
-                        `${this.endpoint}/stage-profiling`,
+                        new URL('stage-profiling', this.endpoint).toString(),
                         {
                             operationIds: chunk,
                         },
@@ -140,7 +146,7 @@ export class LiteSequencerClient {
                 operationIds,
                 async (chunk) => {
                     const response = await axios.post<StatusesResponse>(
-                        `${this.endpoint}/status`,
+                        new URL('status', this.endpoint).toString(),
                         {
                             operationIds: chunk,
                         },

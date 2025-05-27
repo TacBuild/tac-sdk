@@ -122,7 +122,14 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TONParams?: TONParams,
     ): Promise<InternalTONParams> {
-        const contractOpener = TONParams?.contractOpener ?? new TonClient({ endpoint: network == Network.TESTNET ? testnet.TON_RPC_ENDPOINT_BY_TAC : mainnet.TON_PUBLIC_RPC_ENDPOINT });
+        const contractOpener =
+            TONParams?.contractOpener ??
+            new TonClient({
+                endpoint:
+                    network == Network.TESTNET
+                        ? new URL('api/v2/jsonRPC', testnet.TON_RPC_ENDPOINT_BY_TAC).toString()
+                        : mainnet.TON_PUBLIC_RPC_ENDPOINT,
+            });
         const settingsAddress = TONParams?.settingsAddress ?? artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
         const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
 
@@ -789,10 +796,7 @@ export class TacSdk {
         return await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, false, undefined);
     }
 
-    async getTVMExecutorFeeInfo(
-        assets: AssetBridgingData[],
-        feeSymbol: String,
-    ): Promise<SuggestedTONExecutorFee> {
+    async getTVMExecutorFeeInfo(assets: AssetBridgingData[], feeSymbol: String): Promise<SuggestedTONExecutorFee> {
         const rawAssets = await this.convertAssetsToRawFormat(assets);
         const requestBody = {
             tonAssets: rawAssets.map((asset) => ({
@@ -970,12 +974,12 @@ export class TacSdk {
         }
 
         if (value > 0) {
-            const tvmAddress = await this.getTVMTokenAddress(await this.nativeTACAddress())
+            const tvmAddress = await this.getTVMTokenAddress(await this.nativeTACAddress());
             tonAssets.push({
                 address: tvmAddress,
                 rawAmount: value,
                 type: AssetType.FT,
-            })
+            });
         }
 
         const suggestedTONExecutorFee = await this.getTVMExecutorFeeInfo(tonAssets, TAC_SYMBOL);
@@ -1012,15 +1016,21 @@ export class TacSdk {
             tvmExecutorFee: tvmExecutorFee ?? BigInt(suggestedTONExecutorFee.inTAC),
             tvmValidExecutors: this.TACParams.trustedTONExecutors,
             toBridge: assets
-                .filter((asset): asset is RawAssetBridgingData<WithAddressNFTCollectionItem> & WithAddressFT => 
-                    asset.type === AssetType.FT)
+                .filter(
+                    (asset): asset is RawAssetBridgingData<WithAddressNFTCollectionItem> & WithAddressFT =>
+                        asset.type === AssetType.FT,
+                )
                 .map((asset) => ({
                     evmAddress: asset.address!,
                     amount: asset.rawAmount,
                 })),
             toBridgeNFT: assets
-                .filter((asset): asset is RawAssetBridgingData<WithAddressNFTCollectionItem> & WithAddressNFTCollectionItem => 
-                    asset.type === AssetType.NFT)
+                .filter(
+                    (
+                        asset,
+                    ): asset is RawAssetBridgingData<WithAddressNFTCollectionItem> & WithAddressNFTCollectionItem =>
+                        asset.type === AssetType.NFT,
+                )
                 .map((asset) => ({
                     evmAddress: asset.collectionAddress,
                     amount: 1n,
