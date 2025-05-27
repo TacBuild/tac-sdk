@@ -1,4 +1,14 @@
-import { Network, TransactionLinker, SimplifiedStatuses, OperationType } from '../structs/Struct';
+import {
+    Network,
+    TransactionLinker,
+    SimplifiedStatuses,
+    OperationType,
+    OperationIdsByShardsKey,
+    ExecutionStages,
+    ExecutionStagesByOperationId,
+    StatusInfosByOperationId,
+    StatusInfo,
+} from '../structs/Struct';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { LiteSequencerClient } from './LiteSequencerClient';
 
@@ -37,7 +47,11 @@ export class OperationTracker {
         throw new Error('All endpoints failed to get operation id');
     }
 
-    async getOperationIdsByShardsKeys(shardsKeys: string[], caller: string, chunkSize: number = 100) {
+    async getOperationIdsByShardsKeys(
+        shardsKeys: string[],
+        caller: string,
+        chunkSize: number = 100,
+    ): Promise<OperationIdsByShardsKey> {
         for (const client of this.clients) {
             try {
                 return await client.getOperationIdsByShardsKeys(shardsKeys, caller, chunkSize);
@@ -48,10 +62,15 @@ export class OperationTracker {
         throw new Error('All endpoints failed to get operation ids by shards keys');
     }
 
-    async getStageProfiling(operationId: string) {
+    async getStageProfiling(operationId: string): Promise<ExecutionStages> {
         for (const client of this.clients) {
             try {
-                return await client.getStageProfilings([operationId]);
+                const map = await client.getStageProfilings([operationId]);
+                const result = map[operationId];
+                if (!result) {
+                    throw new Error(`No stageProfiling data for operationId=${operationId}`);
+                }
+                return result;
             } catch (error) {
                 console.error('Failed to get stage profiling:', error);
             }
@@ -59,7 +78,7 @@ export class OperationTracker {
         throw new Error('All endpoints failed to get stage profiling');
     }
 
-    async getStageProfilings(operationIds: string[], chunkSize: number = 100) {
+    async getStageProfilings(operationIds: string[], chunkSize: number = 100): Promise<ExecutionStagesByOperationId> {
         for (const client of this.clients) {
             try {
                 return await client.getStageProfilings(operationIds, chunkSize);
@@ -70,7 +89,7 @@ export class OperationTracker {
         throw new Error('All endpoints failed to get stage profilings');
     }
 
-    async getOperationStatuses(operationIds: string[], chunkSize: number = 100) {
+    async getOperationStatuses(operationIds: string[], chunkSize: number = 100): Promise<StatusInfosByOperationId> {
         for (const client of this.clients) {
             try {
                 return await client.getOperationStatuses(operationIds, chunkSize);
@@ -81,10 +100,15 @@ export class OperationTracker {
         throw new Error('All endpoints failed to get operation statuses');
     }
 
-    async getOperationStatus(operationId: string) {
+    async getOperationStatus(operationId: string): Promise<StatusInfo> {
         for (const client of this.clients) {
             try {
-                return await client.getOperationStatuses([operationId]);
+                const map = await client.getOperationStatuses([operationId]);
+                const result = map[operationId];
+                if (!result) {
+                    throw new Error(`No operation status for operationId=${operationId}`);
+                }
+                return result;
             } catch (error) {
                 console.error('Failed to get operation status:', error);
             }
