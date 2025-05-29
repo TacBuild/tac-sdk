@@ -12,10 +12,14 @@ All notable changes to this project will be documented in this file.
 - Added advanced options to `sendCrossChainTransaction`.
 - Methods to work with NFT items: bridging and gettings addresses.
 - Method to send multiple crosschain transactions at once: `sendCrossChainTransactions`.
+- LiteSequencerClient to handle lite sequencer requests and its parameters.
+- Batch sending support for crosschain transactions.
+- Error handling while sending crosschain transactions.
 
 ### Changed
 
 - `getEVMTokenAddress` now automatically normalizes addresses to `EQ` form.
+- TonClient with TAC endpoint as default contract opener.
 
 ## [0.5.7] - 2025-04-01
 

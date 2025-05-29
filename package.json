@@ -1,6 +1,6 @@
 {
   "name": "@tonappchain/sdk",
-  "version": "0.5.7",
+  "version": "0.6.1-v3.0.5",
   "repository": "https://github.com/TacBuild/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
