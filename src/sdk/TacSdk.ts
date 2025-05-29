@@ -72,7 +72,6 @@ import {
 } from './Utils';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { emptyContractError, simulationError } from '../errors';
-import { orbsOpener4 } from '../adapters/contractOpener';
 import { NFTCollection, NFTItem } from '@tonappchain/artifacts/dist/src/ton/wrappers';
 import { invalidAssetType } from '../errors/instances';
 import { SandboxContract } from '@ton/sandbox';
@@ -729,7 +728,6 @@ export class TacSdk {
             },
             evmValidExecutors: evmValidExecutors,
             extraData: '0x',
-            feeAssetAddress: '',
             shardsKey: transactionLinker.shardsKey,
             tonAssets: rawAssets.map((asset) => ({
                 amount: asset.rawAmount.toString(),
@@ -816,7 +814,7 @@ export class TacSdk {
 
                 return response.data.response;
             } catch (error) {
-                console.error(`Error while calulating tvm executor fee ${endpoint}:`, error);
+                console.error(`Error while calculating tvm executor fee ${endpoint}:`, error);
             }
         }
         throw simulationError;

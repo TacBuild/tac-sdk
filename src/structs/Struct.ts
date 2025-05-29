@@ -219,7 +219,6 @@ export type TACSimulationRequest = {
     };
     evmValidExecutors: string[];
     extraData: string;
-    feeAssetAddress: string;
     shardsKey: string;
 
     tonAssets: {
