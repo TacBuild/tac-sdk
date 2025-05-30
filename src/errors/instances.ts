@@ -42,7 +42,7 @@ export const invalidMethodNameError = (methodName: string) =>
         111,
     );
 
-export const simulationError = new FetchError('Failed to simulate EVM call', 112);
+export const simulationError = (inner: unknown) => new FetchError(`Failed to simulate EVM call: ${inner}`, 112, inner);
 
 export const profilingFetchError = (msg: string) => new FetchError(`failed to fetch stage profiling: ${msg}`, 113);
 

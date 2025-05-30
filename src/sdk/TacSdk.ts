@@ -805,6 +805,7 @@ export class TacSdk {
             feeSymbol: feeSymbol,
         };
 
+        let lastError;
         for (const endpoint of this.liteSequencerEndpoints) {
             try {
                 const response = await axios.post<SuggestedTONExecutorFeeResponse>(
@@ -815,9 +816,10 @@ export class TacSdk {
                 return response.data.response;
             } catch (error) {
                 console.error(`Error while calculating tvm executor fee ${endpoint}:`, error);
+                lastError = error;
             }
         }
-        throw simulationError;
+        throw simulationError(lastError);
     }
 
     private async prepareCrossChainTransaction(
@@ -1167,6 +1169,7 @@ export class TacSdk {
     }
 
     async simulateTACMessage(req: TACSimulationRequest): Promise<TACSimulationResult> {
+        let lastError;
         for (const endpoint of this.liteSequencerEndpoints) {
             try {
                 const response = await axios.post<TACSimulationResponse>(
@@ -1180,8 +1183,9 @@ export class TacSdk {
                 return response.data.response;
             } catch (error) {
                 console.error(`Error while simulating with ${endpoint}:`, error);
+                lastError = error;
             }
         }
-        throw simulationError;
+        throw simulationError(lastError);
     }
 }

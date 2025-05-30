@@ -15,9 +15,12 @@ export class ContractError extends ErrorWithStatusCode {
 }
 
 export class FetchError extends ErrorWithStatusCode {
-    constructor(message: string, errorCode: number) {
+    readonly inner?: unknown;
+
+    constructor(message: string, errorCode: number, inner?: unknown) {
         super(message, errorCode);
         this.name = 'FetchError';
+        this.inner = inner;
     }
 }
 
