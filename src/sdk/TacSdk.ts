@@ -1082,15 +1082,15 @@ export class TacSdk {
     async getTVMTokenAddress(evmTokenAddress: string): Promise<string> {
         validateEVMAddress(evmTokenAddress);
 
-        const bytecode = await this.TACParams.provider.getCode(evmTokenAddress);
+        const exists = await this.TACParams.tokenUtils['exists(address)'](evmTokenAddress);
 
-        if (bytecode.includes(ethers.id('getInfo()').slice(2, 10))) {
-            const contract = new ethers.Contract(
+        if (exists) {
+            const erc721Token = this.artifacts.tac.wrappers.CrossChainLayerERC20FactoryTAC.connect(
                 evmTokenAddress,
-                this.TACParams.crossChainLayerTokenABI,
                 this.TACParams.provider,
             );
-            const info = await contract.getInfo.staticCall();
+
+            const info = await erc721Token.getInfo();
             return info.tvmAddress;
         }
 
@@ -1109,15 +1109,16 @@ export class TacSdk {
 
         let nftCollection: OpenedContract<NFTCollection> | SandboxContract<NFTCollection>;
 
-        const bytecode = await this.TACParams.provider.getCode(evmNFTAddress);
-        if (bytecode.includes(ethers.id('getInfo()').slice(2, 10))) {
-            const contract = new ethers.Contract(
+        const exists = await this.TACParams.tokenUtils['exists(address)'](evmNFTAddress);
+
+        if (exists) {
+            const erc721Token = this.artifacts.tac.wrappers.CrossChainLayerERC721FactoryTAC.connect(
                 evmNFTAddress,
-                this.TACParams.crossChainLayerNFTABI,
                 this.TACParams.provider,
             );
-            const info = await contract.getInfo.staticCall();
-            nftCollection = this.TONParams.contractOpener.open(NFTCollection.createFromAddress(info.tvmAddress));
+
+            const info = await erc721Token.getInfo();
+            nftCollection = this.TONParams.contractOpener.open(NFTCollection.createFromAddress(address(info.tvmAddress)));
         } else {
             nftCollection = this.TONParams.contractOpener.open(
                 NFTCollection.createFromConfig(
