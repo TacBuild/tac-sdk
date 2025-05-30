@@ -1,6 +1,6 @@
 export { TacSdk } from './sdk/TacSdk';
 export { OperationTracker } from './sdk/OperationTracker';
-export { startTracking } from './sdk/StartTracking';
+export { startTracking, startTrackingMultiple } from './sdk/StartTracking';
 export * from './sender';
 export * from './structs/Struct';
 export { Network, SimplifiedStatuses } from './structs/Struct';

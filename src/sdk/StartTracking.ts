@@ -94,6 +94,57 @@ export async function startTracking(
     }
 }
 
+export async function startTrackingMultiple(
+    transactionLinkers: TransactionLinker[],
+    network: Network,
+    options?: {
+        customLiteSequencerEndpoints?: string[];
+        delay?: number;
+        maxIterationCount?: number;
+        returnValue?: boolean;
+        tableView?: boolean;
+    },
+): Promise<void | ExecutionStages[]> {
+    const {
+        customLiteSequencerEndpoints,
+        delay = 10,
+        maxIterationCount = MAX_ITERATION_COUNT,
+        returnValue = false,
+        tableView = true,
+    } = options || {};
+
+    console.log(`Start tracking ${transactionLinkers.length} operations`);
+
+    const results = await Promise.all(
+        transactionLinkers.map((linker, index) => {
+            console.log(`\nProcessing operation ${index + 1}/${transactionLinkers.length}`);
+            return startTracking(linker, network, {
+                customLiteSequencerEndpoints,
+                delay,
+                maxIterationCount,
+                returnValue: true,
+                tableView: false,
+            });
+        })
+    );
+
+    if (returnValue) {
+        return results as ExecutionStages[];
+    }
+
+    if (tableView) {
+        results.forEach((result, index) => {
+            console.log(`\nResults for operation ${index + 1}:`);
+            printExecutionStagesTable(result as ExecutionStages);
+        });
+    } else {
+        results.forEach((result, index) => {
+            console.log(`\nResults for operation ${index + 1}:`);
+            console.log(formatExecutionStages(result as ExecutionStages));
+        });
+    }
+}
+
 function formatExecutionStages(stages: ExecutionStages) {
     const { operationType, metaInfo, ...stagesData } = stages;
 
