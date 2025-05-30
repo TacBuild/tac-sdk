@@ -155,11 +155,14 @@ const evmProxyMsg: EvmProxyMsg = {
 const assets: AssetBridgingData[] = [
     {
         address: TVMtokenAAddress,
-        amount: tokenAAmount
+        amount: tokenAAmount,
+        type: AssetType.FT,
+
     },
     {
         address: TVMtokenBAddress,
-        amount: tokenBAmount
+        amount: tokenBAmount,
+        type: AssetType.FT,
     }
 ];
 

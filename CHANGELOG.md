@@ -15,10 +15,12 @@ All notable changes to this project will be documented in this file.
 - LiteSequencerClient to handle lite sequencer requests and its parameters.
 - Batch sending support for crosschain transactions.
 - Error handling while sending crosschain transactions.
+- Method to calculate tvmExecutorFee: `getTVMExecutorFeeInfo`.
 
 ### Changed
 
 - `getEVMTokenAddress` now automatically normalizes addresses to `EQ` form.
+- For TAC->TON transactions tvmExecutorFee calculated via lite sequencer.
 - TonClient with TAC endpoint as default contract opener.
 
 ## [0.5.7] - 2025-04-01

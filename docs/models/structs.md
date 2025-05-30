@@ -22,6 +22,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`TACSimulationRequest`](#tacsimulationrequest)
 - [`TACSimulationResult`](#tacsimulationresult)
 - [`ExecutionFeeEstimationResult`](#executionfeeestimationresult)
+- [`SuggestedTONExecutorFee`](#suggestedtonexecutorfee)
 
 ### Execution & Status
 - [`TransactionData`](#transactiondata)
@@ -353,6 +354,28 @@ Used to pre-evaluate:
 - how much fee is required in the chosen asset.
 
 Enables safe transaction previews before actual submission.
+
+Here's your corrected structure documentation in the same format:
+
+### `SuggestedTONExecutorFee`
+
+```ts
+export type SuggestedTONExecutorFee = {
+  inTAC: string;
+  inTON: string;
+}
+```
+
+#### **Description**  
+Contains estimated tvm executor fee for TON bridging operations in both TAC and TON denominations.
+
+#### **Fields**  
+- **`inTAC`**: Fee amount in TAC tokens
+- **`inTON`**: Fee amount in TON tokens
+
+#### **Purpose**  
+Allows users to:
+- Estimate costs before initiating transactions in both currencies 
 
 ### `TransactionData`
 

@@ -42,6 +42,8 @@
   - [Advanced](#advanced)
     - [`simulateTACMessage`](#simulatetacmessage)
       - [**Returns** `TACSimulationResult`](#returns-tacsimulationresult)
+    - [`getTVMExecutorFeeInfo`](#gettvmexecutorfeeinfo)
+      - [**Returns** `SuggestedTONExecutorFee`](#returns-suggestedtonexecutorfee)
     - [`bridgeTokensToTON`](#bridgetokenstoton)
       - [**Parameters**](#parameters-4)
       - [**Returns** `Promise<string>`](#returns-promisestring)
@@ -336,6 +338,22 @@ Simulates EVM-side contract call with a TAC header and TON asset context.
 
 #### **Returns** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)
   - Simulation result on TAC.
+
+---
+
+### `getTVMExecutorFeeInfo`
+
+```ts
+  getTVMExecutorFeeInfo(
+    assets: AssetBridgingData[], 
+    feeSymbol: String
+  ): Promise<SuggestedTONExecutorFee> 
+```
+
+Calculates the TVM executor fee for bridging `assets` to TON. The `feeSymbol` determines the token used to pay the fee - TAC for direct TAC->TON operations, or TON for TON->TAC->TON messages.
+
+#### **Returns** [`SuggestedTONExecutorFee`](./../models/structs.md#suggestedtonexecutorfee)
+  - Estimated tvmExecutorFee in both TAC and TON.
 
 ---
 
