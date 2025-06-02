@@ -1104,7 +1104,7 @@ export class TacSdk {
         return jettonMaster.address.toString();
     }
 
-    async getTVMNFTAddress(evmNFTAddress: string, tokenId?: number |bigint): Promise<string> {
+    async getTVMNFTAddress(evmNFTAddress: string, tokenId?: number | bigint): Promise<string> {
         validateEVMAddress(evmNFTAddress);
 
         let nftCollection: OpenedContract<NFTCollection> | SandboxContract<NFTCollection>;
@@ -1119,6 +1119,15 @@ export class TacSdk {
 
             const info = await erc721Token.getInfo();
             nftCollection = this.TONParams.contractOpener.open(NFTCollection.createFromAddress(address(info.tvmAddress)));
+
+            return tokenId == undefined
+                ? nftCollection.address.toString()
+                : NFTItem.createFromConfig({
+                    collectionAddress: nftCollection.address,
+                    cclAddress: address(this.TONParams.crossChainLayerAddress),
+                    // @ts-ignore // bigint can be used, wrapper is not typed properly
+                    index: tokenId,
+                }, this.TONParams.nftItemCode).address.toString();
         } else {
             nftCollection = this.TONParams.contractOpener.open(
                 NFTCollection.createFromConfig(
@@ -1131,16 +1140,11 @@ export class TacSdk {
                     this.TONParams.nftCollectionCode,
                 ),
             );
-        }
 
-        return tokenId == undefined
-            ? nftCollection.address.toString()
-            : NFTItem.createFromConfig({
-                collectionAddress: nftCollection.address,
-                cclAddress: address(this.TONParams.crossChainLayerAddress),
-                // @ts-ignore // bigint can be used, wrapper is not typed properly
-                index: tokenId,
-            }, this.TONParams.nftItemCode).address.toString();
+            return tokenId == undefined
+                ? nftCollection.address.toString()
+                : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
+        }
     }
 
     async getEVMNFTAddress(tvmNFTAddress: string, addressType: NFTAddressType): Promise<string> {

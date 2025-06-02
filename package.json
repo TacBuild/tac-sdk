@@ -1,6 +1,6 @@
 {
   "name": "@tonappchain/sdk",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "repository": "https://github.com/TacBuild/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
@@ -45,8 +45,8 @@
     "jest": "^29.7.0",
     "prettier": "^3.5.3",
     "ts-jest": "^29.2.6",
-    "ts-node": "^10.9.2", 
-    "typescript": "^5.7.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3",
     "typescript-eslint": "^8.17.0"
   },
   "publishConfig": {
