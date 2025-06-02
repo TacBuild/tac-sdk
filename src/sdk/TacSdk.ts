@@ -1122,12 +1122,7 @@ export class TacSdk {
 
             return tokenId == undefined
                 ? nftCollection.address.toString()
-                : NFTItem.createFromConfig({
-                    collectionAddress: nftCollection.address,
-                    cclAddress: address(this.TONParams.crossChainLayerAddress),
-                    // @ts-ignore // bigint can be used, wrapper is not typed properly
-                    index: tokenId,
-                }, this.TONParams.nftItemCode).address.toString();
+                : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
         } else {
             nftCollection = this.TONParams.contractOpener.open(
                 NFTCollection.createFromConfig(
@@ -1143,7 +1138,12 @@ export class TacSdk {
 
             return tokenId == undefined
                 ? nftCollection.address.toString()
-                : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
+                : NFTItem.createFromConfig({
+                    collectionAddress: nftCollection.address,
+                    cclAddress: address(this.TONParams.crossChainLayerAddress),
+                    // @ts-ignore // bigint can be used, wrapper is not typed properly
+                    index: tokenId,
+                }, this.TONParams.nftItemCode).address.toString();
         }
     }
 
