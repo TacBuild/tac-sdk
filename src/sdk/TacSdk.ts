@@ -1104,7 +1104,7 @@ export class TacSdk {
         return jettonMaster.address.toString();
     }
 
-    async getTVMNFTAddress(evmNFTAddress: string, tokenId?: bigint): Promise<string> {
+    async getTVMNFTAddress(evmNFTAddress: string, tokenId?: number |bigint): Promise<string> {
         validateEVMAddress(evmNFTAddress);
 
         let nftCollection: OpenedContract<NFTCollection> | SandboxContract<NFTCollection>;
@@ -1135,7 +1135,12 @@ export class TacSdk {
 
         return tokenId == undefined
             ? nftCollection.address.toString()
-            : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
+            : NFTItem.createFromConfig({
+                collectionAddress: nftCollection.address,
+                cclAddress: address(this.TONParams.crossChainLayerAddress),
+                // @ts-ignore // bigint can be used, wrapper is not typed properly
+                index: tokenId,
+            }, this.TONParams.nftItemCode).address.toString();
     }
 
     async getEVMNFTAddress(tvmNFTAddress: string, addressType: NFTAddressType): Promise<string> {
