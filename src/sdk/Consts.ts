@@ -15,5 +15,5 @@ export const MAX_EXT_MSG_SIZE = 65535;
 export const MAX_HIGHLOAD_GROUP_MSG_NUM = 254;
 export const MAX_MSG_DEPTH = 512;
 
-export const TON_SYMBOL = "TON";
-export const TAC_SYMBOL = "TAC";
+export const TON_SYMBOL = 'TON';
+export const TAC_SYMBOL = 'TAC';

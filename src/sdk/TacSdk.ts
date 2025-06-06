@@ -1118,7 +1118,9 @@ export class TacSdk {
             );
 
             const info = await erc721Token.getInfo();
-            nftCollection = this.TONParams.contractOpener.open(NFTCollection.createFromAddress(address(info.tvmAddress)));
+            nftCollection = this.TONParams.contractOpener.open(
+                NFTCollection.createFromAddress(address(info.tvmAddress)),
+            );
 
             return tokenId == undefined
                 ? nftCollection.address.toString()
@@ -1138,12 +1140,15 @@ export class TacSdk {
 
             return tokenId == undefined
                 ? nftCollection.address.toString()
-                : NFTItem.createFromConfig({
-                    collectionAddress: nftCollection.address,
-                    cclAddress: address(this.TONParams.crossChainLayerAddress),
-                    // @ts-ignore // bigint can be used, wrapper is not typed properly
-                    index: tokenId,
-                }, this.TONParams.nftItemCode).address.toString();
+                : NFTItem.createFromConfig(
+                      {
+                          collectionAddress: nftCollection.address,
+                          cclAddress: address(this.TONParams.crossChainLayerAddress),
+                          // @ts-ignore // bigint can be used, wrapper is not typed properly
+                          index: tokenId,
+                      },
+                      this.TONParams.nftItemCode,
+                  ).address.toString();
         }
     }
 

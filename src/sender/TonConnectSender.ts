@@ -89,11 +89,7 @@ export class TonConnectSender implements SenderAbstraction {
         return this.tonConnect.account?.address?.toString() || '';
     }
 
-    async sendShardTransaction(
-        shardTransaction: ShardTransaction,
-        delay: number,
-        chain: Network,
-    ): Promise<SendResult> {
+    async sendShardTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network): Promise<SendResult> {
         const messages = [];
         for (const message of shardTransaction.messages) {
             messages.push({

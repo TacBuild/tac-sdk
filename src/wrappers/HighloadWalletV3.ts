@@ -163,7 +163,12 @@ export class HighloadWalletV3 implements WalletInstance {
         return HighloadQueryId.fromQueryId(BigInt(createdAt) % 8388608n);
     }
 
-    getExternalMessage(messages: MessageRelaxed[], sendMode: SendMode, value: bigint, queryId: HighloadQueryId): MessageRelaxed {
+    getExternalMessage(
+        messages: MessageRelaxed[],
+        sendMode: SendMode,
+        value: bigint,
+        queryId: HighloadQueryId,
+    ): MessageRelaxed {
         return this.packActions(
             messages.map((msg) => ({
                 type: 'sendMsg',
@@ -172,7 +177,7 @@ export class HighloadWalletV3 implements WalletInstance {
             })),
             value,
             queryId,
-        )
+        );
     }
 
     static createInternalTransferBody(opts: { actions: OutAction[] | Cell; queryId: HighloadQueryId }) {

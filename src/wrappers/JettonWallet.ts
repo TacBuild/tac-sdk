@@ -75,7 +75,7 @@ export class JettonWallet implements Contract {
             jettonAmount: bigint;
             receiverAddress?: string;
             crossChainTonAmount?: bigint;
-            feeData?: Cell | null; 
+            feeData?: Cell | null;
             crossChainPayload?: Cell | null;
         },
     ) {
@@ -112,12 +112,14 @@ export class JettonWallet implements Contract {
             .storeAddress(Address.parse(to))
             .storeAddress(responseAddress ? Address.parse(responseAddress) : null)
             .storeMaybeRef(null)
-            .storeCoins((forwardTonAmount || 0n))
-            .storeMaybeRef(beginCell()
-                        .storeCoins(crossChainTonAmount ?? 0n)
-                        .storeMaybeRef(feeData)
-                        .storeMaybeRef(crossChainPayload)
-                        .endCell())
+            .storeCoins(forwardTonAmount || 0n)
+            .storeMaybeRef(
+                beginCell()
+                    .storeCoins(crossChainTonAmount ?? 0n)
+                    .storeMaybeRef(feeData)
+                    .storeMaybeRef(crossChainPayload)
+                    .endCell(),
+            )
             .endCell();
     }
 

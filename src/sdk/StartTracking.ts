@@ -52,7 +52,6 @@ export async function startTracking(
                 operationId = await tracker.getOperationId(transactionLinker);
             } catch (err) {}
         } else {
-
             try {
                 operationType = await tracker.getOperationType(operationId);
                 if (operationType != OperationType.PENDING && operationType != OperationType.UNKNOWN) {
@@ -125,7 +124,7 @@ export async function startTrackingMultiple(
                 returnValue: true,
                 tableView: false,
             });
-        })
+        }),
     );
 
     if (returnValue) {
