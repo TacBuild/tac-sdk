@@ -4,24 +4,51 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Switched to spb(chain) set of addresses
+
+
+## [0.6.3] - 2025-06-2
+
 ### Added
 
-- Fee support for crosschain transactions.
-- New methods for requesting execution fees and simulation `getTransactionSimulationInfo`.
-- Added `metaInfo` field to the `ExecutionStages`.
 - Added advanced options to `sendCrossChainTransaction`.
-- Methods to work with NFT items: bridging and gettings addresses.
 - Method to send multiple crosschain transactions at once: `sendCrossChainTransactions`.
-- LiteSequencerClient to handle lite sequencer requests and its parameters.
 - Batch sending support for crosschain transactions.
 - Error handling while sending crosschain transactions.
+
+### Changed
+
+- TonClient with TAC endpoint as default contract opener.
+
+
+## [0.6.2] - 2025-05-30
+
+### Added
+
+- Added `metaInfo` field to the `ExecutionStages`.
+- LiteSequencerClient to handle lite sequencer requests and its parameters.
 - Method to calculate tvmExecutorFee: `getTVMExecutorFeeInfo`.
 
 ### Changed
 
 - `getEVMTokenAddress` now automatically normalizes addresses to `EQ` form.
 - For TAC->TON transactions tvmExecutorFee calculated via lite sequencer.
-- TonClient with TAC endpoint as default contract opener.
+
+
+## [0.6.1] - 2025-05-05
+
+### Added
+
+- Fee support for crosschain transactions.
+- New methods for requesting execution fees and simulation `getTransactionSimulationInfo`.
+- Methods to work with NFT items: bridging and gettings addresses.
+
+### Changed 
+
+- Switched to v3 sequencer
+
 
 ## [0.5.7] - 2025-04-01
 
