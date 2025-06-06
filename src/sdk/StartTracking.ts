@@ -45,8 +45,6 @@ export async function startTracking(
             break;
         }
 
-        console.log();
-
         if (operationId == '') {
             console.log('request operationId');
 
@@ -54,8 +52,6 @@ export async function startTracking(
                 operationId = await tracker.getOperationId(transactionLinker);
             } catch (err) {}
         } else {
-            console.log('request operationType');
-
             try {
                 operationType = await tracker.getOperationType(operationId);
                 if (operationType != OperationType.PENDING && operationType != OperationType.UNKNOWN) {
@@ -65,9 +61,11 @@ export async function startTracking(
                 console.log('failed to get operation type:', err);
             }
 
-            console.log('operationId:', operationId);
-            console.log('operationType:', operationType);
-            console.log('time: ', Math.floor(+new Date() / 1000));
+            console.log(`
+                operationId: ${operationId}
+                operationType: ${operationType}
+                time: ${new Date().toISOString()} (${Math.floor(+new Date() / 1000)})
+            `);
         }
         await sleep(delay * 1000);
     }
@@ -87,6 +85,7 @@ export async function startTracking(
     }
 
     console.log(profilingData.operationType);
+    console.log(profilingData.metaInfo);
     if (tableView) {
         printExecutionStagesTable(profilingData);
     } else {
@@ -94,8 +93,59 @@ export async function startTracking(
     }
 }
 
+export async function startTrackingMultiple(
+    transactionLinkers: TransactionLinker[],
+    network: Network,
+    options?: {
+        customLiteSequencerEndpoints?: string[];
+        delay?: number;
+        maxIterationCount?: number;
+        returnValue?: boolean;
+        tableView?: boolean;
+    },
+): Promise<void | ExecutionStages[]> {
+    const {
+        customLiteSequencerEndpoints,
+        delay = 10,
+        maxIterationCount = MAX_ITERATION_COUNT,
+        returnValue = false,
+        tableView = true,
+    } = options || {};
+
+    console.log(`Start tracking ${transactionLinkers.length} operations`);
+
+    const results = await Promise.all(
+        transactionLinkers.map((linker, index) => {
+            console.log(`\nProcessing operation ${index + 1}/${transactionLinkers.length}`);
+            return startTracking(linker, network, {
+                customLiteSequencerEndpoints,
+                delay,
+                maxIterationCount,
+                returnValue: true,
+                tableView: false,
+            });
+        }),
+    );
+
+    if (returnValue) {
+        return results as ExecutionStages[];
+    }
+
+    if (tableView) {
+        results.forEach((result, index) => {
+            console.log(`\nResults for operation ${index + 1}:`);
+            printExecutionStagesTable(result as ExecutionStages);
+        });
+    } else {
+        results.forEach((result, index) => {
+            console.log(`\nResults for operation ${index + 1}:`);
+            console.log(formatExecutionStages(result as ExecutionStages));
+        });
+    }
+}
+
 function formatExecutionStages(stages: ExecutionStages) {
-    const { operationType, ...stagesData } = stages;
+    const { operationType, metaInfo, ...stagesData } = stages;
 
     return Object.entries(stagesData).map(([stage, data]) => ({
         stage: stage,

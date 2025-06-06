@@ -1,7 +1,7 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers, isAddress as isEthereumAddress } from 'ethers';
 
-import { EvmProxyMsg, TransactionLinker } from '../structs/Struct';
+import { EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors } from '../structs/Struct';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import { evmAddressError, invalidMethodNameError, tvmAddressError } from '../errors';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
@@ -26,7 +26,11 @@ export async function calculateContractAddress(code: Cell, data: Cell): Promise<
     return new Address(0, stateInit.hash());
 }
 
-export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyMsg: EvmProxyMsg): Cell {
+export function buildEvmDataCell(
+    transactionLinker: TransactionLinker,
+    evmProxyMsg: EvmProxyMsg,
+    validExecutors: ValidExecutors,
+): Cell {
     const evmArguments = evmProxyMsg.encodedParameters
         ? Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64')
         : null;
@@ -40,6 +44,8 @@ export function buildEvmDataCell(transactionLinker: TransactionLinker, evmProxyM
         },
         shardsKey: transactionLinker.shardsKey,
         shardCount: transactionLinker.shardCount,
+        evmValidExecutors: validExecutors.tac,
+        tvmValidExecutors: validExecutors.ton,
     });
 
     return beginCell().storeStringTail(json).endCell();
@@ -85,9 +91,9 @@ export function calculateEVMTokenAddress(
     tokenUtilsAddress: string,
     crossChainLayerTokenBytecode: string,
     crossChainLayerAddress: string,
-    l1Address: string,
+    tvmAddress: string,
 ): string {
-    const salt = ethers.keccak256(ethers.solidityPacked(['string'], [l1Address]));
+    const salt = ethers.keccak256(ethers.solidityPacked(['string'], [tvmAddress]));
     const initCode = ethers.solidityPacked(
         ['bytes', 'bytes'],
         [crossChainLayerTokenBytecode, abiCoder.encode(['address'], [crossChainLayerAddress])],
@@ -139,5 +145,20 @@ export const toCamelCaseTransformer = (data: any) => {
         return convertKeysToCamelCase(parsedData);
     } catch {
         return data;
+    }
+};
+
+export const generateFeeData = (feeParams?: FeeParams): Cell | undefined => {
+    if (feeParams) {
+        let feeDataBuilder = beginCell()
+            .storeBit(feeParams.isRoundTrip)
+            .storeCoins(feeParams.protocolFee)
+            .storeCoins(feeParams.evmExecutorFee);
+        if (feeParams.isRoundTrip) {
+            feeDataBuilder.storeCoins(feeParams.tvmExecutorFee);
+        }
+        return feeDataBuilder.endCell();
+    } else {
+        return undefined;
     }
 };

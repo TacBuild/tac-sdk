@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
+import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
@@ -27,6 +27,7 @@ const bridgeTonSawSender = async (amount: number) => {
     const assets: AssetBridgingData[] = [
         {
             amount: amount,
+            type: AssetType.FT,
         },
     ];
 

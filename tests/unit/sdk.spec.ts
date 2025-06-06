@@ -1,11 +1,20 @@
 import '@ton/test-utils';
 
-import { address, beginCell, Cell, Dictionary, toNano } from '@ton/ton';
+import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
 import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
-import { AssetBridgingData, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
+import {
+    AssetBridgingData,
+    AssetType,
+    EvmProxyMsg,
+    Network,
+    SenderFactory,
+    TacSdk,
+    wallets,
+    WalletVersion,
+} from '../../src';
 
 import { testnet } from '@tonappchain/artifacts';
 import { sandboxOpener } from '../../src/adapters/contractOpener';
@@ -18,6 +27,8 @@ describe('TacSDK', () => {
         JettonWalletCompiled,
         JettonProxyCompiled,
         SettingsCompiled,
+        NFTCollectionCompiled,
+        NFTItemCompiled,
     } = testnet.ton.compilationArtifacts;
     const { CrossChainLayer, CrossChainLayerOpCodes, JettonMinter, JettonProxy, Settings } = testnet.ton.wrappers;
 
@@ -27,6 +38,8 @@ describe('TacSDK', () => {
     const JettonWalletCode = Cell.fromHex(JettonWalletCompiled.hex);
     const JettonProxyCode = Cell.fromHex(JettonProxyCompiled.hex);
     const SettingsCode = Cell.fromHex(SettingsCompiled.hex);
+    const NFTCollectionCode = Cell.fromHex(NFTCollectionCompiled.hex);
+    const NFTItemCode = Cell.fromHex(NFTItemCompiled.hex);
 
     let blockchain: Blockchain;
     let initialState: BlockchainSnapshot;
@@ -36,9 +49,9 @@ describe('TacSDK', () => {
     let crossChainLayer: SandboxContract<testnet.ton.wrappers.CrossChainLayer>;
     let admin: SandboxContract<TreasuryContract>;
     let sequencerMultisig: SandboxContract<TreasuryContract>;
-    let feeAmount: number;
-    let feeSupply: number;
-    let merkleRoot: bigint;
+    let tacProtocolFee: number;
+    let tonProtocolFee: number;
+    let protocolFeeSupply: number;
     let epochDelay: number;
     let nextVotingTime: number;
     let currEpoch: number;
@@ -65,11 +78,13 @@ describe('TacSDK', () => {
                     prevEpoch,
                     adminAddress: admin.address.toString(),
                     executorCode: ExecutorCode,
-                    feeAmount,
-                    feeSupply,
-                    merkleRoot,
+                    tacProtocolFee,
+                    tonProtocolFee,
+                    protocolFeeSupply,
+                    merkleRoots: [],
                     epochDelay,
                     nextVotingTime,
+                    maxRootsSize: 10,
                     sequencerMultisigAddress: sequencerMultisig.address.toString(),
                 },
                 CrossChainLayerCode,
@@ -133,12 +148,20 @@ describe('TacSDK', () => {
             value: beginCell().storeAddress(crossChainLayer.address).endCell(),
         });
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
-            key: getKeyFromString('JETTON_MINTER_CODE'),
+            key: getKeyFromString('JettonMinterCode'),
             value: JettonMinterCode,
         });
         await settings.sendSetValue(admin.getSender(), toNano(0.1), {
-            key: getKeyFromString('JETTON_WALLET_CODE'),
+            key: getKeyFromString('JettonWalletCode'),
             value: JettonWalletCode,
+        });
+        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+            key: getKeyFromString('NFTCollectionCode'),
+            value: NFTCollectionCode,
+        });
+        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+            key: getKeyFromString('NFTItemCode'),
+            value: NFTItemCode,
         });
     };
 
@@ -149,7 +172,7 @@ describe('TacSDK', () => {
                     adminAddress: crossChainLayer.address,
                     content: beginCell().endCell(),
                     jettonWalletCode: JettonWalletCode,
-                    l2TokenAddress: '0x1234',
+                    evmTokenAddress: '0x1234',
                     totalSupply: 0,
                 },
                 JettonMinterCode,
@@ -172,9 +195,9 @@ describe('TacSDK', () => {
         admin = await blockchain.treasury('admin');
         user = await blockchain.treasury('user');
         sequencerMultisig = await blockchain.treasury('sequencerMultisig');
-        feeAmount = 0.1;
-        feeSupply = 0;
-        merkleRoot = 0n;
+        tacProtocolFee = 0.01;
+        tonProtocolFee = 0.02;
+        protocolFeeSupply = 0;
         epochDelay = 0;
         nextVotingTime = 0;
         nextVotingTime = 0;
@@ -226,24 +249,27 @@ describe('TacSDK', () => {
             {
                 /** TON */
                 amount: 1,
+                type: AssetType.FT,
             },
             {
                 /** ETH address */
                 address: evmRandomAddress,
                 amount: amountTokenForEVMAddress,
                 decimals: decimalsForEVMAddress,
+                type: AssetType.FT,
             },
             {
                 /** TON address */
                 address: tvmRandomAddress,
                 rawAmount: amountTokenForTVMAddress,
+                type: AssetType.FT,
             },
         ];
 
         const expectedTVMAddressForEVM = await sdk.getTVMTokenAddress(evmRandomAddress);
 
         const rawAssets = await sdk['convertAssetsToRawFormat'](assets);
-        const jettonAssets = await sdk['aggregateJettons'](rawAssets);
+        const jettonAssets = await sdk['aggregateTokens'](rawAssets);
         expect(jettonAssets.jettons.length).toBe(2);
         expect(jettonAssets.crossChainTonAmount).toBe(toNano(1));
         expect(jettonAssets.jettons).toContainEqual({ address: tvmRandomAddress, rawAmount: amountTokenForTVMAddress });
@@ -261,14 +287,17 @@ describe('TacSDK', () => {
         const assets: AssetBridgingData[] = [
             {
                 amount: amount1,
+                type: AssetType.FT,
             },
             {
                 address: tvmRandomAddress,
                 amount: amount2,
+                type: AssetType.FT,
                 decimals: decimals2,
             },
             {
                 address: tvmRandomAddress,
+                type: AssetType.FT,
                 rawAmount: amount3,
             },
         ];
@@ -296,12 +325,12 @@ describe('TacSDK', () => {
             const assets: AssetBridgingData[] = [
                 {
                     rawAmount: 2n,
+                    type: AssetType.FT,
                 },
             ];
 
             const mnemonic: string[] = await mnemonicNew(24, '');
 
-            let fee = 0;
             const rawSender = await SenderFactory.getSender({
                 network: Network.TESTNET,
                 version,
@@ -314,10 +343,9 @@ describe('TacSDK', () => {
                 from: address(rawSender.getSenderAddress()),
                 to: crossChainLayer.address,
                 success: true,
-                op: CrossChainLayerOpCodes.anyone_l1MsgToL2,
+                op: CrossChainLayerOpCodes.anyone_tvmMsgToEVM,
             });
-            fee += feeAmount;
-            expect((await crossChainLayer.getFullData()).feeSupply).toBe(+fee.toFixed(1));
+            expect((await crossChainLayer.getFullData()).protocolFeeSupply).toBe(tacProtocolFee);
         },
     );
 });

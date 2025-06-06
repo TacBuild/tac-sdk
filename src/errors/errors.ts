@@ -15,9 +15,12 @@ export class ContractError extends ErrorWithStatusCode {
 }
 
 export class FetchError extends ErrorWithStatusCode {
-    constructor(message: string, errorCode: number) {
+    readonly inner?: unknown;
+
+    constructor(message: string, errorCode: number, inner?: unknown) {
         super(message, errorCode);
         this.name = 'FetchError';
+        this.inner = inner;
     }
 }
 
@@ -74,5 +77,19 @@ export class EVMCallError extends ErrorWithStatusCode {
     constructor(message: string, errorCode: number) {
         super(message, errorCode);
         this.name = 'EVMCallError';
+    }
+}
+
+export class PrepareMessageGroupError extends ErrorWithStatusCode {
+    constructor(message: string, errorCode: number) {
+        super(message, errorCode);
+        this.name = 'PrepareMessageGroupError';
+    }
+}
+
+export class NoValidGroupFoundError extends ErrorWithStatusCode {
+    constructor(message: string, errorCode: number) {
+        super(message, errorCode);
+        this.name = 'NoValidGroupFoundError';
     }
 }

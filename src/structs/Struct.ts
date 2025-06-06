@@ -1,5 +1,5 @@
 import { SandboxContract } from '@ton/sandbox';
-import type { Address, Contract, OpenedContract } from '@ton/ton';
+import type { Address, Cell, Contract, OpenedContract } from '@ton/ton';
 import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
 
 export interface ContractOpener {
@@ -70,6 +70,16 @@ export type TACParams = {
      * bytecode of TAC CrossChainLayerToken contract. Use only for tests.
      */
     crossChainLayerTokenBytecode?: string;
+
+    /**
+     * ABI of TAC CrossChainLayerNFT contract. Use only for tests.
+     */
+    crossChainLayerNFTABI?: Interface | InterfaceAbi;
+
+    /**
+     * bytecode of TAC CrossChainLayerNFT contract. Use only for tests.
+     */
+    crossChainLayerNFTBytecode?: string;
 };
 
 export type TONParams = {
@@ -111,7 +121,18 @@ export type SDKParams = {
     customLiteSequencerEndpoints?: string[];
 };
 
-export type WithAddress = {
+export enum AssetType {
+    NFT = 'NFT',
+    FT = 'FT',
+}
+
+export enum NFTAddressType {
+    ITEM = 'ITEM',
+    COLLECTION = 'COLLECTION',
+}
+
+export type WithAddressFT = {
+    type: AssetType.FT;
     /**
      * Address of TAC or TON token.
      * Empty if sending native TON coin.
@@ -119,10 +140,34 @@ export type WithAddress = {
     address?: string;
 };
 
-export type RawAssetBridgingData = {
+export type WithAddressNFTItem = {
+    type: AssetType.NFT;
+    /**
+     * Address NFT item token.
+     */
+    address: string;
+};
+
+export type WithAddressNFTCollectionItem = {
+    type: AssetType.NFT;
+    /**
+     * Address NFT collection.
+     */
+    collectionAddress: string;
+    /**
+     * Index of NFT item in collection.
+     */
+    itemIndex: bigint;
+};
+
+export type WithAddressNFT = WithAddressNFTItem | WithAddressNFTCollectionItem;
+
+export type WithAddress = WithAddressFT | WithAddressNFT;
+
+export type RawAssetBridgingData<NFTFormatRequired extends WithAddressNFT = WithAddressNFTItem> = {
     /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
     rawAmount: bigint;
-} & WithAddress;
+} & (WithAddressFT | NFTFormatRequired);
 
 export type UserFriendlyAssetBridgingData = {
     /**
@@ -172,12 +217,14 @@ export type TACSimulationRequest = {
         methodName: string;
         target: string;
     };
+    evmValidExecutors: string[];
     extraData: string;
-    feeAssetAddress: string;
     shardsKey: string;
+
     tonAssets: {
         amount: string;
         tokenAddress: string;
+        assetType: string;
     }[];
     tonCaller: string;
 };
@@ -219,8 +266,41 @@ export type ProfilingStageData = {
     stageData: StageData | null;
 };
 
+export type InitialCallerInfo = {
+    address: string;
+    blockchainType: BlockchainType;
+};
+
+export type ValidExecutors = {
+    tac: string[];
+    ton: string[];
+};
+
+export enum TokenSymbol {
+    TAC_SYMBOL = 'TAC',
+    TON_SYMBOL = 'TON',
+}
+
+export type GeneralFeeInfo = {
+    protocolFee: string;
+    executorFee: string;
+    tokenFeeSymbol: TokenSymbol;
+};
+
+export type FeeInfo = {
+    tac: GeneralFeeInfo;
+    ton: GeneralFeeInfo;
+};
+
+export type MetaInfo = {
+    initialCaller: InitialCallerInfo;
+    validExecutors: ValidExecutors;
+    feeInfo: FeeInfo;
+};
+
 export type ExecutionStages = {
     operationType: OperationType;
+    metaInfo: MetaInfo;
 } & Record<StageName, ProfilingStageData>;
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
@@ -233,9 +313,8 @@ export type OperationIds = {
 
 export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
-export type TACSimulationResults = {
+export type TACSimulationResult = {
     estimatedGas: bigint;
-    estimatedJettonFeeAmount: string;
     feeParams: {
         currentBaseFee: string;
         isEip1559: boolean;
@@ -258,14 +337,66 @@ export type TACSimulationResults = {
                   amount: string;
                   tokenAddress: string;
               }[];
+              nftBurned: {
+                  amount: string;
+                  tokenAddress: string;
+              }[];
+              nftLocked: {
+                  amount: string;
+                  tokenAddress: string;
+              }[];
           }[]
         | null;
     simulationError: string;
     simulationStatus: boolean;
+    suggestedTonExecutionFee: string;
+    suggestedTacExecutionFee: string;
     debugInfo: {
         from: string;
         to: string;
         callData: string;
         blockNumber: number;
     };
+};
+
+export type SuggestedTONExecutorFee = {
+    inTAC: string;
+    inTON: string;
+};
+
+export type FeeParams = {
+    isRoundTrip: boolean;
+    gasLimit: bigint;
+    protocolFee: bigint;
+    evmExecutorFee: bigint;
+    tvmExecutorFee: bigint;
+};
+
+export type CrossChainTransactionOptions = {
+    forceSend?: boolean;
+    isRoundTrip?: boolean;
+    protocolFee?: bigint;
+    evmValidExecutors?: string[];
+    evmExecutorFee?: bigint;
+    tvmValidExecutors?: string[];
+    tvmExecutorFee?: bigint;
+};
+
+export type ExecutionFeeEstimationResult = {
+    feeParams: FeeParams;
+    simulation: TACSimulationResult;
+};
+
+export type CrosschainTx = {
+    evmProxyMsg: EvmProxyMsg;
+    assets?: AssetBridgingData[];
+    options?: CrossChainTransactionOptions;
+};
+
+export type NFTItemData = {
+    init: boolean;
+    index: number;
+    collectionAddress: Address;
+    ownerAddress: Address | null;
+    content: Cell | null;
 };

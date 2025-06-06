@@ -1,15 +1,18 @@
 import { Cell } from '@ton/ton';
 import {
     ContractOpener,
-    TACSimulationResults,
+    TACSimulationResult,
     ExecutionStagesByOperationId,
     Network,
     OperationIdsByShardsKey,
     RawAssetBridgingData,
     StatusInfosByOperationId,
     OperationType,
+    AssetType,
+    SuggestedTONExecutorFee,
 } from './Struct';
 import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
+import { mainnet, testnet } from '@tonappchain/artifacts';
 
 export type ShardMessage = {
     address: string;
@@ -26,6 +29,8 @@ export type ShardTransaction = {
 export enum AssetOpType {
     JETTON_BURN = 'JETTON_BURN',
     JETTON_TRANSFER = 'JETTON_TRANSFER',
+    NFT_BURN = 'NFT_BURN',
+    NFT_TRANSFER = 'NFT_TRANSFER',
 }
 
 export type RandomNumberByTimestamp = {
@@ -34,6 +39,7 @@ export type RandomNumberByTimestamp = {
 };
 
 export type JettonBridgingData = RawAssetBridgingData & {
+    type: AssetType.FT;
     address: string;
 };
 
@@ -43,23 +49,50 @@ export type JettonBurnData = JettonBridgingData & {
     notificationReceiverAddress: string;
 };
 
+export type NFTBridgingData = RawAssetBridgingData & {
+    type: AssetType.NFT;
+    address: string;
+};
+
+export type NFTTransferData = NFTBridgingData & {
+    to: string;
+    responseAddress: string;
+    evmData: Cell;
+    crossChainTonAmount?: bigint;
+    feeData?: Cell;
+};
+
+export type NFTBurnData = NFTBridgingData & {
+    notificationReceiverAddress: string;
+    evmData: Cell;
+    crossChainTonAmount?: bigint;
+    feeData?: Cell;
+};
+
 export type InternalTONParams = {
     contractOpener: ContractOpener;
     jettonProxyAddress: string;
+    nftProxyAddress: string;
     crossChainLayerAddress: string;
     jettonMinterCode: Cell;
     jettonWalletCode: Cell;
+    nftItemCode: Cell;
+    nftCollectionCode: Cell;
 };
 
 export type InternalTACParams = {
     provider: AbstractProvider;
-    settingsAddress: string;
-    tokenUtilsAddress: string;
+    crossChainLayer: testnet.tac.wrappers.CrossChainLayerTAC | mainnet.tac.wrappers.CrossChainLayerTAC;
+    settings: testnet.tac.wrappers.SettingsTAC | testnet.tac.wrappers.SettingsTAC;
+    tokenUtils: testnet.tac.wrappers.TokenUtilsTAC | mainnet.tac.wrappers.TokenUtilsTAC;
+    trustedTACExecutors: string[];
+    trustedTONExecutors: string[];
     abiCoder: ethers.AbiCoder;
     crossChainLayerABI: Interface | InterfaceAbi;
-    crossChainLayerAddress: string;
     crossChainLayerTokenABI: Interface | InterfaceAbi;
     crossChainLayerTokenBytecode: string;
+    crossChainLayerNFTABI: Interface | InterfaceAbi;
+    crossChainLayerNFTBytecode: string;
 };
 
 export type ResponseBase<T> = { response: T };
@@ -74,4 +107,13 @@ export type OperationIdsByShardsKeyResponse = ResponseBase<OperationIdsByShardsK
 
 export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
 
-export type TACSimulationResponse = ResponseBase<TACSimulationResults>;
+export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
+
+export type SuggestedTONExecutorFeeResponse = ResponseBase<SuggestedTONExecutorFee>;
+
+export interface SendResult {
+    success: boolean;
+    result?: unknown;
+    error?: Error;
+    lastMessageIndex?: number;
+}

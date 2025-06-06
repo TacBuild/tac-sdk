@@ -1,6 +1,6 @@
 {
   "name": "@tonappchain/sdk",
-  "version": "0.5.6",
+  "version": "0.6.4",
   "repository": "https://github.com/TacBuild/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
@@ -20,7 +20,7 @@
     "@aws-crypto/sha256-js": "^5.2.0",
     "@orbs-network/ton-access": "^2.3.3",
     "@ton/ton": "15.1.0",
-    "@tonappchain/artifacts": "0.0.16-v2",
+    "@tonappchain/artifacts": "0.0.18",
     "@tonappchain/ton-lite-client": "3.0.6",
     "@tonconnect/ui": "^2.0.11",
     "bn.js": "^5.2.1",
@@ -46,7 +46,7 @@
     "prettier": "^3.5.3",
     "ts-jest": "^29.2.6",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2",
+    "typescript": "^5.7.3",
     "typescript-eslint": "^8.17.0"
   },
   "publishConfig": {

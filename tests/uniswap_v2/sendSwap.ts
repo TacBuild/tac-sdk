@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
+import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
 
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 
@@ -61,6 +61,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number, t
         assets.push({
             address: tokenAddress,
             amount: amount,
+            type: AssetType.FT,
         });
     }
 

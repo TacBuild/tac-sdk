@@ -68,8 +68,8 @@ export class JettonMaster implements Contract {
         };
     }
 
-    async getL2Address(provider: ContractProvider): Promise<string> {
-        const result = await provider.get('get_l2_token_address', []);
+    async getEVMAddress(provider: ContractProvider): Promise<string> {
+        const result = await provider.get('get_evm_token_address', []);
         return result.stack.readString();
     }
 }

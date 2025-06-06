@@ -68,6 +68,7 @@ export class HighloadWalletV3 implements WalletInstance {
             sendMode: SendMode;
             timeout?: number;
             subwalletId?: number;
+            createdAt?: number;
         },
     ): Promise<void> {
         if (!args.messages.length) {
@@ -80,15 +81,13 @@ export class HighloadWalletV3 implements WalletInstance {
         const subwalletId = isActive ? await this.getSubwalletId(provider) : DEFAULT_SUBWALLET_ID;
         const timeout = isActive ? await this.getTimeout(provider) : DEFAULT_TIMEOUT;
 
-        const queryId = new HighloadQueryId();
-
         const actions: OutActionSendMsg[] = args.messages.map((msg) => ({
             type: 'sendMsg',
             mode: args.sendMode,
             outMsg: msg,
         }));
 
-        await this.sendBatch(provider, args.secretKey, actions, subwalletId, queryId, timeout);
+        await this.sendBatch(provider, args.secretKey, actions, subwalletId, timeout, args.createdAt);
     }
 
     static create(config: HighloadWalletV3Config, code: Cell = HIGHLOAD_V3_CODE, workchain = 0) {
@@ -140,14 +139,15 @@ export class HighloadWalletV3 implements WalletInstance {
         secretKey: Buffer,
         messages: OutActionSendMsg[],
         subwallet: number,
-        queryId: HighloadQueryId,
         timeout: number,
         createdAt?: number,
         value: bigint = 0n,
     ) {
         if (createdAt == undefined) {
-            createdAt = Math.floor(Date.now() / 1000) - 20; // -20 is used to pass check created_at <= now() in smart contract for sure
+            createdAt = Math.floor(Date.now() / 1000) - 40; // -40 is used to pass check created_at <= now() in smart contract for sure
         }
+
+        const queryId = this.getQueryIdFromCreatedAt(createdAt);
 
         return await this.sendExternalMessage(provider, secretKey, {
             message: this.packActions(messages, value, queryId),
@@ -157,6 +157,27 @@ export class HighloadWalletV3 implements WalletInstance {
             subwalletId: subwallet,
             timeout: timeout,
         });
+    }
+
+    getQueryIdFromCreatedAt(createdAt: number): HighloadQueryId {
+        return HighloadQueryId.fromQueryId(BigInt(createdAt) % 8388608n);
+    }
+
+    getExternalMessage(
+        messages: MessageRelaxed[],
+        sendMode: SendMode,
+        value: bigint,
+        queryId: HighloadQueryId,
+    ): MessageRelaxed {
+        return this.packActions(
+            messages.map((msg) => ({
+                type: 'sendMsg',
+                mode: sendMode,
+                outMsg: msg,
+            })),
+            value,
+            queryId,
+        );
     }
 
     static createInternalTransferBody(opts: { actions: OutAction[] | Cell; queryId: HighloadQueryId }) {
