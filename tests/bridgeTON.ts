@@ -31,7 +31,7 @@ const bridgeTonSawSender = async (amount: number) => {
         },
     ];
 
-    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets, {isRoundTrip: false});
 
     tacSdk.closeConnections();
 
