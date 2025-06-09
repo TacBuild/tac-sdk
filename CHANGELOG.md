@@ -16,8 +16,8 @@ All notable changes to this project will be documented in this file.
 - Batch sending support for crosschain transactions.
 - Error handling while sending crosschain transactions.
 - Method to calculate tvmExecutorFee: `getTVMExecutorFeeInfo`.
-- The `IsRoundTrip` flag is set to `true` by default
-- The `tonExecutorFee` is now determined as `max(rollback_message, normal_execution)`
+- The `IsRoundTrip` flag is set to `true` by default.
+- The `tonExecutorFee` is now determined as `max(rollback_message, normal_execution)`.
 
 ### Changed
 
