@@ -119,7 +119,12 @@ export type SDKParams = {
      * URLs of lite sequencers
      */
     customLiteSequencerEndpoints?: string[];
-};
+
+    /**
+     * Debug flag
+     */
+    debug?: boolean;
+}
 
 export enum AssetType {
     NFT = 'NFT',
@@ -209,6 +214,10 @@ export type TransactionLinker = {
     shardsKey: string;
     timestamp: number;
     sendTransactionResult?: unknown;
+};
+
+export type TransactionLinkerWithOperationId = TransactionLinker & {
+    operationId?: string;
 };
 
 export type TACSimulationRequest = {

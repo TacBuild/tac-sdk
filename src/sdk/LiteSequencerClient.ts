@@ -1,13 +1,6 @@
 import axios from 'axios';
-import {
-    TransactionLinker,
-    StatusInfosByOperationId,
-    OperationIdsByShardsKey,
-    ExecutionStagesByOperationId,
-    OperationType,
-} from '../structs/Struct';
-import { operationFetchError, statusFetchError, emptyArrayError, profilingFetchError } from '../errors';
-import { toCamelCaseTransformer } from './Utils';
+
+import { emptyArrayError, operationFetchError, profilingFetchError,statusFetchError } from '../errors';
 import {
     OperationIdsByShardsKeyResponse,
     OperationTypeResponse,
@@ -15,6 +8,14 @@ import {
     StatusesResponse,
     StringResponse,
 } from '../structs/InternalStruct';
+import {
+    ExecutionStagesByOperationId,
+    OperationIdsByShardsKey,
+    OperationType,
+    StatusInfosByOperationId,
+    TransactionLinker,
+} from '../structs/Struct';
+import { toCamelCaseTransformer } from './Utils';
 
 export class LiteSequencerClient {
     private readonly endpoint: string;
@@ -37,8 +38,7 @@ export class LiteSequencerClient {
             );
             return response.data.response || '';
         } catch (error) {
-            console.error(`Failed to get operationType with ${this.endpoint}:`, error);
-            throw operationFetchError;
+            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
         }
     }
 
@@ -59,12 +59,10 @@ export class LiteSequencerClient {
         } catch (error) {
             if (axios.isAxiosError(error)) {
                 if (error.response?.status === 404) {
-                    console.warn(`404 Not Found: ${new URL('ton/operation-id', this.endpoint).toString()}`);
                     return '';
                 }
             }
-            console.error(`Failed to get OperationId with ${this.endpoint}:`, error);
-            throw operationFetchError;
+            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
         }
     }
 
@@ -95,8 +93,7 @@ export class LiteSequencerClient {
 
             return response.response;
         } catch (error) {
-            console.error(`Failed to get OperationIds with ${this.endpoint}:`, error);
-            throw operationFetchError;
+            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
         }
     }
 
@@ -128,8 +125,7 @@ export class LiteSequencerClient {
 
             return response.response;
         } catch (error) {
-            console.error(`Error fetching stage profiling with ${this.endpoint}:`, error);
-            throw profilingFetchError('endpoint failed to complete request');
+            throw profilingFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
         }
     }
 
@@ -161,8 +157,7 @@ export class LiteSequencerClient {
 
             return response.response;
         } catch (error) {
-            console.error(`Error fetching status transaction with ${this.endpoint}:`, error);
-            throw statusFetchError('endpoint failed to complete request');
+            throw statusFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
         }
     }
 
