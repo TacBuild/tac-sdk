@@ -83,7 +83,7 @@ export type InternalTONParams = {
 export type InternalTACParams = {
     provider: AbstractProvider;
     crossChainLayer: testnet.tac.wrappers.CrossChainLayerTAC | mainnet.tac.wrappers.CrossChainLayerTAC;
-    settings: testnet.tac.wrappers.SettingsTAC | testnet.tac.wrappers.SettingsTAC;
+    settings: testnet.tac.wrappers.SettingsTAC | mainnet.tac.wrappers.SettingsTAC;
     tokenUtils: testnet.tac.wrappers.TokenUtilsTAC | mainnet.tac.wrappers.TokenUtilsTAC;
     trustedTACExecutors: string[];
     trustedTONExecutors: string[];

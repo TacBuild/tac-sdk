@@ -2,6 +2,7 @@ import axios from 'axios';
 import { Address, address, beginCell, Cell, fromNano, OpenedContract, toNano, TonClient } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes, isAddress as isEthereumAddress, Wallet } from 'ethers';
 import type { SenderAbstraction } from '../sender';
+import { createDefaultRetryableOpener } from '../adapters/retryableContractOpener';
 
 // import structs
 import {
@@ -121,14 +122,15 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TONParams?: TONParams,
     ): Promise<InternalTONParams> {
-        const contractOpener =
-            TONParams?.contractOpener ??
-            new TonClient({
-                endpoint:
-                    network == Network.TESTNET
-                        ? new URL('api/v2/jsonRPC', testnet.TON_RPC_ENDPOINT_BY_TAC).toString()
-                        : mainnet.TON_PUBLIC_RPC_ENDPOINT,
-            });
+        // If a custom contractOpener is provided, use it
+        // Otherwise, create a RetryableContractOpener with default configuration
+        let contractOpener;
+
+        if (TONParams?.contractOpener) {
+            contractOpener = TONParams.contractOpener;
+        } else {
+            contractOpener = await createDefaultRetryableOpener(network);
+        }
         const settingsAddress = TONParams?.settingsAddress ?? artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
         const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
 
