@@ -3,7 +3,7 @@ import { AbiCoder, ethers, isAddress as isEthereumAddress } from 'ethers';
 
 import { evmAddressError, invalidMethodNameError, tvmAddressError } from '../errors';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
-import { EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors } from '../structs/Struct';
+import { EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors, WaitOptions } from '../structs/Struct';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -162,33 +162,6 @@ export const generateFeeData = (feeParams?: FeeParams): Cell | undefined => {
         return undefined;
     }
 };
-
-export interface WaitOptions<T = unknown> {
-    /**
-     * Timeout in milliseconds
-     * @default 300000 (5 minutes)
-     */
-    timeout?: number;
-    /**
-     * Maximum number of attempts
-     * @default 30
-     */
-    maxAttempts?: number;
-    /**
-     * Delay between attempts in milliseconds
-     * @default 10000 (10 seconds)
-     */
-    delay?: number;
-    /**
-     * Function to log debug messages
-     */
-    log?: (message: string) => void;
-    /**
-     * Function to check if the result is successful
-     * If not provided, any non-error result is considered successful
-     */
-    successCheck?: (result: T) => boolean;
-}
 
 export async function waitUntilSuccess<T, A extends unknown[]>(
     options: WaitOptions<T> = {},

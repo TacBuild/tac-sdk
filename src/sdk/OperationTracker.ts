@@ -11,9 +11,10 @@ import {
     StatusInfo,
     StatusInfosByOperationId,
     TransactionLinker,
+    WaitOptions,
 } from '../structs/Struct';
 import { LiteSequencerClient } from './LiteSequencerClient';
-import { WaitOptions, waitUntilSuccess } from './Utils';
+import { waitUntilSuccess } from './Utils';
 
 export class OperationTracker {
     private readonly clients: LiteSequencerClient[];
@@ -59,7 +60,7 @@ export class OperationTracker {
     }
 
     async getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string>): Promise<string> {
-        this.debugLog(`Getting operation ID for transaction linker: ${JSON.stringify(transactionLinker)}`);
+        this.debugLog(`Getting operation ID for transaction linker: ${transactionLinker}`);
 
         const requestFn = async (): Promise<string> => {
             let lastError: unknown;
@@ -215,9 +216,7 @@ export class OperationTracker {
     }
 
     async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
-        this.debugLog(
-            `Getting simplified operation status for transaction linker: ${JSON.stringify(transactionLinker)}`,
-        );
+        this.debugLog(`Getting simplified operation status for transaction linker: ${transactionLinker}`);
 
         const operationId = await this.getOperationId(transactionLinker);
         if (operationId == '') {

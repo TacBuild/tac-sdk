@@ -48,6 +48,7 @@ import {
     TransactionLinkerWithOperationId,
     UserWalletBalanceExtended,
     ValidExecutors,
+    WaitOptions,
     WithAddressFT,
     WithAddressNFTCollectionItem,
 } from '../structs/Struct';
@@ -77,7 +78,6 @@ import {
     toCamelCaseTransformer,
     validateEVMAddress,
     validateTVMAddress,
-    WaitOptions,
 } from './Utils';
 
 export class TacSdk {
@@ -516,7 +516,7 @@ export class TacSdk {
         const opType = await this.getJettonOpType(jetton);
         await sleep(this.delay * 1000);
 
-        this.debugLog(`Generation fee data with params: ${JSON.stringify(feeParams)}`);
+        this.debugLog(`Generation fee data with params: ${feeParams}`);
         const feeData = generateFeeData(feeParams);
 
         let payload: Cell;
@@ -560,7 +560,7 @@ export class TacSdk {
         const opType = await this.getNFTOpType(nft);
         await sleep(this.delay * 1000);
 
-        this.debugLog(`Generation fee data with params: ${JSON.stringify(feeParams)}`);
+        this.debugLog(`Generation fee data with params: ${feeParams}`);
         const feeData = generateFeeData(feeParams);
 
         let payload: Cell;
@@ -714,7 +714,7 @@ export class TacSdk {
         this.debugLog(`Converting assets to raw format`);
         return await Promise.all(
             (assets ?? []).map(async (asset) => {
-                this.debugLog(`Converting asset to raw format: ${JSON.stringify(asset)}`);
+                this.debugLog(`Converting asset to raw format: ${asset}`);
                 if (asset.type === AssetType.FT) {
                     const address = isEthereumAddress(asset.address)
                         ? await this.getTVMTokenAddress(asset.address)
@@ -768,7 +768,7 @@ export class TacSdk {
         );
         const fullStateCCL = await crossChainLayer.getFullData();
         await sleep(this.delay * 1000);
-        this.debugLog(`Full state CCL: ${JSON.stringify(fullStateCCL)}`);
+        this.debugLog(`Full state CCL: ${fullStateCCL}`);
 
         const tacSimulationBody: TACSimulationRequest = {
             tacCallParams: {
@@ -787,7 +787,7 @@ export class TacSdk {
             tonCaller: transactionLinker.caller,
         };
 
-        isRoundTrip = isRoundTrip ?? (rawAssets.length != 0);
+        isRoundTrip = isRoundTrip ?? rawAssets.length != 0;
         this.debugLog(`Is round trip: ${isRoundTrip}`);
 
         const tacSimulationResult = await this.simulateTACMessage(tacSimulationBody);
@@ -822,7 +822,7 @@ export class TacSdk {
             evmExecutorFee: BigInt(tacSimulationResult.suggestedTacExecutionFee),
             tvmExecutorFee: BigInt(tacSimulationResult.suggestedTonExecutionFee) * BigInt(isRoundTrip),
         };
-        this.debugLog(`Collected fee params: ${JSON.stringify(feeParams)}`);
+        this.debugLog(`Collected fee params: ${feeParams}`);
 
         return { feeParams: feeParams, simulation: tacSimulationResult };
     }
@@ -839,7 +839,7 @@ export class TacSdk {
         this.debugLog(`Transaction linker shard count: ${transactionLinkerShardCount}`);
 
         const transactionLinker = generateTransactionLinker(sender.getSenderAddress(), transactionLinkerShardCount);
-        this.debugLog(`Transaction linker: ${JSON.stringify(transactionLinker)}`);
+        this.debugLog(`Transaction linker: ${transactionLinker}`);
 
         return await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets);
     }
@@ -899,7 +899,7 @@ export class TacSdk {
         this.debugLog(`Transaction linker shard count: ${transactionLinkerShardCount}`);
 
         const transactionLinker = generateTransactionLinker(caller, transactionLinkerShardCount);
-        this.debugLog(`Generated transaction linker: ${JSON.stringify(transactionLinker)}`);
+        this.debugLog(`Generated transaction linker: ${transactionLinker}`);
 
         if (evmValidExecutors.length == 0) {
             evmValidExecutors = this.TACParams.trustedTACExecutors;
@@ -933,13 +933,13 @@ export class TacSdk {
         if (protocolFee != undefined) {
             feeParams.protocolFee = protocolFee;
         }
-        this.debugLog(`Resulting fee params: ${JSON.stringify(feeParams)}`);
+        this.debugLog(`Resulting fee params: ${feeParams}`);
 
         const validExecutors: ValidExecutors = {
             tac: evmValidExecutors,
             ton: tvmValidExecutors,
         };
-        this.debugLog(`Valid executors: ${JSON.stringify(validExecutors)}`);
+        this.debugLog(`Valid executors: ${validExecutors}`);
 
         const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg, validExecutors);
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData, feeParams);
@@ -985,7 +985,7 @@ export class TacSdk {
                   sendTransactionResult,
                   operationId: await this.operationTracker.getOperationId(transactionLinker, {
                       ...waitOptions,
-                      successCheck: (operationId) => !!operationId,
+                      successCheck: (operationId: string) => !!operationId,
                       log: this.debugLog.bind(this),
                   }),
                   ...transactionLinker,
@@ -1070,7 +1070,7 @@ export class TacSdk {
                 });
             }
         }
-        this.debugLog(`TON assets: ${JSON.stringify(tonAssets)}`);
+        this.debugLog(`TON assets: ${tonAssets}`);
 
         if (value > 0) {
             this.debugLog('Adding native TAC to TON assets');
@@ -1083,7 +1083,7 @@ export class TacSdk {
         }
 
         const suggestedTONExecutorFee = await this.getTVMExecutorFeeInfo(tonAssets, TAC_SYMBOL);
-        this.debugLog(`Suggested TON executor fee: ${JSON.stringify(suggestedTONExecutorFee)}`);
+        this.debugLog(`Suggested TON executor fee: ${suggestedTONExecutorFee}`);
 
         const crossChainLayerAddress = await this.TACParams.crossChainLayer.getAddress();
         for (const asset of assets) {
