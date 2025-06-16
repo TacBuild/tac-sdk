@@ -30,6 +30,8 @@ All notable changes to this project will be documented in this file.
 - Added `metaInfo` field to the `ExecutionStages`.
 - LiteSequencerClient to handle lite sequencer requests and its parameters.
 - Method to calculate tvmExecutorFee: `getTVMExecutorFeeInfo`.
+- The `IsRoundTrip` flag is set to `true` by default.
+- The `tonExecutorFee` is now determined as `max(rollback_message, normal_execution)`.
 
 ### Changed
 

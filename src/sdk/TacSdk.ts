@@ -711,9 +711,9 @@ export class TacSdk {
         evmProxyMsg: EvmProxyMsg,
         transactionLinker: TransactionLinker,
         rawAssets: RawAssetBridgingData[],
-        evmValidExecutors: string[],
         forceSend: boolean = false,
-        isRoundTrip?: boolean,
+        isRoundTrip: boolean = true,
+        evmValidExecutors: string[] = this.TACParams.trustedTACExecutors,
     ): Promise<ExecutionFeeEstimationResult> {
         const crossChainLayer = this.TONParams.contractOpener.open(
             this.artifacts.ton.wrappers.CrossChainLayer.createFromAddress(
@@ -739,30 +739,25 @@ export class TacSdk {
             tonCaller: transactionLinker.caller,
         };
 
+        isRoundTrip = isRoundTrip ?? (rawAssets.length != 0);
+
         const tacSimulationResult = await this.simulateTACMessage(tacSimulationBody);
         if (!tacSimulationResult.simulationStatus) {
             if (forceSend) {
                 return {
                     feeParams: {
-                        isRoundTrip: isRoundTrip ?? false,
+                        isRoundTrip,
                         gasLimit: 0n,
                         protocolFee:
                             BigInt(toNano(fullStateCCL.tacProtocolFee!)) +
-                            BigInt(isRoundTrip ?? false) * BigInt(toNano(fullStateCCL.tonProtocolFee!)),
-                        evmExecutorFee: 0n,
-                        tvmExecutorFee: 0n,
+                            BigInt(isRoundTrip) * BigInt(toNano(fullStateCCL.tonProtocolFee!)),
+                        evmExecutorFee: BigInt(tacSimulationResult.suggestedTacExecutionFee),
+                        tvmExecutorFee: BigInt(tacSimulationResult.suggestedTonExecutionFee) * BigInt(isRoundTrip),
                     },
                     simulation: tacSimulationResult,
                 };
             }
             throw tacSimulationResult;
-        }
-
-        isRoundTrip = isRoundTrip ?? tacSimulationResult.outMessages != null;
-
-        let tonExecutorFeeInTON = 0n;
-        if (isRoundTrip) {
-            tonExecutorFeeInTON = BigInt(tacSimulationResult.suggestedTonExecutionFee);
         }
 
         const protocolFee =
@@ -774,7 +769,7 @@ export class TacSdk {
             gasLimit: tacSimulationResult.estimatedGas,
             protocolFee: protocolFee,
             evmExecutorFee: BigInt(tacSimulationResult.suggestedTacExecutionFee),
-            tvmExecutorFee: tonExecutorFeeInTON,
+            tvmExecutorFee: BigInt(tacSimulationResult.suggestedTonExecutionFee) * BigInt(isRoundTrip),
         };
 
         return { feeParams: feeParams, simulation: tacSimulationResult };
@@ -791,9 +786,7 @@ export class TacSdk {
 
         const transactionLinker = generateTransactionLinker(sender.getSenderAddress(), transactionLinkerShardCount);
 
-        const evmValidExecutors = this.TACParams.trustedTACExecutors;
-
-        return await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets, evmValidExecutors, false, undefined);
+        return await this.getFeeInfo(evmProxyMsg, transactionLinker, rawAssets);
     }
 
     async getTVMExecutorFeeInfo(assets: AssetBridgingData[], feeSymbol: String): Promise<SuggestedTONExecutorFee> {
@@ -860,9 +853,9 @@ export class TacSdk {
             evmProxyMsg,
             transactionLinker,
             rawAssets,
-            evmValidExecutors,
             forceSend,
             isRoundTrip,
+            evmValidExecutors,
         );
 
         if (evmProxyMsg.gasLimit == undefined) {
