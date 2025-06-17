@@ -186,6 +186,7 @@ export async function waitUntilSuccess<T, A extends unknown[]>(
             if (!result) {
                 throw new Error(`Empty result`);
             }
+            log(`Result: ${formatObjectForLogging(result)}`);
             if (successCheck && !successCheck(result)) {
                 throw new Error(`Result is not successful`);
             }

@@ -1026,7 +1026,16 @@ export class TacSdk {
                 const operationIds = await this.operationTracker.getOperationIdsByShardsKeys(
                     transactionLinkers.map((linker) => linker.shardsKey),
                     caller,
-                    waitOptions,
+                    {
+                        ...waitOptions,
+                        log: this.debugLog.bind(this),
+                        successCheck: (operationIds: OperationIdsByShardsKey) => {
+                            return (
+                                Object.keys(operationIds).length == transactionLinkers.length &&
+                                Object.values(operationIds).every((ids) => ids.operationIds.length > 0)
+                            );
+                        },
+                    },
                 );
                 this.debugLog(`Operation IDs: ${formatObjectForLogging(operationIds)}`);
                 return transactionLinkers.map((linker) => ({
