@@ -123,7 +123,7 @@ export class TacSdk {
         const contractOpener =
             TONParams?.contractOpener ??
             new TonClient({
-                endpoint: new URL('api/v2/jsonRPC', testnet.TON_RPC_ENDPOINT_BY_TAC).toString()
+                endpoint: new URL('api/v2/jsonRPC', artifacts.TON_RPC_ENDPOINT_BY_TAC).toString()
             });
         const settingsAddress = TONParams?.settingsAddress 
                                 ?? artifacts.TON_SETTINGS_ADDRESS;
