@@ -8,6 +8,7 @@
   - [How Tracking Works](#how-tracking-works)
   - [Getting Started](#getting-started)
   - [Architecture](#architecture)
+  - [Waiting for Results](#waiting-for-results)
   - [Tracking by Transaction Link](#tracking-by-transaction-link)
     - [`getOperationId`](#getoperationid)
     - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
@@ -51,7 +52,8 @@ import { OperationTracker, Network } from "@tonappchain/sdk";
 const tracker = new OperationTracker(
   network: Network.TESTNET,
   // Optional:
-  // customLiteSequencerEndpoints: ["https://your-sequencer.com"]
+  // customLiteSequencerEndpoints: ["https://your-sequencer.com"],
+  // debug: true // Enable debug logging
 );
 ```
 
@@ -74,12 +76,57 @@ For more details about the underlying client, see [`LiteSequencerClient`](./lite
 
 ---
 
+## Waiting for Results
+
+All methods in `OperationTracker` support an optional `waitOptions` parameter that enables automatic retrying and waiting for successful results:
+
+```ts
+interface WaitOptions<T = unknown> {
+    /**
+     * Timeout in milliseconds
+     * @default 300000 (5 minutes)
+     */
+    timeout?: number;
+    /**
+     * Maximum number of attempts
+     * @default 30
+     */
+    maxAttempts?: number;
+    /**
+     * Delay between attempts in milliseconds
+     * @default 10000 (10 seconds)
+     */
+    delay?: number;
+    /**
+     * Function to check if the result is successful
+     * If not provided, any non-error result is considered successful
+     */
+    successCheck?: (result: T) => boolean;
+}
+```
+
+Example usage:
+```ts
+// Wait for operation ID with custom options
+const operationId = await tracker.getOperationId(transactionLinker, {
+    timeout: 60000,     // 1 minute timeout
+    maxAttempts: 10,    // 10 attempts
+    delay: 5000,        // 5 seconds between attempts
+    successCheck: (result) => result !== '' // Custom success check
+});
+```
+
+---
+
 ## Tracking by Transaction Link
 
 ### `getOperationId`
 
 ```ts
-getOperationId(transactionLinker: TransactionLinker): Promise<string>
+getOperationId(
+    transactionLinker: TransactionLinker,
+    waitOptions?: WaitOptions<string>
+): Promise<string>
 ```
 
 Fetches the crosschain `operationId` based on a transaction linker. Tries each endpoint in sequence until successful.
@@ -101,7 +148,10 @@ getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<Simp
 ### `getOperationStatus`
 
 ```ts
-getOperationStatus(operationId: string): Promise<StatusInfo>
+getOperationStatus(
+    operationId: string,
+    waitOptions?: WaitOptions<StatusInfo>
+): Promise<StatusInfo>
 ```
 
 **Returns:** [`StatusInfo`](./../models/structs.md#statusinfo)
@@ -111,7 +161,11 @@ getOperationStatus(operationId: string): Promise<StatusInfo>
 ### `getOperationStatuses`
 
 ```ts
-getOperationStatuses(operationIds: string[], chunkSize?: number): Promise<StatusInfosByOperationId>
+getOperationStatuses(
+    operationIds: string[],
+    waitOptions?: WaitOptions<StatusInfosByOperationId>,
+    chunkSize?: number
+): Promise<StatusInfosByOperationId>
 ```
 
 **Returns:** [`StatusInfosByOperationId`](./../models/structs.md#statusinfosbyoperationId)
@@ -124,7 +178,10 @@ getOperationStatuses(operationIds: string[], chunkSize?: number): Promise<Status
 ### `getStageProfiling`
 
 ```ts
-getStageProfiling(operationId: string): Promise<ExecutionStages>
+getStageProfiling(
+    operationId: string,
+    waitOptions?: WaitOptions<ExecutionStages>
+): Promise<ExecutionStages>
 ```
 
 **Returns:** [`ExecutionStages`](./../models/structs.md#executionstages)
@@ -135,7 +192,11 @@ getStageProfiling(operationId: string): Promise<ExecutionStages>
 ### `getStageProfilings`
 
 ```ts
-getStageProfilings(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesByOperationId>
+getStageProfilings(
+    operationIds: string[],
+    waitOptions?: WaitOptions<ExecutionStagesByOperationId>,
+    chunkSize?: number
+): Promise<ExecutionStagesByOperationId>
 ```
 
 **Returns:** [`ExecutionStagesByOperationId`](./../models/structs.md#executionstagesbyoperationid)
@@ -148,7 +209,10 @@ getStageProfilings(operationIds: string[], chunkSize?: number): Promise<Executio
 ### `getOperationType`
 
 ```ts
-getOperationType(operationId: string): Promise<OperationType>
+getOperationType(
+    operationId: string,
+    waitOptions?: WaitOptions<OperationType>
+): Promise<OperationType>
 ```
 
 **Returns:** [`OperationType`](./../models/enums.md#operationtype)
@@ -160,9 +224,10 @@ getOperationType(operationId: string): Promise<OperationType>
 
 ```ts
 getOperationIdsByShardsKeys(
-  shardsKeys: string[],
-  caller: string,
-  chunkSize?: number
+    shardsKeys: string[],
+    caller: string,
+    waitOptions?: WaitOptions<OperationIdsByShardsKey>,
+    chunkSize?: number
 ): Promise<OperationIdsByShardsKey>
 ```
 

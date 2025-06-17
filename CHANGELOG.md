@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Debug mode for `TacSDK` and `OperationTracker`: SDK and OperationTracker don't write to console by default.
+- Optional waiting for operation resolution in `TacSDK` and `OperationTracker` while using `waitOptions` argument.
+
+### Changed
+
+- Methods in `OperationTracker` and `sendCrossChainTransaction(s)` in `TacSDK` now accept optional `waitOptions` argument. Example:
+
+```typescript
+async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>)
+```
+
 ## [0.6.4] - 2025-06-06
 
 ### Changed
