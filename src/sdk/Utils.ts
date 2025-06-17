@@ -209,3 +209,9 @@ export async function waitUntilSuccess<T, A extends unknown[]>(
         }
     }
 }
+
+export function formatObjectForLogging(obj: unknown): string {
+    return JSON.stringify(obj, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+    );
+}

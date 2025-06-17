@@ -14,7 +14,7 @@ import {
     WaitOptions,
 } from '../structs/Struct';
 import { LiteSequencerClient } from './LiteSequencerClient';
-import { waitUntilSuccess } from './Utils';
+import { formatObjectForLogging, waitUntilSuccess } from './Utils';
 
 export class OperationTracker {
     private readonly clients: LiteSequencerClient[];
@@ -38,7 +38,7 @@ export class OperationTracker {
     }
 
     async getOperationType(operationId: string, waitOptions?: WaitOptions<OperationType>): Promise<OperationType> {
-        this.debugLog(`Getting operation type for ${operationId}`);
+        this.debugLog(`Getting operation type for ${formatObjectForLogging(operationId)}`);
 
         const requestFn = async (): Promise<OperationType> => {
             let lastError: unknown;
@@ -60,7 +60,7 @@ export class OperationTracker {
     }
 
     async getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string>): Promise<string> {
-        this.debugLog(`Getting operation ID for transaction linker: ${transactionLinker}`);
+        this.debugLog(`Getting operation ID for transaction linker: ${formatObjectForLogging(transactionLinker)}`);
 
         const requestFn = async (): Promise<string> => {
             let lastError: unknown;
@@ -87,7 +87,7 @@ export class OperationTracker {
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
         chunkSize: number = 100,
     ): Promise<OperationIdsByShardsKey> {
-        this.debugLog(`Getting operation IDs for shards keys: ${shardsKeys.join(', ')}`);
+        this.debugLog(`Getting operation IDs for shards keys: ${formatObjectForLogging(shardsKeys)}`);
         this.debugLog(`Caller: ${caller}, Chunk size: ${chunkSize}`);
         const requestFn = async (): Promise<OperationIdsByShardsKey> => {
             let lastError: unknown;
@@ -167,7 +167,7 @@ export class OperationTracker {
         waitOptions?: WaitOptions<StatusInfosByOperationId>,
         chunkSize: number = 100,
     ): Promise<StatusInfosByOperationId> {
-        this.debugLog(`Getting operation statuses for operations: ${operationIds.join(', ')}`);
+        this.debugLog(`Getting operation statuses for operations: ${formatObjectForLogging(operationIds)}`);
         this.debugLog(`Chunk size: ${chunkSize}`);
         const requestFn = async (): Promise<StatusInfosByOperationId> => {
             let lastError: unknown;
@@ -189,7 +189,7 @@ export class OperationTracker {
     }
 
     async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>): Promise<StatusInfo> {
-        this.debugLog(`Getting operation status for ${operationId}`);
+        this.debugLog(`Getting operation status for ${formatObjectForLogging(operationId)}`);
         const requestFn = async (): Promise<StatusInfo> => {
             let lastError: unknown;
 
@@ -216,7 +216,7 @@ export class OperationTracker {
     }
 
     async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
-        this.debugLog(`Getting simplified operation status for transaction linker: ${transactionLinker}`);
+        this.debugLog(`Getting simplified operation status for transaction linker: ${formatObjectForLogging(transactionLinker)}`);
 
         const operationId = await this.getOperationId(transactionLinker);
         if (operationId == '') {
