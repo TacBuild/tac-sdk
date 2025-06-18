@@ -2,14 +2,16 @@ import { SandboxContract } from '@ton/sandbox';
 import type { Address, Cell, Contract, OpenedContract } from '@ton/ton';
 import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
 
+export type ContractState = {
+    balance: bigint;
+    state: 'active' | 'uninitialized' | 'frozen';
+    code: Buffer | null;
+};
+
 export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
 
-    getContractState(address: Address): Promise<{
-        balance: bigint;
-        state: 'active' | 'uninitialized' | 'frozen';
-        code: Buffer | null;
-    }>;
+    getContractState(address: Address): Promise<ContractState>;
 
     closeConnections?: () => unknown;
 }

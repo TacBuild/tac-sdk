@@ -78,8 +78,7 @@ export async function orbsOpener(network: Network): Promise<ContractOpener> {
     const endpoint = await getHttpEndpoint({
         network,
     });
-    const client = new TonClient({ endpoint });
-    return client;
+    return new TonClient({ endpoint });
 }
 
 export async function orbsOpener4(network: Network, timeout = 10000): Promise<ContractOpener> {

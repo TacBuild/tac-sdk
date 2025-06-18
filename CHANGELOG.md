@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - Debug mode for `TacSDK` and `OperationTracker`: SDK and OperationTracker don't write to console by default.
 - Optional waiting for operation resolution in `TacSDK` and `OperationTracker` while using `waitOptions` argument.
+- RetryableContractOpener for stable work of SDK
 
 ### Changed
 

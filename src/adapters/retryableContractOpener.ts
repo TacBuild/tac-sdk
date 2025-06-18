@@ -1,13 +1,10 @@
-import { ContractOpener, Network } from '../structs/Struct';
-import { Address, Contract, OpenedContract } from '@ton/ton';
-import { orbsOpener, orbsOpener4 } from './contractOpener';
-import { TonClient } from '@ton/ton';
+import { ContractOpener, ContractState, Network } from '../structs/Struct';
+import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
 import { SandboxContract } from '@ton/sandbox';
 import { mainnet, testnet } from '@tonappchain/artifacts';
+import { orbsOpener, orbsOpener4 } from './contractOpener';
 
-function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface OpenerConfig {
     opener: ContractOpener;
@@ -16,82 +13,121 @@ export interface OpenerConfig {
 }
 
 export class RetryableContractOpener implements ContractOpener {
-    private readonly openerConfigs: OpenerConfig[] = [];
+    private readonly openerConfigs: OpenerConfig[];
 
     constructor(openerConfigs: OpenerConfig[]) {
-        if (openerConfigs.length > 0) {
-            this.openerConfigs = openerConfigs.map((config) => ({
-                opener: config.opener,
-                retries: config.retries ?? 3,
-                retryDelay: config.retryDelay ?? 1000,
-            }));
+        if (openerConfigs.length === 0) {
+            throw new Error('No ContractOpener instances available');
+        }
+        this.openerConfigs = openerConfigs;
+    }
+
+    open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T> {
+        const firstConfig = this.openerConfigs[0];
+        const contract = firstConfig.opener.open(src);
+        return this.createRetryableContract(contract, src);
+    }
+
+    async getContractState(address: Address): Promise<ContractState> {
+        const result = await this.executeWithFallback((config) => config.opener.getContractState(address));
+
+        if (result.success && result.data) {
+            return result.data;
+        }
+        throw result.lastError || new Error('Failed to get contract state');
+    }
+
+    closeConnections(): void {
+        for (const config of this.openerConfigs) {
+            config.opener.closeConnections?.();
         }
     }
 
-    private async executeWithRetries<T>(operation: (opener: ContractOpener) => Promise<T>): Promise<T> {
-        let lastError: Error | null = null;
+    private async executeWithFallback<T>(
+        operation: (config: OpenerConfig) => Promise<T>,
+    ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+        let lastError: Error | undefined;
 
-        for (const openerConfig of this.openerConfigs) {
-            const { opener, retries, retryDelay } = openerConfig;
+        for (const config of this.openerConfigs) {
+            const result = await this.tryWithRetries(() => operation(config), config);
 
-            for (let attempt = 0; attempt < retries; attempt++) {
-                try {
-                    return await operation(opener);
-                } catch (error) {
-                    lastError = error as Error;
+            if (result.success) {
+                return { success: true, data: result.data };
+            }
+            lastError = result.lastError;
+        }
 
-                    if (attempt < retries - 1) {
-                        await sleep(retryDelay);
-                    }
+        return { success: false, lastError };
+    }
+
+    private async tryWithRetries<T>(
+        operation: () => Promise<T>,
+        config: OpenerConfig,
+    ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+        let lastError: Error | undefined;
+
+        for (let attempt = 0; attempt <= config.retries; attempt++) {
+            try {
+                const data = await operation();
+                return { success: true, data };
+            } catch (error) {
+                lastError = error as Error;
+                if (attempt < config.retries) {
+                    await sleep(config.retryDelay);
                 }
             }
         }
 
-        throw new Error(`All ContractOpener types failed: ${lastError?.message || 'Unknown error'}`);
+        return { success: false, lastError };
     }
 
-    open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T> {
-        if (this.openerConfigs.length === 0) {
-            throw new Error('No ContractOpener instances available');
-        }
+    private createRetryableContract<T extends Contract>(
+        contract: OpenedContract<T> | SandboxContract<T>,
+        src: T,
+    ): OpenedContract<T> | SandboxContract<T> {
+        return new Proxy(contract, {
+            get: (target, prop) => {
+                const value = Reflect.get(target, prop);
+                if (typeof value !== 'function') return value;
 
-        for (const { opener } of this.openerConfigs) {
-            try {
-                return opener.open(src);
-            } catch (error) {
-                // Continue to next opener
+                return async (...args: any[]) => {
+                    return this.callMethodAcrossOpeners(prop, args, src);
+                };
+            },
+        });
+    }
+
+    private async callMethodAcrossOpeners<T extends Contract>(
+        methodName: string | symbol,
+        args: any[],
+        src: T,
+    ): Promise<any> {
+        const result = await this.executeWithFallback((config) => {
+            const contract = config.opener.open(src);
+            const method = Reflect.get(contract, methodName);
+
+            if (typeof method !== 'function') {
+                throw new Error(`Method ${String(methodName)} is not a function`);
             }
-        }
 
-        throw new Error('All ContractOpener types failed to open contract');
-    }
+            return method.call(contract, ...args);
+        });
 
-    async getContractState(address: Address): Promise<{
-        balance: bigint;
-        state: 'active' | 'uninitialized' | 'frozen';
-        code: Buffer | null;
-    }> {
-        return this.executeWithRetries((opener) => opener.getContractState(address));
-    }
-
-    closeConnections(): void {
-        for (const { opener } of this.openerConfigs) {
-            opener.closeConnections?.();
-        }
+        if (result.success) return result.data;
+        throw result.lastError;
     }
 }
 
 export async function createDefaultRetryableOpener(
-    network: Network,
+    artifacts: typeof testnet | typeof mainnet,
     maxRetries = 3,
     retryDelay = 1000,
 ): Promise<ContractOpener> {
     const tonClient = new TonClient({
-        endpoint:
-            network === Network.TESTNET
-                ? new URL('api/v2/jsonRPC', testnet.TON_RPC_ENDPOINT_BY_TAC).toString()
-                : mainnet.TON_PUBLIC_RPC_ENDPOINT,
+        endpoint: new URL('api/v2/jsonRPC', artifacts.TON_RPC_ENDPOINT_BY_TAC).toString(),
     });
+
+    const network: Network = artifacts === testnet ? Network.TESTNET : Network.MAINNET;
 
     const opener4 = await orbsOpener4(network);
     const opener = await orbsOpener(network);
