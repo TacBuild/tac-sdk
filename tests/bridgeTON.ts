@@ -1,10 +1,13 @@
 import 'dotenv/config';
+
 import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
+import { defaultWaitOptions } from '../src/structs/Struct';
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
     const sdkParams: SDKParams = {
         network: Network.TESTNET,
+        debug: true,
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
@@ -31,7 +34,7 @@ const bridgeTonSawSender = async (amount: number) => {
         },
     ];
 
-    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets, {}, defaultWaitOptions);
 
     tacSdk.closeConnections();
 

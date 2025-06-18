@@ -10,13 +10,13 @@
     - [`sendCrossChainTransaction`](#sendcrosschaintransaction)
       - [**Purpose**](#purpose)
       - [**Parameters**](#parameters)
-      - [**Returns** `TransactionLinker`](#returns-transactionlinker)
+      - [**Returns** `TransactionLinkerWithOperationId`](#returns-transactionlinkerwithoperationid)
       - [**Possible exceptions**](#possible-exceptions)
       - [**Functionality**](#functionality)
     - [`getTransactionSimulationInfo`](#gettransactionsimulationinfo)
     - [`sendCrossChainTransactions`](#sendcrosschaintransactions)
       - [**Parameters**](#parameters-1)
-      - [**Returns** `Promise<TransactionLinker[]>`](#returns-promisetransactionlinker)
+      - [**Returns** `Promise<TransactionLinkerWithOperationId[]>`](#returns-promisetransactionlinkerwithoperationid)
   - [Token Address Helpers](#token-address-helpers)
     - [`getEVMTokenAddress`](#getevmtokenaddress)
       - [**Purpose**](#purpose-1)
@@ -72,7 +72,7 @@
 TacSdk.create(sdkParams: SDKParams): Promise<TacSdk>
 ```
 
-Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](./../models/structs.md#tonparams-type) and [`TACParams`](./../models/structs.md#tacparams-type).
+Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](./../models/structs.md#tonparams-type), [`TACParams`](./../models/structs.md#tacparams-type) and optional `debug` flag.
 
 ---
 
@@ -85,8 +85,9 @@ sendCrossChainTransaction(
   evmProxyMsg: EvmProxyMsg,
   sender: SenderAbstraction,
   assets?: AssetBridgingData[],
-  options?: CrossChainTransactionOptions
-): Promise<TransactionLinker>
+  options?: CrossChainTransactionOptions,
+  waitOptions?: WaitOptions<string>,
+): Promise<TransactionLinkerWithOperationId>
 ```
 
 This function facilitates crosschain operations by bridging data and assets from TON for interaction with TAC. Creates a transaction on the TON side that is sent to the TAC protocol address. This starts the crosschain operation. Works with TON native coin transfer and/or it handles the required logic for burning or transferring jettons based on the Jetton type(wrapped by our s-c CrossChainLayer or not).
@@ -114,11 +115,13 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 - **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) struct. 
 
+- **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct.
+
 > **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 
 > **Note:** If you don't specify methodName and encodedParameters and specify assets this will mean bridge any assets to evmTargetAddress (be sure to specify assets when doing this).
 
-#### **Returns** [`TransactionLinker`](./../models/structs.md#transactionlinker-type)
+#### **Returns** [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type)
   - An object for linking TON transaction and crosschain operation as well as for tracking crosschain operation status
 
 #### **Possible exceptions**
@@ -155,7 +158,7 @@ Simulates the full transaction lifecycle and estimates fees.
 ### `sendCrossChainTransactions`
 
 ```ts
-sendCrossChainTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TransactionLinker[]>
+sendCrossChainTransactions(sender: SenderAbstraction, txs: CrosschainTx[], waitOptions?: WaitOptions<OperationIdsByShardsKey>): Promise<TransactionLinkerWithOperationId[]>
 ```
 
 Sends multiple cross-chain transactions in a batch. This is useful for scenarios where multiple independent operations need to be initiated from TON to TAC.
@@ -164,9 +167,10 @@ Sends multiple cross-chain transactions in a batch. This is useful for scenarios
 
 - **`sender`**: A [`SenderAbstraction`](./sender.md) object representing the user's wallet.
 - **`txs`**: An array of [`CrosschainTx`](./../models/structs.md#crosschaintx-type) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`.
+- **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct.
 
-#### **Returns** `Promise<TransactionLinker[]>`
-  - An array of [`TransactionLinker`](./../models/structs.md#transactionlinker-type) objects, one for each transaction sent.
+#### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
+  - An array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.
 
 ---
 

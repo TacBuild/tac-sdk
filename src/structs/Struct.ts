@@ -119,6 +119,11 @@ export type SDKParams = {
      * URLs of lite sequencers
      */
     customLiteSequencerEndpoints?: string[];
+
+    /**
+     * Debug flag
+     */
+    debug?: boolean;
 };
 
 export enum AssetType {
@@ -209,6 +214,10 @@ export type TransactionLinker = {
     shardsKey: string;
     timestamp: number;
     sendTransactionResult?: unknown;
+};
+
+export type TransactionLinkerWithOperationId = TransactionLinker & {
+    operationId?: string;
 };
 
 export type TACSimulationRequest = {
@@ -399,4 +408,37 @@ export type NFTItemData = {
     collectionAddress: Address;
     ownerAddress: Address | null;
     content: Cell | null;
+};
+
+export interface WaitOptions<T = unknown> {
+    /**
+     * Timeout in milliseconds
+     * @default 300000 (5 minutes)
+     */
+    timeout?: number;
+    /**
+     * Maximum number of attempts
+     * @default 30
+     */
+    maxAttempts?: number;
+    /**
+     * Delay between attempts in milliseconds
+     * @default 10000 (10 seconds)
+     */
+    delay?: number;
+    /**
+     * Function to log debug messages
+     */
+    log?: (message: string) => void;
+    /**
+     * Function to check if the result is successful
+     * If not provided, any non-error result is considered successful
+     */
+    successCheck?: (result: T) => boolean;
+}
+
+export const defaultWaitOptions: WaitOptions = {
+    timeout: 300000,
+    maxAttempts: 30,
+    delay: 10000,
 };

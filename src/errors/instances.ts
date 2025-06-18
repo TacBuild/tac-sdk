@@ -15,9 +15,11 @@ import {
 
 export const emptyContractError = new ContractError('unexpected empty contract code of given jetton.', 100);
 
-export const operationFetchError = new FetchError('failed to fetch OperationId', 101);
+export const operationFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`failed to fetch OperationId: ${msg}`, 101, inner);
 
-export const statusFetchError = (msg: string) => new FetchError(`failed to fetch status transaction: ${msg}`, 102);
+export const statusFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`failed to fetch status transaction: ${msg}`, 102, inner);
 
 export const tvmAddressError = (addr: string) => new AddressError(`invalid tvm address ${addr}`, 103);
 
@@ -44,7 +46,8 @@ export const invalidMethodNameError = (methodName: string) =>
 
 export const simulationError = (inner: unknown) => new FetchError(`Failed to simulate EVM call: ${inner}`, 112, inner);
 
-export const profilingFetchError = (msg: string) => new FetchError(`failed to fetch stage profiling: ${msg}`, 113);
+export const profilingFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`failed to fetch stage profiling: ${msg}`, 113, inner);
 
 export const emptyArrayError = (msg: string) => new FetchError(`empty array: ${msg}`, 114);
 
@@ -57,3 +60,5 @@ export const prepareMessageGroupError = (isBocSizeValid: boolean, isDepthValid: 
     );
 
 export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 117);
+
+export const allEndpointsFailedError = (inner: unknown) => new FetchError('All endpoints failed', 118, inner);

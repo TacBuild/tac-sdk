@@ -17,6 +17,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`CrosschainTx`](#crosschaintx)
 ### Transaction Tracking
 - [`TransactionLinker`](#transactionlinker-type)
+- [`TransactionLinkerWithOperationId`](#transactionlinkerwithoperationid-type)
 
 ### Simulation Structures
 - [`TACSimulationRequest`](#tacsimulationrequest)
@@ -34,6 +35,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`ExecutionStages`](#executionstages)
 - [`ExecutionStagesByOperationId`](#executionstagesbyoperationid)
 - [`StatusInfosByOperationId`](#statusinfosbyoperationid)
+- [`WaitOptions`](#waitoptions)
 
 ### Metadata & Fees
 - [`MetaInfo`](#metainfo)
@@ -72,6 +74,7 @@ export type SDKParams = {
     TACParams?: TACParams;
     TONParams?: TONParams;
     customLiteSequencerEndpoints?: string[];
+    debug?: boolean;
 }
 ```
 
@@ -81,7 +84,7 @@ Parameters for SDK:
 - **`TACParams`** *(optional)*: Custom parameters for TAC side
 - **`TONParams`** *(optional)*: Custom parameters for TON side
 - **`customLiteSequencerEndpoints`** *(optional)*: Custom lite sequencer endpoints for API access.
-
+- **`debug`** *(optional)*: Debug mode for SDK. Default is *false*.
 
 ### `TONParams (Type)`
 ```typescript
@@ -289,6 +292,17 @@ Linker to track TON transaction for crosschain operation.
 - **`sendTransactionResult`** *(optional)*: Result of sending transaction. May be used to check result of sending transaction. Default TonClient does NOT fill this field. However, in unit tests @ton/sandbox set transaction result object to this field.
 
 This structure is designed to help track the entire execution path of a operation across all levels. By using it, you can identify the `operationId` and subsequently monitor the operation status through a public API. This is particularly useful for ensuring visibility and transparency in the operation lifecycle, allowing you to verify its progress and outcome.
+
+### `TransactionLinkerWithOperationId (Type)`
+
+```typescript
+export type TransactionLinkerWithOperationId = TransactionLinker & {
+    operationId?: string;
+};
+```
+
+This structure is extended version of `TransactionLinker` with `operationId` field that is retrieved automatically by `TacSDK` when sending crosschain transaction.
+
 
 ### `TACSimulationRequest`
 
@@ -731,3 +745,25 @@ Contains fee information for both TAC and TON blockchain networks.
 
 - **`tac`**: Complete fee structure for transactions on the TAC blockchain.
 - **`ton`**: Complete fee structure for transactions on the TON blockchain.
+
+### `WaitOptions`
+
+```typescript
+export type WaitOptions<T> = {
+    timeout?: number;
+    maxAttempts?: number;
+    delay?: number;
+    successCheck?: (result: T) => boolean;
+};
+```
+
+Allows to specify custom options for waiting for operation resolution.
+
+- **`timeout`** *(optional)*: The maximum time to wait for the operation to complete.
+- **`maxAttempts`** *(optional)*: The maximum number of attempts to check the operation status.
+- **`delay`** *(optional)*: The delay between attempts to check the operation status.
+- **`successCheck`** *(optional)*: A function to check if the operation is successful.
+
+
+
+
