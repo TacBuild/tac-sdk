@@ -104,7 +104,7 @@ export class TacSdk {
         const network = sdkParams.network;
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
         const artifacts = network === Network.TESTNET ? testnet : mainnet;
-        const TONParams = await this.prepareTONParams(network, delay, artifacts, sdkParams.TONParams);
+        const TONParams = await this.prepareTONParams(delay, artifacts, sdkParams.TONParams);
         const TACParams = await this.prepareTACParams(artifacts, delay, sdkParams.TACParams);
 
         const liteSequencerEndpoints =
@@ -116,7 +116,6 @@ export class TacSdk {
     }
 
     private static async prepareTONParams(
-        network: Network,
         delay: number,
         artifacts: typeof testnet | typeof mainnet,
         TONParams?: TONParams,
@@ -124,12 +123,10 @@ export class TacSdk {
         const contractOpener =
             TONParams?.contractOpener ??
             new TonClient({
-                endpoint:
-                    network == Network.TESTNET
-                        ? new URL('api/v2/jsonRPC', testnet.TON_RPC_ENDPOINT_BY_TAC).toString()
-                        : mainnet.TON_PUBLIC_RPC_ENDPOINT,
+                endpoint: new URL('api/v2/jsonRPC', artifacts.TON_RPC_ENDPOINT_BY_TAC).toString()
             });
-        const settingsAddress = TONParams?.settingsAddress ?? artifacts.ton.addresses.TON_SETTINGS_ADDRESS;
+        const settingsAddress = TONParams?.settingsAddress 
+                                ?? artifacts.TON_SETTINGS_ADDRESS;
         const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
 
         const jettonProxyAddress = await settings.getAddressSetting('JettonProxyAddress');
@@ -166,7 +163,8 @@ export class TacSdk {
     ): Promise<InternalTACParams> {
         const provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
 
-        const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.tac.addresses.TAC_SETTINGS_ADDRESS;
+        const settingsAddress = TACParams?.settingsAddress?.toString() 
+                            ?? artifacts.TAC_SETTINGS_ADDRESS;
 
         const settings = artifacts.tac.wrappers.SettingsFactoryTAC.connect(settingsAddress, provider);
         const crossChainLayerABI =
