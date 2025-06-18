@@ -14,6 +14,7 @@ export {
     simulationError,
     emptyArrayError,
     profilingFetchError,
+    allEndpointsFailedError,
 } from './instances';
 
 export {

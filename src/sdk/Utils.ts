@@ -1,9 +1,9 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers, isAddress as isEthereumAddress } from 'ethers';
 
-import { EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors } from '../structs/Struct';
-import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import { evmAddressError, invalidMethodNameError, tvmAddressError } from '../errors';
+import { RandomNumberByTimestamp } from '../structs/InternalStruct';
+import { EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors, WaitOptions } from '../structs/Struct';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -110,7 +110,7 @@ export const convertKeysToCamelCase = <T>(data: T): T => {
     } else if (data !== null && typeof data === 'object') {
         return Object.keys(data).reduce((acc, key) => {
             const camelKey = snakeToCamel(key);
-            (acc as any)[camelKey] = convertKeysToCamelCase((data as any)[key]);
+            (acc as Record<string, unknown>)[camelKey] = convertKeysToCamelCase((data as Record<string, unknown>)[key]);
             return acc;
         }, {} as T);
     }
@@ -139,7 +139,7 @@ export const calculateAmount = (rawAmount: bigint, decimals: number): number => 
     return Number(fractionalPart ? `${integerPart}.${fractionalPart}` : integerPart);
 };
 
-export const toCamelCaseTransformer = (data: any) => {
+export const toCamelCaseTransformer = (data: string) => {
     try {
         const parsedData = JSON.parse(data);
         return convertKeysToCamelCase(parsedData);
@@ -150,7 +150,7 @@ export const toCamelCaseTransformer = (data: any) => {
 
 export const generateFeeData = (feeParams?: FeeParams): Cell | undefined => {
     if (feeParams) {
-        let feeDataBuilder = beginCell()
+        const feeDataBuilder = beginCell()
             .storeBit(feeParams.isRoundTrip)
             .storeCoins(feeParams.protocolFee)
             .storeCoins(feeParams.evmExecutorFee);
@@ -162,3 +162,57 @@ export const generateFeeData = (feeParams?: FeeParams): Cell | undefined => {
         return undefined;
     }
 };
+
+export async function waitUntilSuccess<T, A extends unknown[]>(
+    options: WaitOptions<T> = {},
+    operation: (...args: A) => Promise<T>,
+    ...args: A
+): Promise<T> {
+    const timeout = options.timeout ?? 300000;
+    const maxAttempts = options.maxAttempts ?? 30;
+    const delay = options.delay ?? 10000;
+    const successCheck = options.successCheck;
+    const log = options.log ?? (() => {});
+
+    log(`Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`);
+    const startTime = Date.now();
+    let attempt = 1;
+
+    while (true) {
+        const currentTime = Date.now();
+        const elapsedTime = currentTime - startTime;
+        try {
+            const result = await operation(...args);
+            if (!result) {
+                throw new Error(`Empty result`);
+            }
+            log(`Result: ${formatObjectForLogging(result)}`);
+            if (successCheck && !successCheck(result)) {
+                throw new Error(`Result is not successful`);
+            }
+            log(`Attempt ${attempt} successful`);
+
+            return result;
+        } catch (error) {
+            if (elapsedTime >= timeout) {
+                log(`Timeout after ${elapsedTime}ms`);
+                throw error;
+            }
+
+            if (attempt >= maxAttempts) {
+                log(`Max attempts (${maxAttempts}) reached`);
+                throw error;
+            }
+            log(`Error on attempt ${attempt}: ${error}`);
+            log(`Waiting ${delay}ms before next attempt`);
+            await sleep(delay);
+            attempt++;
+        }
+    }
+}
+
+export function formatObjectForLogging(obj: unknown): string {
+    return JSON.stringify(obj, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+    );
+}
