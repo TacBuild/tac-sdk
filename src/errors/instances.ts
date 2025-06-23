@@ -62,3 +62,5 @@ export const prepareMessageGroupError = (isBocSizeValid: boolean, isDepthValid: 
 export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 117);
 
 export const allEndpointsFailedError = (inner: unknown) => new FetchError('All endpoints failed', 118, inner);
+export const allContractOpenerFailedError = (inner: unknown) =>
+    new FetchError('All contract opener failed', 119, inner);

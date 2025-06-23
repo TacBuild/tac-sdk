@@ -10,6 +10,11 @@ This file documents the primary data structures (types and interfaces often refe
 - [`TONParams`](#tonparams-type)
 - [`TACParams`](#tacparams-type)
 
+### Contract Openers
+- [`ContractState`](#contractstate-type)
+- [`ContractOpener`](#contractopener-interface)
+- [`RetryableContractOpener`](#retryablecontractopener-class)
+
 ### Crosschain Transaction
 - [`EvmProxyMsg`](#evmproxymsg-type)
 - [`CrossChainTransactionOptions`](#crosschaintransactionoptions)
@@ -121,6 +126,91 @@ TAC Parameters for SDK:
 - **`crossChainLayerTokenBytecode`** *(optional)*: TAC CCL Token contract bytecode. Set for tests only
 - **`crossChainLayerNFTABI`** *(optional)*: TAC CCL NFT contract ABI. Set for tests only
 - **`crossChainLayerNFTBytecode`** *(optional)*: TAC CCL NFT contract bytecode. Set for tests only
+
+
+### `ContractState (Type)`
+
+```typescript
+export type ContractState = {
+    balance: bigint;
+    state: 'active' | 'uninitialized' | 'frozen';
+    code: Buffer | null;
+};
+```
+
+Represents the state of a TON smart contract:
+- **`balance`**: The contract's balance in nanoTONs.
+- **`state`**: The current state of the contract, which can be:
+    - **`active`**: The contract is deployed and active.
+    - **`uninitialized`**: The contract exists but has not been initialized.
+    - **`frozen`**: The contract is frozen (inactive).
+- **`code`**: The contract's code as a Buffer, or null if the contract has no code.
+
+### `ContractOpener (Interface)`
+
+```typescript
+export interface ContractOpener {
+    open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
+    getContractState(address: Address): Promise<ContractState>;
+    closeConnections?: () => unknown;
+}
+```
+
+Interface for opening and interacting with TON smart contracts:
+- **`open<T extends Contract>(src: T)`**: Opens a contract for interaction, returning an OpenedContract or SandboxContract instance.
+- **`getContractState(address: Address)`**: Retrieves the state of a contract at the specified address.
+- **`closeConnections?`** *(optional)*: Closes any open connections to the TON network.
+
+### `RetryableContractOpener (Class)`
+
+```typescript
+export interface OpenerConfig {
+    opener: ContractOpener;
+    retries: number;
+    retryDelay: number;
+}
+
+export class RetryableContractOpener implements ContractOpener {
+    constructor(openerConfigs: OpenerConfig[]);
+    open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
+    getContractState(address: Address): Promise<ContractState>;
+    closeConnections(): void;
+}
+```
+
+A resilient implementation of ContractOpener that provides retry capabilities and fallback mechanisms when interacting with TON contracts.
+
+#### **Constructor Parameters**
+- **`openerConfigs`**: An array of `OpenerConfig` objects, each containing:
+  - **`opener`**: A ContractOpener instance.
+  - **`retries`**: Number of retry attempts for failed operations.
+  - **`retryDelay`**: Delay in milliseconds between retry attempts.
+
+#### **Methods**
+- **`open<T extends Contract>(src: T)`**: Opens a contract with retry capabilities. If the primary opener fails, it will automatically retry using the configured retry policy.
+- **`getContractState(address: Address)`**: Retrieves contract state with retry capabilities. If the primary opener fails, it will try alternative openers according to the configured retry policy.
+- **`closeConnections()`**: Closes all connections across all configured openers.
+
+#### **Helper Functions**
+```typescript
+export async function createDefaultRetryableOpener(
+    artifacts: typeof testnet | typeof mainnet,
+    maxRetries = 3,
+    retryDelay = 1000,
+): Promise<ContractOpener>
+```
+
+Creates a default RetryableContractOpener with multiple fallback providers:
+- **`artifacts`**: Network artifacts (testnet or mainnet).
+- **`maxRetries`** *(optional)*: Maximum number of retry attempts. Default is *3*.
+- **`retryDelay`** *(optional)*: Delay in milliseconds between retry attempts. Default is *1000*.
+
+Returns a RetryableContractOpener configured with:
+1. TonClient by TAC (primary)
+2. orbsOpener4 (first fallback)
+3. orbsOpener (second fallback)
+
+This function provides a convenient way to create a robust contract opener with sensible defaults for production use.
 
 
 ### `EvmProxyMsg (Type)`
@@ -763,7 +853,3 @@ Allows to specify custom options for waiting for operation resolution.
 - **`maxAttempts`** *(optional)*: The maximum number of attempts to check the operation status.
 - **`delay`** *(optional)*: The delay between attempts to check the operation status.
 - **`successCheck`** *(optional)*: A function to check if the operation is successful.
-
-
-
-

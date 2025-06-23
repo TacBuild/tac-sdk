@@ -1,5 +1,5 @@
 import { SandboxContract } from '@ton/sandbox';
-import { Address, address, beginCell, Cell, fromNano, OpenedContract, toNano, TonClient } from '@ton/ton';
+import { Address, address, beginCell, Cell, fromNano, OpenedContract, toNano } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { NFTCollection, NFTItem } from '@tonappchain/artifacts/dist/src/ton/wrappers';
 import axios from 'axios';
@@ -8,6 +8,8 @@ import { ethers, isAddress as isEthereumAddress, keccak256, toUtf8Bytes, Wallet 
 import { emptyContractError, simulationError } from '../errors';
 import { invalidAssetType } from '../errors/instances';
 import type { SenderAbstraction } from '../sender';
+import { createDefaultRetryableOpener } from '../adapters/retryableContractOpener';
+
 // import internal structs
 import {
     AssetOpType,
@@ -131,13 +133,8 @@ export class TacSdk {
         artifacts: typeof testnet | typeof mainnet,
         TONParams?: TONParams,
     ): Promise<InternalTONParams> {
-        const contractOpener =
-            TONParams?.contractOpener ??
-            new TonClient({
-                endpoint: new URL('api/v2/jsonRPC', artifacts.TON_RPC_ENDPOINT_BY_TAC).toString()
-            });
-        const settingsAddress = TONParams?.settingsAddress 
-                                ?? artifacts.TON_SETTINGS_ADDRESS;
+        const contractOpener = TONParams?.contractOpener ?? (await createDefaultRetryableOpener(artifacts));
+        const settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
         const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
 
         const jettonProxyAddress = await settings.getAddressSetting('JettonProxyAddress');
@@ -174,8 +171,7 @@ export class TacSdk {
     ): Promise<InternalTACParams> {
         const provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
 
-        const settingsAddress = TACParams?.settingsAddress?.toString() 
-                            ?? artifacts.TAC_SETTINGS_ADDRESS;
+        const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.TAC_SETTINGS_ADDRESS;
 
         const settings = artifacts.tac.wrappers.SettingsFactoryTAC.connect(settingsAddress, provider);
         const crossChainLayerABI =
@@ -595,13 +591,11 @@ export class TacSdk {
     private async generateCrossChainMessages(
         caller: string,
         evmData: Cell,
-
         aggregatedData: {
             jettons: JettonBridgingData[];
             nfts: NFTBridgingData[];
             crossChainTonAmount: bigint;
         },
-
         feeParams: FeeParams,
     ): Promise<ShardMessage[]> {
         this.debugLog(`Generating cross-chain messages`);
