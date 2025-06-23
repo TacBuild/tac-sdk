@@ -3,12 +3,11 @@ import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { RetryableContractOpener } from '../../src/adapters/retryableContractOpener';
 import '@ton/test-utils';
 import { UnstableContractOpener } from './unstableContractOpener';
-import { JettonWallet, JettonWalletData } from '../../src';
 import { testnet } from '@tonappchain/artifacts';
 
 describe('RetryableContractOpener with Sandbox', () => {
     let blockchain: Blockchain;
-    let jettonWallet: SandboxContract<JettonWallet>;
+    let jettonWallet: SandboxContract<testnet.ton.wrappers.JettonWallet>;
     let deployer: SandboxContract<TreasuryContract>;
 
     beforeEach(async () => {
@@ -18,14 +17,16 @@ describe('RetryableContractOpener with Sandbox', () => {
         const jettonMaster = await blockchain.treasury('jettonMaster');
 
         const jettonWalletCode = Cell.fromHex(testnet.ton.compilationArtifacts.JettonWalletCompiled.hex);
-        const config: JettonWalletData = {
-            balance: 0n,
+        const config = {
+            balance: 0,
             ownerAddress: deployer.address.toString(),
             jettonMasterAddress: jettonMaster.address.toString(),
             jettonWalletCode: jettonWalletCode,
         };
 
-        jettonWallet = blockchain.openContract(JettonWallet.createFromConfig(config, jettonWalletCode));
+        jettonWallet = blockchain.openContract(
+            testnet.ton.wrappers.JettonWallet.createFromConfig(config, jettonWalletCode),
+        );
 
         await jettonWallet.sendReceive(jettonMaster.getSender(), toNano('0.01'), { jettonAmount: 1000 });
     });

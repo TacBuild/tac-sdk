@@ -3,6 +3,8 @@ import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
 import { SandboxContract } from '@ton/sandbox';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { orbsOpener, orbsOpener4 } from './contractOpener';
+import { allEndpointsFailedError } from '../errors';
+import { allContractOpenerFailedError } from '../errors/instances';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -34,7 +36,7 @@ export class RetryableContractOpener implements ContractOpener {
         if (result.success && result.data) {
             return result.data;
         }
-        throw result.lastError || new Error('Failed to get contract state');
+        throw result.lastError || allContractOpenerFailedError('Failed to get contract state');
     }
 
     closeConnections(): void {
@@ -114,7 +116,7 @@ export class RetryableContractOpener implements ContractOpener {
         });
 
         if (result.success) return result.data;
-        throw result.lastError;
+        throw result.lastError || allContractOpenerFailedError('failed to call method in contract');
     }
 }
 
