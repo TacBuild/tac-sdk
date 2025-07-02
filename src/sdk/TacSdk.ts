@@ -752,6 +752,7 @@ export class TacSdk {
         forceSend: boolean = false,
         isRoundTrip: boolean = true,
         evmValidExecutors: string[] = this.TACParams.trustedTACExecutors,
+        tvmValidExecutors: string[] = this.TACParams.trustedTONExecutors,
     ): Promise<ExecutionFeeEstimationResult> {
         this.debugLog('Getting fee info');
         const crossChainLayer = this.TONParams.contractOpener.open(
@@ -770,6 +771,7 @@ export class TacSdk {
                 target: evmProxyMsg.evmTargetAddress,
             },
             evmValidExecutors: evmValidExecutors,
+            tvmValidExecutors: tvmValidExecutors,
             extraData: '0x',
             shardsKey: transactionLinker.shardsKey,
             tonAssets: rawAssets.map((asset) => ({
@@ -909,6 +911,7 @@ export class TacSdk {
             forceSend,
             isRoundTrip,
             evmValidExecutors,
+            tvmValidExecutors,
         );
 
         if (evmProxyMsg.gasLimit == undefined) {

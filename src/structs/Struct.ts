@@ -229,6 +229,7 @@ export type TACSimulationRequest = {
         target: string;
     };
     evmValidExecutors: string[];
+    tvmValidExecutors: string[];
     extraData: string;
     shardsKey: string;
 
