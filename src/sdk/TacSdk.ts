@@ -1253,8 +1253,10 @@ export class TacSdk {
             nftCollection = this.TONParams.contractOpener.open(
                 NFTCollection.createFromConfig(
                     {
-                        ownerAddress: address(this.TONParams.crossChainLayerAddress),
-                        content: beginCell().endCell(),
+                        adminAddress: address(this.TONParams.crossChainLayerAddress),
+                        newAdminAddress: null,
+                        collectionContent: beginCell().endCell(),
+                        commonContent: beginCell().endCell(),
                         nftItemCode: this.TONParams.nftItemCode,
                         originalAddress: evmNFTAddress,
                     },
