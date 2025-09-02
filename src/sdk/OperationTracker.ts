@@ -1,6 +1,7 @@
 import { mainnet, testnet } from '@tonappchain/artifacts';
 
 import { allEndpointsFailedError } from '../errors';
+import { ILogger, IOperationTracker } from '../structs/Services';
 import {
     ExecutionStages,
     ExecutionStagesByOperationId,
@@ -14,45 +15,99 @@ import {
     WaitOptions,
 } from '../structs/Struct';
 import { LiteSequencerClient } from './LiteSequencerClient';
+import { NoopLogger } from './Logger';
 import { formatObjectForLogging, waitUntilSuccess } from './Utils';
 
-export class OperationTracker {
-    private readonly clients: LiteSequencerClient[];
-    private readonly debug: boolean;
+export interface ILiteSequencerClientFactory {
+    createClients(endpoints: string[]): ILiteSequencerClient[];
+}
 
-    constructor(network: Network, customLiteSequencerEndpoints?: string[], debug: boolean = false) {
+export interface ILiteSequencerClient {
+    getOperationType(operationId: string): Promise<OperationType>;
+    getOperationId(transactionLinker: TransactionLinker): Promise<string>;
+    getOperationIdByTransactionHash(transactionHash: string): Promise<string>;
+    getOperationIdsByShardsKeys(
+        shardsKeys: string[],
+        caller: string,
+        chunkSize?: number
+    ): Promise<OperationIdsByShardsKey>;
+    getStageProfilings(
+        operationIds: string[],
+        chunkSize?: number
+    ): Promise<ExecutionStagesByOperationId>;
+    getOperationStatuses(
+        operationIds: string[],
+        chunkSize?: number
+    ): Promise<StatusInfosByOperationId>;
+}
+
+export class DefaultLiteSequencerClientFactory implements ILiteSequencerClientFactory {
+    createClients(endpoints: string[]): ILiteSequencerClient[] {
+        return endpoints.map(endpoint => new LiteSequencerClient(endpoint));
+    }
+}
+
+export class OperationTracker implements IOperationTracker {
+    private readonly clients: ILiteSequencerClient[];
+    private readonly logger: ILogger;
+
+    constructor(
+        network: Network, 
+        customLiteSequencerEndpoints?: string[], 
+        logger: ILogger = new NoopLogger(),
+        clientFactory: ILiteSequencerClientFactory = new DefaultLiteSequencerClientFactory()
+    ) {
         const endpoints =
             customLiteSequencerEndpoints ??
             (network === Network.TESTNET
                 ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
                 : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
 
-        this.clients = endpoints.map((endpoint) => new LiteSequencerClient(endpoint));
-        this.debug = debug;
+        this.clients = clientFactory.createClients(endpoints);
+        this.logger = logger;
     }
 
-    private debugLog(message: string) {
-        if (this.debug) {
-            console.log(`[OperationTracker Debug] ${message}`);
-        }
+    async getOperationIdByTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<string>,
+    ): Promise<string> {
+        this.logger.debug(`Getting operation ID for transactionHash: ${formatObjectForLogging(transactionHash)}`);
+
+        const requestFn = async (): Promise<string> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const id = await client.getOperationIdByTransactionHash(transactionHash);
+                    this.logger.debug(`Operation ID ${id == '' ? 'does not exist' : 'retrieved successfully'}`);
+                    return id;
+                } catch (error) {
+                    this.logger.warn(`Failed to get OperationId by transactionHash using one of the endpoints`);
+                    lastError = error;
+                }
+            }
+            this.logger.error('All endpoints failed to get operation id by transactionHash');
+            throw allEndpointsFailedError(lastError);
+        };
+
+        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
     }
 
     async getOperationType(operationId: string, waitOptions?: WaitOptions<OperationType>): Promise<OperationType> {
-        this.debugLog(`Getting operation type for ${formatObjectForLogging(operationId)}`);
+        this.logger.debug(`Getting operation type for ${formatObjectForLogging(operationId)}`);
 
         const requestFn = async (): Promise<OperationType> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const type = await client.getOperationType(operationId);
-                    this.debugLog(`Operation retrieved successfully`);
+                    this.logger.debug(`Operation retrieved successfully`);
                     return type;
                 } catch (error) {
-                    this.debugLog(`Failed to get operationType using one of the endpoints`);
+                    this.logger.warn(`Failed to get operationType using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.debugLog('All endpoints failed to get operation type');
+            this.logger.error('All endpoints failed to get operation type');
             throw allEndpointsFailedError(lastError);
         };
 
@@ -60,21 +115,21 @@ export class OperationTracker {
     }
 
     async getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string>): Promise<string> {
-        this.debugLog(`Getting operation ID for transaction linker: ${formatObjectForLogging(transactionLinker)}`);
+        this.logger.debug(`Getting operation ID for transaction linker: ${formatObjectForLogging(transactionLinker)}`);
 
         const requestFn = async (): Promise<string> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const id = await client.getOperationId(transactionLinker);
-                    this.debugLog(`Operation ID ${id == '' ? 'does not exist' : 'retrieved successfully'}`);
+                    this.logger.debug(`Operation ID ${id == '' ? 'does not exist' : 'retrieved successfully'}`);
                     return id;
                 } catch (error) {
-                    this.debugLog(`Failed to get OperationId using one of the endpoints`);
+                    this.logger.warn(`Failed to get OperationId using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.debugLog('All endpoints failed to get operation id');
+            this.logger.error('All endpoints failed to get operation id');
             throw allEndpointsFailedError(lastError);
         };
 
@@ -87,22 +142,22 @@ export class OperationTracker {
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
         chunkSize: number = 100,
     ): Promise<OperationIdsByShardsKey> {
-        this.debugLog(`Getting operation IDs for shards keys: ${formatObjectForLogging(shardsKeys)}`);
-        this.debugLog(`Caller: ${caller}, Chunk size: ${chunkSize}`);
+        this.logger.debug(`Getting operation IDs for shards keys: ${formatObjectForLogging(shardsKeys)}`);
+        this.logger.debug(`Caller: ${caller}, Chunk size: ${chunkSize}`);
         const requestFn = async (): Promise<OperationIdsByShardsKey> => {
             let lastError: unknown;
 
             for (const client of this.clients) {
                 try {
                     const result = await client.getOperationIdsByShardsKeys(shardsKeys, caller, chunkSize);
-                    this.debugLog(`Operation IDs by shards keys retrieved successfully`);
+                    this.logger.debug(`Operation IDs by shards keys retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.debugLog(`Failed to get OperationIds using one of the endpoints`);
+                    this.logger.warn(`Failed to get OperationIds using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.debugLog('All endpoints failed to get operation ids by shards keys');
+            this.logger.error('All endpoints failed to get operation ids by shards keys');
             throw allEndpointsFailedError(lastError);
         };
 
@@ -110,7 +165,7 @@ export class OperationTracker {
     }
 
     async getStageProfiling(operationId: string, waitOptions?: WaitOptions<ExecutionStages>): Promise<ExecutionStages> {
-        this.debugLog(`Getting stage profiling for operation ${operationId}`);
+        this.logger.debug(`Getting stage profiling for operation ${operationId}`);
         const requestFn = async (): Promise<ExecutionStages> => {
             let lastError: unknown;
 
@@ -119,17 +174,17 @@ export class OperationTracker {
                     const map = await client.getStageProfilings([operationId]);
                     const result = map[operationId];
                     if (!result) {
-                        this.debugLog(`No stageProfiling data for operationId=${operationId}`);
+                        this.logger.warn(`No stageProfiling data for operationId=${operationId}`);
                         throw new Error(`No stageProfiling data for operationId=${operationId}`);
                     }
-                    this.debugLog(`Stage profiling retrieved successfully`);
+                    this.logger.debug(`Stage profiling retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.debugLog(`Failed to get stage profiling using one of the endpoints`);
+                    this.logger.warn(`Failed to get stage profiling using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.debugLog('All endpoints failed to get stage profiling');
+            this.logger.error('All endpoints failed to get stage profiling');
             throw allEndpointsFailedError(lastError);
         };
 
@@ -141,21 +196,21 @@ export class OperationTracker {
         waitOptions?: WaitOptions<ExecutionStagesByOperationId>,
         chunkSize: number = 100,
     ): Promise<ExecutionStagesByOperationId> {
-        this.debugLog(`Getting stage profilings for operations: ${operationIds.join(', ')}`);
-        this.debugLog(`Chunk size: ${chunkSize}`);
+        this.logger.debug(`Getting stage profilings for operations: ${operationIds.join(', ')}`);
+        this.logger.debug(`Chunk size: ${chunkSize}`);
         const requestFn = async (): Promise<ExecutionStagesByOperationId> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const result = await client.getStageProfilings(operationIds, chunkSize);
-                    this.debugLog(`Stage profilings retrieved successfully`);
+                    this.logger.debug(`Stage profilings retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.debugLog(`Failed to get stage profilings using one of the endpoints`);
+                    this.logger.warn(`Failed to get stage profilings using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.debugLog('All endpoints failed to get stage profilings');
+            this.logger.error('All endpoints failed to get stage profilings');
             throw allEndpointsFailedError(lastError);
         };
 
@@ -167,21 +222,21 @@ export class OperationTracker {
         waitOptions?: WaitOptions<StatusInfosByOperationId>,
         chunkSize: number = 100,
     ): Promise<StatusInfosByOperationId> {
-        this.debugLog(`Getting operation statuses for operations: ${formatObjectForLogging(operationIds)}`);
-        this.debugLog(`Chunk size: ${chunkSize}`);
+        this.logger.debug(`Getting operation statuses for operations: ${formatObjectForLogging(operationIds)}`);
+        this.logger.debug(`Chunk size: ${chunkSize}`);
         const requestFn = async (): Promise<StatusInfosByOperationId> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const result = await client.getOperationStatuses(operationIds, chunkSize);
-                    this.debugLog(`Operation statuses retrieved successfully`);
+                    this.logger.debug(`Operation statuses retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.debugLog(`Failed to get operation statuses using one of the endpoints`);
+                    this.logger.warn(`Failed to get operation statuses using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.debugLog('All endpoints failed to get operation statuses');
+            this.logger.error('All endpoints failed to get operation statuses');
             throw allEndpointsFailedError(lastError);
         };
 
@@ -189,7 +244,7 @@ export class OperationTracker {
     }
 
     async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>): Promise<StatusInfo> {
-        this.debugLog(`Getting operation status for ${formatObjectForLogging(operationId)}`);
+        this.logger.debug(`Getting operation status for ${formatObjectForLogging(operationId)}`);
         const requestFn = async (): Promise<StatusInfo> => {
             let lastError: unknown;
 
@@ -198,17 +253,17 @@ export class OperationTracker {
                     const map = await client.getOperationStatuses([operationId]);
                     const result = map[operationId];
                     if (!result) {
-                        this.debugLog(`No operation status for operationId=${operationId}`);
+                        this.logger.warn(`No operation status for operationId=${operationId}`);
                         throw new Error(`No operation status for operationId=${operationId}`);
                     }
-                    this.debugLog(`Operation status retrieved successfully`);
+                    this.logger.debug(`Operation status retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.debugLog(`Failed to get operation status using one of the endpoints`);
+                    this.logger.warn(`Failed to get operation status using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.debugLog('All endpoints failed to get operation status');
+            this.logger.error('All endpoints failed to get operation status');
             throw allEndpointsFailedError(lastError);
         };
 
@@ -216,17 +271,19 @@ export class OperationTracker {
     }
 
     async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
-        this.debugLog(`Getting simplified operation status for transaction linker: ${formatObjectForLogging(transactionLinker)}`);
+        this.logger.debug(
+            `Getting simplified operation status for transaction linker: ${formatObjectForLogging(transactionLinker)}`,
+        );
 
         const operationId = await this.getOperationId(transactionLinker);
         if (operationId == '') {
-            this.debugLog('Operation ID not found');
+            this.logger.warn('Operation ID not found');
             return SimplifiedStatuses.OPERATION_ID_NOT_FOUND;
         }
-        this.debugLog(`Operation ID: ${operationId}`);
+        this.logger.debug(`Operation ID: ${operationId}`);
 
         const operationType = await this.getOperationType(operationId);
-        this.debugLog(`Operation type: ${operationType}`);
+        this.logger.debug(`Operation type: ${operationType}`);
 
         if (operationType == OperationType.PENDING || operationType == OperationType.UNKNOWN) {
             return SimplifiedStatuses.PENDING;

@@ -9,6 +9,7 @@
   - [API Reference](#api-reference)
     - [Operation Type](#operation-type)
     - [Operation ID](#operation-id)
+    - [Operation ID by Transaction Hash](#operation-id-by-transaction-hash)
     - [Operation IDs by Shards Keys](#operation-ids-by-shards-keys)
     - [Stage Profiling](#stage-profiling)
     - [Operation Statuses](#operation-statuses)
@@ -58,6 +59,18 @@ getOperationId(transactionLinker: TransactionLinker): Promise<string>
 ```
 
 Fetches the crosschain operation ID based on a transaction linker.
+
+**Returns:** `string` - The operation ID, or empty string if not found (404)
+
+---
+
+### Operation ID by Transaction Hash
+
+```ts
+getOperationIdByTransactionHash(transactionHash: string): Promise<string>
+```
+
+Fetches the crosschain operation ID based on a transaction hash. The client automatically routes to the appropriate API depending on whether the hash is an ETH hash (`0x...` 32 bytes) or a TON hash.
 
 **Returns:** `string` - The operation ID, or empty string if not found (404)
 

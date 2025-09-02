@@ -1,6 +1,8 @@
 import { SandboxContract } from '@ton/sandbox';
 import type { Address, Cell, Contract, OpenedContract } from '@ton/ton';
-import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
+import { AbstractProvider, Addressable } from 'ethers';
+
+import { ILogger } from './Services';
 
 export type ContractState = {
     balance: bigint;
@@ -52,36 +54,6 @@ export type TACParams = {
      * Address of TAC settings contract. Use only for tests.
      */
     settingsAddress?: string | Addressable;
-
-    /**
-     * ABI of TAC settings contract. Use only for tests.
-     */
-    settingsABI?: Interface | InterfaceAbi;
-
-    /**
-     * ABI of TAC CCL contract. Use only for tests.
-     */
-    crossChainLayerABI?: Interface | InterfaceAbi;
-
-    /**
-     * ABI of TAC CrossChainLayerToken contract. Use only for tests.
-     */
-    crossChainLayerTokenABI?: Interface | InterfaceAbi;
-
-    /**
-     * bytecode of TAC CrossChainLayerToken contract. Use only for tests.
-     */
-    crossChainLayerTokenBytecode?: string;
-
-    /**
-     * ABI of TAC CrossChainLayerNFT contract. Use only for tests.
-     */
-    crossChainLayerNFTABI?: Interface | InterfaceAbi;
-
-    /**
-     * bytecode of TAC CrossChainLayerNFT contract. Use only for tests.
-     */
-    crossChainLayerNFTBytecode?: string;
 };
 
 export type TONParams = {
@@ -121,11 +93,6 @@ export type SDKParams = {
      * URLs of lite sequencers
      */
     customLiteSequencerEndpoints?: string[];
-
-    /**
-     * Debug flag
-     */
-    debug?: boolean;
 };
 
 export enum AssetType {
@@ -137,60 +104,6 @@ export enum NFTAddressType {
     ITEM = 'ITEM',
     COLLECTION = 'COLLECTION',
 }
-
-export type WithAddressFT = {
-    type: AssetType.FT;
-    /**
-     * Address of TAC or TON token.
-     * Empty if sending native TON coin.
-     */
-    address?: string;
-};
-
-export type WithAddressNFTItem = {
-    type: AssetType.NFT;
-    /**
-     * Address NFT item token.
-     */
-    address: string;
-};
-
-export type WithAddressNFTCollectionItem = {
-    type: AssetType.NFT;
-    /**
-     * Address NFT collection.
-     */
-    collectionAddress: string;
-    /**
-     * Index of NFT item in collection.
-     */
-    itemIndex: bigint;
-};
-
-export type WithAddressNFT = WithAddressNFTItem | WithAddressNFTCollectionItem;
-
-export type WithAddress = WithAddressFT | WithAddressNFT;
-
-export type RawAssetBridgingData<NFTFormatRequired extends WithAddressNFT = WithAddressNFTItem> = {
-    /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
-    rawAmount: bigint;
-} & (WithAddressFT | NFTFormatRequired);
-
-export type UserFriendlyAssetBridgingData = {
-    /**
-     * User friendly format, e.g. 12.34 tokens
-     * Specified value will be converted automatically to raw format: 12.34 * (10^decimals).
-     * No decimals should be specified.
-     */
-    amount: number;
-    /**
-     * Decimals may be specified manually.
-     * Otherwise, SDK tries to extract them from chain.
-     */
-    decimals?: number;
-} & WithAddress;
-
-export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridgingData;
 
 export type UserWalletBalanceExtended =
     | {
@@ -208,6 +121,7 @@ export type EvmProxyMsg = {
     methodName?: string;
     encodedParameters?: string;
     gasLimit?: bigint;
+    [key: string]: unknown;
 };
 
 export type TransactionLinker = {
@@ -299,15 +213,43 @@ export type GeneralFeeInfo = {
     tokenFeeSymbol: TokenSymbol;
 };
 
+export type AdditionalFeeInfo = {
+    attachedProtocolFee: string;
+    tokenFeeSymbol: TokenSymbol;
+};
+
 export type FeeInfo = {
+    additionalFeeInfo: AdditionalFeeInfo;
     tac: GeneralFeeInfo;
     ton: GeneralFeeInfo;
+};
+
+export type AssetMovement = {
+    assetType: AssetType;
+    tvmAddress: string;
+    evmAddress: string;
+    amount: string;
+    tokenId: string | null;
+};
+
+export type TransactionHash = {
+    hash: string;
+    blockchainType: BlockchainType;
+};
+
+export type AssetMovementInfo = {
+    caller: InitialCallerInfo;
+    target: InitialCallerInfo;
+    transactionHash: TransactionHash;
+    assetMovements: AssetMovement[];
 };
 
 export type MetaInfo = {
     initialCaller: InitialCallerInfo;
     validExecutors: ValidExecutors;
     feeInfo: FeeInfo;
+    sentAssets: AssetMovementInfo;
+    receivedAssets: AssetMovementInfo;
 };
 
 export type ExecutionStages = {
@@ -385,7 +327,7 @@ export type FeeParams = {
 };
 
 export type CrossChainTransactionOptions = {
-    forceSend?: boolean;
+    allowSimulationError?: boolean;
     isRoundTrip?: boolean;
     protocolFee?: bigint;
     evmValidExecutors?: string[];
@@ -396,12 +338,12 @@ export type CrossChainTransactionOptions = {
 
 export type ExecutionFeeEstimationResult = {
     feeParams: FeeParams;
-    simulation: TACSimulationResult;
+    simulation?: TACSimulationResult;
 };
 
 export type CrosschainTx = {
     evmProxyMsg: EvmProxyMsg;
-    assets?: AssetBridgingData[];
+    assets?: Asset[];
     options?: CrossChainTransactionOptions;
 };
 
@@ -430,9 +372,9 @@ export interface WaitOptions<T = unknown> {
      */
     delay?: number;
     /**
-     * Function to log debug messages
+     * Logger
      */
-    log?: (message: string) => void;
+    logger?: ILogger;
     /**
      * Function to check if the result is successful
      * If not provided, any non-error result is considered successful
@@ -444,4 +386,62 @@ export const defaultWaitOptions: WaitOptions = {
     timeout: 300000,
     maxAttempts: 30,
     delay: 10000,
+};
+
+export interface Asset {
+    // Address of the token on the blockchain
+    address: string;
+    // Type of the token
+    type: AssetType;
+    // Raw amount of the token to be transferred
+    rawAmount: bigint;
+    // Clone to create new token with the same parameters
+    clone: Asset;
+    // Set amount of the token to be transferred
+    withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
+    // Add amount of the token to the current amount
+    addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
+    // Get EVM address of the token
+    getEVMAddress(): Promise<string>;
+    // Get TVM address of the token
+    getTVMAddress(): Promise<string>;
+    // Generate payload for the token
+    generatePayload(params: {
+        excessReceiver: string;
+        evmData: Cell;
+        crossChainTonAmount?: bigint;
+        forwardFeeTonAmount?: bigint;
+        feeParams?: FeeParams;
+    }): Promise<Cell>;
+    // Check if the token can be transferred - throws error if not
+    checkCanBeTransferedBy(userAddress: string): Promise<void>;
+    // Check balance of the users
+    getBalanceOf(userAddress: string): Promise<bigint>;
+}
+
+export enum Origin {
+    TON = 'TON',
+    TAC = 'TAC',
+}
+
+export type TVMAddress = string;
+export type EVMAddress = string;
+
+// Arguments for creating Asset instances via AssetFactory
+export type AssetFromFTArg = {
+    address: TVMAddress | EVMAddress;
+    tokenType: AssetType.FT;
+};
+
+export type AssetFromNFTCollectionArg = {
+    address: TVMAddress | EVMAddress;
+    tokenType: AssetType.NFT;
+    addressType: NFTAddressType.COLLECTION;
+    index: bigint;
+};
+
+export type AssetFromNFTItemArg = {
+    address: TVMAddress;
+    tokenType: AssetType.NFT;
+    addressType: NFTAddressType.ITEM;
 };

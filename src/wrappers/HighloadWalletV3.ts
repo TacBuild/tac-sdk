@@ -14,8 +14,9 @@ import {
     toNano,
 } from '@ton/ton';
 import { sign } from 'ton-crypto';
-import { HighloadQueryId } from './HighloadQueryId';
+
 import { WalletInstance } from '../sender';
+import { HighloadQueryId } from './HighloadQueryId';
 
 export enum OP {
     InternalTransfer = 0xae42e5a4,
@@ -55,7 +56,7 @@ export class HighloadWalletV3 implements WalletInstance {
         readonly init?: { code: Cell; data: Cell },
     ) {}
 
-    async getSeqno(_: ContractProvider): Promise<number> {
+    async getSeqno(): Promise<number> {
         return 0; // will not be used
     }
 
@@ -94,6 +95,10 @@ export class HighloadWalletV3 implements WalletInstance {
         const data = highloadWalletV3ConfigToCell(config);
         const init = { code, data };
         return new HighloadWalletV3(contractAddress(workchain, init), init);
+    }
+
+    static generateCreatedAt(): number {
+        return Math.floor(Date.now() / 1000) - 40; // -40 is used to pass check created_at <= now() in smart contract for sure
     }
 
     async sendExternalMessage(
@@ -144,7 +149,7 @@ export class HighloadWalletV3 implements WalletInstance {
         value: bigint = 0n,
     ) {
         if (createdAt == undefined) {
-            createdAt = Math.floor(Date.now() / 1000) - 40; // -40 is used to pass check created_at <= now() in smart contract for sure
+            createdAt = HighloadWalletV3.generateCreatedAt();
         }
 
         const queryId = this.getQueryIdFromCreatedAt(createdAt);

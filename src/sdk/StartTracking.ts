@@ -1,8 +1,13 @@
+import Table from 'cli-table3';
+
+import { TxFinalizerConfig } from '../structs/InternalStruct';
+import { ILogger } from '../structs/Services';
 import { ExecutionStages, Network, OperationType, TransactionLinker } from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
+import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
+import { TonTxFinalizer } from './TxFinalizer';
 import { sleep } from './Utils';
-import Table from 'cli-table3';
 
 export async function startTracking(
     transactionLinker: TransactionLinker,
@@ -13,6 +18,8 @@ export async function startTracking(
         maxIterationCount?: number;
         returnValue?: boolean;
         tableView?: boolean;
+        txFinalizerConfig?: TxFinalizerConfig;
+        logger?: ILogger;
     },
 ): Promise<void | ExecutionStages> {
     const {
@@ -21,15 +28,17 @@ export async function startTracking(
         maxIterationCount = MAX_ITERATION_COUNT,
         returnValue = false,
         tableView = true,
+        txFinalizerConfig,
+        logger = new NoopLogger(),
     } = options || {};
 
-    const tracker = new OperationTracker(network, customLiteSequencerEndpoints);
+    const tracker = new OperationTracker(network, customLiteSequencerEndpoints, logger);
 
-    console.log('Start tracking operation');
-    console.log('caller: ', transactionLinker.caller);
-    console.log('shardsKey: ', transactionLinker.shardsKey);
-    console.log('shardCount: ', transactionLinker.shardCount);
-    console.log('timestamp: ', transactionLinker.timestamp);
+    logger.debug('Start tracking operation');
+    logger.debug('caller: ' + transactionLinker.caller);
+    logger.debug('shardsKey: ' + transactionLinker.shardsKey);
+    logger.debug('shardCount: ' + transactionLinker.shardCount);
+    logger.debug('timestamp: ' + transactionLinker.timestamp);
 
     let operationId = '';
     let iteration = 0; // number of iterations
@@ -46,11 +55,13 @@ export async function startTracking(
         }
 
         if (operationId == '') {
-            console.log('request operationId');
+            logger.debug('request operationId');
 
             try {
                 operationId = await tracker.getOperationId(transactionLinker);
-            } catch (err) {}
+            } catch {
+                // Ignore error and continue
+            }
         } else {
             try {
                 operationType = await tracker.getOperationType(operationId);
@@ -58,10 +69,10 @@ export async function startTracking(
                     break;
                 }
             } catch (err) {
-                console.log('failed to get operation type:', err);
+                logger.debug('failed to get operation type: ' + err);
             }
 
-            console.log(`
+            logger.debug(`
                 operationId: ${operationId}
                 operationType: ${operationType}
                 time: ${new Date().toISOString()} (${Math.floor(+new Date() / 1000)})
@@ -70,26 +81,51 @@ export async function startTracking(
         await sleep(delay * 1000);
     }
 
-    console.log('Tracking finished');
+    logger.debug('Tracking finished');
     if (!ok) {
         if (returnValue) {
             throw Error(errorMessage);
         }
-        console.log(errorMessage);
+        logger.debug(errorMessage);
     }
 
     const profilingData = await tracker.getStageProfiling(operationId);
+
+    // Check if EXECUTED_IN_TON stage exists and use TxFinalizer to verify transaction success
+    if (profilingData.executedInTON.exists && profilingData.executedInTON.stageData?.transactions) {
+        logger.debug('EXECUTED_IN_TON stage found, verifying transaction success in TON...');
+
+        if (txFinalizerConfig) {
+            const txFinalizer = new TonTxFinalizer(txFinalizerConfig, logger);
+
+            const transactions = profilingData.executedInTON.stageData.transactions;
+            for (const tx of transactions) {
+                try {
+                    logger.debug(`Verifying transaction: ${tx.hash}`);
+                    await txFinalizer.trackTransactionTree(tx.hash);
+                    logger.debug(`Transaction ${tx.hash} verified successfully in TON`);
+                } catch (error) {
+                    logger.debug(`Transaction ${tx.hash} failed verification in TON: ${error}`);
+                    if (returnValue) {
+                        throw error;
+                    }
+                }
+            }
+        } else {
+            logger.debug('TxFinalizer config not provided, skipping TON transaction verification');
+        }
+    }
 
     if (returnValue) {
         return profilingData;
     }
 
-    console.log(profilingData.operationType);
-    console.log(profilingData.metaInfo);
+    logger.debug(profilingData.operationType);
+    logger.debug(profilingData.metaInfo);
     if (tableView) {
-        printExecutionStagesTable(profilingData);
+        printExecutionStagesTable(profilingData, logger);
     } else {
-        console.log(formatExecutionStages(profilingData));
+        logger.debug(formatExecutionStages(profilingData));
     }
 }
 
@@ -102,6 +138,8 @@ export async function startTrackingMultiple(
         maxIterationCount?: number;
         returnValue?: boolean;
         tableView?: boolean;
+        txFinalizerConfig?: TxFinalizerConfig;
+        logger?: ILogger;
     },
 ): Promise<void | ExecutionStages[]> {
     const {
@@ -110,19 +148,23 @@ export async function startTrackingMultiple(
         maxIterationCount = MAX_ITERATION_COUNT,
         returnValue = false,
         tableView = true,
+        txFinalizerConfig,
+        logger = new NoopLogger(),
     } = options || {};
 
-    console.log(`Start tracking ${transactionLinkers.length} operations`);
+    logger.debug(`Start tracking ${transactionLinkers.length} operations`);
 
     const results = await Promise.all(
         transactionLinkers.map((linker, index) => {
-            console.log(`\nProcessing operation ${index + 1}/${transactionLinkers.length}`);
+            logger.debug(`\nProcessing operation ${index + 1}/${transactionLinkers.length}`);
             return startTracking(linker, network, {
                 customLiteSequencerEndpoints,
                 delay,
                 maxIterationCount,
                 returnValue: true,
                 tableView: false,
+                txFinalizerConfig,
+                logger,
             });
         }),
     );
@@ -133,21 +175,35 @@ export async function startTrackingMultiple(
 
     if (tableView) {
         results.forEach((result, index) => {
-            console.log(`\nResults for operation ${index + 1}:`);
-            printExecutionStagesTable(result as ExecutionStages);
+            logger.debug(`\nResults for operation ${index + 1}:`);
+            printExecutionStagesTable(result as ExecutionStages, logger);
         });
     } else {
         results.forEach((result, index) => {
-            console.log(`\nResults for operation ${index + 1}:`);
-            console.log(formatExecutionStages(result as ExecutionStages));
+            logger.debug(`\nResults for operation ${index + 1}:`);
+            logger.debug(formatExecutionStages(result as ExecutionStages));
         });
     }
 }
 
 function formatExecutionStages(stages: ExecutionStages) {
-    const { operationType, metaInfo, ...stagesData } = stages;
+    const {
+        collectedInTAC,
+        includedInTACConsensus,
+        executedInTAC,
+        collectedInTON,
+        includedInTONConsensus,
+        executedInTON,
+    } = stages;
 
-    return Object.entries(stagesData).map(([stage, data]) => ({
+    return Object.entries({
+        collectedInTAC,
+        includedInTACConsensus,
+        executedInTAC,
+        collectedInTON,
+        includedInTONConsensus,
+        executedInTON,
+    }).map(([stage, data]) => ({
         stage: stage,
         exists: data.exists ? 'Yes' : 'No',
         success: data.exists && data.stageData ? (data.stageData.success ? 'Yes' : 'No') : '-',
@@ -168,7 +224,7 @@ function formatExecutionStages(stages: ExecutionStages) {
     }));
 }
 
-function printExecutionStagesTable(stages: ExecutionStages): void {
+function printExecutionStagesTable(stages: ExecutionStages, logger: ILogger): void {
     const table = new Table({
         head: [
             'Stage',
@@ -201,5 +257,5 @@ function printExecutionStagesTable(stages: ExecutionStages): void {
         ]);
     });
 
-    console.log(table.toString());
+    logger.debug(table.toString());
 }

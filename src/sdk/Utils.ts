@@ -1,9 +1,20 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
-import { AbiCoder, ethers, isAddress as isEthereumAddress } from 'ethers';
+import { AbiCoder, ethers } from 'ethers';
 
-import { evmAddressError, invalidMethodNameError, tvmAddressError } from '../errors';
+import { FT } from '../assets/FT';
+import { NFT } from '../assets/NFT';
+import { TON } from '../assets/TON';
+import { invalidMethodNameError } from '../errors';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
-import { EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors, WaitOptions } from '../structs/Struct';
+import {
+    Asset,
+    AssetType,
+    EvmProxyMsg,
+    FeeParams,
+    TransactionLinker,
+    ValidExecutors,
+    WaitOptions,
+} from '../structs/Struct';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -70,20 +81,6 @@ export function generateTransactionLinker(caller: string, shardCount: number): T
         shardsKey: String(random.randomNumber),
         timestamp: random.timestamp,
     };
-}
-
-export function validateTVMAddress(address: string): void {
-    try {
-        Address.parse(address); // will throw on error address
-    } catch {
-        throw tvmAddressError(address);
-    }
-}
-
-export function validateEVMAddress(address: string): void {
-    if (!isEthereumAddress(address)) {
-        throw evmAddressError(address);
-    }
 }
 
 export function calculateEVMTokenAddress(
@@ -172,9 +169,10 @@ export async function waitUntilSuccess<T, A extends unknown[]>(
     const maxAttempts = options.maxAttempts ?? 30;
     const delay = options.delay ?? 10000;
     const successCheck = options.successCheck;
-    const log = options.log ?? (() => {});
 
-    log(`Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`);
+    options.logger?.debug(
+        `Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`,
+    );
     const startTime = Date.now();
     let attempt = 1;
 
@@ -186,25 +184,25 @@ export async function waitUntilSuccess<T, A extends unknown[]>(
             if (!result) {
                 throw new Error(`Empty result`);
             }
-            log(`Result: ${formatObjectForLogging(result)}`);
+            options.logger?.debug(`Result: ${formatObjectForLogging(result)}`);
             if (successCheck && !successCheck(result)) {
                 throw new Error(`Result is not successful`);
             }
-            log(`Attempt ${attempt} successful`);
+            options.logger?.debug(`Attempt ${attempt} successful`);
 
             return result;
         } catch (error) {
             if (elapsedTime >= timeout) {
-                log(`Timeout after ${elapsedTime}ms`);
+                options.logger?.debug(`Timeout after ${elapsedTime}ms`);
                 throw error;
             }
 
             if (attempt >= maxAttempts) {
-                log(`Max attempts (${maxAttempts}) reached`);
+                options.logger?.debug(`Max attempts (${maxAttempts}) reached`);
                 throw error;
             }
-            log(`Error on attempt ${attempt}: ${error}`);
-            log(`Waiting ${delay}ms before next attempt`);
+            options.logger?.debug(`Error on attempt ${attempt}: ${error}`);
+            options.logger?.debug(`Waiting ${delay}ms before next attempt`);
             await sleep(delay);
             attempt++;
         }
@@ -212,7 +210,46 @@ export async function waitUntilSuccess<T, A extends unknown[]>(
 }
 
 export function formatObjectForLogging(obj: unknown): string {
-    return JSON.stringify(obj, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : value
-    );
+    return JSON.stringify(obj, (key, value) => (typeof value === 'bigint' ? value.toString() : value));
+}
+
+export async function aggregateTokens(assets?: Asset[]): Promise<{
+    jettons: FT[];
+    nfts: NFT[];
+    ton?: TON;
+}> {
+    const uniqueAssetsMap: Map<string, Asset> = new Map();
+    let ton: TON | undefined;
+
+    for await (const asset of assets ?? []) {
+        if (asset.type !== AssetType.FT) continue;
+
+        if (!asset.address) {
+            ton = ton ? await ton.addAmount({ rawAmount: asset.rawAmount }) : (asset.clone as TON);
+            continue;
+        }
+
+        let jetton = uniqueAssetsMap.get(asset.address);
+        if (!jetton) {
+            jetton = asset.clone;
+        } else {
+            jetton = await jetton.addAmount({ rawAmount: asset.rawAmount });
+        }
+
+        uniqueAssetsMap.set(asset.address, jetton);
+    }
+    const jettons: FT[] = Array.from(uniqueAssetsMap.values()) as FT[];
+
+    uniqueAssetsMap.clear();
+    for await (const asset of assets ?? []) {
+        if (asset.type !== AssetType.NFT) continue;
+        uniqueAssetsMap.set(asset.address, asset.clone);
+    }
+    const nfts: NFT[] = Array.from(uniqueAssetsMap.values()) as NFT[];
+
+    return {
+        jettons,
+        nfts,
+        ton,
+    };
 }

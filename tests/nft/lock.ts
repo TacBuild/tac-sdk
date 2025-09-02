@@ -1,13 +1,13 @@
-import { ethers } from 'ethers';
 import {
-    SDKParams,
-    TacSdk,
-    Network,
-    SenderFactory,
-    EvmProxyMsg,
-    AssetBridgingData,
+    Asset,
+    AssetFactory,
     AssetType,
+    EvmProxyMsg,
+    Network,
+    NFTAddressType,
+    SenderFactory,
     startTracking,
+    TacSdk,
 } from '../../src';
 import { localSDKParams } from '../utils';
 
@@ -34,12 +34,12 @@ async function lock() {
         mnemonic: mnemonic,
     });
 
-    const nfts: AssetBridgingData[] = [
-        {
+    const nfts: Asset[] = [
+        await AssetFactory.from(tacSdk.config, {
             address: NFT_ITEM_ADDRESS,
-            amount: 1,
-            type: AssetType.NFT,
-        },
+            tokenType: AssetType.NFT,
+            addressType: NFTAddressType.ITEM,
+        }),
     ];
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, nfts);

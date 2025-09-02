@@ -1,10 +1,10 @@
-import { ContractOpener, ContractState, Network } from '../structs/Struct';
-import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
 import { SandboxContract } from '@ton/sandbox';
+import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
-import { orbsOpener, orbsOpener4 } from './contractOpener';
-import { allEndpointsFailedError } from '../errors';
+
 import { allContractOpenerFailedError } from '../errors/instances';
+import { ContractOpener, ContractState, Network } from '../structs/Struct';
+import { orbsOpener, orbsOpener4 } from './contractOpener';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -92,7 +92,7 @@ export class RetryableContractOpener implements ContractOpener {
                 const value = Reflect.get(target, prop);
                 if (typeof value !== 'function') return value;
 
-                return async (...args: any[]) => {
+                return async (...args: unknown[]) => {
                     return this.callMethodAcrossOpeners(prop, args, src);
                 };
             },
@@ -101,9 +101,9 @@ export class RetryableContractOpener implements ContractOpener {
 
     private async callMethodAcrossOpeners<T extends Contract>(
         methodName: string | symbol,
-        args: any[],
+        args: unknown[],
         src: T,
-    ): Promise<any> {
+    ): Promise<unknown> {
         const result = await this.executeWithFallback((config) => {
             const contract = config.opener.open(src);
             const method = Reflect.get(contract, methodName);

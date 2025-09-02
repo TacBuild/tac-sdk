@@ -1,24 +1,16 @@
 import 'dotenv/config';
 
-import {
-    AssetBridgingData,
-    AssetType,
-    EvmProxyMsg,
-    Network,
-    SDKParams,
-    SenderFactory,
-    startTracking,
-    TacSdk,
-} from '../src';
+import { AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
 import { defaultWaitOptions } from '../src';
+import { AssetFactory } from '../src/assets';
+import { ConsoleLogger } from '../src/sdk/Logger';
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
     const sdkParams: SDKParams = {
         network: Network.TESTNET,
-        debug: true,
     };
-    const tacSdk = await TacSdk.create(sdkParams);
+    const tacSdk = await TacSdk.create(sdkParams, new ConsoleLogger());
 
     // create evm proxy msg
     const evmProxyMsg: EvmProxyMsg = {
@@ -36,14 +28,25 @@ const bridgeTonSawSender = async (amount: number) => {
     console.log(sender.getSenderAddress());
 
     // create JettonTransferData (transfer jetton in TVM to swap)
-    const assets: AssetBridgingData[] = [
-        {
-            amount: amount,
-            type: AssetType.FT,
-        },
+    const assets = [
+        await (
+            await AssetFactory.from(tacSdk.config, { address: tacSdk.config.nativeTONAddress, tokenType: AssetType.FT })
+        ).withAmount({ amount: amount }),
+        await (
+            await AssetFactory.from(tacSdk.config, { address: tacSdk.config.nativeTONAddress, tokenType: AssetType.FT })
+        ).withAmount({ amount: amount }),
+        await (
+            await AssetFactory.from(tacSdk.config, { address: tacSdk.config.nativeTONAddress, tokenType: AssetType.FT })
+        ).withAmount({ amount: amount }),
     ];
 
-    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets, {}, defaultWaitOptions);
+    const result = await tacSdk.sendCrossChainTransaction(
+        evmProxyMsg,
+        sender,
+        assets,
+        { allowSimulationError: true },
+        defaultWaitOptions,
+    );
 
     tacSdk.closeConnections();
 
@@ -53,7 +56,7 @@ const bridgeTonSawSender = async (amount: number) => {
 async function main() {
     try {
         // send transaction
-        const result = await bridgeTonSawSender(1);
+        const result = await bridgeTonSawSender(0.0012);
         console.log('Transaction successful:', result);
 
         // start tracking transaction status

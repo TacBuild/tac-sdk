@@ -1,7 +1,16 @@
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
-import { toNano } from '@ton/ton';
+import {
+    Asset,
+    AssetFactory,
+    AssetType,
+    EvmProxyMsg,
+    Network,
+    SDKParams,
+    SenderFactory,
+    startTracking,
+    TacSdk,
+} from '../../src';
 
 const UNISWAPV2_PROXY_ADDRESS = '0x14Ad9182F54903dFD8215CA2c1aD0F9A47Ac7Edb';
 
@@ -18,10 +27,23 @@ async function removeLiquidity() {
         network: Network.TESTNET,
     };
     const tacSdk = await TacSdk.create(sdkParams);
+    const sender = await SenderFactory.getSender({
+        network: Network.TESTNET,
+        version: WALLET_VERSION,
+        mnemonic: TVM_MNEMONICS,
+    });
 
     const amountLP = 1;
-    const EVM_TKA_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKA_ADDRESS);
-    const EVM_TKB_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKB_ADDRESS);
+
+    const tokenLP = await (
+        await AssetFactory.from(tacSdk.config, { address: TVM_LP_ADDRESS, tokenType: AssetType.FT })
+    ).withAmount({ amount: amountLP });
+
+    const tokenA = await AssetFactory.from(tacSdk.config, { address: TVM_TKA_ADDRESS, tokenType: AssetType.FT });
+    const tokenB = await AssetFactory.from(tacSdk.config, { address: TVM_TKB_ADDRESS, tokenType: AssetType.FT });
+
+    const EVM_TKA_ADDRESS = await tokenA.getEVMAddress();
+    const EVM_TKB_ADDRESS = await tokenB.getEVMAddress();
 
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(
@@ -45,19 +67,7 @@ async function removeLiquidity() {
         encodedParameters,
     };
 
-    const sender = await SenderFactory.getSender({
-        network: Network.TESTNET,
-        version: WALLET_VERSION,
-        mnemonic: TVM_MNEMONICS,
-    });
-
-    const assets: AssetBridgingData[] = [
-        {
-            address: TVM_LP_ADDRESS,
-            amount: amountLP,
-            type: AssetType.FT,
-        },
-    ];
+    const assets: Asset[] = [tokenLP];
 
     const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
     tacSdk.closeConnections();

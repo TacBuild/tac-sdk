@@ -2,22 +2,13 @@ import '@ton/test-utils';
 
 import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
 import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } from '@ton/sandbox';
+import { testnet } from '@tonappchain/artifacts';
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
-import {
-    AssetBridgingData,
-    AssetType,
-    EvmProxyMsg,
-    Network,
-    SenderFactory,
-    TacSdk,
-    wallets,
-    WalletVersion,
-} from '../../src';
-
-import { testnet } from '@tonappchain/artifacts';
+import { Asset, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
 import { sandboxOpener } from '../../src/adapters/contractOpener';
+import { TON } from '../../src/assets';
 
 describe('TacSDK', () => {
     const {
@@ -68,7 +59,7 @@ describe('TacSDK', () => {
     let jettonMinter: SandboxContract<testnet.ton.wrappers.JettonMinter>;
 
     const evmRandomAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
-    const tvmRandomAddress = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
+    // const tvmRandomAddress = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
 
     const deployCCL = async () => {
         crossChainLayer = blockchain.openContract(
@@ -131,7 +122,7 @@ describe('TacSDK', () => {
                 SettingsCode,
             ),
         );
-        const deployResult = await settings.sendDeploy(admin.getSender(), toNano(0.05));
+        const deployResult = await settings.sendDeploy(admin.getSender(), toNano(0.5));
         expect(deployResult.transactions).toHaveTransaction({
             from: admin.address,
             to: settings.address,
@@ -139,27 +130,27 @@ describe('TacSDK', () => {
             success: true,
         });
 
-        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+        await settings.sendSetValue(admin.getSender(), toNano(0.2), {
             key: getKeyFromString('JettonProxyAddress'),
             value: beginCell().storeAddress(jettonProxy.address).endCell(),
         });
-        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+        await settings.sendSetValue(admin.getSender(), toNano(0.2), {
             key: getKeyFromString('CrossChainLayerAddress'),
             value: beginCell().storeAddress(crossChainLayer.address).endCell(),
         });
-        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+        await settings.sendSetValue(admin.getSender(), toNano(0.2), {
             key: getKeyFromString('JettonMinterCode'),
             value: JettonMinterCode,
         });
-        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+        await settings.sendSetValue(admin.getSender(), toNano(0.2), {
             key: getKeyFromString('JettonWalletCode'),
             value: JettonWalletCode,
         });
-        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+        await settings.sendSetValue(admin.getSender(), toNano(0.2), {
             key: getKeyFromString('NFTCollectionCode'),
             value: NFTCollectionCode,
         });
-        await settings.sendSetValue(admin.getSender(), toNano(0.1), {
+        await settings.sendSetValue(admin.getSender(), toNano(0.2), {
             key: getKeyFromString('NFTItemCode'),
             value: NFTItemCode,
         });
@@ -231,104 +222,9 @@ describe('TacSDK', () => {
         expect((await blockchain.getContract(crossChainLayer.address)).accountState!.type).toBe('active');
     });
 
-    it('should get valid user jetton wallet address', async () => {
-        const addr = await sdk.getUserJettonWalletAddress(user.address.toString(), jettonMinter.address.toString());
-        expect((await jettonMinter.getWalletAddress(user.address)).toString()).toBe(addr);
-    });
-
-    it('should get set jetton balance', async () => {
-        const balance = await sdk.getUserJettonBalance(user.address.toString(), jettonMinter.address.toString());
-        expect(balance).toBe(0n);
-    });
-
-    it('should create valid jetton bridging data from asset bridging data', async () => {
-        const amountTokenForEVMAddress = 2;
-        const decimalsForEVMAddress = 18;
-        const amountTokenForTVMAddress = BigInt(3 * 10 ** 10); // decimals = 10
-        const assets: AssetBridgingData[] = [
-            {
-                /** TON */
-                amount: 1,
-                type: AssetType.FT,
-            },
-            {
-                /** ETH address */
-                address: evmRandomAddress,
-                amount: amountTokenForEVMAddress,
-                decimals: decimalsForEVMAddress,
-                type: AssetType.FT,
-            },
-            {
-                /** TON address */
-                address: tvmRandomAddress,
-                rawAmount: amountTokenForTVMAddress,
-                type: AssetType.FT,
-            },
-        ];
-
-        const expectedTVMAddressForEVM = await sdk.getTVMTokenAddress(evmRandomAddress);
-
-        const rawAssets = await sdk['convertAssetsToRawFormat'](assets);
-        const jettonAssets = await sdk['aggregateTokens'](rawAssets);
-        expect(jettonAssets.jettons.length).toBe(2);
-        expect(jettonAssets.crossChainTonAmount).toBe(toNano(1));
-        expect(jettonAssets.jettons).toContainEqual({ address: tvmRandomAddress, rawAmount: amountTokenForTVMAddress });
-        expect(jettonAssets.jettons).toContainEqual({
-            address: expectedTVMAddressForEVM,
-            rawAmount: BigInt(amountTokenForEVMAddress) * 10n ** BigInt(decimalsForEVMAddress),
-        });
-    });
-
-    it('should correctly handle different types of AssetBridgingData', async () => {
-        const amount1 = 1;
-        const amount2 = 0.12;
-        const decimals2 = 24;
-        const amount3 = BigInt(3) ** BigInt(24);
-        const assets: AssetBridgingData[] = [
-            {
-                amount: amount1,
-                type: AssetType.FT,
-            },
-            {
-                address: tvmRandomAddress,
-                amount: amount2,
-                type: AssetType.FT,
-                decimals: decimals2,
-            },
-            {
-                address: tvmRandomAddress,
-                type: AssetType.FT,
-                rawAmount: amount3,
-            },
-        ];
-
-        const rawAssets = await sdk['convertAssetsToRawFormat'](assets);
-        expect(rawAssets).toContainEqual({ address: undefined, rawAmount: toNano(1) });
-        expect(rawAssets).toContainEqual({
-            address: tvmRandomAddress,
-            rawAmount: BigInt(amount2 * 100) * 10n ** BigInt(decimals2 - 2),
-        });
-        expect(rawAssets).toContainEqual({
-            address: tvmRandomAddress,
-            rawAmount: amount3,
-        });
-    });
-
     it.each(Object.keys(wallets) as WalletVersion[])(
         'should send cross chain message to CCL from wallet %s',
         async (version) => {
-            const evmProxyMsg: EvmProxyMsg = {
-                evmTargetAddress: evmRandomAddress,
-            };
-
-            // sending TON
-            const assets: AssetBridgingData[] = [
-                {
-                    rawAmount: 2n,
-                    type: AssetType.FT,
-                },
-            ];
-
             const mnemonic: string[] = await mnemonicNew(24, '');
 
             const rawSender = await SenderFactory.getSender({
@@ -337,15 +233,41 @@ describe('TacSDK', () => {
                 mnemonic: mnemonic.join(' '),
             });
 
+            const evmProxyMsg: EvmProxyMsg = {
+                evmTargetAddress: evmRandomAddress,
+            };
+
+            const token = TON.create(sdk.config);
+
+            // sending TON
+            const assets: Asset[] = [await token.withAmount({ rawAmount: 1n })];
+
             await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
+
+            const spy = jest.spyOn(sdk['simulator'], 'getSimulationInfoForTransaction').mockResolvedValue({
+                feeParams: {
+                    isRoundTrip: true,
+                    gasLimit: 1000000000000000000n,
+                    protocolFee: toNano(tacProtocolFee) + toNano(tonProtocolFee),
+                    evmExecutorFee: 0n,
+                    tvmExecutorFee: 0n,
+                },
+            });
+
             const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets);
-            expect((sendTransactionResult as any).transactions).toHaveTransaction({
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            expect((sendTransactionResult as any).result.transactions).toHaveTransaction({
                 from: address(rawSender.getSenderAddress()),
                 to: crossChainLayer.address,
                 success: true,
                 op: CrossChainLayerOpCodes.anyone_tvmMsgToEVM,
             });
-            expect((await crossChainLayer.getFullData()).protocolFeeSupply).toBe(tacProtocolFee);
+
+            expect((await crossChainLayer.getFullData()).protocolFeeSupply).toBe(tacProtocolFee + tonProtocolFee);
+
+            expect(spy).toHaveBeenCalled();
+            spy.mockRestore();
         },
     );
 });

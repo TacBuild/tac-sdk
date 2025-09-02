@@ -1,12 +1,18 @@
 export { liteClientOpener, orbsOpener } from './adapters/contractOpener';
 export * from './errors';
+export { Configuration } from './sdk/Configuration';
 export { LiteSequencerClient } from './sdk/LiteSequencerClient';
+export { ConsoleLogger, NoopLogger } from './sdk/Logger';
 export { OperationTracker } from './sdk/OperationTracker';
+export { Simulator } from './sdk/Simulator';
 export { startTracking, startTrackingMultiple } from './sdk/StartTracking';
 export { TacSdk } from './sdk/TacSdk';
+export { TransactionManager } from './sdk/TransactionManager';
 export * from './sender';
+export * from './structs/Services';
 export * from './structs/Struct';
 export { Network, SimplifiedStatuses } from './structs/Struct';
+export * from './assets';
 export { readJettonMetadata } from './wrappers/ContentUtils';
 export { HighloadWalletV3 } from './wrappers/HighloadWalletV3';
 export type { JettonWalletData } from './wrappers/JettonWallet';

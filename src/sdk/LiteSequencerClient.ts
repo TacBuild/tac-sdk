@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import { emptyArrayError, operationFetchError, profilingFetchError,statusFetchError } from '../errors';
+import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
 import {
     OperationIdsByShardsKeyResponse,
     OperationTypeResponse,
@@ -24,6 +24,25 @@ export class LiteSequencerClient {
     constructor(endpoint: string, maxChunkSize: number = 100) {
         this.endpoint = endpoint;
         this.maxChunkSize = maxChunkSize;
+    }
+
+    async getOperationIdByTransactionHash(transactionHash: string): Promise<string> {
+        const isEthHash = /^0x[a-fA-F0-9]{64}$/.test(transactionHash);
+        const path = isEthHash ? 'tac/operation-id' : 'ton/operation-id';
+
+        try {
+            const response = await axios.get<StringResponse>(new URL(path, this.endpoint).toString(), {
+                params: { transactionHash },
+            });
+            return response.data.response || '';
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                if (error.response?.status === 404) {
+                    return '';
+                }
+            }
+            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+        }
     }
 
     async getOperationType(operationId: string): Promise<OperationType> {
