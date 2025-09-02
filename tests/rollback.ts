@@ -1,13 +1,21 @@
-import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
 import { ethers } from 'ethers';
 
-const TEST_PROXY = "";
-const TVM_TKA_ADDRESS = "EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1";
+import { Asset, AssetFactory, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
+
+const TEST_PROXY = '';
+const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
 const amountA = 1;
 
-const WALLET_VERSION = "V3R2";
+const WALLET_VERSION = 'V3R2';
 
 async function rollback() {
+    const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
+    const sender = await SenderFactory.getSender({
+        network: Network.TESTNET,
+        version: WALLET_VERSION,
+        mnemonic: mnemonic,
+    });
+
     const sdkParams: SDKParams = {
         network: Network.TESTNET,
         TACParams: {
@@ -20,7 +28,9 @@ async function rollback() {
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
-    const EVM_TKA_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKA_ADDRESS);
+    const token = await (
+        await AssetFactory.from(tacSdk.config, { address: TVM_TKA_ADDRESS, tokenType: AssetType.FT })
+    ).withAmount({ amount: amountA });
 
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(['string'], [`error`]);
@@ -31,23 +41,10 @@ async function rollback() {
         encodedParameters,
     };
 
-    const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
-    const sender = await SenderFactory.getSender({
-        network: Network.TESTNET,
-        version: WALLET_VERSION,
-        mnemonic: mnemonic,
-    });
-
-    const jettons: AssetBridgingData[] = [
-        {
-            address: TVM_TKA_ADDRESS,
-            amount: amountA,
-            type: AssetType.FT,
-        },
-    ];
+    const jettons: Asset[] = [token];
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons, {
-        forceSend: true,
+        allowSimulationError: true,
         isRoundTrip: true,
         evmExecutorFee: 1_000_000_000n,
     });
@@ -60,7 +57,7 @@ async function main() {
         console.log('Transaction successful:', result);
 
         // start tracking transaction status
-        await startTracking(result, Network.TESTNET, {customLiteSequencerEndpoints: ["http://localhost:8080"]});
+        await startTracking(result, Network.TESTNET, { customLiteSequencerEndpoints: ['http://localhost:8080'] });
     } catch (error) {
         console.error('Error during transaction:', error);
     }

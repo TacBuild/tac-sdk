@@ -1,7 +1,8 @@
-import { ethers } from 'ethers';
-import { TacSdk, Network, SenderFactory, EvmProxyMsg, AssetBridgingData, AssetType, CrosschainTx } from '../../src';
-import { localSDKParams } from '../utils';
 import { toNano } from '@ton/ton';
+import { ethers } from 'ethers';
+
+import { Asset, AssetFactory, AssetType, CrosschainTx, EvmProxyMsg, Network, SenderFactory, TacSdk } from '../../src';
+import { localSDKParams } from '../utils';
 
 const EVM_SETTINGS_ADDRESS = '0x87B6a0ab90d826189cC004Dc2ff16E2b472309db';
 const TVM_SETTINGS_ADDRESS = 'EQA7Z2R39FUUtCJOdmTrmjrNsNoJGjdSdWGiRfVW3WLRmZ1c';
@@ -26,10 +27,19 @@ async function main() {
     });
     console.log(sender.getSenderAddress());
 
-    const EVM_TKA_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKA_ADDRESS);
-    const EVM_TKB_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKB_ADDRESS);
     const amountA = 1;
     const amountB = 2;
+
+    const tokenA = await (
+        await AssetFactory.from(tacSdk.config, { address: TVM_TKA_ADDRESS, tokenType: AssetType.FT })
+    ).withAmount({ amount: amountA });
+
+    const tokenB = await (
+        await AssetFactory.from(tacSdk.config, { address: TVM_TKB_ADDRESS, tokenType: AssetType.FT })
+    ).withAmount({ amount: amountB });
+
+    const EVM_TKA_ADDRESS = await tokenA.getEVMAddress();
+    const EVM_TKB_ADDRESS = await tokenB.getEVMAddress();
 
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(
@@ -47,23 +57,12 @@ async function main() {
             ],
         ],
     );
-    let evmProxyMsg: EvmProxyMsg = {
+    const evmProxyMsg: EvmProxyMsg = {
         evmTargetAddress: UNISWAPV2_PROXY_ADDRESS,
         methodName: 'addLiquidity',
         encodedParameters,
     };
-    const jettons: AssetBridgingData[] = [
-        {
-            address: TVM_TKA_ADDRESS,
-            amount: amountA,
-            type: AssetType.FT,
-        },
-        {
-            address: TVM_TKB_ADDRESS,
-            amount: amountB,
-            type: AssetType.FT,
-        },
-    ];
+    const jettons: Asset[] = [tokenA, tokenB];
 
     // 5 Jetton transfers
     const txs: CrosschainTx[] = Array.from({ length: 5 }, () => ({
@@ -71,13 +70,17 @@ async function main() {
         assets: jettons,
     }));
 
+    const tonToken = await (
+        await AssetFactory.from(tacSdk.config, { address: '', tokenType: AssetType.FT })
+    ).withAmount({ amount: 0.001 });
+
     // 50 TON transfers
     for (let i = 0; i < 300; i++) {
         txs.push({
             evmProxyMsg: {
                 evmTargetAddress: `0x${Math.random().toString(16).slice(2).padEnd(40, '0')}`,
             },
-            assets: [{ amount: 0.001, type: AssetType.FT }],
+            assets: [tonToken],
         });
     }
 

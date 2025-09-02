@@ -1,18 +1,17 @@
 import { Cell } from '@ton/ton';
+import { mainnet, testnet } from '@tonappchain/artifacts';
+import { AbstractProvider, ethers } from 'ethers';
+
 import {
     ContractOpener,
-    TACSimulationResult,
     ExecutionStagesByOperationId,
     Network,
     OperationIdsByShardsKey,
-    RawAssetBridgingData,
-    StatusInfosByOperationId,
     OperationType,
-    AssetType,
+    StatusInfosByOperationId,
     SuggestedTONExecutorFee,
+    TACSimulationResult,
 } from './Struct';
-import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
-import { mainnet, testnet } from '@tonappchain/artifacts';
 
 export type ShardMessage = {
     address: string;
@@ -38,37 +37,6 @@ export type RandomNumberByTimestamp = {
     randomNumber: number;
 };
 
-export type JettonBridgingData = RawAssetBridgingData & {
-    type: AssetType.FT;
-    address: string;
-};
-
-export type JettonTransferData = JettonBridgingData;
-
-export type JettonBurnData = JettonBridgingData & {
-    notificationReceiverAddress: string;
-};
-
-export type NFTBridgingData = RawAssetBridgingData & {
-    type: AssetType.NFT;
-    address: string;
-};
-
-export type NFTTransferData = NFTBridgingData & {
-    to: string;
-    responseAddress: string;
-    evmData: Cell;
-    crossChainTonAmount?: bigint;
-    feeData?: Cell;
-};
-
-export type NFTBurnData = NFTBridgingData & {
-    notificationReceiverAddress: string;
-    evmData: Cell;
-    crossChainTonAmount?: bigint;
-    feeData?: Cell;
-};
-
 export type InternalTONParams = {
     contractOpener: ContractOpener;
     jettonProxyAddress: string;
@@ -88,11 +56,6 @@ export type InternalTACParams = {
     trustedTACExecutors: string[];
     trustedTONExecutors: string[];
     abiCoder: ethers.AbiCoder;
-    crossChainLayerABI: Interface | InterfaceAbi;
-    crossChainLayerTokenABI: Interface | InterfaceAbi;
-    crossChainLayerTokenBytecode: string;
-    crossChainLayerNFTABI: Interface | InterfaceAbi;
-    crossChainLayerNFTBytecode: string;
 };
 
 export type ResponseBase<T> = { response: T };
@@ -117,3 +80,37 @@ export interface SendResult {
     error?: Error;
     lastMessageIndex?: number;
 }
+
+export type ToncenterTransaction = {
+    description: {
+        aborted: boolean;
+        action: {
+            resultCode: number;
+            success: boolean;
+        };
+        computePh: {
+            exitCode: number;
+            success: boolean;
+        };
+        destroyed: boolean;
+    };
+    hash: string;
+    inMsg: {
+        hash: string;
+        opcode: string;
+    };
+};
+
+export type TransactionDepth = {
+    hash: string;
+    depth: number;
+};
+
+export type AdjacentTransactionsResponse = {
+    transactions: ToncenterTransaction[];
+};
+
+export type TxFinalizerConfig = {
+    urlBuilder: (hash: string) => string;
+    authorization: { header: string; value: string };
+};

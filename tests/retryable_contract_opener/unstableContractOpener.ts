@@ -1,5 +1,6 @@
 import { Blockchain, SandboxContract } from '@ton/sandbox';
-import { Address, Contract } from '@ton/ton';
+import { Address, Cell, Contract } from '@ton/ton';
+
 import { ContractOpener, ContractState } from '../../src';
 
 export class UnstableContractOpener implements ContractOpener {
@@ -17,7 +18,7 @@ export class UnstableContractOpener implements ContractOpener {
                 const originalMethod = Reflect.get(target, prop, receiver);
 
                 if (typeof originalMethod === 'function' && typeof prop === 'string') {
-                    return async (...args: any[]) => {
+                    return async (...args: unknown[]) => {
                         const key = `${this.name}-${prop}`;
                         const currentCount = (this.callCounts.get(key) || 0) + 1;
                         this.callCounts.set(key, currentCount);
@@ -52,14 +53,16 @@ export class UnstableContractOpener implements ContractOpener {
         const account = await this.blockchain.getContract(address);
         const accountState = account.account.account;
 
-        let code = null;
+        let code: Cell | undefined | null;
         if (accountState?.storage.state.type === 'active') {
             code = accountState.storage.state.state.code;
         }
 
+        const type = accountState?.storage.state.type;
+
         return {
             balance: account.balance,
-            state: accountState?.storage.state.type || ('uninitialized' as any),
+            state: type === 'uninit' ? 'uninitialized' : type || 'uninitialized',
             code: code?.toBoc() || null,
         };
     }

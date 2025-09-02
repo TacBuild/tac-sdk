@@ -93,3 +93,17 @@ export class NoValidGroupFoundError extends ErrorWithStatusCode {
         this.name = 'NoValidGroupFoundError';
     }
 }
+
+export class InsufficientBalanceError extends ErrorWithStatusCode {
+    constructor(message: string, errorCode: number) {
+        super(message, errorCode);
+        this.name = 'InsufficientBalanceError';
+    }
+}
+
+export class TokenError extends ErrorWithStatusCode {
+    constructor(message: string, errorCode: number) {
+        super(message, errorCode);
+        this.name = 'TokenError';
+    }
+}

@@ -1,16 +1,18 @@
 import {
-    ContractError,
-    FetchError,
     AddressError,
-    WalletError,
-    KeyError,
-    FormatError,
     BitError,
-    MetadataError,
-    SettingError,
+    ContractError,
     EVMCallError,
+    FetchError,
+    FormatError,
+    InsufficientBalanceError,
+    KeyError,
+    MetadataError,
     NoValidGroupFoundError,
     PrepareMessageGroupError,
+    SettingError,
+    TokenError,
+    WalletError,
 } from './errors';
 
 export const emptyContractError = new ContractError('unexpected empty contract code of given jetton.', 100);
@@ -44,7 +46,10 @@ export const invalidMethodNameError = (methodName: string) =>
         111,
     );
 
-export const simulationError = (inner: unknown) => new FetchError(`Failed to simulate EVM call: ${inner}`, 112, inner);
+export const simulationError = (inner: unknown) =>
+    // try to get meaningful error message from axios error
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    new FetchError(`Failed to simulate EVM call: ${(inner as any)?.response?.data?.error}`, 112, inner);
 
 export const profilingFetchError = (msg: string, inner?: unknown) =>
     new FetchError(`failed to fetch stage profiling: ${msg}`, 113, inner);
@@ -62,5 +67,14 @@ export const prepareMessageGroupError = (isBocSizeValid: boolean, isDepthValid: 
 export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 117);
 
 export const allEndpointsFailedError = (inner: unknown) => new FetchError('All endpoints failed', 118, inner);
+
 export const allContractOpenerFailedError = (inner: unknown) =>
     new FetchError('All contract opener failed', 119, inner);
+
+export const insufficientBalanceError = (token: string) =>
+    new InsufficientBalanceError(`Insufficient balance of ${token}`, 120);
+
+export const unknownTokenTypeError = (token: string, reason?: string) =>
+    new TokenError(`Unknown token type of ${token}: ${reason}`, 121);
+
+export const indexRequiredError = (token: string) => new TokenError(`Index is required for collection ${token}`, 122);

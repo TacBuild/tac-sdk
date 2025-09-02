@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+
 import { Network, SDKParams } from '../src';
 
 export const localSDKParams = (evmSettingsAddress: string, tvmSettingsAddress: string): SDKParams => {

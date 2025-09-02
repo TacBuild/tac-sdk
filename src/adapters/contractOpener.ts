@@ -1,17 +1,18 @@
-import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
-import { ContractOpener, Network } from '../structs/Struct';
-import { Blockchain } from '@ton/sandbox';
 import { getHttpEndpoint, getHttpV4Endpoint } from '@orbs-network/ton-access';
+import { Blockchain } from '@ton/sandbox';
 import { TonClient, TonClient4 } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
+import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
+
+import { ContractOpener, Network } from '../structs/Struct';
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
 
 function intToIP(int: number) {
-    var part1 = int & 255;
-    var part2 = (int >> 8) & 255;
-    var part3 = (int >> 16) & 255;
-    var part4 = (int >> 24) & 255;
+    const part1 = int & 255;
+    const part2 = (int >> 8) & 255;
+    const part3 = (int >> 16) & 255;
+    const part4 = (int >> 24) & 255;
 
     return part4 + '.' + part3 + '.' + part2 + '.' + part1;
 }

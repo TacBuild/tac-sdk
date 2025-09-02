@@ -9,13 +9,13 @@ import {
 import { TonConnectUI } from '@tonconnect/ui';
 import { mnemonicToWalletKey } from 'ton-crypto';
 
-import { RawSender } from './RawSender';
-import { SenderAbstraction } from './SenderAbstraction';
-import { TonConnectSender } from './TonConnectSender';
-import { BatchSender } from './BatchSender';
 import { unknownWalletError } from '../errors';
 import { Network } from '../structs/Struct';
 import { DEFAULT_SUBWALLET_ID, DEFAULT_TIMEOUT, HighloadWalletV3 } from '../wrappers/HighloadWalletV3';
+import { BatchSender } from './BatchSender';
+import { RawSender } from './RawSender';
+import { SenderAbstraction } from './SenderAbstraction';
+import { TonConnectSender } from './TonConnectSender';
 
 export type WalletVersion = 'V2R1' | 'V2R2' | 'V3R1' | 'V3R2' | 'V4' | 'V5R1' | 'HIGHLOAD_V3';
 
@@ -58,13 +58,15 @@ export class SenderFactory {
 
         const keypair = await mnemonicToWalletKey(params.mnemonic.split(' '));
 
-        const config: { workchain: number; publicKey: Buffer; walletId: any; subwalletId: any; timeout: any } = {
-            workchain: 0,
-            publicKey: keypair.publicKey,
-            walletId: undefined, // for w5
-            subwalletId: undefined, // for highload v3
-            timeout: undefined, // for highload v3
-        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const config: { workchain: number; publicKey: Buffer; walletId?: any; subwalletId?: number; timeout?: number } =
+            {
+                workchain: 0,
+                publicKey: keypair.publicKey,
+                walletId: undefined, // for w5
+                subwalletId: undefined, // for highload v3
+                timeout: undefined, // for highload v3
+            };
 
         if (params.version === 'V5R1') {
             // manual setup of wallet id required to support wallet w5 both on mainnet and testnet
@@ -89,6 +91,6 @@ export class SenderFactory {
             return new BatchSender(wallet as HighloadWalletV3, keypair.secretKey);
         }
 
-        return new RawSender(wallet, keypair.secretKey);
+        return new RawSender(wallet, keypair.secretKey, params.version === 'V5R1' ? 254 : 4);
     }
 }

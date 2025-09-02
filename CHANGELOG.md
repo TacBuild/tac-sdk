@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 - Debug mode for `TacSDK` and `OperationTracker`: SDK and OperationTracker don't write to console by default.
 - Optional waiting for operation resolution in `TacSDK` and `OperationTracker` while using `waitOptions` argument.
 - RetryableContractOpener for stable work of SDK
+- Check balance before sending crosschain transaction.
+- `RawSender` can send transactions in batches(size is 254 for W5, 4 for others).
+- Check for transaction tree success on TON using `TonTxFinalizer`.
 
 ### Changed
 

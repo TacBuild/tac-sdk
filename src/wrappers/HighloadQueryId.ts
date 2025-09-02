@@ -1,5 +1,4 @@
 const BIT_NUMBER_SIZE = 10n; // 10 bit
-const SHIFT_SIZE = 13n; // 13 bit
 const MAX_BIT_NUMBER = 1022n;
 const MAX_SHIFT = 8191n; // 2^13 = 8192
 

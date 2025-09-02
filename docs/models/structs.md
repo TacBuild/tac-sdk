@@ -79,7 +79,6 @@ export type SDKParams = {
     TACParams?: TACParams;
     TONParams?: TONParams;
     customLiteSequencerEndpoints?: string[];
-    debug?: boolean;
 }
 ```
 
@@ -89,7 +88,6 @@ Parameters for SDK:
 - **`TACParams`** *(optional)*: Custom parameters for TAC side
 - **`TONParams`** *(optional)*: Custom parameters for TON side
 - **`customLiteSequencerEndpoints`** *(optional)*: Custom lite sequencer endpoints for API access.
-- **`debug`** *(optional)*: Debug mode for SDK. Default is *false*.
 
 ### `TONParams (Type)`
 ```typescript
@@ -108,24 +106,12 @@ TON Parameters for SDK:
 export type TACParams = {
     provider?: AbstractProvider;
     settingsAddress?: string | Addressable;  
-    settingsABI?: Interface | InterfaceAbi;
-    crossChainLayerABI?: Interface | InterfaceAbi;
-    crossChainLayerTokenABI?: Interface | InterfaceAbi;
-    crossChainLayerTokenBytecode?: string;
-    crossChainLayerNFTABI?: Interface | InterfaceAbi;
-    crossChainLayerNFTBytecode?: string;
 }
 ```
 
 TAC Parameters for SDK:
 - **`provider`** *(optional)*: Provider used for TAC smart contract interaction. Set for increasing rate limit or tests only
 - **`settingsAddress`** *(optional)*: TAC settings contract address. Needed to retrieve protocol data. Set for tests only
-- **`settingsABI`** *(optional)*: TAC settings contract ABI. Set for tests only 
-- **`crossChainLayerABI`** *(optional)*: TAC CCL contract ABI. Set for tests only
-- **`crossChainLayerTokenABI`** *(optional)*: TAC CCL Token contract ABI. Set for tests only
-- **`crossChainLayerTokenBytecode`** *(optional)*: TAC CCL Token contract bytecode. Set for tests only
-- **`crossChainLayerNFTABI`** *(optional)*: TAC CCL NFT contract ABI. Set for tests only
-- **`crossChainLayerNFTBytecode`** *(optional)*: TAC CCL NFT contract bytecode. Set for tests only
 
 
 ### `ContractState (Type)`
@@ -220,6 +206,7 @@ export type EvmProxyMsg = {
     methodName?: string,
     encodedParameters?: string,
     gasLimit?: bigint,
+    [key: string]: unknown;
 }
 ```
 Represents a proxy message to a TAC.
@@ -227,6 +214,7 @@ Represents a proxy message to a TAC.
 - **`methodName`** *(optional)*: Method name to be called on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
 - **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
 - **`gasLimit`** *(optional)*: `gasLimit` is a parameter that will be passed on the TAC side. The executor must allocate at least gasLimit gas for executing the transaction on the TAC side. If this parameter is not specified, it will be calculated using the `simulateTACMessage` method(prefered).
+- **`[key: string]`** *(optional)*: Additional parameters that can be used for customizing the EVM data cell builder. Attention, this may lead to unexpected behavior if not used correctly.
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the crosschain transaction.
 
@@ -235,7 +223,7 @@ An optional configuration object for customizing advanced crosschain transaction
 
 ```ts
 export type CrossChainTransactionOptions = {
-    forceSend?: boolean;
+    allowSimulationError?: boolean;
     isRoundTrip?: boolean;
     protocolFee?: bigint;
     evmValidExecutors?: string[];
@@ -245,8 +233,8 @@ export type CrossChainTransactionOptions = {
 };
 ```
 
-- **forceSend** *(optional)*:  
-  If true, the transaction will be sent even if the simulation phase detects potential issues or failures.  
+- **allowSimulationError** *(optional)*:  
+  If true, transaction simulation phase is skipped.  
   **Default**: false
 
 - **isRoundTrip** *(optional)*:  
@@ -353,7 +341,7 @@ For non-fungible tokens:
 ```ts
 export type CrosschainTx = {
     evmProxyMsg: EvmProxyMsg;
-    assets?: AssetBridgingData[];
+    assets?: Asset[];
     options?: CrossChainTransactionOptions;
 };
 ```
@@ -404,9 +392,9 @@ export type TACSimulationRequest = {
         target: string;
     };
     evmValidExecutors: string[];
+    tvmValidExecutors: string[];
     extraData: string;
-    feeAssetAddress: string;
-    shardsKey: number;
+    shardsKey: string;
     tonAssets: {
         amount: string;
         tokenAddress: string;
@@ -416,15 +404,15 @@ export type TACSimulationRequest = {
 };
 ```
 
-Represents a request to simulate an TAC message.
+Represents a request to simulate a TAC message.
 
 - **`tacCallParams`**: An object containing parameters for the TAC call.
   - **`arguments`**: Encoded arguments for the TAC method.
   - **`methodName`**: Name of the method to be called on the target TAC contract.
   - **`target`**: The target address on the TAC network.
-- **`evmValidExecutors`**: valid executors.
+- **`evmValidExecutors`**: Valid executors for TAC.
+- **`tvmValidExecutors`**: Valid executors for TON.
 - **`extraData`**: Additional non-root data to be included in TAC call.
-- **`feeAssetAddress`**: Address of the asset used to cover fees; empty string if using native TON.
 - **`shardsKey`**: Key identifying shards for the operation.
 - **`tonAssets`**: An array of assets involved in the transaction.
   - **`amount`**: Amount of the asset to be transferred.
@@ -437,7 +425,7 @@ Represents a request to simulate an TAC message.
 ```ts
 export type ExecutionFeeEstimationResult = {
   feeParams: FeeParams;
-  simulation: TACSimulationResult;
+  simulation?: TACSimulationResult;
 }
 ```
 
@@ -582,10 +570,12 @@ export type MetaInfo = {
     initialCaller: InitialCallerInfo;
     validExecutors: ValidExecutors;
     feeInfo: FeeInfo;
+    sentAssets: AssetMovementInfo;
+    receivedAssets: AssetMovementInfo;
 };
 ```
 
-Holds metadata associated with a crosschain transaction, including the initiating party, allowed executors, and detailed fee information.
+Holds metadata associated with a crosschain transaction, including the initiating party, allowed executors, detailed fee information, and asset movement details.
 
 - **`initialCaller`**:  
   Information about the original sender of the transaction, including address and source blockchain.
@@ -595,6 +585,86 @@ Holds metadata associated with a crosschain transaction, including the initiatin
 
 - **`feeInfo`**:  
   Object containing detailed information about fees required for the transaction execution.
+
+- **`sentAssets`**:  
+  Information about assets sent in the transaction, including caller, target, transaction hash, and asset movements.
+
+- **`receivedAssets`**:  
+  Information about assets received in the transaction, including caller, target, transaction hash, and asset movements.
+
+
+### `AssetMovementInfo`
+
+```ts
+export type AssetMovementInfo = {
+    caller: InitialCallerInfo;
+    target: InitialCallerInfo;
+    transactionHash: TransactionHash;
+    assetMovements: AssetMovement[];
+};
+```
+
+Represents information about asset movements in a transaction.
+
+- **`caller`**:  
+  Information about the caller address and blockchain type.
+
+- **`target`**:  
+  Information about the target address and blockchain type.
+
+- **`transactionHash`**:  
+  The transaction hash and its blockchain type.
+
+- **`assetMovements`**:  
+  Array of individual asset movements in the transaction.
+
+
+### `AssetMovement`
+
+```ts
+export type AssetMovement = {
+    assetType: AssetType;
+    tvmAddress: string;
+    evmAddress: string;
+    amount: string;
+    tokenId: string | null;
+};
+```
+
+Represents a single asset movement in a transaction.
+
+- **`assetType`**:  
+  The type of asset being moved (`FT` for fungible tokens, `NFT` for non-fungible tokens).
+
+- **`tvmAddress`**:  
+  The TVM (TON Virtual Machine) address of the asset.
+
+- **`evmAddress`**:  
+  The EVM (Ethereum Virtual Machine) address of the asset.
+
+- **`amount`**:  
+  The amount of the asset being moved as a string.
+
+- **`tokenId`**:  
+  The token ID for NFTs, or `null` for fungible tokens.
+
+
+### `TransactionHash`
+
+```ts
+export type TransactionHash = {
+    hash: string;
+    blockchainType: BlockchainType;
+};
+```
+
+Represents a transaction hash with its associated blockchain type.
+
+- **`hash`**:  
+  The transaction hash string.
+
+- **`blockchainType`**:  
+  The blockchain type (`TON` or `TAC`) where the transaction occurred.
 
 
 ### `InitialCallerInfo`
@@ -823,16 +893,32 @@ Represents the fee structure for a blockchain protocol.
 - **`tokenFeeSymbol`**: The symbol/identifier of the [token](./enums.md#tokensymbol) used to pay fees.
 
 
+### `AdditionalFeeInfo`
+
+```ts
+export type AdditionalFeeInfo = {
+    attachedProtocolFee: string;
+    tokenFeeSymbol: TokenSymbol;
+};
+```
+Represents additional fee information attached to the transaction.
+
+- **`attachedProtocolFee`**: The additional protocol fee amount attached to the transaction.
+- **`tokenFeeSymbol`**: The symbol/identifier of the token used for the additional fee.
+
+
 ### `FeeInfo`
 
 ```ts
 export type FeeInfo = {
+    additionalFeeInfo: AdditionalFeeInfo;
     tac: GeneralFeeInfo;
     ton: GeneralFeeInfo;
 };
 ```
-Contains fee information for both TAC and TON blockchain networks.
+Contains fee information for both TAC and TON blockchain networks, plus additional fee information.
 
+- **`additionalFeeInfo`**: Additional fee information attached to the transaction.
 - **`tac`**: Complete fee structure for transactions on the TAC blockchain.
 - **`ton`**: Complete fee structure for transactions on the TON blockchain.
 
@@ -843,6 +929,7 @@ export type WaitOptions<T> = {
     timeout?: number;
     maxAttempts?: number;
     delay?: number;
+    logger?: ILogger;
     successCheck?: (result: T) => boolean;
 };
 ```
@@ -852,4 +939,5 @@ Allows to specify custom options for waiting for operation resolution.
 - **`timeout`** *(optional)*: The maximum time to wait for the operation to complete.
 - **`maxAttempts`** *(optional)*: The maximum number of attempts to check the operation status.
 - **`delay`** *(optional)*: The delay between attempts to check the operation status.
+- **`logger`** *(optional)*: Logger used to output debug information during waiting.
 - **`successCheck`** *(optional)*: A function to check if the operation is successful.

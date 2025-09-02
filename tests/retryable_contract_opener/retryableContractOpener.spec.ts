@@ -1,9 +1,11 @@
-import { Cell, toNano } from '@ton/ton';
-import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { RetryableContractOpener } from '../../src/adapters/retryableContractOpener';
 import '@ton/test-utils';
-import { UnstableContractOpener } from './unstableContractOpener';
+
+import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
+import { Cell, toNano } from '@ton/ton';
 import { testnet } from '@tonappchain/artifacts';
+
+import { RetryableContractOpener } from '../../src/adapters/retryableContractOpener';
+import { UnstableContractOpener } from './unstableContractOpener';
 
 describe('RetryableContractOpener with Sandbox', () => {
     let blockchain: Blockchain;
