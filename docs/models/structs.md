@@ -230,6 +230,7 @@ export type CrossChainTransactionOptions = {
     evmExecutorFee?: bigint;
     tvmValidExecutors?: string[];
     tvmExecutorFee?: bigint;
+    calculateRollbackFee?: boolean;
 };
 ```
 
@@ -329,8 +330,8 @@ For fungible tokens:
 
 For non-fungible tokens:
 - **`type`**: Type of the asset. Should be [`AssetType.NFT`](./enums.md#assettype) for non-fungible tokens.
-- **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transfered. Should be 1 for NFTs.
-- **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transfered. Should be 1 for NFTs.
+- **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred. Should be 1 for NFTs.
+- **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred. Should be 1 for NFTs.
 - **`address`** *(required if `collectionAddress` is not specified): TVM or EVM asset's address.
 - **`collectionAddress`** *(required if `address` is not specified): TVM or EVM asset's collection address.
 - **`itemIndex`** *(required if `address` is not specified): Index of the NFT item in the collection.
@@ -391,9 +392,9 @@ export type TACSimulationRequest = {
         methodName: string;
         target: string;
     };
-    evmValidExecutors: string[];
-    tvmValidExecutors: string[];
-    extraData: string;
+    evmValidExecutors?: string[];
+    tvmValidExecutors?: string[];
+    extraData?: string;
     shardsKey: string;
     tonAssets: {
         amount: string;
@@ -401,6 +402,7 @@ export type TACSimulationRequest = {
         assetType: string;
     }[];
     tonCaller: string;
+    calculateRollbackFee?: boolean;
 };
 ```
 
@@ -410,15 +412,20 @@ Represents a request to simulate a TAC message.
   - **`arguments`**: Encoded arguments for the TAC method.
   - **`methodName`**: Name of the method to be called on the target TAC contract.
   - **`target`**: The target address on the TAC network.
-- **`evmValidExecutors`**: Valid executors for TAC.
-- **`tvmValidExecutors`**: Valid executors for TON.
-- **`extraData`**: Additional non-root data to be included in TAC call.
+- **`evmValidExecutors`** *(optional)*: Valid executors for TAC. Default: `config.TACParams.trustedTACExecutors`.
+- **`tvmValidExecutors`** *(optional)*: Valid executors for TON. Default: `config.TACParams.trustedTONExecutors`.
+- **`extraData`** *(optional)*: Additional non-root data to be included in TAC call. Default: `"0x"`.
 - **`shardsKey`**: Key identifying shards for the operation.
 - **`tonAssets`**: An array of assets involved in the transaction.
   - **`amount`**: Amount of the asset to be transferred.
   - **`tokenAddress`**: Address of the token.
   - **`assetType`**: Type of the asset. Either fungible or non-fungible.
 - **`tonCaller`**: Address of the caller in the TON.
+- **`calculateRollbackFee`** *(optional)*: Whether to include rollback path fee in estimation. Default: `true`.
+
+Note:
+- When using SDK helpers (e.g., Simulator), if `tacCallParams.arguments` are omitted, they will be set to `"0x"`.
+- `tacCallParams.methodName` is validated and normalized via `formatSolidityMethodName`.
 
 ### `ExecutionFeeEstimationResult`
 

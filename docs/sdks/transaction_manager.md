@@ -36,6 +36,8 @@
 - **Fee Management**: Handles protocol, executor, and forward fees with intelligent distribution
 - **Balance Checking**: Validates sufficient TON balance before transaction execution
 - **Operation Tracking**: Provides optional waiting mechanisms for transaction completion
+- **Auto Gas Limit**: If `evmProxyMsg.gasLimit` is not provided, it is auto-populated from the simulation result.
+- **Shard Count Logic**: Internally, shardCount is computed as the number of Jettons plus NFTs (or 1 when none), which defines how many shard messages are created.
 
 ---
 
@@ -94,6 +96,10 @@ Sends a single cross-chain transaction from TON to TAC. This method prepares the
 - **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions-type) for transaction customization
 - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for operation tracking
 
+Notes:
+- If `options.evmValidExecutors` or `options.tvmValidExecutors` are omitted or empty, defaults from `config.getTrustedTACExecutors` and `config.getTrustedTONExecutors` are used.
+- If `evmProxyMsg.gasLimit` is not provided, it will be auto-populated from the simulation result.
+
 #### **Returns** [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type)
 
 Returns an object containing:
@@ -143,7 +149,8 @@ bridgeTokensToTON(
   value: bigint,
   tonTarget: string,
   assets?: Asset[],
-  tvmExecutorFee?: bigint
+  tvmExecutorFee?: bigint,
+  tvmValidExecutors?: string[]
 ): Promise<string>
 ```
 
@@ -158,6 +165,7 @@ Bridges tokens from TAC to TON by sending a message to the TAC cross-chain layer
 - **`tonTarget`**: Target address on TON network
 - **`assets`** *(optional)*: Array of [`Asset`](./../models/structs.md#asset-interface) objects to bridge
 - **`tvmExecutorFee`** *(optional)*: Custom TVM executor fee (if not provided, will be calculated)
+- **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
 
 #### **Returns** `Promise<string>`
 
@@ -172,16 +180,13 @@ Returns the transaction hash of the bridging transaction.
 ## Example Usage
 
 ```ts
-import { TransactionManager } from './sdk/TransactionManager';
-import { Simulator } from './sdk/Simulator';
-import { OperationTracker } from './sdk/OperationTracker';
-import { Configuration } from './sdk/Configuration';
-import { ConsoleLogger } from './sdk/Logger';
+import { TransactionManager, Simulator, OperationTracker, Configuration, ConsoleLogger, Network } from "@tonappchain/sdk";
+import { testnet } from "@tonappchain/artifacts";
 
 // Create dependencies
 const config = await Configuration.create(Network.TESTNET, testnet);
 const simulator = new Simulator(config);
-const operationTracker = new OperationTracker(config);
+const operationTracker = new OperationTracker(Network.TESTNET);
 const logger = new ConsoleLogger();
 
 // Create TransactionManager
@@ -230,11 +235,8 @@ const txHash = await transactionManager.bridgeTokensToTON(
 ### Integration with Other Components
 
 ```ts
-// Using with TacSdk
-const sdk = await TacSdk.create({
-  network: Network.TESTNET,
-  debug: true
-});
+// Using with TacSdk (pass a logger if you want console output; otherwise it is silent by default)
+const sdk = await TacSdk.create({ network: Network.TESTNET }, new ConsoleLogger());
 
 // The TacSdk internally uses TransactionManager for cross-chain operations
 const result = await sdk.sendCrossChainTransaction(
@@ -244,4 +246,4 @@ const result = await sdk.sendCrossChainTransaction(
   options,
   waitOptions
 );
-``` 
+```

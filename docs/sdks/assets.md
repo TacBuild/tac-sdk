@@ -20,7 +20,7 @@
       - [`getUserBalanceExtended`](#getuserbalanceextended)
       - [`getDecimals`](#getdecimals)
       - [`checkBalance`](#checkbalance)
-      - [`checkCanBeTransferedBy`](#checkcanbetransferedby)
+      - [`checkCanBeTransferredBy`](#checkcanbetransferredby)
       - [`getBalanceOf`](#getbalanceof)
       - [`generatePayload`](#generatepayload)
   - [NFT Class](#nft-class)
@@ -36,7 +36,7 @@
       - [`getCollectionData`](#getcollectiondata-1)
       - [`getUserBalance`](#getuserbalance-1)
       - [`isOwnedBy`](#isownedby)
-      - [`checkCanBeTransferedBy`](#checkcanbetransferedby-1)
+      - [`checkCanBeTransferredBy`](#checkcanbetransferredby-1)
       - [`getBalanceOf`](#getbalanceof-1)
       - [`generatePayload`](#generatepayload-1)
   - [TON Class](#ton-class)
@@ -44,7 +44,7 @@
     - [Core Methods](#core-methods-1)
       - [`generatePayload`](#generatepayload-2)
       - [`getUserBalance`](#getuserbalance-2)
-      - [`checkCanBeTransferedBy`](#checkcanbetransferedby-2)
+      - [`checkCanBeTransferredBy`](#checkcanbetransferredby-2)
       - [`getBalanceOf`](#getbalanceof-2)
       - [`checkBalance`](#checkbalance-1)
   - [Example Usage](#example-usage)
@@ -79,7 +79,7 @@ interface Asset {
     forwardFeeTonAmount?: bigint;
     feeParams?: FeeParams;
   }): Promise<Cell>;
-  checkCanBeTransferedBy(userAddress: string): Promise<void>;
+  checkCanBeTransferredBy(userAddress: string): Promise<void>;
   getBalanceOf(userAddress: string): Promise<bigint>;
 }
 ```
@@ -98,7 +98,7 @@ The `Asset` interface defines the contract for all token implementations in the 
 - `getEVMAddress`: Gets the EVM address for the token
 - `getTVMAddress`: Gets the TVM address for the token
 - `generatePayload`: Generates cross-chain operation payload with unified object parameters
-- `checkCanBeTransferedBy`: Checks if the token can be transferred by the user (requires userAddress parameter)
+- `checkCanBeTransferredBy`: Checks if the token can be transferred by the user (requires userAddress parameter)
 - `getBalanceOf`: Gets the balance of the token for the given user address
 
 ---
@@ -254,10 +254,10 @@ Checks if the user has sufficient balance for the specified amount.
 
 **Throws:** `InsufficientBalanceError` if balance is insufficient
 
-#### `checkCanBeTransferedBy`
+#### `checkCanBeTransferredBy`
 
 ```ts
-checkCanBeTransferedBy(userAddress: string): Promise<void>
+checkCanBeTransferredBy(userAddress: string): Promise<void>
 ```
 
 Checks if the token can be transferred by the user.
@@ -452,10 +452,10 @@ Checks if the user is the owner of this NFT.
 
 **Returns:** `true` if the user owns the NFT, `false` otherwise
 
-#### `checkCanBeTransferedBy`
+#### `checkCanBeTransferredBy`
 
 ```ts
-checkCanBeTransferedBy(userAddress: string): Promise<void>
+checkCanBeTransferredBy(userAddress: string): Promise<void>
 ```
 
 Checks if the token can be transferred by the user.
@@ -568,10 +568,10 @@ Gets the user's TON balance.
 
 **Returns:** TON balance in raw format (nano)
 
-#### `checkCanBeTransferedBy`
+#### `checkCanBeTransferredBy`
 
 ```ts
-checkCanBeTransferedBy(userAddress: string): Promise<void>
+checkCanBeTransferredBy(userAddress: string): Promise<void>
 ```
 
 Checks if the token can be transferred by the user.
@@ -619,8 +619,8 @@ Checks if the sender has sufficient TON balance for the given transactions.
 ## Example Usage
 
 ```ts
-import { AssetFactory, FT, NFT, TON } from './assets';
-import { Configuration } from './sdk/Configuration';
+import { AssetFactory, FT, NFT, TON, Configuration, Network } from "@tonappchain/sdk";
+import { testnet } from "@tonappchain/artifacts";
 
 // Create configuration
 const config = await Configuration.create(Network.TESTNET, testnet);
@@ -644,7 +644,7 @@ await tonToken.withAmount({ amount: 1.5 }); // Set amount to 1.5 TON
 const jettonData = await FT.getJettonData(contractOpener, "EQ...");
 const userWallet = await jetton.getUserWalletAddress("EQ...");
 const balance = await jetton.getUserBalance("EQ...");
-const canTransfer = await jetton.checkCanBeTransferedBy("EQ...");
+const canTransfer = await jetton.checkCanBeTransferredBy("EQ...");
 const balanceOf = await jetton.getBalanceOf("EQ...");
 
 // Work with NFTs
@@ -656,7 +656,7 @@ const nftBalanceOf = await nft.getBalanceOf("EQ...");
 
 // Work with native TON
 const tonBalance = await tonToken.getUserBalance("EQ...");
-const tonCanTransfer = await tonToken.checkCanBeTransferedBy("EQ...");
+const tonCanTransfer = await tonToken.checkCanBeTransferredBy("EQ...");
 const tonBalanceOf = await tonToken.getBalanceOf("EQ...");
 const payload = await tonToken.generatePayload({
     excessReceiver: "EQ...",

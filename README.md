@@ -44,7 +44,7 @@ The TAC SDK enables you to create frontends that:
   - [`sendCrossChainTransaction`](./docs/sdks/tac_sdk.md#sendcrosschaintransaction): Sends a cross-chain transaction from TON to TAC.
   - [`getEVMTokenAddress`](./docs/sdks/tac_sdk.md#getevmtokenaddress): Gets the TAC address for a TON token.
   - [`getTVMTokenAddress`](./docs/sdks/tac_sdk.md#gettvmtokenaddress): Gets the TON address for a TAC token.
-  - [`getTransactionSimulationInfo`](./docs/sdks/tac_sdk.md#simulatetacmessage): Performs a complete simulation of a crosschain transaction to estimate fees and gather execution-related metadata.  
+  - [`getTransactionSimulationInfo`](./docs/sdks/tac_sdk.md#gettransactionsimulationinfo): Performs a complete simulation of a crosschain transaction to estimate fees and gather execution-related metadata.  
   - [`getUserJettonBalance`](./docs/sdks/tac_sdk.md#getuserjettonbalance): Gets a user's Jetton balance (raw).
   - [`getUserJettonBalanceExtended`](./docs/sdks/tac_sdk.md#getuserjettonbalanceextended): Gets extended Jetton balance info (including decimals).
   - [`getUserJettonWalletAddress`](./docs/sdks/tac_sdk.md#getuserjettonwalletaddress): Calculates a user's Jetton wallet address.
@@ -59,9 +59,9 @@ The TAC SDK enables you to create frontends that:
   - [`getSimplifiedOperationStatus`](./docs/sdks/operation_tracker.md#getsimplifiedoperationstatus): Gets a simplified overall status (Pending, Successful, Failed, Not Found).
   - *(See file for more...)*
 
-- **[`Senders`](./docs/sdks/senders.md)**: Handles signing and sending TON transactions.
-  - [`TonConnectSender`](./docs/sdks/senders.md#tonconnectsender): Implements sending via TonConnect UI.
-  - [`RawSender`](./docs/sdks/senders.md#rawsender): Implements sending using a raw private key.
+- **[`Senders`](./docs/sdks/sender.md)**: Handles signing and sending TON transactions.
+  - [`TonConnectSender`](./docs/sdks/sender.md#tonconnectsender): Implements sending via TonConnect UI.
+  - [`RawSender`](./docs/sdks/sender.md#rawsender): Implements sending using a raw private key.
 
 - **[`Utilities`](./docs/sdks/utilities.md)**: Helper functions and interfaces.
   - [`startTracking`](./docs/sdks/utilities.md#starttracking): Utility function to poll and log operation status to the console.

@@ -106,6 +106,10 @@ const sender = await SenderFactory.getSender({
 - `getBalance`: Gets the TON balance of the sender
 - `getBalanceOf`: Gets the balance of a specific asset for the sender
 
+Note on batching:
+- RawSender groups outbound messages into batches when sending multiple shard transactions.
+- Max batch size depends on wallet version: 254 for `V5R1`, 4 for others.
+
 ---
 
 ### `BatchSender`

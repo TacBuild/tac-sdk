@@ -72,8 +72,10 @@ Simulates a TAC message by sending the request to lite sequencer endpoints. This
 
 - **`req`**: A [`TACSimulationRequest`](./../models/structs.md#tacsimulationrequest-type) object containing:
   - **`tacCallParams`**: EVM call parameters including target, method name, and arguments
-  - **`evmValidExecutors`**: Array of trusted EVM executor addresses
-  - **`extraData`**: Additional data for the simulation
+  - **`evmValidExecutors`** *(optional)*: Array of trusted EVM executor addresses (defaults to `config.TACParams.trustedTACExecutors` if omitted)
+  - **`tvmValidExecutors`** *(optional)*: Array of trusted TVM executor addresses (defaults to `config.TACParams.trustedTONExecutors` if omitted)
+  - **`calculateRollbackFee`** *(optional)*: Whether to include rollback path fee in estimation (default: `true`)
+  - **`extraData`** *(optional)*: Additional data for the simulation (default: `"0x"`)
   - **`shardsKey`**: Unique identifier for the transaction
   - **`tonAssets`**: Array of TON assets to be included in the simulation
   - **`tonCaller`**: TON caller address
@@ -97,7 +99,7 @@ Returns detailed simulation results including:
 ### `getTVMExecutorFeeInfo`
 
 ```ts
-getTVMExecutorFeeInfo(assets: Asset[], feeSymbol: string): Promise<SuggestedTONExecutorFee>
+getTVMExecutorFeeInfo(assets: Asset[], feeSymbol: string, tvmValidExecutors?: string[]): Promise<SuggestedTONExecutorFee>
 ```
 
 #### **Purpose**
@@ -108,6 +110,9 @@ Calculates the suggested TON executor fee based on the provided assets and fee s
 
 - **`assets`**: Array of [`Asset`](./../models/structs.md#asset-interface) objects representing the assets to be processed
 - **`feeSymbol`**: String representing the fee symbol (e.g., "TON", "TAC")
+- **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation. Defaults to `config.TACParams.trustedTONExecutors` if omitted.
+
+Note: The TON executor fee is determined as max(rollback_message, normal_execution) to account for the worst-case path.
 
 #### **Returns** [`SuggestedTONExecutorFee`](./../models/structs.md#suggestedtonexecutorfee-type)
 
@@ -159,7 +164,8 @@ getSimulationInfoForTransaction(
   allowSimulationError?: boolean,
   isRoundTrip?: boolean,
   evmValidExecutors?: string[],
-  tvmValidExecutors?: string[]
+  tvmValidExecutors?: string[],
+  calculateRollbackFee?: boolean
 ): Promise<ExecutionFeeEstimationResult>
 ```
 
@@ -173,9 +179,10 @@ Gets simulation information for a specific transaction using a pre-defined trans
 - **`transactionLinker`**: A [`TransactionLinker`](./../models/structs.md#transactionlinker-type) object for the transaction
 - **`assets`**: Array of [`Asset`](./../models/structs.md#asset-interface) objects to be included
 - **`allowSimulationError`** *(optional)*: Boolean to skip simulation (default: `false`)
-- **`isRoundTrip`** *(optional)*: Boolean indicating if this is a round-trip operation (default: `true`)
+- **`isRoundTrip`** *(optional)*: Boolean indicating if this is a round-trip operation. If omitted, it is auto-detected as `assets.length !== 0`.
 - **`evmValidExecutors`** *(optional)*: Array of trusted EVM executor addresses
 - **`tvmValidExecutors`** *(optional)*: Array of trusted TVM executor addresses
+- **`calculateRollbackFee`** *(optional)*: Whether to include rollback path fee in estimation (default: `true`)
 
 #### **Returns** [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult-type)
 
@@ -220,24 +227,27 @@ Returns an array of simulation results, one for each transaction in the input ar
 private aggregateTokens(assets?: Asset[]): Promise<{
   jettons: Asset[];
   nfts: Asset[];
-  crossChainTonAmount: bigint;
+  ton?: Asset; // native TON asset, if present
 }>
 ```
 
-Aggregates tokens by type, combining amounts for fungible tokens and collecting unique NFTs. This method is used internally to prepare token data for simulation.
+Aggregates tokens by type, combining amounts for fungible tokens (summing identical jettons) and collecting unique NFTs. Also detects native TON amount as a separate Asset instance when present.
+
+Notes:
+- The shard count for transaction linker equals `jettons.length` (or 1 when there are no jettons).
 
 **Returns:**
 - `jettons`: Array of aggregated fungible tokens
 - `nfts`: Array of unique NFTs
-- `crossChainTonAmount`: Total amount of native TON to be transferred
+- `ton` (optional): Native TON asset instance if present
 
 ---
 
 ## Example Usage
 
 ```ts
-import { Simulator } from './sdk/Simulator';
-import { Configuration } from './sdk/Configuration';
+import { Simulator, Configuration, Network } from "@tonappchain/sdk";
+import { testnet } from "@tonappchain/artifacts";
 
 // Create configuration
 const config = await Configuration.create(Network.TESTNET, testnet);

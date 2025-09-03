@@ -75,7 +75,7 @@
 TacSdk.create(sdkParams: SDKParams, logger?: ILogger): Promise<TacSdk>
 ```
 
-Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](./../models/structs.md#tonparams-type), [`TACParams`](./../models/structs.md#tacparams-type) and optional `debug` flag. The optional `logger` parameter allows you to provide a custom logger instance; if not provided, a no-op logger is used by default.
+Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](./../models/structs.md#tonparams-type) and [`TACParams`](./../models/structs.md#tacparams-type). The optional `logger` parameter allows you to provide a custom logger instance; if not provided, a no-op logger is used by default.
 
 ---
 
@@ -125,6 +125,8 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 
 #### **Possible exceptions**
 
+- **`InsufficientBalanceError`**: sender has insufficient TON balance to cover fees and transfers.
+- **`SimulationError`**: simulation failed on TAC/TON and the SDK aborted sending.
 - **`ContractError`**: contract for given jetton is not deployed on TVM side.
 - **`AddressError`**: invalid token address provided.
 
@@ -189,6 +191,8 @@ For example, when adding liquidity, you need to specify the addresses of the tok
 
 **Note:** For native TON coin (empty string or nativeTONAddress), this method returns the computed EVM address for the native TON token.
 
+**Note:** The input TVM token address is automatically normalized to the standard EQ form before computing the EVM address.
+
 #### **Returns**
 
 Returns the EVM paired address for a given TVM token address.
@@ -208,7 +212,7 @@ Returns the TVM wrapper address for a given EVM token.
 ### `nativeTONAddress`
 
 ```ts
-get nativeTONAddress(): string
+nativeTONAddress(): string
 ```
 
 Returns a symbolic identifier for native TON.
@@ -218,7 +222,7 @@ Returns a symbolic identifier for native TON.
 ### `nativeTACAddress`
 
 ```ts
-get nativeTACAddress(): Promise<string>
+nativeTACAddress(): Promise<string>
 ```
 
 Returns the address of native TAC coin on the TAC chain.
@@ -230,7 +234,7 @@ Returns the address of native TAC coin on the TAC chain.
 ### `getTrustedTACExecutors`
 
 ```ts
-get getTrustedTACExecutors(): string[]
+getTrustedTACExecutors(): string[]
 ```
 
 Returns trusted EVM executor addresses.
@@ -240,7 +244,7 @@ Returns trusted EVM executor addresses.
 ### `getTrustedTONExecutors`
 
 ```ts
-get getTrustedTONExecutors(): string[]
+getTrustedTONExecutors(): string[]
 ```
 
 Returns trusted TON executor addresses.
@@ -279,7 +283,7 @@ Returns the corresponding EVM NFT address for a given TVM NFT address (which can
 #### **Parameters**
 
 - **`tvmNFTAddress`**: The address of the NFT on the TVM (TON) chain (can be a collection or item wrapper).
-- **`addressType`**: An enum [`NFTAddressType`](./../models/structs.md#nftaddresstype-enum) indicating whether the provided `tvmNFTAddress` refers to a collection (`NFTAddressType.COLLECTION`) or a specific item (`NFTAddressType.ITEM`).
+- **`addressType`**: An enum [`NFTAddressType`](./../models/enums.md#nftaddresstype) indicating whether the provided `tvmNFTAddress` refers to a collection (`NFTAddressType.COLLECTION`) or a specific item (`NFTAddressType.ITEM`).
 
 #### **Returns**
 
@@ -353,15 +357,17 @@ Simulates multiple cross-chain transactions in batch, providing the same conveni
 ---
 
 ### `getTVMExecutorFeeInfo`
-
 ```ts
   getTVMExecutorFeeInfo(
-    assets: Asset[], 
-    feeSymbol: String
-  ): Promise<SuggestedTONExecutorFee> 
+    assets: Asset[],
+    feeSymbol: string,
+    tvmValidExecutors?: string[]
+  ): Promise<SuggestedTONExecutorFee>
 ```
 
-Calculates the TVM executor fee for bridging `assets` to TON. The `feeSymbol` determines the token used to pay the fee - TAC for direct TAC->TON operations, or TON for TON->TAC->TON messages.
+Calculates the TVM executor fee for bridging `assets` to TON. The `feeSymbol` determines the token used to pay the fee — TAC for direct TAC->TON operations, or TON for TON->TAC->TON messages. Optionally, you can pass `tvmValidExecutors` to restrict the set of trusted TON executors used for estimation.
+
+Note: The TON executor fee is determined as max(rollback_message, normal_execution) to account for the worst-case path.
 
 #### **Returns** [`SuggestedTONExecutorFee`](./../models/structs.md#suggestedtonexecutorfee)
   - Estimated tvmExecutorFee in both TAC and TON.
@@ -376,7 +382,8 @@ bridgeTokensToTON(
   value: bigint, 
   tonTarget: string, 
   assets?: Asset[], 
-  tvmExecutorFee?: bigint
+  tvmExecutorFee?: bigint,
+  tvmValidExecutors?: string[]
 ): Promise<string>
 ```
 
@@ -391,6 +398,7 @@ Initiates a bridge operation from TAC back to TON. This function handles the nec
 - **`tonTarget`**: The target address on the TON network where the assets should be received.
 - **`assets`** *(optional)*: An array of [`Asset`](./../models/structs.md#asset-interface) objects specifying the tokens or NFTs to bridge.
 - **`tvmExecutorFee`** *(optional)*: The fee (in TON) to pay the TVM executor for processing the message on the TON side. If not provided, a suggested fee is calculated.
+- **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
 
 #### **Returns** `Promise<string>`
   - The transaction hash of the bridging transaction submitted on the TAC chain.
