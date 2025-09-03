@@ -109,7 +109,7 @@ export class TON implements Asset {
         }
     }
 
-    async checkCanBeTransferedBy(userAddress: string): Promise<void> {
+    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
         const balance = await this.getUserBalance(userAddress);
         if (balance < this._rawAmount) {
             throw insufficientBalanceError(TON_SYMBOL);

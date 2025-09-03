@@ -5,12 +5,9 @@ import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { address, beginCell, SendMode, toNano, WalletContractV4, WalletContractV5R1 } from '@ton/ton';
 
 import { sandboxOpener } from '../../src/adapters/contractOpener';
-import { BatchSender, SenderFactory } from '../../src/sender';
+import { BatchSender, SenderFactory, SenderAbstraction, ContractOpener, Network, HighloadWalletV3 } from '../../src';
 import { RawSender } from '../../src/sender/RawSender';
-import { SenderAbstraction } from '../../src/sender/SenderAbstraction';
 import { SendResult, ShardTransaction } from '../../src/structs/InternalStruct';
-import { ContractOpener, Network } from '../../src/structs/Struct';
-import { HighloadWalletV3 } from '../../src/wrappers/HighloadWalletV3';
 
 describe('RawSender', () => {
     let blockchain: Blockchain;

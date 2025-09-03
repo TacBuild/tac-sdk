@@ -1,9 +1,7 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers } from 'ethers';
 
-import { FT } from '../assets/FT';
-import { NFT } from '../assets/NFT';
-import { TON } from '../assets/TON';
+import { FT, NFT, TON } from '../assets';
 import { invalidMethodNameError } from '../errors';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import {

@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 import { ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } from '../../src/sdk/OperationTracker';
-import { ILogger } from '../../src/structs/Services';
 import {
     AssetType,
     BlockchainType,
@@ -17,7 +16,8 @@ import {
     TokenSymbol,
     TransactionLinker,
     WaitOptions,
-} from '../../src/structs/Struct';
+    ILogger,
+} from '../../src';
 
 // Mock implementations
 class MockLogger implements ILogger {

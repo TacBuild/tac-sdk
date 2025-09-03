@@ -1,7 +1,7 @@
 import { mainnet, testnet } from '@tonappchain/artifacts';
 
 import { allEndpointsFailedError } from '../errors';
-import { ILogger, IOperationTracker } from '../structs/Services';
+import { ILogger, IOperationTracker } from '../interfaces';
 import {
     ExecutionStages,
     ExecutionStagesByOperationId,
@@ -29,21 +29,15 @@ export interface ILiteSequencerClient {
     getOperationIdsByShardsKeys(
         shardsKeys: string[],
         caller: string,
-        chunkSize?: number
+        chunkSize?: number,
     ): Promise<OperationIdsByShardsKey>;
-    getStageProfilings(
-        operationIds: string[],
-        chunkSize?: number
-    ): Promise<ExecutionStagesByOperationId>;
-    getOperationStatuses(
-        operationIds: string[],
-        chunkSize?: number
-    ): Promise<StatusInfosByOperationId>;
+    getStageProfilings(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesByOperationId>;
+    getOperationStatuses(operationIds: string[], chunkSize?: number): Promise<StatusInfosByOperationId>;
 }
 
 export class DefaultLiteSequencerClientFactory implements ILiteSequencerClientFactory {
     createClients(endpoints: string[]): ILiteSequencerClient[] {
-        return endpoints.map(endpoint => new LiteSequencerClient(endpoint));
+        return endpoints.map((endpoint) => new LiteSequencerClient(endpoint));
     }
 }
 
@@ -52,10 +46,10 @@ export class OperationTracker implements IOperationTracker {
     private readonly logger: ILogger;
 
     constructor(
-        network: Network, 
-        customLiteSequencerEndpoints?: string[], 
+        network: Network,
+        customLiteSequencerEndpoints?: string[],
         logger: ILogger = new NoopLogger(),
-        clientFactory: ILiteSequencerClientFactory = new DefaultLiteSequencerClientFactory()
+        clientFactory: ILiteSequencerClientFactory = new DefaultLiteSequencerClientFactory(),
     ) {
         const endpoints =
             customLiteSequencerEndpoints ??
@@ -67,10 +61,7 @@ export class OperationTracker implements IOperationTracker {
         this.logger = logger;
     }
 
-    async getOperationIdByTransactionHash(
-        transactionHash: string,
-        waitOptions?: WaitOptions<string>,
-    ): Promise<string> {
+    async getOperationIdByTransactionHash(transactionHash: string, waitOptions?: WaitOptions<string>): Promise<string> {
         this.logger.debug(`Getting operation ID for transactionHash: ${formatObjectForLogging(transactionHash)}`);
 
         const requestFn = async (): Promise<string> => {

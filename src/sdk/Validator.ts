@@ -1,14 +1,14 @@
 import { Address } from '@ton/ton';
 import { isAddress as isEthereumAddress } from 'ethers';
 
-import { evmAddressError, tvmAddressError } from '../errors/instances';
+import { evmAddressError, tvmAddressError } from '../errors';
 import { EvmProxyMsg, TACSimulationRequest } from '../structs/Struct';
 
 export class Validator {
     static validateTACSimulationRequest(req: TACSimulationRequest): void {
         this.validateEVMAddress(req.tacCallParams.target);
-        req.evmValidExecutors.forEach(this.validateEVMAddress);
-        req.tvmValidExecutors.forEach(this.validateTVMAddress);
+        req.evmValidExecutors?.forEach(this.validateEVMAddress);
+        req.tvmValidExecutors?.forEach(this.validateTVMAddress);
         req.tonAssets.forEach((asset) => {
             // if empty then it's native TON
             if (asset.tokenAddress !== '') {

@@ -1,11 +1,7 @@
 import { Wallet } from 'ethers';
 
-import { AssetFactory } from '../assets';
-import { FT } from '../assets/FT';
-import { NFT } from '../assets/NFT';
-import { TON } from '../assets/TON';
+import { AssetFactory, FT, TON, NFT } from '../assets';
 import type { SenderAbstraction } from '../sender';
-import { IConfiguration, ILogger, ITacSDK } from '../structs/Services';
 import {
     Asset,
     AssetType,
@@ -31,13 +27,14 @@ import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
 import { TransactionManager } from './TransactionManager';
+import { IConfiguration, ILogger, ISimulator, ITacSDK } from '../interfaces';
 
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
-    private readonly simulator: Simulator;
+    private readonly simulator: ISimulator;
     private readonly transactionManager: TransactionManager;
 
-    private constructor(config: IConfiguration, simulator: Simulator, transactionManager: TransactionManager) {
+    private constructor(config: IConfiguration, simulator: ISimulator, transactionManager: TransactionManager) {
         this.config = config;
         this.simulator = simulator;
         this.transactionManager = transactionManager;
@@ -94,8 +91,12 @@ export class TacSdk implements ITacSDK {
         return this.simulator.getTransactionSimulationInfo(evmProxyMsg, sender, assets);
     }
 
-    async getTVMExecutorFeeInfo(assets: Asset[], feeSymbol: string): Promise<SuggestedTONExecutorFee> {
-        return this.simulator.getTVMExecutorFeeInfo(assets, feeSymbol);
+    async getTVMExecutorFeeInfo(
+        assets: Asset[],
+        feeSymbol: string,
+        tvmValidExecutors?: string[],
+    ): Promise<SuggestedTONExecutorFee> {
+        return this.simulator.getTVMExecutorFeeInfo(assets, feeSymbol, tvmValidExecutors);
     }
 
     async sendCrossChainTransaction(
@@ -122,8 +123,16 @@ export class TacSdk implements ITacSDK {
         tonTarget: string,
         assets?: Asset[],
         tvmExecutorFee?: bigint,
+        tvmValidExecutors?: string[],
     ): Promise<string> {
-        return this.transactionManager.bridgeTokensToTON(signer, value, tonTarget, assets, tvmExecutorFee);
+        return this.transactionManager.bridgeTokensToTON(
+            signer,
+            value,
+            tonTarget,
+            assets,
+            tvmExecutorFee,
+            tvmValidExecutors,
+        );
     }
 
     async isContractDeployedOnTVM(address: string): Promise<boolean> {

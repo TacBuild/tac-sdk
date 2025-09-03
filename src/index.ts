@@ -9,7 +9,7 @@ export { startTracking, startTrackingMultiple } from './sdk/StartTracking';
 export { TacSdk } from './sdk/TacSdk';
 export { TransactionManager } from './sdk/TransactionManager';
 export * from './sender';
-export * from './structs/Services';
+export * from './interfaces';
 export * from './structs/Struct';
 export { Network, SimplifiedStatuses } from './structs/Struct';
 export * from './assets';

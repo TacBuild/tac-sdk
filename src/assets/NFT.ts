@@ -320,7 +320,7 @@ export class NFT implements Asset {
         return false;
     }
 
-    async checkCanBeTransferedBy(userAddress: string): Promise<void> {
+    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
         if (!(await this.isOwnedBy(userAddress))) {
             throw insufficientBalanceError(this.address.toString());
         }

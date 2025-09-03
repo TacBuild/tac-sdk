@@ -4,7 +4,7 @@ import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 import { simulationError } from '../errors';
 import type { SenderAbstraction } from '../sender';
 import { SuggestedTONExecutorFeeResponse, TACSimulationResponse } from '../structs/InternalStruct';
-import { IConfiguration, ILogger, ISimulator } from '../structs/Services';
+import { IConfiguration, ILogger, ISimulator } from '../interfaces';
 import {
     Asset,
     CrosschainTx,
@@ -97,6 +97,7 @@ export class Simulator implements ISimulator {
         const {
             evmValidExecutors = this.config.TACParams.trustedTACExecutors,
             tvmValidExecutors = this.config.TACParams.trustedTONExecutors,
+            calculateRollbackFee = true,
         } = options;
 
         Validator.validateEVMAddresses(evmValidExecutors);
@@ -122,10 +123,15 @@ export class Simulator implements ISimulator {
                 assetType: asset.type,
             })),
             tonCaller: transactionLinker.caller,
+            calculateRollbackFee: calculateRollbackFee,
         };
     }
 
-    async getTVMExecutorFeeInfo(assets: Asset[], feeSymbol: string): Promise<SuggestedTONExecutorFee> {
+    async getTVMExecutorFeeInfo(
+        assets: Asset[],
+        feeSymbol: string,
+        tvmValidExecutors: string[] = this.config.TACParams.trustedTONExecutors,
+    ): Promise<SuggestedTONExecutorFee> {
         this.logger.debug('Getting TVM executor fee info');
         const requestBody = {
             tonAssets: assets.map((asset) => ({
@@ -134,6 +140,7 @@ export class Simulator implements ISimulator {
                 assetType: asset.type,
             })),
             feeSymbol: feeSymbol,
+            tvmValidExecutors: tvmValidExecutors,
         };
 
         let lastError;
@@ -162,6 +169,7 @@ export class Simulator implements ISimulator {
         isRoundTrip: boolean = true,
         evmValidExecutors: string[] = this.config.TACParams.trustedTACExecutors,
         tvmValidExecutors: string[] = this.config.TACParams.trustedTONExecutors,
+        calculateRollbackFee: boolean = true,
     ): Promise<ExecutionFeeEstimationResult> {
         this.logger.debug('Getting fee info');
 
@@ -193,6 +201,7 @@ export class Simulator implements ISimulator {
                 assetType: asset.type,
             })),
             tonCaller: transactionLinker.caller,
+            calculateRollbackFee: calculateRollbackFee,
         };
 
         isRoundTrip = isRoundTrip ?? assets.length != 0;
@@ -255,6 +264,7 @@ export class Simulator implements ISimulator {
         isRoundTrip?: boolean,
         evmValidExecutors?: string[],
         tvmValidExecutors?: string[],
+        calculateRollbackFee?: boolean,
     ): Promise<ExecutionFeeEstimationResult> {
         return await this.getFeeInfo(
             evmProxyMsg,
@@ -264,6 +274,7 @@ export class Simulator implements ISimulator {
             isRoundTrip,
             evmValidExecutors,
             tvmValidExecutors,
+            calculateRollbackFee,
         );
     }
 }

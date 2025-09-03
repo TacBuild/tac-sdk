@@ -4,7 +4,7 @@ import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
 import { createDefaultRetryableOpener } from '../adapters/retryableContractOpener';
 import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
-import { IConfiguration } from '../structs/Services';
+import { IConfiguration } from '../interfaces';
 import { Network, TACParams, TONParams } from '../structs/Struct';
 import { Settings } from '../wrappers/Settings';
 import { Validator } from './Validator';

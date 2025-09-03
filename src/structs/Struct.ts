@@ -1,8 +1,7 @@
 import { SandboxContract } from '@ton/sandbox';
 import type { Address, Cell, Contract, OpenedContract } from '@ton/ton';
 import { AbstractProvider, Addressable } from 'ethers';
-
-import { ILogger } from './Services';
+import { ILogger } from '../interfaces/ILogger';
 
 export type ContractState = {
     balance: bigint;
@@ -142,17 +141,17 @@ export type TACSimulationRequest = {
         methodName: string;
         target: string;
     };
-    evmValidExecutors: string[];
-    tvmValidExecutors: string[];
-    extraData: string;
+    evmValidExecutors?: string[];
+    tvmValidExecutors?: string[];
+    extraData?: string;
     shardsKey: string;
-
     tonAssets: {
         amount: string;
         tokenAddress: string;
         assetType: string;
     }[];
     tonCaller: string;
+    calculateRollbackFee?: boolean;
 };
 
 export enum StageName {
@@ -334,6 +333,7 @@ export type CrossChainTransactionOptions = {
     evmExecutorFee?: bigint;
     tvmValidExecutors?: string[];
     tvmExecutorFee?: bigint;
+    calculateRollbackFee?: boolean;
 };
 
 export type ExecutionFeeEstimationResult = {
@@ -414,7 +414,7 @@ export interface Asset {
         feeParams?: FeeParams;
     }): Promise<Cell>;
     // Check if the token can be transferred - throws error if not
-    checkCanBeTransferedBy(userAddress: string): Promise<void>;
+    checkCanBeTransferredBy(userAddress: string): Promise<void>;
     // Check balance of the users
     getBalanceOf(userAddress: string): Promise<bigint>;
 }

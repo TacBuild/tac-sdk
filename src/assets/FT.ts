@@ -313,7 +313,7 @@ export class FT implements Asset {
         }
     }
 
-    async checkCanBeTransferedBy(userAddress: string): Promise<void> {
+    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
         await this.checkBalance(userAddress);
     }
 
