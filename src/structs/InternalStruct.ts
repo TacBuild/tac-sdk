@@ -3,7 +3,7 @@ import { mainnet, testnet } from '@tonappchain/artifacts';
 import { AbstractProvider, ethers } from 'ethers';
 
 import {
-    ContractOpener,
+    IContractOpener,
     ExecutionStagesByOperationId,
     Network,
     OperationIdsByShardsKey,
@@ -11,6 +11,7 @@ import {
     StatusInfosByOperationId,
     SuggestedTONExecutorFee,
     TACSimulationResult,
+    ConvertedCurrencyResult,
 } from './Struct';
 
 export type ShardMessage = {
@@ -38,7 +39,7 @@ export type RandomNumberByTimestamp = {
 };
 
 export type InternalTONParams = {
-    contractOpener: ContractOpener;
+    contractOpener: IContractOpener;
     jettonProxyAddress: string;
     nftProxyAddress: string;
     crossChainLayerAddress: string;
@@ -73,6 +74,8 @@ export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
 export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
 
 export type SuggestedTONExecutorFeeResponse = ResponseBase<SuggestedTONExecutorFee>;
+
+export type ConvertCurrencyResponse = ResponseBase<ConvertedCurrencyResult>;
 
 export interface SendResult {
     success: boolean;

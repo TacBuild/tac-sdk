@@ -1,14 +1,14 @@
-import { Asset } from '../structs/Struct';
+import { IAsset } from '../interfaces';
 
 type AssetKey = string;
 
 export class AssetCache {
-    private static readonly cache = new Map<AssetKey, Asset>();
+    private static readonly cache = new Map<AssetKey, IAsset>();
 
     /**
      * Get asset from cache
      */
-    static get(token: { address: string; index?: bigint }): Asset | undefined {
+    static get(token: { address: string; index?: bigint }): IAsset | undefined {
         const key = this.generateKey(token);
         return this.cache.get(key);
     }
@@ -16,7 +16,7 @@ export class AssetCache {
     /**
      * Set asset in cache
      */
-    static set(token: { address: string; index?: bigint }, asset: Asset): void {
+    static set(token: { address: string; index?: bigint }, asset: IAsset): void {
         const key = this.generateKey(token);
         this.cache.set(key, asset);
     }

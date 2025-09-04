@@ -1,21 +1,13 @@
-import { SandboxContract } from '@ton/sandbox';
-import type { Address, Cell, Contract, OpenedContract } from '@ton/ton';
+import type { Address, Cell } from '@ton/ton';
 import { AbstractProvider, Addressable } from 'ethers';
-import { ILogger } from '../interfaces/ILogger';
+import type { ILogger, IContractOpener, IAsset } from '../interfaces';
+export type { IContractOpener, IAsset } from '../interfaces';
 
 export type ContractState = {
     balance: bigint;
     state: 'active' | 'uninitialized' | 'frozen';
     code: Buffer | null;
 };
-
-export interface ContractOpener {
-    open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
-
-    getContractState(address: Address): Promise<ContractState>;
-
-    closeConnections?: () => unknown;
-}
 
 export enum SimplifiedStatuses {
     PENDING = 'PENDING',
@@ -30,6 +22,11 @@ export enum Network {
 }
 
 export enum BlockchainType {
+    TAC = 'TAC',
+    TON = 'TON',
+}
+
+export enum CurrencyType {
     TAC = 'TAC',
     TON = 'TON',
 }
@@ -59,7 +56,7 @@ export type TONParams = {
     /**
      * Provider for TON side. Use your own provider for tests or to increase ratelimit
      */
-    contractOpener?: ContractOpener;
+    contractOpener?: IContractOpener;
 
     /**
      * Address of TON settings contract. Use only for tests.
@@ -218,9 +215,9 @@ export type AdditionalFeeInfo = {
 };
 
 export type FeeInfo = {
-    additionalFeeInfo: AdditionalFeeInfo;
-    tac: GeneralFeeInfo;
-    ton: GeneralFeeInfo;
+    additionalFeeInfo: AdditionalFeeInfo | null;
+    tac: GeneralFeeInfo | null;
+    ton: GeneralFeeInfo | null;
 };
 
 export type AssetMovement = {
@@ -239,21 +236,21 @@ export type TransactionHash = {
 export type AssetMovementInfo = {
     caller: InitialCallerInfo;
     target: InitialCallerInfo;
-    transactionHash: TransactionHash;
-    assetMovements: AssetMovement[];
+    transactionHash: TransactionHash | null;
+    assetMovements: AssetMovement[] | null;
 };
 
 export type MetaInfo = {
     initialCaller: InitialCallerInfo;
     validExecutors: ValidExecutors;
     feeInfo: FeeInfo;
-    sentAssets: AssetMovementInfo;
-    receivedAssets: AssetMovementInfo;
+    sentAssets: AssetMovementInfo | null;
+    receivedAssets: AssetMovementInfo | null;
 };
 
 export type ExecutionStages = {
     operationType: OperationType;
-    metaInfo: MetaInfo;
+    metaInfo: MetaInfo | null;
 } & Record<StageName, ProfilingStageData>;
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
@@ -343,7 +340,7 @@ export type ExecutionFeeEstimationResult = {
 
 export type CrosschainTx = {
     evmProxyMsg: EvmProxyMsg;
-    assets?: Asset[];
+    assets?: IAsset[];
     options?: CrossChainTransactionOptions;
 };
 
@@ -353,6 +350,12 @@ export type NFTItemData = {
     collectionAddress: Address;
     ownerAddress: Address | null;
     content: Cell | null;
+};
+
+export type NFTCollectionData = {
+    nextIndex: number;
+    content: Cell;
+    adminAddress: Address;
 };
 
 export interface WaitOptions<T = unknown> {
@@ -388,37 +391,6 @@ export const defaultWaitOptions: WaitOptions = {
     delay: 10000,
 };
 
-export interface Asset {
-    // Address of the token on the blockchain
-    address: string;
-    // Type of the token
-    type: AssetType;
-    // Raw amount of the token to be transferred
-    rawAmount: bigint;
-    // Clone to create new token with the same parameters
-    clone: Asset;
-    // Set amount of the token to be transferred
-    withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
-    // Add amount of the token to the current amount
-    addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
-    // Get EVM address of the token
-    getEVMAddress(): Promise<string>;
-    // Get TVM address of the token
-    getTVMAddress(): Promise<string>;
-    // Generate payload for the token
-    generatePayload(params: {
-        excessReceiver: string;
-        evmData: Cell;
-        crossChainTonAmount?: bigint;
-        forwardFeeTonAmount?: bigint;
-        feeParams?: FeeParams;
-    }): Promise<Cell>;
-    // Check if the token can be transferred - throws error if not
-    checkCanBeTransferredBy(userAddress: string): Promise<void>;
-    // Check balance of the users
-    getBalanceOf(userAddress: string): Promise<bigint>;
-}
-
 export enum Origin {
     TON = 'TON',
     TAC = 'TAC',
@@ -444,4 +416,26 @@ export type AssetFromNFTItemArg = {
     address: TVMAddress;
     tokenType: AssetType.NFT;
     addressType: NFTAddressType.ITEM;
+};
+
+export type ConvertCurrencyParams = {
+    rawValue: bigint;
+    currencyType: CurrencyType;
+};
+
+export type TokenPriceInfo = {
+    spot: bigint;
+    ema: bigint;
+};
+
+export type ConvertedCurrencyResult = {
+    spotRawValue: bigint;
+    spotFriendlyValue: string;
+    emaValue: bigint;
+    emaFriendlyValue: string;
+    spotValueInUSD: number;
+    emaValueInUSD: number;
+    currencyType: CurrencyType;
+    tacPrice: TokenPriceInfo;
+    tonPrice: TokenPriceInfo;
 };

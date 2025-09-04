@@ -2,22 +2,22 @@ import { fromNano, internal } from '@ton/ton';
 import { MessageRelaxed, SendMode } from '@ton/ton';
 
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
-import type { Asset, ContractOpener } from '../structs/Struct';
+import type { IAsset, IContractOpener } from '../interfaces';
 import { Network } from '../structs/Struct';
-import { SenderAbstraction, WalletInstance } from './SenderAbstraction';
+import { ISender, IWallet } from '../interfaces';
 
-export class RawSender implements SenderAbstraction {
+export class RawSender implements ISender {
     constructor(
-        private wallet: WalletInstance,
+        private wallet: IWallet,
         private secretKey: Buffer,
         private maxBatchSize: number = 4,
     ) {}
 
-    async getBalanceOf(asset: Asset): Promise<bigint> {
+    async getBalanceOf(asset: IAsset): Promise<bigint> {
         return asset.getBalanceOf(this.getSenderAddress());
     }
 
-    async getBalance(contractOpener: ContractOpener): Promise<bigint> {
+    async getBalance(contractOpener: IContractOpener): Promise<bigint> {
         const { balance } = await contractOpener.getContractState(this.wallet.address);
         return balance;
     }
@@ -25,7 +25,7 @@ export class RawSender implements SenderAbstraction {
     async sendShardTransactions(
         shardTransactions: ShardTransaction[],
         _chain: Network,
-        contractOpener: ContractOpener,
+        contractOpener: IContractOpener,
     ): Promise<SendResult[]> {
         const allMessages: MessageRelaxed[] = [];
 
@@ -80,7 +80,7 @@ export class RawSender implements SenderAbstraction {
         return batches;
     }
 
-    private async sendBatch(messages: MessageRelaxed[], contractOpener: ContractOpener): Promise<unknown> {
+    private async sendBatch(messages: MessageRelaxed[], contractOpener: IContractOpener): Promise<unknown> {
         const walletContract = contractOpener.open(this.wallet);
         const seqno = await walletContract.getSeqno();
 
@@ -99,7 +99,7 @@ export class RawSender implements SenderAbstraction {
     async sendShardTransaction(
         shardTransaction: ShardTransaction,
         _chain: Network,
-        contractOpener: ContractOpener,
+        contractOpener: IContractOpener,
     ): Promise<SendResult> {
         const messages: MessageRelaxed[] = [];
         for (const message of shardTransaction.messages) {

@@ -1,12 +1,13 @@
 import { Wallet } from 'ethers';
 
 import { AssetFactory, FT, TON, NFT } from '../assets';
-import type { SenderAbstraction } from '../sender';
+import type { ISender } from '../sender';
 import {
-    Asset,
+    IAsset,
     AssetType,
     CrossChainTransactionOptions,
     CrosschainTx,
+    EVMAddress,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
     Network,
@@ -18,8 +19,12 @@ import {
     TACSimulationRequest,
     TACSimulationResult,
     TransactionLinkerWithOperationId,
+    TVMAddress,
     UserWalletBalanceExtended,
     WaitOptions,
+    AssetFromFTArg,
+    AssetFromNFTCollectionArg,
+    AssetFromNFTItemArg,
 } from '../structs/Struct';
 import { Configuration } from './Configuration';
 import { DEFAULT_DELAY } from './Consts';
@@ -27,14 +32,15 @@ import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
 import { TransactionManager } from './TransactionManager';
-import { IConfiguration, ILogger, ISimulator, ITacSDK } from '../interfaces';
+import { IConfiguration, ILogger, ISimulator, ITacSDK, ITransactionManager } from '../interfaces';
+import { JettonMasterData } from '../wrappers/JettonMaster';
 
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
     private readonly simulator: ISimulator;
-    private readonly transactionManager: TransactionManager;
+    private readonly transactionManager: ITransactionManager;
 
-    private constructor(config: IConfiguration, simulator: ISimulator, transactionManager: TransactionManager) {
+    private constructor(config: IConfiguration, simulator: ISimulator, transactionManager: ITransactionManager) {
         this.config = config;
         this.simulator = simulator;
         this.transactionManager = transactionManager;
@@ -85,14 +91,14 @@ export class TacSdk implements ITacSDK {
 
     async getTransactionSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
-        sender: SenderAbstraction,
-        assets?: Asset[],
+        sender: ISender,
+        assets?: IAsset[],
     ): Promise<ExecutionFeeEstimationResult> {
         return this.simulator.getTransactionSimulationInfo(evmProxyMsg, sender, assets);
     }
 
     async getTVMExecutorFeeInfo(
-        assets: Asset[],
+        assets: IAsset[],
         feeSymbol: string,
         tvmValidExecutors?: string[],
     ): Promise<SuggestedTONExecutorFee> {
@@ -101,8 +107,8 @@ export class TacSdk implements ITacSDK {
 
     async sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
-        sender: SenderAbstraction,
-        assets?: Asset[],
+        sender: ISender,
+        assets?: IAsset[],
         options?: CrossChainTransactionOptions,
         waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId> {
@@ -110,7 +116,7 @@ export class TacSdk implements ITacSDK {
     }
 
     async sendCrossChainTransactions(
-        sender: SenderAbstraction,
+        sender: ISender,
         txs: CrosschainTx[],
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]> {
@@ -121,7 +127,7 @@ export class TacSdk implements ITacSDK {
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: Asset[],
+        assets?: IAsset[],
         tvmExecutorFee?: bigint,
         tvmValidExecutors?: string[],
     ): Promise<string> {
@@ -143,8 +149,16 @@ export class TacSdk implements ITacSDK {
         return this.simulator.simulateTACMessage(req);
     }
 
-    async simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]> {
+    async simulateTransactions(sender: ISender, txs: CrosschainTx[]): Promise<TACSimulationResult[]> {
         return this.simulator.simulateTransactions(sender, txs);
+    }
+
+    // Asset methods
+    async getAsset(args: AssetFromFTArg): Promise<FT>;
+    async getAsset(args: AssetFromNFTCollectionArg): Promise<NFT>;
+    async getAsset(args: AssetFromNFTItemArg): Promise<NFT>;
+    async getAsset(args: AssetFromFTArg | AssetFromNFTCollectionArg | AssetFromNFTItemArg): Promise<IAsset> {
+        return await AssetFactory.from(this.config, args);
     }
 
     // Jetton methods
@@ -172,9 +186,29 @@ export class TacSdk implements ITacSDK {
         return (ft as FT).getUserBalanceExtended(userAddress);
     }
 
+    async getJettonData(itemAddress: TVMAddress): Promise<JettonMasterData> {
+        return FT.getJettonData(this.config.TONParams.contractOpener, itemAddress);
+    }
+
+    public async getFT(address: TVMAddress | EVMAddress): Promise<FT> {
+        return await FT.fromAddress(this.config, address);
+    }
+
     // NFT methods
-    async getNFTItemData(itemAddress: string): Promise<NFTItemData> {
+    async getNFTItemData(itemAddress: TVMAddress): Promise<NFTItemData> {
         return NFT.getItemData(this.config.TONParams.contractOpener, itemAddress);
+    }
+
+    async getNFT(args: AssetFromNFTCollectionArg | AssetFromNFTItemArg): Promise<NFT> {
+        if ('addressType' in args && args.addressType === NFTAddressType.ITEM) {
+            return NFT.fromItem(this.config, args.address as TVMAddress);
+        } else {
+            const collectionArgs = args as AssetFromNFTCollectionArg;
+            return NFT.fromCollection(this.config, {
+                collection: collectionArgs.address,
+                index: collectionArgs.index,
+            });
+        }
     }
 
     // Address conversion methods

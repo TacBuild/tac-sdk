@@ -3,18 +3,22 @@ import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 
 import { allContractOpenerFailedError } from '../errors/instances';
-import { ContractOpener, ContractState, Network } from '../structs/Struct';
+import { ContractState, Network } from '../structs/Struct';
 import { orbsOpener, orbsOpener4 } from './contractOpener';
+import { IContractOpener } from '../interfaces';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface OpenerConfig {
-    opener: ContractOpener;
+    /** Underlying opener implementation to use for this slot. */
+    opener: IContractOpener;
+    /** Number of retry attempts before falling back to the next opener. */
     retries: number;
+    /** Delay in milliseconds between retries for this opener. */
     retryDelay: number;
 }
 
-export class RetryableContractOpener implements ContractOpener {
+export class RetryableContractOpener implements IContractOpener {
     private readonly openerConfigs: OpenerConfig[];
 
     constructor(openerConfigs: OpenerConfig[]) {
@@ -124,7 +128,7 @@ export async function createDefaultRetryableOpener(
     artifacts: typeof testnet | typeof mainnet,
     maxRetries = 3,
     retryDelay = 1000,
-): Promise<ContractOpener> {
+): Promise<IContractOpener> {
     const tonClient = new TonClient({
         endpoint: new URL('api/v2/jsonRPC', artifacts.TON_RPC_ENDPOINT_BY_TAC).toString(),
     });

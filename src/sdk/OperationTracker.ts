@@ -1,8 +1,10 @@
 import { mainnet, testnet } from '@tonappchain/artifacts';
 
 import { allEndpointsFailedError } from '../errors';
-import { ILogger, IOperationTracker } from '../interfaces';
+import { ILogger, IOperationTracker, ILiteSequencerClientFactory, ILiteSequencerClient } from '../interfaces';
 import {
+    ConvertCurrencyParams,
+    ConvertedCurrencyResult,
     ExecutionStages,
     ExecutionStagesByOperationId,
     Network,
@@ -17,23 +19,6 @@ import {
 import { LiteSequencerClient } from './LiteSequencerClient';
 import { NoopLogger } from './Logger';
 import { formatObjectForLogging, waitUntilSuccess } from './Utils';
-
-export interface ILiteSequencerClientFactory {
-    createClients(endpoints: string[]): ILiteSequencerClient[];
-}
-
-export interface ILiteSequencerClient {
-    getOperationType(operationId: string): Promise<OperationType>;
-    getOperationId(transactionLinker: TransactionLinker): Promise<string>;
-    getOperationIdByTransactionHash(transactionHash: string): Promise<string>;
-    getOperationIdsByShardsKeys(
-        shardsKeys: string[],
-        caller: string,
-        chunkSize?: number,
-    ): Promise<OperationIdsByShardsKey>;
-    getStageProfilings(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesByOperationId>;
-    getOperationStatuses(operationIds: string[], chunkSize?: number): Promise<StatusInfosByOperationId>;
-}
 
 export class DefaultLiteSequencerClientFactory implements ILiteSequencerClientFactory {
     createClients(endpoints: string[]): ILiteSequencerClient[] {
@@ -285,5 +270,30 @@ export class OperationTracker implements IOperationTracker {
         }
 
         return SimplifiedStatuses.SUCCESSFUL;
+    }
+
+    async convertCurrency(
+        params: ConvertCurrencyParams,
+        waitOptions?: WaitOptions<ConvertedCurrencyResult>,
+    ): Promise<ConvertedCurrencyResult> {
+        this.logger.debug(`Converting currency: ${formatObjectForLogging(params)}`);
+
+        const requestFn = async (): Promise<ConvertedCurrencyResult> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const result = await client.convertCurrency(params);
+                    this.logger.debug(`Conversion result retrieved successfully`);
+                    return result;
+                } catch (error) {
+                    this.logger.warn(`Failed to convert currency using one of the endpoints`);
+                    lastError = error;
+                }
+            }
+            this.logger.error('All endpoints failed to convert currency');
+            throw allEndpointsFailedError(lastError);
+        };
+
+        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
     }
 }

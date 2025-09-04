@@ -2,11 +2,11 @@ import { Address, toNano } from '@ton/ton';
 import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 import { simulationError } from '../errors';
-import type { SenderAbstraction } from '../sender';
+import type { ISender } from '../sender';
 import { SuggestedTONExecutorFeeResponse, TACSimulationResponse } from '../structs/InternalStruct';
 import { IConfiguration, ILogger, ISimulator } from '../interfaces';
 import {
-    Asset,
+    IAsset,
     CrosschainTx,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
@@ -25,10 +25,7 @@ import {
     toCamelCaseTransformer,
 } from './Utils';
 import { Validator } from './Validator';
-
-export interface IHttpClient {
-    post<T>(url: string, data: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
-}
+import { IHttpClient } from '../interfaces';
 
 export class AxiosHttpClient implements IHttpClient {
     async post<T>(url: string, data: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
@@ -76,7 +73,7 @@ export class Simulator implements ISimulator {
         throw simulationError(lastError);
     }
 
-    async simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]> {
+    async simulateTransactions(sender: ISender, txs: CrosschainTx[]): Promise<TACSimulationResult[]> {
         this.logger.debug(`Simulating ${txs.length} TAC messages`);
         const results: TACSimulationResult[] = [];
 
@@ -89,10 +86,7 @@ export class Simulator implements ISimulator {
         return results;
     }
 
-    private async buildTACSimulationRequest(
-        sender: SenderAbstraction,
-        tx: CrosschainTx,
-    ): Promise<TACSimulationRequest> {
+    private async buildTACSimulationRequest(sender: ISender, tx: CrosschainTx): Promise<TACSimulationRequest> {
         const { evmProxyMsg, assets = [], options = {} } = tx;
         const {
             evmValidExecutors = this.config.TACParams.trustedTACExecutors,
@@ -128,7 +122,7 @@ export class Simulator implements ISimulator {
     }
 
     async getTVMExecutorFeeInfo(
-        assets: Asset[],
+        assets: IAsset[],
         feeSymbol: string,
         tvmValidExecutors: string[] = this.config.TACParams.trustedTONExecutors,
     ): Promise<SuggestedTONExecutorFee> {
@@ -164,7 +158,7 @@ export class Simulator implements ISimulator {
     private async getFeeInfo(
         evmProxyMsg: EvmProxyMsg,
         transactionLinker: TransactionLinker,
-        assets: Asset[],
+        assets: IAsset[],
         allowSimulationError: boolean = false,
         isRoundTrip: boolean = true,
         evmValidExecutors: string[] = this.config.TACParams.trustedTACExecutors,
@@ -239,8 +233,8 @@ export class Simulator implements ISimulator {
 
     async getTransactionSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
-        sender: SenderAbstraction,
-        assets?: Asset[],
+        sender: ISender,
+        assets?: IAsset[],
     ): Promise<ExecutionFeeEstimationResult> {
         this.logger.debug('Getting transaction simulation info');
 
@@ -259,7 +253,7 @@ export class Simulator implements ISimulator {
     async getSimulationInfoForTransaction(
         evmProxyMsg: EvmProxyMsg,
         transactionLinker: TransactionLinker,
-        assets: Asset[],
+        assets: IAsset[],
         allowSimulationError: boolean = false,
         isRoundTrip?: boolean,
         evmValidExecutors?: string[],

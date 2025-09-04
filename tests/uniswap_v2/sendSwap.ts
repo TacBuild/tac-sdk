@@ -4,7 +4,7 @@ import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 
 import {
-    Asset,
+    IAsset,
     AssetFactory,
     AssetType,
     EvmProxyMsg,
@@ -68,7 +68,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number) =
     };
 
     // create JettonTransferData (transfer jetton in TVM to swap)
-    const assets: Asset[] = [];
+    const assets: IAsset[] = [];
     for (const amount of amountsIn) {
         assets.push(await tokenA.withAmount({ amount }));
     }

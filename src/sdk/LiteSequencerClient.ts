@@ -2,6 +2,7 @@ import axios from 'axios';
 
 import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
 import {
+    ConvertCurrencyResponse,
     OperationIdsByShardsKeyResponse,
     OperationTypeResponse,
     StageProfilingResponse,
@@ -9,6 +10,8 @@ import {
     StringResponse,
 } from '../structs/InternalStruct';
 import {
+    ConvertCurrencyParams,
+    ConvertedCurrencyResult,
     ExecutionStagesByOperationId,
     OperationIdsByShardsKey,
     OperationType,
@@ -177,6 +180,58 @@ export class LiteSequencerClient {
             return response.response;
         } catch (error) {
             throw statusFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+        }
+    }
+
+    async convertCurrency(params: ConvertCurrencyParams): Promise<ConvertedCurrencyResult> {
+        try {
+            const payload = {
+                currencyType: params.currencyType,
+                rawValue: params.rawValue.toString(),
+            } as const;
+
+            const response = await axios.post<ConvertCurrencyResponse>(
+                new URL('convert_currency', this.endpoint).toString(),
+                payload,
+                {
+                    transformResponse: [toCamelCaseTransformer],
+                },
+            );
+
+            // Backend returns numbers as strings; convert to bigint for numeric fields
+            type RawResult = Omit<
+                ConvertedCurrencyResult,
+                'spotRawValue' | 'emaValue' | 'tacPrice' | 'tonPrice' | 'spotValueInUSD' | 'emaValueInUSD'
+            > & {
+                spotRawValue: string;
+                emaValue: string;
+                spotValueInUSD: string;
+                emaValueInUSD: string;
+                tacPrice: { spot: string; ema: string };
+                tonPrice: { spot: string; ema: string };
+            };
+
+            const raw = response.data.response as unknown as RawResult;
+
+            return {
+                spotRawValue: BigInt(raw.spotRawValue),
+                spotFriendlyValue: raw.spotFriendlyValue,
+                emaValue: BigInt(raw.emaValue),
+                emaFriendlyValue: raw.emaFriendlyValue,
+                spotValueInUSD: Number(raw.spotValueInUSD),
+                emaValueInUSD: Number(raw.emaValueInUSD),
+                currencyType: raw.currencyType,
+                tacPrice: {
+                    spot: BigInt(raw.tacPrice.spot),
+                    ema: BigInt(raw.tacPrice.ema),
+                },
+                tonPrice: {
+                    spot: BigInt(raw.tonPrice.spot),
+                    ema: BigInt(raw.tonPrice.ema),
+                },
+            };
+        } catch (error) {
+            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
         }
     }
 

@@ -4,8 +4,8 @@ import { AbiCoder, ethers } from 'ethers';
 import { FT, NFT, TON } from '../assets';
 import { invalidMethodNameError } from '../errors';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
+import { IAsset } from '../interfaces';
 import {
-    Asset,
     AssetType,
     EvmProxyMsg,
     FeeParams,
@@ -211,12 +211,12 @@ export function formatObjectForLogging(obj: unknown): string {
     return JSON.stringify(obj, (key, value) => (typeof value === 'bigint' ? value.toString() : value));
 }
 
-export async function aggregateTokens(assets?: Asset[]): Promise<{
+export async function aggregateTokens(assets?: IAsset[]): Promise<{
     jettons: FT[];
     nfts: NFT[];
     ton?: TON;
 }> {
-    const uniqueAssetsMap: Map<string, Asset> = new Map();
+    const uniqueAssetsMap: Map<string, IAsset> = new Map();
     let ton: TON | undefined;
 
     for await (const asset of assets ?? []) {

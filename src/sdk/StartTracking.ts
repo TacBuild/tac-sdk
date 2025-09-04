@@ -1,7 +1,7 @@
 import Table from 'cli-table3';
 
 import { TxFinalizerConfig } from '../structs/InternalStruct';
-import { ILogger } from '../structs/Services';
+import { ILogger } from '../interfaces';
 import { ExecutionStages, Network, OperationType, TransactionLinker } from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
 import { NoopLogger } from './Logger';
