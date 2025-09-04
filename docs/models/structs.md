@@ -12,7 +12,7 @@ This file documents the primary data structures (types and interfaces often refe
 
 ### Contract Openers
 - [`ContractState`](#contractstate-type)
-- [`ContractOpener`](#contractopener-interface)
+- [`IContractOpener`](#icontractopener-interface)
 - [`RetryableContractOpener`](#retryablecontractopener-class)
 
 ### Crosschain Transaction
@@ -84,7 +84,7 @@ export type SDKParams = {
 
 Parameters for SDK:
 - **`network`**: Specifies TON network (`Network` type).
-- **`delay`** *(optional)*: Delay (in seconds) for requests to the TON client. Default is *0*.
+- **`delay`** (optional): Delay in milliseconds between retry attempts when querying TON via the contract opener. Default is 0 ms.
 - **`TACParams`** *(optional)*: Custom parameters for TAC side
 - **`TONParams`** *(optional)*: Custom parameters for TON side
 - **`customLiteSequencerEndpoints`** *(optional)*: Custom lite sequencer endpoints for API access.
@@ -92,13 +92,13 @@ Parameters for SDK:
 ### `TONParams (Type)`
 ```typescript
 export type TONParams = {
-    contractOpener?: ContractOpener;
+    contractOpener?: IContractOpener;
     settingsAddress?: string;
 }
 ```
 TON Parameters for SDK:
-- **`contractOpener`** *(optional)*: Client used for TON smart contract interaction. Default is `orbsOpener4`. Set for tests only 
-- **`settingsAddress`** *(optional)*: TON settings contract address. Needed to retrieve protocol data. Set for tests only
+- **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that combines TonClient (TAC endpoint), orbsOpener4, and orbsOpener as fallbacks. Provide your own opener primarily for tests or custom setups.
+- **`settingsAddress`** (optional): TON settings contract address. Needed to retrieve protocol data. Set for tests only
 
 
 ### `TACParams (Type)`
@@ -132,10 +132,10 @@ Represents the state of a TON smart contract:
     - **`frozen`**: The contract is frozen (inactive).
 - **`code`**: The contract's code as a Buffer, or null if the contract has no code.
 
-### `ContractOpener (Interface)`
+### `IContractOpener (Interface)`
 
 ```typescript
-export interface ContractOpener {
+export interface IContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
     getContractState(address: Address): Promise<ContractState>;
     closeConnections?: () => unknown;
@@ -151,12 +151,12 @@ Interface for opening and interacting with TON smart contracts:
 
 ```typescript
 export interface OpenerConfig {
-    opener: ContractOpener;
+    opener: IContractOpener;
     retries: number;
     retryDelay: number;
 }
 
-export class RetryableContractOpener implements ContractOpener {
+export class RetryableContractOpener implements IContractOpener {
     constructor(openerConfigs: OpenerConfig[]);
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
     getContractState(address: Address): Promise<ContractState>;
@@ -164,11 +164,11 @@ export class RetryableContractOpener implements ContractOpener {
 }
 ```
 
-A resilient implementation of ContractOpener that provides retry capabilities and fallback mechanisms when interacting with TON contracts.
+A resilient implementation of IContractOpener that provides retry capabilities and fallback mechanisms when interacting with TON contracts.
 
 #### **Constructor Parameters**
 - **`openerConfigs`**: An array of `OpenerConfig` objects, each containing:
-  - **`opener`**: A ContractOpener instance.
+  - **`opener`**: A IContractOpener instance.
   - **`retries`**: Number of retry attempts for failed operations.
   - **`retryDelay`**: Delay in milliseconds between retry attempts.
 
@@ -183,7 +183,7 @@ export async function createDefaultRetryableOpener(
     artifacts: typeof testnet | typeof mainnet,
     maxRetries = 3,
     retryDelay = 1000,
-): Promise<ContractOpener>
+): Promise<IContractOpener>
 ```
 
 Creates a default RetryableContractOpener with multiple fallback providers:
@@ -298,7 +298,7 @@ export type WithAddress = WithAddressFT | WithAddressNFT;
 export type RawAssetBridgingData<NFTFormatRequired extends WithAddressNFT = WithAddressNFTItem> = {
     /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
     rawAmount: bigint;
-} & & (WithAddressFT | NFTFormatRequired);
+} & (WithAddressFT | NFTFormatRequired);
 
 export type UserFriendlyAssetBridgingData = {
     /**
@@ -342,7 +342,7 @@ For non-fungible tokens:
 ```ts
 export type CrosschainTx = {
     evmProxyMsg: EvmProxyMsg;
-    assets?: Asset[];
+    assets?: IAsset[];
     options?: CrossChainTransactionOptions;
 };
 ```
@@ -577,8 +577,8 @@ export type MetaInfo = {
     initialCaller: InitialCallerInfo;
     validExecutors: ValidExecutors;
     feeInfo: FeeInfo;
-    sentAssets: AssetMovementInfo;
-    receivedAssets: AssetMovementInfo;
+    sentAssets: AssetMovementInfo | null;
+    receivedAssets: AssetMovementInfo | null;
 };
 ```
 
@@ -606,8 +606,8 @@ Holds metadata associated with a crosschain transaction, including the initiatin
 export type AssetMovementInfo = {
     caller: InitialCallerInfo;
     target: InitialCallerInfo;
-    transactionHash: TransactionHash;
-    assetMovements: AssetMovement[];
+    transactionHash: TransactionHash | null;
+    assetMovements: AssetMovement[] | null;
 };
 ```
 
@@ -730,7 +730,7 @@ Provides profiling information for a specific stage.
 ```typescript
 export type ExecutionStages = {
   operationType: OperationType;
-  metaInfo: MetaInfo;
+  metaInfo: MetaInfo | null;
 } & Record<StageName, ProfilingStageData>;
 
 ```
@@ -918,27 +918,27 @@ Represents additional fee information attached to the transaction.
 
 ```ts
 export type FeeInfo = {
-    additionalFeeInfo: AdditionalFeeInfo;
-    tac: GeneralFeeInfo;
-    ton: GeneralFeeInfo;
+    additionalFeeInfo: AdditionalFeeInfo | null;
+    tac: GeneralFeeInfo | null;
+    ton: GeneralFeeInfo | null;
 };
 ```
 Contains fee information for both TAC and TON blockchain networks, plus additional fee information.
 
-- **`additionalFeeInfo`**: Additional fee information attached to the transaction.
-- **`tac`**: Complete fee structure for transactions on the TAC blockchain.
-- **`ton`**: Complete fee structure for transactions on the TON blockchain.
+- **`additionalFeeInfo`**: Additional fee information attached to the transaction (may be null).
+- **`tac`**: Complete fee structure for transactions on the TAC blockchain (may be null if not applicable or not yet available).
+- **`ton`**: Complete fee structure for transactions on the TON blockchain (may be null if not applicable or not yet available).
 
 ### `WaitOptions`
 
 ```typescript
-export type WaitOptions<T> = {
+export interface WaitOptions<T = unknown> {
     timeout?: number;
     maxAttempts?: number;
     delay?: number;
     logger?: ILogger;
     successCheck?: (result: T) => boolean;
-};
+}
 ```
 
 Allows to specify custom options for waiting for operation resolution.
@@ -948,3 +948,86 @@ Allows to specify custom options for waiting for operation resolution.
 - **`delay`** *(optional)*: The delay between attempts to check the operation status.
 - **`logger`** *(optional)*: Logger used to output debug information during waiting.
 - **`successCheck`** *(optional)*: A function to check if the operation is successful.
+
+
+---
+### Address Aliases
+
+```ts
+export type TVMAddress = string;
+export type EVMAddress = string;
+```
+
+Aliases for address strings used throughout the SDK:
+- TVMAddress: TON Virtual Machine address in friendly/raw string form.
+- EVMAddress: EVM-compatible checksum address string.
+
+
+### Asset Creation Arguments
+
+These helper types are used by factory methods (e.g., AssetFactory.from) to construct specific asset instances.
+
+```ts
+export type AssetFromFTArg = {
+    address: TVMAddress | EVMAddress;
+    tokenType: AssetType.FT;
+};
+
+export type AssetFromNFTItemArg = {
+    address: TVMAddress;
+    tokenType: AssetType.NFT;
+    addressType: NFTAddressType.ITEM;
+};
+
+export type AssetFromNFTCollectionArg = {
+    address: TVMAddress | EVMAddress;
+    tokenType: AssetType.NFT;
+    addressType: NFTAddressType.COLLECTION;
+    index: bigint;
+};
+```
+
+- AssetFromFTArg: Use for fungible tokens (Jettons). Address may be TVM or EVM.
+- AssetFromNFTItemArg: Use for a specific NFT item. Address must be a TVM item address.
+- AssetFromNFTCollectionArg: Use for an NFT item derived from a collection and an on-chain `index`. Address may be TVM or EVM collection address.
+
+
+### Currency Conversion Types
+
+Utilities for converting amounts and reporting price information.
+
+```ts
+export type ConvertCurrencyParams = {
+    rawValue: bigint;
+    currencyType: CurrencyType;
+};
+
+export type TokenPriceInfo = {
+    spot: bigint;
+    ema: bigint;
+};
+
+export type ConvertedCurrencyResult = {
+    spotRawValue: bigint;
+    spotFriendlyValue: string;
+    emaValue: bigint;
+    emaFriendlyValue: string;
+    spotValueInUSD: number;
+    emaValueInUSD: number;
+    currencyType: CurrencyType;
+    tacPrice: TokenPriceInfo;
+    tonPrice: TokenPriceInfo;
+};
+```
+
+- ConvertCurrencyParams: Input parameters to convert a raw bigint amount for the selected currency type.
+- TokenPriceInfo: Price data in raw bigint units for both spot and EMA values.
+- ConvertedCurrencyResult: Human-friendly and raw values for both spot and EMA, with USD approximations and underlying price references for TAC and TON.
+
+
+### WaitOptions Defaults
+
+The SDK provides the following defaults (see `defaultWaitOptions` in the code):
+- timeout: 300000 (5 minutes)
+- maxAttempts: 30
+- delay: 10000 (10 seconds)

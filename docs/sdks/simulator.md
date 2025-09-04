@@ -99,7 +99,7 @@ Returns detailed simulation results including:
 ### `getTVMExecutorFeeInfo`
 
 ```ts
-getTVMExecutorFeeInfo(assets: Asset[], feeSymbol: string, tvmValidExecutors?: string[]): Promise<SuggestedTONExecutorFee>
+getTVMExecutorFeeInfo(assets: IAsset[], feeSymbol: string, tvmValidExecutors?: string[]): Promise<SuggestedTONExecutorFee>
 ```
 
 #### **Purpose**
@@ -108,7 +108,7 @@ Calculates the suggested TON executor fee based on the provided assets and fee s
 
 #### **Parameters**
 
-- **`assets`**: Array of [`Asset`](./../models/structs.md#asset-interface) objects representing the assets to be processed
+- **`assets`**: Array of [`IAsset`](./assets.md#iasset-interface) objects representing the assets to be processed
 - **`feeSymbol`**: String representing the fee symbol (e.g., "TON", "TAC")
 - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation. Defaults to `config.TACParams.trustedTONExecutors` if omitted.
 
@@ -131,8 +131,8 @@ Returns an object containing:
 ```ts
 getTransactionSimulationInfo(
   evmProxyMsg: EvmProxyMsg,
-  sender: SenderAbstraction,
-  assets?: Asset[]
+  sender: ISender,
+  assets?: IAsset[]
 ): Promise<ExecutionFeeEstimationResult>
 ```
 
@@ -143,8 +143,8 @@ Provides comprehensive simulation information for a cross-chain transaction, inc
 #### **Parameters**
 
 - **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
-- **`sender`**: A [`SenderAbstraction`](./sender.md) object representing the transaction sender
-- **`assets`** *(optional)*: Array of [`Asset`](./../models/structs.md#asset-interface) objects to be included in the transaction
+- **`sender`**: An [`ISender`](./sender.md) instance representing the transaction sender
+- **`assets`** *(optional)*: Array of [`IAsset`](./assets.md#iasset-interface) objects to be included in the transaction
 
 #### **Returns** [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult-type)
 
@@ -160,7 +160,7 @@ Returns detailed execution fee estimation including:
 getSimulationInfoForTransaction(
   evmProxyMsg: EvmProxyMsg,
   transactionLinker: TransactionLinker,
-  assets: Asset[],
+  assets: IAsset[],
   allowSimulationError?: boolean,
   isRoundTrip?: boolean,
   evmValidExecutors?: string[],
@@ -177,7 +177,7 @@ Gets simulation information for a specific transaction using a pre-defined trans
 
 - **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
 - **`transactionLinker`**: A [`TransactionLinker`](./../models/structs.md#transactionlinker-type) object for the transaction
-- **`assets`**: Array of [`Asset`](./../models/structs.md#asset-interface) objects to be included
+- **`assets`**: Array of [`IAsset`](./assets.md#iasset-interface) objects to be included
 - **`allowSimulationError`** *(optional)*: Boolean to skip simulation (default: `false`)
 - **`isRoundTrip`** *(optional)*: Boolean indicating if this is a round-trip operation. If omitted, it is auto-detected as `assets.length !== 0`.
 - **`evmValidExecutors`** *(optional)*: Array of trusted EVM executor addresses
@@ -193,7 +193,7 @@ Returns comprehensive execution fee estimation with simulation results.
 ### `simulateTransactions`
 
 ```ts
-simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]>
+simulateTransactions(sender: ISender, txs: CrosschainTx[]): Promise<TACSimulationResult[]>
 ```
 
 #### **Purpose**
@@ -202,7 +202,7 @@ Simulates multiple cross-chain transactions in batch, similar to how `sendCrossC
 
 #### **Parameters**
 
-- **`sender`**: A [`SenderAbstraction`](./sender.md) object representing the transaction sender
+- **`sender`**: An [`ISender`](./sender.md) instance representing the transaction sender
 - **`txs`**: An array of [`CrosschainTx`](./../models/structs.md#crosschaintx-type) objects, each containing:
   - **`evmProxyMsg`**: EVM proxy message defining the operation
   - **`assets`** *(optional)*: Array of assets to be included
@@ -224,10 +224,10 @@ Returns an array of simulation results, one for each transaction in the input ar
 ### `aggregateTokens`
 
 ```ts
-private aggregateTokens(assets?: Asset[]): Promise<{
-  jettons: Asset[];
-  nfts: Asset[];
-  ton?: Asset; // native TON asset, if present
+private aggregateTokens(assets?: IAsset[]): Promise<{
+  jettons: IAsset[];
+  nfts: IAsset[];
+  ton?: IAsset; // native TON asset, if present
 }>
 ```
 

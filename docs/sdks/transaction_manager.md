@@ -77,8 +77,8 @@ Creates a TransactionManager instance with the required dependencies.
 ```ts
 sendCrossChainTransaction(
   evmProxyMsg: EvmProxyMsg,
-  sender: SenderAbstraction,
-  assets?: Asset[],
+  sender: ISender,
+  assets?: IAsset[],
   options?: CrossChainTransactionOptions,
   waitOptions?: WaitOptions<string>
 ): Promise<TransactionLinkerWithOperationId>
@@ -91,8 +91,8 @@ Sends a single cross-chain transaction from TON to TAC. This method prepares the
 #### **Parameters**
 
 - **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
-- **`sender`**: A [`SenderAbstraction`](./sender.md) object representing the transaction sender
-- **`assets`** *(optional)*: Array of `Asset` objects to be included
+- **`sender`**: An [`ISender`](./sender.md) instance representing the transaction sender
+- **`assets`** *(optional)*: Array of `IAsset` objects to be included
 - **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions-type) for transaction customization
 - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for operation tracking
 
@@ -119,7 +119,7 @@ Returns an object containing:
 
 ```ts
 sendCrossChainTransactions(
-  sender: SenderAbstraction,
+  sender: ISender,
   txs: CrosschainTx[],
   waitOptions?: WaitOptions<OperationIdsByShardsKey>
 ): Promise<TransactionLinkerWithOperationId[]>
@@ -131,7 +131,7 @@ Sends multiple cross-chain transactions in a batch. This method is useful for sc
 
 #### **Parameters**
 
-- **`sender`**: A [`SenderAbstraction`](./sender.md) object representing the transaction sender
+- **`sender`**: An [`ISender`](./sender.md) instance representing the transaction sender
 - **`txs`**: Array of [`CrosschainTx`](./../models/structs.md#crosschaintx-type) objects, each defining a single cross-chain transaction
 - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for operation tracking
 
@@ -148,7 +148,7 @@ bridgeTokensToTON(
   signer: Wallet,
   value: bigint,
   tonTarget: string,
-  assets?: Asset[],
+  assets?: IAsset[],
   tvmExecutorFee?: bigint,
   tvmValidExecutors?: string[]
 ): Promise<string>
@@ -163,7 +163,7 @@ Bridges tokens from TAC to TON by sending a message to the TAC cross-chain layer
 - **`signer`**: An ethers `Wallet` instance for signing the transaction
 - **`value`**: Amount of native TAC tokens to send with the transaction
 - **`tonTarget`**: Target address on TON network
-- **`assets`** *(optional)*: Array of [`Asset`](./../models/structs.md#asset-interface) objects to bridge
+- **`assets`** *(optional)*: Array of [`IAsset`](./assets.md#iasset-interface) objects to bridge
 - **`tvmExecutorFee`** *(optional)*: Custom TVM executor fee (if not provided, will be calculated)
 - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
 

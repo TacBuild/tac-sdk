@@ -1,4 +1,4 @@
-import { AssetFactory, AssetType, liteClientOpener, Network, TacSdk } from '../../src';
+import { AssetType, liteClientOpener, Network, TacSdk } from '../../src';
 
 async function main() {
     const sdk = await TacSdk.create({
@@ -8,12 +8,16 @@ async function main() {
         },
     });
 
-    const token = await AssetFactory.from(sdk.config, {
-        address: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+    const tokenAddress = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
+    const token1 = await sdk.getFT(tokenAddress);
+    const token2 = await sdk.getAsset({
+        address: tokenAddress,
         tokenType: AssetType.FT,
     });
 
-    console.log(await token.getEVMAddress());
+    console.log(await token1.getJettonData());
+    console.log(await token2.getJettonData());
+    console.log(await token2.getEVMAddress());
 
     sdk.closeConnections();
 }
