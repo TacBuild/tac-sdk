@@ -13,6 +13,10 @@ describe('LiteSequencerClient.convertCurrency', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        // Ensure SDK's internal axios instance uses our mocked axios
+        if (typeof mockedAxios.create === 'function') {
+            (mockedAxios.create as jest.Mock).mockReturnValue(mockedAxios as any);
+        }
         client = new LiteSequencerClient(endpoint);
     });
 

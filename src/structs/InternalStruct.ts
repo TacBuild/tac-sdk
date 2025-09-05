@@ -11,7 +11,7 @@ import {
     StatusInfosByOperationId,
     SuggestedTONExecutorFee,
     TACSimulationResult,
-    ConvertedCurrencyResult,
+    CurrencyType,
 } from './Struct';
 
 export type ShardMessage = {
@@ -75,7 +75,7 @@ export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
 
 export type SuggestedTONExecutorFeeResponse = ResponseBase<SuggestedTONExecutorFee>;
 
-export type ConvertCurrencyResponse = ResponseBase<ConvertedCurrencyResult>;
+export type ConvertCurrencyResponse = ResponseBase<ConvertedCurrencyRawResult>;
 
 export interface SendResult {
     success: boolean;
@@ -116,4 +116,20 @@ export type AdjacentTransactionsResponse = {
 export type TxFinalizerConfig = {
     urlBuilder: (hash: string) => string;
     authorization: { header: string; value: string };
+};
+
+export type TokenPriceInfoRaw = {
+    spot: string;
+    ema: string;
+};
+export type ConvertedCurrencyRawResult = {
+    spotRawValue: string;
+    spotFriendlyValue: string;
+    emaValue: string;
+    emaFriendlyValue: string;
+    spotValueInUSD: string;
+    emaValueInUSD: string;
+    currencyType: CurrencyType;
+    tacPrice: TokenPriceInfoRaw;
+    tonPrice: TokenPriceInfoRaw;
 };

@@ -1,5 +1,4 @@
 import { Address, toNano } from '@ton/ton';
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 import { simulationError } from '../errors';
 import type { ISender } from '../sender';
@@ -26,12 +25,7 @@ import {
 } from './Utils';
 import { Validator } from './Validator';
 import { IHttpClient } from '../interfaces';
-
-export class AxiosHttpClient implements IHttpClient {
-    async post<T>(url: string, data: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-        return axios.post<T>(url, data, config);
-    }
-}
+import { AxiosHttpClient } from './AxiosHttpClient';
 
 export class Simulator implements ISimulator {
     private readonly config: IConfiguration;

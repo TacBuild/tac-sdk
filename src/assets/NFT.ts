@@ -80,7 +80,8 @@ export class NFT implements IAsset {
                       {
                           collectionAddress: nftCollection.address,
                           cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
-                          index: Number(item.index),
+                          // @ts-expect-error // bigint can be used, wrapper is not typed properly
+                          index: item.index,
                       },
                       configuration.TONParams.nftItemCode,
                   ).address
@@ -146,7 +147,8 @@ export class NFT implements IAsset {
     ): Promise<string> {
         Validator.validateTVMAddress(collectionAddress);
         const nftCollection = contractOpener.open(NFTCollection.createFromAddress(Address.parse(collectionAddress)));
-        return nftCollection.getNFTAddressByIndex(index).then(toString);
+        const address = await nftCollection.getNFTAddressByIndex(index);
+        return address.toString();
     }
 
     static async getTVMAddress(

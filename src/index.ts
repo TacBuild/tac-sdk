@@ -7,6 +7,7 @@ export { OperationTracker } from './sdk/OperationTracker';
 export { Simulator } from './sdk/Simulator';
 export { startTracking, startTrackingMultiple } from './sdk/StartTracking';
 export { TacSdk } from './sdk/TacSdk';
+export { AxiosHttpClient } from './sdk/AxiosHttpClient';
 export { TransactionManager } from './sdk/TransactionManager';
 export * from './sender';
 export * from './interfaces';

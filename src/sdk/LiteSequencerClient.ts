@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
 import {
     ConvertCurrencyResponse,
@@ -19,14 +17,18 @@ import {
     TransactionLinker,
 } from '../structs/Struct';
 import { toCamelCaseTransformer } from './Utils';
+import { IHttpClient } from '../interfaces';
+import { AxiosHttpClient } from './AxiosHttpClient';
 
 export class LiteSequencerClient {
     private readonly endpoint: string;
     private readonly maxChunkSize: number;
+    private readonly httpClient: IHttpClient;
 
-    constructor(endpoint: string, maxChunkSize: number = 100) {
+    constructor(endpoint: string, maxChunkSize: number = 100, httpClient: IHttpClient = new AxiosHttpClient()) {
         this.endpoint = endpoint;
         this.maxChunkSize = maxChunkSize;
+        this.httpClient = httpClient;
     }
 
     async getOperationIdByTransactionHash(transactionHash: string): Promise<string> {
@@ -34,15 +36,13 @@ export class LiteSequencerClient {
         const path = isEthHash ? 'tac/operation-id' : 'ton/operation-id';
 
         try {
-            const response = await axios.get<StringResponse>(new URL(path, this.endpoint).toString(), {
+            const response = await this.httpClient.get<StringResponse>(new URL(path, this.endpoint).toString(), {
                 params: { transactionHash },
             });
             return response.data.response || '';
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                if (error.response?.status === 404) {
-                    return '';
-                }
+            if ((error as any)?.response?.status === 404) {
+                return '';
             }
             throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
         }
@@ -50,7 +50,7 @@ export class LiteSequencerClient {
 
     async getOperationType(operationId: string): Promise<OperationType> {
         try {
-            const response = await axios.get<OperationTypeResponse>(
+            const response = await this.httpClient.get<OperationTypeResponse>(
                 new URL('operation-type', this.endpoint).toString(),
                 {
                     params: {
@@ -73,16 +73,14 @@ export class LiteSequencerClient {
         };
 
         try {
-            const response = await axios.post<StringResponse>(
+            const response = await this.httpClient.post<StringResponse>(
                 new URL('ton/operation-id', this.endpoint).toString(),
                 requestBody,
             );
             return response.data.response || '';
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                if (error.response?.status === 404) {
-                    return '';
-                }
+            if ((error as any)?.response?.status === 404) {
+                return '';
             }
             throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
         }
@@ -101,7 +99,7 @@ export class LiteSequencerClient {
             const response = await this.processChunkedRequest<OperationIdsByShardsKeyResponse>(
                 shardsKeys,
                 async (chunk) => {
-                    const response = await axios.post<OperationIdsByShardsKeyResponse>(
+                    const response = await this.httpClient.post<OperationIdsByShardsKeyResponse>(
                         new URL('operation-ids-by-shards-keys', this.endpoint).toString(),
                         {
                             shardsKeys: chunk,
@@ -131,7 +129,7 @@ export class LiteSequencerClient {
             const response = await this.processChunkedRequest<StageProfilingResponse>(
                 operationIds,
                 async (chunk) => {
-                    const response = await axios.post<StageProfilingResponse>(
+                    const response = await this.httpClient.post<StageProfilingResponse>(
                         new URL('stage-profiling', this.endpoint).toString(),
                         {
                             operationIds: chunk,
@@ -163,7 +161,7 @@ export class LiteSequencerClient {
             const response = await this.processChunkedRequest<StatusesResponse>(
                 operationIds,
                 async (chunk) => {
-                    const response = await axios.post<StatusesResponse>(
+                    const response = await this.httpClient.post<StatusesResponse>(
                         new URL('status', this.endpoint).toString(),
                         {
                             operationIds: chunk,
@@ -190,7 +188,7 @@ export class LiteSequencerClient {
                 rawValue: params.rawValue.toString(),
             } as const;
 
-            const response = await axios.post<ConvertCurrencyResponse>(
+            const response = await this.httpClient.post<ConvertCurrencyResponse>(
                 new URL('convert_currency', this.endpoint).toString(),
                 payload,
                 {
@@ -198,20 +196,7 @@ export class LiteSequencerClient {
                 },
             );
 
-            // Backend returns numbers as strings; convert to bigint for numeric fields
-            type RawResult = Omit<
-                ConvertedCurrencyResult,
-                'spotRawValue' | 'emaValue' | 'tacPrice' | 'tonPrice' | 'spotValueInUSD' | 'emaValueInUSD'
-            > & {
-                spotRawValue: string;
-                emaValue: string;
-                spotValueInUSD: string;
-                emaValueInUSD: string;
-                tacPrice: { spot: string; ema: string };
-                tonPrice: { spot: string; ema: string };
-            };
-
-            const raw = response.data.response as unknown as RawResult;
+            const raw = response.data.response;
 
             return {
                 spotRawValue: BigInt(raw.spotRawValue),
