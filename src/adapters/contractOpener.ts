@@ -4,7 +4,8 @@ import { TonClient, TonClient4 } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
-import { ContractOpener, Network } from '../structs/Struct';
+import { Network } from '../structs/Struct';
+import { IContractOpener } from '../interfaces';
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
 
@@ -26,7 +27,7 @@ async function getDefaultLiteServers(network: Network): Promise<LiteServer[]> {
 
 export async function liteClientOpener(
     options: { liteservers: LiteServer[] } | { network: Network },
-): Promise<ContractOpener> {
+): Promise<IContractOpener> {
     const liteservers = 'liteservers' in options ? options.liteservers : await getDefaultLiteServers(options.network);
     const engines: LiteEngine[] = [];
     for (const server of liteservers) {
@@ -61,7 +62,7 @@ export async function liteClientOpener(
     };
 }
 
-export function sandboxOpener(blockchain: Blockchain): ContractOpener {
+export function sandboxOpener(blockchain: Blockchain): IContractOpener {
     return {
         open: (contract) => blockchain.openContract(contract),
         getContractState: async (address) => {
@@ -75,14 +76,14 @@ export function sandboxOpener(blockchain: Blockchain): ContractOpener {
     };
 }
 
-export async function orbsOpener(network: Network): Promise<ContractOpener> {
+export async function orbsOpener(network: Network): Promise<IContractOpener> {
     const endpoint = await getHttpEndpoint({
         network,
     });
     return new TonClient({ endpoint });
 }
 
-export async function orbsOpener4(network: Network, timeout = 10000): Promise<ContractOpener> {
+export async function orbsOpener4(network: Network, timeout = 10000): Promise<IContractOpener> {
     const endpoint = await getHttpV4Endpoint({ network });
     const client4 = new TonClient4({ endpoint, timeout });
     return {

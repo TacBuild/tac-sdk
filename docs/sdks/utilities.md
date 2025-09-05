@@ -11,11 +11,8 @@ startTracking(
     returnValue?: boolean;
     tableView?: boolean;
     txFinalizerConfig?: {
-      apiConfig: {
-        urlBuilder: (hash: string) => string;
-        authorization: { header: string; value: string };
-      };
-      debug?: boolean;
+      urlBuilder: (hash: string) => string;
+      authorization: { header: string; value: string };
     };
     logger?: ILogger;
   }
@@ -51,11 +48,8 @@ If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 ```ts
 await startTracking(transactionLinker, Network.TESTNET, {
   txFinalizerConfig: {
-    apiConfig: {
-      urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
-      authorization: { header: 'X-API-Key', value: 'your-api-key' }
-    },
-    debug: true
+    urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
+    authorization: { header: 'X-API-Key', value: 'your-api-key' }
   },
   logger: new ConsoleLogger()
 });
@@ -74,11 +68,8 @@ startTrackingMultiple(
     returnValue?: boolean;
     tableView?: boolean;
     txFinalizerConfig?: {
-      apiConfig: {
-        urlBuilder: (hash: string) => string;
-        authorization: { header: string; value: string };
-      };
-      debug?: boolean;
+      urlBuilder: (hash: string) => string;
+      authorization: { header: string; value: string };
     };
     logger?: ILogger;
   }
@@ -114,11 +105,8 @@ If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 ```ts
 await startTrackingMultiple([transactionLinker1, transactionLinker2], Network.TESTNET, {
   txFinalizerConfig: {
-    apiConfig: {
-      urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
-      authorization: { header: 'X-API-Key', value: 'your-api-key' }
-    },
-    debug: true
+    urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
+    authorization: { header: 'X-API-Key', value: 'your-api-key' }
   },
   logger: new ConsoleLogger()
 });
@@ -133,16 +121,16 @@ await startTrackingMultiple([transactionLinker1, transactionLinker2], Network.TE
 #### Constructor
 ```ts
 new TonTxFinalizer(
-  apiConfig?: {
+  apiConfig: {
     urlBuilder: (hash: string) => string;
     authorization: { header: string; value: string };
   },
-  debug?: boolean
+  logger?: ILogger
 )
 ```
 - `apiConfig.urlBuilder`: Function to build the API URL for fetching adjacent transactions by hash
 - `apiConfig.authorization`: Object specifying the header and value for API authorization
-- `debug`: If true, enables verbose logging
+- `logger`: Optional logger implementing ILogger. Pass a ConsoleLogger to enable verbose output; defaults to NoopLogger
 
 #### Methods
 - `trackTransactionTree(hash: string, maxDepth?: number): Promise<void>`
@@ -154,7 +142,7 @@ new TonTxFinalizer(
 const finalizer = new TonTxFinalizer({
   urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
   authorization: { header: 'X-API-Key', value: 'your-api-key' }
-}, true);
+}, new ConsoleLogger());
 
 await finalizer.trackTransactionTree('TON_TX_HASH');
 ```

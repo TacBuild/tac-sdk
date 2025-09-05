@@ -1,6 +1,16 @@
 import { ethers } from 'ethers';
 
-import { Asset, AssetFactory, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
+import {
+    IAsset,
+    AssetFactory,
+    AssetType,
+    EvmProxyMsg,
+    Network,
+    SDKParams,
+    SenderFactory,
+    startTracking,
+    TacSdk,
+} from '../src';
 
 const TEST_PROXY = '';
 const TVM_TKA_ADDRESS = 'EQBLi0v_y-KiLlT1VzQJmmMbaoZnLcMAHrIEmzur13dwOmM1';
@@ -41,7 +51,7 @@ async function rollback() {
         encodedParameters,
     };
 
-    const jettons: Asset[] = [token];
+    const jettons: IAsset[] = [token];
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons, {
         allowSimulationError: true,

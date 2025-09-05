@@ -1,14 +1,14 @@
 import { Address, beginCell, Cell } from '@ton/ton';
 
-import { insufficientBalanceError } from '../errors/instances';
+import { insufficientBalanceError } from '../errors';
 import { TON_SYMBOL } from '../sdk/Consts';
 import { calculateRawAmount, generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
-import type { SenderAbstraction } from '../sender';
+import type { ISender } from '../sender';
 import type { ShardTransaction } from '../structs/InternalStruct';
-import { IConfiguration } from '../structs/Services';
-import { Asset, AssetType, FeeParams } from '../structs/Struct';
+import { IAsset, IConfiguration } from '../interfaces';
+import { AssetType, FeeParams } from '../structs/Struct';
 
-export class TON implements Asset {
+export class TON implements IAsset {
     readonly address: string;
     readonly type: AssetType = AssetType.FT;
 
@@ -95,7 +95,7 @@ export class TON implements Asset {
     }
 
     static async checkBalance(
-        sender: SenderAbstraction,
+        sender: ISender,
         config: IConfiguration,
         transactions: ShardTransaction[],
     ): Promise<void> {
@@ -109,7 +109,7 @@ export class TON implements Asset {
         }
     }
 
-    async checkCanBeTransferedBy(userAddress: string): Promise<void> {
+    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
         const balance = await this.getUserBalance(userAddress);
         if (balance < this._rawAmount) {
             throw insufficientBalanceError(TON_SYMBOL);

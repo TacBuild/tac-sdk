@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
-import { ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } from '../../src/sdk/OperationTracker';
-import { ILogger } from '../../src/structs/Services';
+import { ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } from '../../src';
 import {
     AssetType,
     BlockchainType,
@@ -17,7 +16,11 @@ import {
     TokenSymbol,
     TransactionLinker,
     WaitOptions,
-} from '../../src/structs/Struct';
+    ILogger,
+    ConvertCurrencyParams,
+    ConvertedCurrencyResult,
+    CurrencyType,
+} from '../../src';
 
 // Mock implementations
 class MockLogger implements ILogger {
@@ -34,6 +37,7 @@ class MockLiteSequencerClient implements ILiteSequencerClient {
     getOperationIdsByShardsKeys = jest.fn<ILiteSequencerClient['getOperationIdsByShardsKeys']>();
     getStageProfilings = jest.fn<ILiteSequencerClient['getStageProfilings']>();
     getOperationStatuses = jest.fn<ILiteSequencerClient['getOperationStatuses']>();
+    convertCurrency = jest.fn<ILiteSequencerClient['convertCurrency']>();
 }
 
 class MockLiteSequencerClientFactory implements ILiteSequencerClientFactory {
@@ -431,6 +435,110 @@ describe('OperationTracker', () => {
 
             expect(result).toEqual(expectedResult);
             expect(mockClients[0].getStageProfilings).toHaveBeenCalledWith(operationIds, 100);
+        });
+    });
+
+    describe('convertCurrency', () => {
+        it('should successfully convert currency using first client', async () => {
+            const params: ConvertCurrencyParams = {
+                rawValue: 123n,
+                currencyType: CurrencyType.TON,
+            };
+            const expected: ConvertedCurrencyResult = {
+                spotRawValue: 100n,
+                spotFriendlyValue: '0.000000100',
+                emaValue: 200n,
+                emaFriendlyValue: '0.000000200',
+                spotValueInUSD: 0.01,
+                emaValueInUSD: 0.02,
+                currencyType: CurrencyType.TON,
+                tacPrice: { spot: 1n, ema: 2n },
+                tonPrice: { spot: 3n, ema: 4n },
+            } as unknown as ConvertedCurrencyResult;
+
+            mockClients[0].convertCurrency.mockResolvedValue(expected);
+
+            const result = await operationTracker.convertCurrency(params);
+
+            expect(result).toBe(expected);
+            expect(mockClients[0].convertCurrency).toHaveBeenCalledWith(params);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `Converting currency: ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}`,
+            );
+            expect(mockLogger.debug).toHaveBeenCalledWith('Conversion result retrieved successfully');
+        });
+
+        it('should retry on second client if first fails', async () => {
+            const params: ConvertCurrencyParams = {
+                rawValue: 999n,
+                currencyType: CurrencyType.TAC,
+            };
+            const expected = {
+                spotRawValue: 1n,
+                spotFriendlyValue: '1',
+                emaValue: 2n,
+                emaFriendlyValue: '2',
+                spotValueInUSD: 0.1,
+                emaValueInUSD: 0.2,
+                currencyType: CurrencyType.TAC,
+                tacPrice: { spot: 10n, ema: 11n },
+                tonPrice: { spot: 12n, ema: 13n },
+            } as unknown as ConvertedCurrencyResult;
+
+            mockClients[0].convertCurrency.mockRejectedValue(new Error('Network error'));
+            mockClients[1].convertCurrency.mockResolvedValue(expected);
+
+            const result = await operationTracker.convertCurrency(params);
+
+            expect(result).toBe(expected);
+            expect(mockClients[0].convertCurrency).toHaveBeenCalledWith(params);
+            expect(mockClients[1].convertCurrency).toHaveBeenCalledWith(params);
+            expect(mockLogger.warn).toHaveBeenCalledWith('Failed to convert currency using one of the endpoints');
+        });
+
+        it('should throw error if all endpoints fail', async () => {
+            const params: ConvertCurrencyParams = {
+                rawValue: 1n,
+                currencyType: CurrencyType.TON,
+            };
+            const error = new Error('Network error');
+
+            mockClients[0].convertCurrency.mockRejectedValue(error);
+            mockClients[1].convertCurrency.mockRejectedValue(error);
+
+            await expect(operationTracker.convertCurrency(params)).rejects.toThrow();
+            expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to convert currency');
+        });
+
+        it('should support waitOptions and still return result', async () => {
+            const params: ConvertCurrencyParams = {
+                rawValue: 123n,
+                currencyType: CurrencyType.TON,
+            };
+            const expected = {
+                spotRawValue: 7n,
+                spotFriendlyValue: '7',
+                emaValue: 8n,
+                emaFriendlyValue: '8',
+                spotValueInUSD: 0.7,
+                emaValueInUSD: 0.8,
+                currencyType: CurrencyType.TON,
+                tacPrice: { spot: 9n, ema: 10n },
+                tonPrice: { spot: 11n, ema: 12n },
+            } as unknown as ConvertedCurrencyResult;
+
+            mockClients[0].convertCurrency.mockResolvedValue(expected);
+
+            const waitOptions: WaitOptions<ConvertedCurrencyResult> = {
+                timeout: 1000,
+                maxAttempts: 1,
+                delay: 10,
+                successCheck: (res) => !!res,
+            };
+
+            const result = await operationTracker.convertCurrency(params, waitOptions);
+            expect(result).toBe(expected);
+            expect(mockClients[0].convertCurrency).toHaveBeenCalledTimes(1);
         });
     });
 

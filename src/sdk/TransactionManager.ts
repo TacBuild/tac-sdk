@@ -2,11 +2,11 @@ import { Cell } from '@ton/ton';
 import { Wallet } from 'ethers';
 
 import { AssetFactory, FT, NFT, TON } from '../assets';
-import type { SenderAbstraction } from '../sender';
+import type { ISender } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
-import { IConfiguration, ILogger, IOperationTracker, ISimulator } from '../structs/Services';
+import { IConfiguration, ILogger, IOperationTracker, ISimulator, ITransactionManager } from '../interfaces';
 import {
-    Asset,
+    IAsset,
     AssetType,
     CrossChainTransactionOptions,
     CrosschainTx,
@@ -23,7 +23,7 @@ import { NoopLogger } from './Logger';
 import { aggregateTokens, buildEvmDataCell, formatObjectForLogging, generateTransactionLinker } from './Utils';
 import { Validator } from './Validator';
 
-export class TransactionManager {
+export class TransactionManager implements ITransactionManager {
     private readonly config: IConfiguration;
     private readonly simulator: ISimulator;
     private readonly operationTracker: IOperationTracker;
@@ -58,7 +58,7 @@ export class TransactionManager {
     private async prepareCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         caller: string,
-        assets?: Asset[],
+        assets?: IAsset[],
         options?: CrossChainTransactionOptions,
     ): Promise<{ transaction: ShardTransaction; transactionLinker: TransactionLinker }> {
         this.logger.debug('Preparing cross-chain transaction');
@@ -68,6 +68,7 @@ export class TransactionManager {
             protocolFee = undefined,
             evmExecutorFee = undefined,
             tvmExecutorFee = undefined,
+            calculateRollbackFee = true,
         } = options || {};
         let { evmValidExecutors = [], tvmValidExecutors = [] } = options || {};
 
@@ -76,9 +77,9 @@ export class TransactionManager {
         Validator.validateTVMAddresses(options?.tvmValidExecutors);
 
         const aggregatedData = await aggregateTokens(assets);
-        await Promise.all(aggregatedData.jettons.map((jetton) => jetton.checkCanBeTransferedBy(caller)));
-        await Promise.all(aggregatedData.nfts.map((nft) => nft.checkCanBeTransferedBy(caller)));
-        await aggregatedData.ton?.checkCanBeTransferedBy(caller);
+        await Promise.all(aggregatedData.jettons.map((jetton) => jetton.checkCanBeTransferredBy(caller)));
+        await Promise.all(aggregatedData.nfts.map((nft) => nft.checkCanBeTransferredBy(caller)));
+        await aggregatedData.ton?.checkCanBeTransferredBy(caller);
 
         const tokensLength = aggregatedData.jettons.length + aggregatedData.nfts.length;
         this.logger.debug(`Tokens length: ${tokensLength}`);
@@ -104,6 +105,7 @@ export class TransactionManager {
             isRoundTrip,
             evmValidExecutors,
             tvmValidExecutors,
+            calculateRollbackFee,
         );
 
         if (evmProxyMsg.gasLimit == undefined) {
@@ -220,8 +222,8 @@ export class TransactionManager {
 
     async sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
-        sender: SenderAbstraction,
-        assets?: Asset[],
+        sender: ISender,
+        assets?: IAsset[],
         options?: CrossChainTransactionOptions,
         waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId> {
@@ -263,7 +265,7 @@ export class TransactionManager {
     }
 
     async sendCrossChainTransactions(
-        sender: SenderAbstraction,
+        sender: ISender,
         txs: CrosschainTx[],
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]> {
@@ -337,8 +339,9 @@ export class TransactionManager {
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: Asset[],
+        assets?: IAsset[],
         tvmExecutorFee?: bigint,
+        tvmValidExecutors?: string[],
     ): Promise<string> {
         this.logger.debug('Bridging tokens to TON');
 
@@ -360,8 +363,15 @@ export class TransactionManager {
 
         Validator.validateTVMAddress(tonTarget);
 
-        const suggestedTONExecutorFee = await this.simulator.getTVMExecutorFeeInfo(tonAssets, TAC_SYMBOL);
-        this.logger.debug(`Suggested TON executor fee: ${formatObjectForLogging(suggestedTONExecutorFee)}`);
+        if (tvmExecutorFee == undefined) {
+            const suggestedTONExecutorFee = await this.simulator.getTVMExecutorFeeInfo(
+                tonAssets,
+                TAC_SYMBOL,
+                tvmValidExecutors,
+            );
+            this.logger.debug(`Suggested TON executor fee: ${formatObjectForLogging(suggestedTONExecutorFee)}`);
+            tvmExecutorFee = BigInt(suggestedTONExecutorFee.inTAC);
+        }
 
         const crossChainLayerAddress = await this.config.TACParams.crossChainLayer.getAddress();
         for (const asset of assets) {
@@ -402,7 +412,7 @@ export class TransactionManager {
             tvmTarget: tonTarget,
             tvmPayload: '',
             tvmProtocolFee: protocolFee,
-            tvmExecutorFee: tvmExecutorFee ?? BigInt(suggestedTONExecutorFee.inTAC),
+            tvmExecutorFee: tvmExecutorFee,
             tvmValidExecutors: this.config.getTrustedTONExecutors,
             toBridge: await Promise.all(
                 assets

@@ -1,7 +1,12 @@
 import axios from 'axios';
 
-import { AdjacentTransactionsResponse, ToncenterTransaction, TransactionDepth, TxFinalizerConfig } from '../structs/InternalStruct';
-import { ILogger } from '../structs/Services';
+import {
+    AdjacentTransactionsResponse,
+    ToncenterTransaction,
+    TransactionDepth,
+    TxFinalizerConfig,
+} from '../structs/InternalStruct';
+import { ILogger } from '../interfaces';
 import { NoopLogger } from './Logger';
 import { sleep, toCamelCaseTransformer } from './Utils';
 
@@ -14,10 +19,7 @@ export class TonTxFinalizer {
     private logger: ILogger;
     private apiConfig: TxFinalizerConfig;
 
-    constructor(
-        apiConfig: TxFinalizerConfig,
-        logger: ILogger = new NoopLogger(),
-    ) {
+    constructor(apiConfig: TxFinalizerConfig, logger: ILogger = new NoopLogger()) {
         this.apiConfig = apiConfig;
         this.logger = logger;
     }

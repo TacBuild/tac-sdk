@@ -13,20 +13,13 @@ import {
 } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { IConfiguration } from '../structs/Services';
-import {
-    AssetType,
-    ContractOpener,
-    EVMAddress,
-    FeeParams,
-    TVMAddress,
-    UserWalletBalanceExtended,
-} from '../structs/Struct';
-import { Asset, Origin } from '../structs/Struct';
-import { JettonMaster } from '../wrappers/JettonMaster';
+import { IAsset, IConfiguration, IContractOpener } from '../interfaces';
+import { AssetType, EVMAddress, FeeParams, TVMAddress, UserWalletBalanceExtended } from '../structs/Struct';
+import { Origin } from '../structs/Struct';
+import { JettonMaster, JettonMasterData } from '../wrappers/JettonMaster';
 import { JettonWallet } from '../wrappers/JettonWallet';
 
-export class FT implements Asset {
+export class FT implements IAsset {
     private _tvmAddress: Address;
 
     readonly type: AssetType = AssetType.FT;
@@ -43,10 +36,14 @@ export class FT implements Asset {
         return this._tvmAddress.toString({ bounceable: true });
     }
 
-    static async getJettonData(contractOpener: ContractOpener, address: TVMAddress) {
+    static async getJettonData(contractOpener: IContractOpener, address: TVMAddress): Promise<JettonMasterData> {
         Validator.validateTVMAddress(address);
         const jetton = contractOpener.open(JettonMaster.createFromAddress(Address.parse(address)));
-        return await jetton.getJettonData();
+        return jetton.getJettonData();
+    }
+
+    async getJettonData(): Promise<JettonMasterData> {
+        return FT.getJettonData(this._configuration.TONParams.contractOpener, this._tvmAddress.toString());
     }
 
     static async getOrigin(configuration: IConfiguration, address: TVMAddress): Promise<Origin> {
@@ -313,7 +310,7 @@ export class FT implements Asset {
         }
     }
 
-    async checkCanBeTransferedBy(userAddress: string): Promise<void> {
+    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
         await this.checkBalance(userAddress);
     }
 

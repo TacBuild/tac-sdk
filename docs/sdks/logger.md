@@ -20,7 +20,7 @@
 
 ## Overview
 
-The SDK provides logging functionality through the `ILogger` interface and two implementations: `ConsoleLogger` and `NoopLogger`. These classes allow for flexible logging configuration throughout the SDK, enabling debug output or silent operation as needed.
+The SDK provides logging functionality through the `ILogger` interface and two implementations: `ConsoleLogger` and `NoopLogger`. By default, SDK components (e.g., TacSdk, OperationTracker, Simulator) use a no-op logger and are silent — they don’t write to the console unless you pass a logger explicitly. This allows flexible logging configuration across environments, enabling detailed debug output in development and quiet operation in production.
 
 ---
 
@@ -107,9 +107,8 @@ This implementation is useful for:
 ## Example Usage
 
 ```ts
-import { ConsoleLogger, NoopLogger } from './sdk/Logger';
-import { Simulator } from './sdk/Simulator';
-import { Configuration } from './sdk/Configuration';
+import { ConsoleLogger, NoopLogger, Simulator, Configuration, Network } from "@tonappchain/sdk";
+import { testnet } from "@tonappchain/artifacts";
 
 // Create configuration
 const config = await Configuration.create(Network.TESTNET, testnet);
@@ -154,12 +153,8 @@ const customSimulator = new Simulator(config, customLogger);
 Most SDK components accept an optional logger parameter:
 
 ```ts
-// TacSdk with custom logger
-const sdk = await TacSdk.create({
-  network: Network.TESTNET,
-  debug: true,
-  log: (message) => console.log(`[SDK] ${message}`)
-});
+// TacSdk with custom logger (SDK is silent by default if no logger is provided)
+const sdk = await TacSdk.create({ network: Network.TESTNET }, new ConsoleLogger());
 
 // TransactionManager with console logger
 const transactionManager = new TransactionManager(
@@ -169,7 +164,7 @@ const transactionManager = new TransactionManager(
   new ConsoleLogger()
 );
 
-// Simulator with noop logger (silent)
+// Simulator with no-op logger (silent)
 const silentSimulator = new Simulator(config, new NoopLogger());
 ```
 

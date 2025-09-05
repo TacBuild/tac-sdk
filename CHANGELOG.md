@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- New assets module: added classes/utilities for working with assets (`FT`, `NFT`, `TON`), `AssetFactory`, `AssetCache`, and export indexes.
+- New SDK components: `Configuration`, `Logger` (`ConsoleLogger`/`NoopLogger`), `Simulator`, `TransactionManager`, `TxFinalizer`, `Validator`.
 - Debug mode for `TacSDK` and `OperationTracker`: SDK and OperationTracker don't write to console by default.
 - Optional waiting for operation resolution in `TacSDK` and `OperationTracker` while using `waitOptions` argument.
 - RetryableContractOpener for stable work of SDK
@@ -15,6 +17,10 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Sender and adapter updates: refactored `BatchSender`/`RawSender`/`TonConnectSender`, `contractOpener` and `retryableContractOpener`.
+- Errors and structs: updated errors (errors/*), structs (structs/*), utilities (Utils.ts), operation tracker (OperationTracker), StartTracking.
+- Documentation: added/updated SDK pages (assets, logger, simulator, transaction_manager, utilities, etc.).
+- Tests: reorganization — removed/replaced some tests (e.g., tests/operation_tracker/tracker.spec.ts, tests/unit/getTokenAddress.spec.ts), added new unit tests (operation-tracker.spec.ts, validator.spec.ts) and updated integration scenarios.
 - Methods in `OperationTracker` and `sendCrossChainTransaction(s)` in `TacSDK` now accept optional `waitOptions` argument. Example:
 
 ```typescript

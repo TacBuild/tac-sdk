@@ -129,3 +129,32 @@ Identifies the type of a contract address belongs to.
 
 - **`COLLECTION`**:
   Represents an NFT collection contract.
+
+
+## `CurrencyType`
+
+Represents supported currency types for price conversion utilities.
+
+- `TAC = 'TAC'`
+- `TON = 'TON'`
+
+```ts
+export enum CurrencyType {
+    TAC = 'TAC',
+    TON = 'TON',
+}
+```
+
+## `Origin`
+
+Represents the origin chain of an asset.
+
+- `TON = 'TON'`
+- `TAC = 'TAC'`
+
+```ts
+export enum Origin {
+    TON = 'TON',
+    TAC = 'TAC',
+}
+```

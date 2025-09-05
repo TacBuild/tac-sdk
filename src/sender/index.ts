@@ -1,3 +1,3 @@
 export * from './BatchSender';
-export * from './SenderAbstraction';
+export * from '../interfaces/ISender';
 export * from './SenderFactory';

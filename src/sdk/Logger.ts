@@ -1,4 +1,4 @@
-import { ILogger } from '../structs/Services';
+import { ILogger } from '../interfaces';
 
 export class ConsoleLogger implements ILogger {
     debug(...arg: unknown[]): void {

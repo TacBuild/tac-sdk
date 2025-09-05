@@ -1,7 +1,17 @@
 import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 
-import { Asset, AssetFactory, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
+import {
+    IAsset,
+    AssetFactory,
+    AssetType,
+    EvmProxyMsg,
+    Network,
+    SDKParams,
+    SenderFactory,
+    startTracking,
+    TacSdk,
+} from '../../src';
 
 const UNISWAPV2_PROXY_ADDRESS = '0xc5bd40D45334AcDdaA324aE6eBDdf847148B8d93';
 
@@ -59,7 +69,7 @@ async function addLiquidity() {
         encodedParameters,
     };
 
-    const jettons: Asset[] = [tokenA, tokenB];
+    const jettons: IAsset[] = [tokenA, tokenB];
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons);
 }

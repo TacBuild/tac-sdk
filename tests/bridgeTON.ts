@@ -2,8 +2,7 @@ import 'dotenv/config';
 
 import { AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
 import { defaultWaitOptions } from '../src';
-import { AssetFactory } from '../src/assets';
-import { ConsoleLogger } from '../src/sdk/Logger';
+import { AssetFactory, ConsoleLogger } from '../src';
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk

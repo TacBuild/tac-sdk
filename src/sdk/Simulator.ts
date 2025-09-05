@@ -1,12 +1,11 @@
 import { Address, toNano } from '@ton/ton';
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 import { simulationError } from '../errors';
-import type { SenderAbstraction } from '../sender';
+import type { ISender } from '../sender';
 import { SuggestedTONExecutorFeeResponse, TACSimulationResponse } from '../structs/InternalStruct';
-import { IConfiguration, ILogger, ISimulator } from '../structs/Services';
+import { IConfiguration, ILogger, ISimulator } from '../interfaces';
 import {
-    Asset,
+    IAsset,
     CrosschainTx,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
@@ -25,16 +24,8 @@ import {
     toCamelCaseTransformer,
 } from './Utils';
 import { Validator } from './Validator';
-
-export interface IHttpClient {
-    post<T>(url: string, data: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
-}
-
-export class AxiosHttpClient implements IHttpClient {
-    async post<T>(url: string, data: unknown, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> {
-        return axios.post<T>(url, data, config);
-    }
-}
+import { IHttpClient } from '../interfaces';
+import { AxiosHttpClient } from './AxiosHttpClient';
 
 export class Simulator implements ISimulator {
     private readonly config: IConfiguration;
@@ -76,7 +67,7 @@ export class Simulator implements ISimulator {
         throw simulationError(lastError);
     }
 
-    async simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]> {
+    async simulateTransactions(sender: ISender, txs: CrosschainTx[]): Promise<TACSimulationResult[]> {
         this.logger.debug(`Simulating ${txs.length} TAC messages`);
         const results: TACSimulationResult[] = [];
 
@@ -89,14 +80,12 @@ export class Simulator implements ISimulator {
         return results;
     }
 
-    private async buildTACSimulationRequest(
-        sender: SenderAbstraction,
-        tx: CrosschainTx,
-    ): Promise<TACSimulationRequest> {
+    private async buildTACSimulationRequest(sender: ISender, tx: CrosschainTx): Promise<TACSimulationRequest> {
         const { evmProxyMsg, assets = [], options = {} } = tx;
         const {
             evmValidExecutors = this.config.TACParams.trustedTACExecutors,
             tvmValidExecutors = this.config.TACParams.trustedTONExecutors,
+            calculateRollbackFee = true,
         } = options;
 
         Validator.validateEVMAddresses(evmValidExecutors);
@@ -122,10 +111,15 @@ export class Simulator implements ISimulator {
                 assetType: asset.type,
             })),
             tonCaller: transactionLinker.caller,
+            calculateRollbackFee: calculateRollbackFee,
         };
     }
 
-    async getTVMExecutorFeeInfo(assets: Asset[], feeSymbol: string): Promise<SuggestedTONExecutorFee> {
+    async getTVMExecutorFeeInfo(
+        assets: IAsset[],
+        feeSymbol: string,
+        tvmValidExecutors: string[] = this.config.TACParams.trustedTONExecutors,
+    ): Promise<SuggestedTONExecutorFee> {
         this.logger.debug('Getting TVM executor fee info');
         const requestBody = {
             tonAssets: assets.map((asset) => ({
@@ -134,6 +128,7 @@ export class Simulator implements ISimulator {
                 assetType: asset.type,
             })),
             feeSymbol: feeSymbol,
+            tvmValidExecutors: tvmValidExecutors,
         };
 
         let lastError;
@@ -157,11 +152,12 @@ export class Simulator implements ISimulator {
     private async getFeeInfo(
         evmProxyMsg: EvmProxyMsg,
         transactionLinker: TransactionLinker,
-        assets: Asset[],
+        assets: IAsset[],
         allowSimulationError: boolean = false,
         isRoundTrip: boolean = true,
         evmValidExecutors: string[] = this.config.TACParams.trustedTACExecutors,
         tvmValidExecutors: string[] = this.config.TACParams.trustedTONExecutors,
+        calculateRollbackFee: boolean = true,
     ): Promise<ExecutionFeeEstimationResult> {
         this.logger.debug('Getting fee info');
 
@@ -193,6 +189,7 @@ export class Simulator implements ISimulator {
                 assetType: asset.type,
             })),
             tonCaller: transactionLinker.caller,
+            calculateRollbackFee: calculateRollbackFee,
         };
 
         isRoundTrip = isRoundTrip ?? assets.length != 0;
@@ -230,8 +227,8 @@ export class Simulator implements ISimulator {
 
     async getTransactionSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
-        sender: SenderAbstraction,
-        assets?: Asset[],
+        sender: ISender,
+        assets?: IAsset[],
     ): Promise<ExecutionFeeEstimationResult> {
         this.logger.debug('Getting transaction simulation info');
 
@@ -250,11 +247,12 @@ export class Simulator implements ISimulator {
     async getSimulationInfoForTransaction(
         evmProxyMsg: EvmProxyMsg,
         transactionLinker: TransactionLinker,
-        assets: Asset[],
+        assets: IAsset[],
         allowSimulationError: boolean = false,
         isRoundTrip?: boolean,
         evmValidExecutors?: string[],
         tvmValidExecutors?: string[],
+        calculateRollbackFee?: boolean,
     ): Promise<ExecutionFeeEstimationResult> {
         return await this.getFeeInfo(
             evmProxyMsg,
@@ -264,6 +262,7 @@ export class Simulator implements ISimulator {
             isRoundTrip,
             evmValidExecutors,
             tvmValidExecutors,
+            calculateRollbackFee,
         );
     }
 }

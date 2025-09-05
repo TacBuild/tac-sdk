@@ -8,18 +8,17 @@ import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import { generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { IConfiguration } from '../structs/Services';
+import { IAsset, IConfiguration, IContractOpener } from '../interfaces';
 import {
-    Asset,
     AssetType,
-    ContractOpener,
     EVMAddress,
     FeeParams,
+    NFTCollectionData,
     NFTItemData,
     Origin,
     TVMAddress,
 } from '../structs/Struct';
-export class NFT implements Asset {
+export class NFT implements IAsset {
     private _addresses: {
         item: TVMAddress;
         collection: TVMAddress;
@@ -38,7 +37,6 @@ export class NFT implements Asset {
      * @description Create NFT from item address. Item MUST BE deployed on TON.
      * @param configuration - Configuration
      * @param item - Item address (TVM address)
-     * @param origin - Origin
      * @returns NFT
      */
     static async fromItem(configuration: IConfiguration, item: TVMAddress): Promise<NFT> {
@@ -55,7 +53,6 @@ export class NFT implements Asset {
      * @description Create NFT from collection address. TON-native assets MUST BE deployed on TON.
      * @param configuration - Configuration
      * @param item - Item address (TVM address)
-     * @param origin - Origin
      * @returns NFT
      */
     static async fromCollection(
@@ -102,16 +99,27 @@ export class NFT implements Asset {
         );
     }
 
-    static async getItemData(contractOpener: ContractOpener, itemAddress: TVMAddress): Promise<NFTItemData> {
+    static async getItemData(contractOpener: IContractOpener, itemAddress: TVMAddress): Promise<NFTItemData> {
         Validator.validateTVMAddress(itemAddress);
         const nftItem = contractOpener.open(NFTItem.createFromAddress(Address.parse(itemAddress)));
         return nftItem.getNFTData();
     }
 
-    static async getCollectionData(contractOpener: ContractOpener, collectionAddress: TVMAddress) {
+    async getItemData(): Promise<NFTItemData> {
+        return NFT.getItemData(this._configuration.TONParams.contractOpener, this._addresses.item);
+    }
+
+    static async getCollectionData(
+        contractOpener: IContractOpener,
+        collectionAddress: TVMAddress,
+    ): Promise<NFTCollectionData> {
         Validator.validateTVMAddress(collectionAddress);
         const nftCollection = contractOpener.open(NFTCollection.createFromAddress(Address.parse(collectionAddress)));
         return nftCollection.getCollectionData();
+    }
+
+    async getCollectionData(): Promise<NFTCollectionData> {
+        return NFT.getCollectionData(this._configuration.TONParams.contractOpener, this._addresses.collection);
     }
 
     static async getOrigin(configuration: IConfiguration, itemOrCollection: TVMAddress): Promise<Origin> {
@@ -132,14 +140,15 @@ export class NFT implements Asset {
         return Origin.TON;
     }
 
-    static getItemAddress(
-        contractOpener: ContractOpener,
+    static async getItemAddress(
+        contractOpener: IContractOpener,
         collectionAddress: TVMAddress,
         index: bigint,
     ): Promise<string> {
         Validator.validateTVMAddress(collectionAddress);
         const nftCollection = contractOpener.open(NFTCollection.createFromAddress(Address.parse(collectionAddress)));
-        return nftCollection.getNFTAddressByIndex(index).then(toString);
+        const address = await nftCollection.getNFTAddressByIndex(index);
+        return address.toString();
     }
 
     static async getTVMAddress(
@@ -314,13 +323,10 @@ export class NFT implements Asset {
 
     async isOwnedBy(userAddress: string): Promise<boolean> {
         const nftData = await NFT.getItemData(this._configuration.TONParams.contractOpener, this.address.toString());
-        if (nftData.ownerAddress?.equals(Address.parse(userAddress))) {
-            return true;
-        }
-        return false;
+        return !!nftData.ownerAddress?.equals(Address.parse(userAddress));
     }
 
-    async checkCanBeTransferedBy(userAddress: string): Promise<void> {
+    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
         if (!(await this.isOwnedBy(userAddress))) {
             throw insufficientBalanceError(this.address.toString());
         }
