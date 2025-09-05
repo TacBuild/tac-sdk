@@ -8,7 +8,7 @@ import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import { generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { IAsset, IConfiguration, IContractOpener } from '../interfaces';
+import { Asset, IConfiguration, ContractOpener } from '../interfaces';
 import {
     AssetType,
     EVMAddress,
@@ -18,7 +18,7 @@ import {
     Origin,
     TVMAddress,
 } from '../structs/Struct';
-export class NFT implements IAsset {
+export class NFT implements Asset {
     private _addresses: {
         item: TVMAddress;
         collection: TVMAddress;
@@ -99,7 +99,7 @@ export class NFT implements IAsset {
         );
     }
 
-    static async getItemData(contractOpener: IContractOpener, itemAddress: TVMAddress): Promise<NFTItemData> {
+    static async getItemData(contractOpener: ContractOpener, itemAddress: TVMAddress): Promise<NFTItemData> {
         Validator.validateTVMAddress(itemAddress);
         const nftItem = contractOpener.open(NFTItem.createFromAddress(Address.parse(itemAddress)));
         return nftItem.getNFTData();
@@ -110,7 +110,7 @@ export class NFT implements IAsset {
     }
 
     static async getCollectionData(
-        contractOpener: IContractOpener,
+        contractOpener: ContractOpener,
         collectionAddress: TVMAddress,
     ): Promise<NFTCollectionData> {
         Validator.validateTVMAddress(collectionAddress);
@@ -141,7 +141,7 @@ export class NFT implements IAsset {
     }
 
     static async getItemAddress(
-        contractOpener: IContractOpener,
+        contractOpener: ContractOpener,
         collectionAddress: TVMAddress,
         index: bigint,
     ): Promise<string> {

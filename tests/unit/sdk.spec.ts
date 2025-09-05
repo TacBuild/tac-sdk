@@ -6,7 +6,7 @@ import { testnet } from '@tonappchain/artifacts';
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
-import { IAsset, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
+import { Asset, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
 import { sandboxOpener } from '../../src/adapters/contractOpener';
 import { TON } from '../../src';
 
@@ -240,7 +240,7 @@ describe('TacSDK', () => {
             const token = TON.create(sdk.config);
 
             // sending TON
-            const assets: IAsset[] = [await token.withAmount({ rawAmount: 1n })];
+            const assets: Asset[] = [await token.withAmount({ rawAmount: 1n })];
 
             await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
 

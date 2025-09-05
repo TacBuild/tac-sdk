@@ -2,7 +2,7 @@ import type { Address, Contract, OpenedContract } from '@ton/ton';
 import { SandboxContract } from '@ton/sandbox';
 import { ContractState } from '../structs/Struct';
 
-export interface IContractOpener {
+export interface ContractOpener {
     /**
      * Opens a contract for interaction using the underlying client (lite client, sandbox, etc.).
      * @param src Contract source instance to open.

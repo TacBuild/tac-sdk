@@ -1,9 +1,9 @@
 import { Wallet } from 'ethers';
 
 import { AssetFactory, FT, TON, NFT } from '../assets';
-import type { ISender } from '../sender';
+import type { SenderAbstraction } from '../sender';
 import {
-    IAsset,
+    Asset,
     AssetType,
     CrossChainTransactionOptions,
     CrosschainTx,
@@ -91,14 +91,14 @@ export class TacSdk implements ITacSDK {
 
     async getTransactionSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
-        sender: ISender,
-        assets?: IAsset[],
+        sender: SenderAbstraction,
+        assets?: Asset[],
     ): Promise<ExecutionFeeEstimationResult> {
         return this.simulator.getTransactionSimulationInfo(evmProxyMsg, sender, assets);
     }
 
     async getTVMExecutorFeeInfo(
-        assets: IAsset[],
+        assets: Asset[],
         feeSymbol: string,
         tvmValidExecutors?: string[],
     ): Promise<SuggestedTONExecutorFee> {
@@ -107,8 +107,8 @@ export class TacSdk implements ITacSDK {
 
     async sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
-        sender: ISender,
-        assets?: IAsset[],
+        sender: SenderAbstraction,
+        assets?: Asset[],
         options?: CrossChainTransactionOptions,
         waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId> {
@@ -116,7 +116,7 @@ export class TacSdk implements ITacSDK {
     }
 
     async sendCrossChainTransactions(
-        sender: ISender,
+        sender: SenderAbstraction,
         txs: CrosschainTx[],
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]> {
@@ -127,7 +127,7 @@ export class TacSdk implements ITacSDK {
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: IAsset[],
+        assets?: Asset[],
         tvmExecutorFee?: bigint,
         tvmValidExecutors?: string[],
     ): Promise<string> {
@@ -149,7 +149,7 @@ export class TacSdk implements ITacSDK {
         return this.simulator.simulateTACMessage(req);
     }
 
-    async simulateTransactions(sender: ISender, txs: CrosschainTx[]): Promise<TACSimulationResult[]> {
+    async simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]> {
         return this.simulator.simulateTransactions(sender, txs);
     }
 
@@ -157,7 +157,7 @@ export class TacSdk implements ITacSDK {
     async getAsset(args: AssetFromFTArg): Promise<FT>;
     async getAsset(args: AssetFromNFTCollectionArg): Promise<NFT>;
     async getAsset(args: AssetFromNFTItemArg): Promise<NFT>;
-    async getAsset(args: AssetFromFTArg | AssetFromNFTCollectionArg | AssetFromNFTItemArg): Promise<IAsset> {
+    async getAsset(args: AssetFromFTArg | AssetFromNFTCollectionArg | AssetFromNFTItemArg): Promise<Asset> {
         return await AssetFactory.from(this.config, args);
     }
 

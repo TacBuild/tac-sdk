@@ -4,15 +4,8 @@ import { AbiCoder, ethers } from 'ethers';
 import { FT, NFT, TON } from '../assets';
 import { invalidMethodNameError } from '../errors';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
-import { IAsset } from '../interfaces';
-import {
-    AssetType,
-    EvmProxyMsg,
-    FeeParams,
-    TransactionLinker,
-    ValidExecutors,
-    WaitOptions,
-} from '../structs/Struct';
+import { Asset } from '../interfaces';
+import { AssetType, EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors, WaitOptions } from '../structs/Struct';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -211,12 +204,12 @@ export function formatObjectForLogging(obj: unknown): string {
     return JSON.stringify(obj, (key, value) => (typeof value === 'bigint' ? value.toString() : value));
 }
 
-export async function aggregateTokens(assets?: IAsset[]): Promise<{
+export async function aggregateTokens(assets?: Asset[]): Promise<{
     jettons: FT[];
     nfts: NFT[];
     ton?: TON;
 }> {
-    const uniqueAssetsMap: Map<string, IAsset> = new Map();
+    const uniqueAssetsMap: Map<string, Asset> = new Map();
     let ton: TON | undefined;
 
     for await (const asset of assets ?? []) {

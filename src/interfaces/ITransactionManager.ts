@@ -1,6 +1,6 @@
 import { Wallet } from 'ethers';
 
-import type { ISender } from '../sender';
+import type { SenderAbstraction } from '../sender';
 import {
     CrossChainTransactionOptions,
     CrosschainTx,
@@ -9,7 +9,7 @@ import {
     TransactionLinkerWithOperationId,
     WaitOptions,
 } from '../structs/Struct';
-import { IAsset } from './IAsset';
+import { Asset } from './Asset';
 
 export interface ITransactionManager {
     /**
@@ -23,8 +23,8 @@ export interface ITransactionManager {
      */
     sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
-        sender: ISender,
-        assets?: IAsset[],
+        sender: SenderAbstraction,
+        assets?: Asset[],
         options?: CrossChainTransactionOptions,
         waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId>;
@@ -37,7 +37,7 @@ export interface ITransactionManager {
      * @returns Array of transaction linkers, one per submitted transaction.
      */
     sendCrossChainTransactions(
-        sender: ISender,
+        sender: SenderAbstraction,
         txs: CrosschainTx[],
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]>;
@@ -56,7 +56,7 @@ export interface ITransactionManager {
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: IAsset[],
+        assets?: Asset[],
         tvmExecutorFee?: bigint,
         tvmValidExecutors?: string[],
     ): Promise<string>;

@@ -1,7 +1,7 @@
 import type { Address, Cell } from '@ton/ton';
 import { AbstractProvider, Addressable } from 'ethers';
-import type { ILogger, IContractOpener, IAsset } from '../interfaces';
-export type { IContractOpener, IAsset } from '../interfaces';
+import type { ILogger, ContractOpener, Asset } from '../interfaces';
+export type { ContractOpener, Asset } from '../interfaces';
 
 export type ContractState = {
     balance: bigint;
@@ -56,7 +56,7 @@ export type TONParams = {
     /**
      * Provider for TON side. Use your own provider for tests or to increase ratelimit
      */
-    contractOpener?: IContractOpener;
+    contractOpener?: ContractOpener;
 
     /**
      * Address of TON settings contract. Use only for tests.
@@ -215,9 +215,9 @@ export type AdditionalFeeInfo = {
 };
 
 export type FeeInfo = {
-    additionalFeeInfo: AdditionalFeeInfo | null;
-    tac: GeneralFeeInfo | null;
-    ton: GeneralFeeInfo | null;
+    additionalFeeInfo: AdditionalFeeInfo;
+    tac: GeneralFeeInfo;
+    ton: GeneralFeeInfo;
 };
 
 export type AssetMovement = {
@@ -236,8 +236,8 @@ export type TransactionHash = {
 export type AssetMovementInfo = {
     caller: InitialCallerInfo;
     target: InitialCallerInfo;
-    transactionHash: TransactionHash | null;
-    assetMovements: AssetMovement[] | null;
+    transactionHash: TransactionHash;
+    assetMovements: AssetMovement[];
 };
 
 export type MetaInfo = {
@@ -250,7 +250,7 @@ export type MetaInfo = {
 
 export type ExecutionStages = {
     operationType: OperationType;
-    metaInfo: MetaInfo | null;
+    metaInfo: MetaInfo;
 } & Record<StageName, ProfilingStageData>;
 
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
@@ -340,7 +340,7 @@ export type ExecutionFeeEstimationResult = {
 
 export type CrosschainTx = {
     evmProxyMsg: EvmProxyMsg;
-    assets?: IAsset[];
+    assets?: Asset[];
     options?: CrossChainTransactionOptions;
 };
 

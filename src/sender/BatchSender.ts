@@ -3,11 +3,11 @@ import { fromNano, internal, MessageRelaxed, SendMode } from '@ton/ton';
 import { noValidGroupFoundError, prepareMessageGroupError } from '../errors/instances';
 import { MAX_EXT_MSG_SIZE, MAX_HIGHLOAD_GROUP_MSG_NUM, MAX_MSG_DEPTH } from '../sdk/Consts';
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
-import type { IAsset, IContractOpener, ISender } from '../interfaces';
+import type { Asset, ContractOpener, SenderAbstraction } from '../interfaces';
 import { Network } from '../structs/Struct';
 import { HighloadWalletV3 } from '../wrappers/HighloadWalletV3';
 
-export class BatchSender implements ISender {
+export class BatchSender implements SenderAbstraction {
     private lastCreatedAt: number;
 
     constructor(
@@ -17,11 +17,11 @@ export class BatchSender implements ISender {
         this.lastCreatedAt = 0;
     }
 
-    async getBalanceOf(asset: IAsset): Promise<bigint> {
+    async getBalanceOf(asset: Asset): Promise<bigint> {
         return asset.getBalanceOf(this.getSenderAddress());
     }
 
-    async getBalance(contractOpener: IContractOpener): Promise<bigint> {
+    async getBalance(contractOpener: ContractOpener): Promise<bigint> {
         const { balance } = await contractOpener.getContractState(this.wallet.address);
         return balance;
     }
@@ -29,7 +29,7 @@ export class BatchSender implements ISender {
     async sendShardTransactions(
         shardTransactions: ShardTransaction[],
         _chain: Network,
-        contractOpener: IContractOpener,
+        contractOpener: ContractOpener,
     ): Promise<SendResult[]> {
         const allMessages: MessageRelaxed[] = [];
         let minValidUntil = Number.MAX_SAFE_INTEGER;
@@ -119,7 +119,7 @@ export class BatchSender implements ISender {
         return groups;
     }
 
-    private async sendGroup(messages: MessageRelaxed[], contractOpener: IContractOpener): Promise<unknown> {
+    private async sendGroup(messages: MessageRelaxed[], contractOpener: ContractOpener): Promise<unknown> {
         const walletContract = contractOpener.open(this.wallet);
 
         let createdAt = HighloadWalletV3.generateCreatedAt();
@@ -143,7 +143,7 @@ export class BatchSender implements ISender {
     async sendShardTransaction(
         shardTransaction: ShardTransaction,
         _chain: Network,
-        contractOpener: IContractOpener,
+        contractOpener: ContractOpener,
     ): Promise<SendResult> {
         const messages: MessageRelaxed[] = [];
         for (const message of shardTransaction.messages) {

@@ -2,22 +2,22 @@ import { fromNano, internal } from '@ton/ton';
 import { MessageRelaxed, SendMode } from '@ton/ton';
 
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
-import type { IAsset, IContractOpener } from '../interfaces';
+import type { Asset, ContractOpener } from '../interfaces';
 import { Network } from '../structs/Struct';
-import { ISender, IWallet } from '../interfaces';
+import { SenderAbstraction, WalletInstanse } from '../interfaces';
 
-export class RawSender implements ISender {
+export class RawSender implements SenderAbstraction {
     constructor(
-        private wallet: IWallet,
+        private wallet: WalletInstanse,
         private secretKey: Buffer,
         private maxBatchSize: number = 4,
     ) {}
 
-    async getBalanceOf(asset: IAsset): Promise<bigint> {
+    async getBalanceOf(asset: Asset): Promise<bigint> {
         return asset.getBalanceOf(this.getSenderAddress());
     }
 
-    async getBalance(contractOpener: IContractOpener): Promise<bigint> {
+    async getBalance(contractOpener: ContractOpener): Promise<bigint> {
         const { balance } = await contractOpener.getContractState(this.wallet.address);
         return balance;
     }
@@ -25,7 +25,7 @@ export class RawSender implements ISender {
     async sendShardTransactions(
         shardTransactions: ShardTransaction[],
         _chain: Network,
-        contractOpener: IContractOpener,
+        contractOpener: ContractOpener,
     ): Promise<SendResult[]> {
         const allMessages: MessageRelaxed[] = [];
 
@@ -80,7 +80,7 @@ export class RawSender implements ISender {
         return batches;
     }
 
-    private async sendBatch(messages: MessageRelaxed[], contractOpener: IContractOpener): Promise<unknown> {
+    private async sendBatch(messages: MessageRelaxed[], contractOpener: ContractOpener): Promise<unknown> {
         const walletContract = contractOpener.open(this.wallet);
         const seqno = await walletContract.getSeqno();
 
@@ -99,7 +99,7 @@ export class RawSender implements ISender {
     async sendShardTransaction(
         shardTransaction: ShardTransaction,
         _chain: Network,
-        contractOpener: IContractOpener,
+        contractOpener: ContractOpener,
     ): Promise<SendResult> {
         const messages: MessageRelaxed[] = [];
         for (const message of shardTransaction.messages) {

@@ -1,4 +1,4 @@
-import type { ISender } from '../sender';
+import type { SenderAbstraction } from '../sender';
 import {
     CrosschainTx,
     EvmProxyMsg,
@@ -8,7 +8,7 @@ import {
     TACSimulationResult,
     TransactionLinker,
 } from '../structs/Struct';
-import { IAsset } from './IAsset';
+import { Asset } from './Asset';
 
 export interface ISimulator {
     /**
@@ -23,7 +23,7 @@ export interface ISimulator {
      * @param txs Cross-chain transactions to simulate.
      * @returns Promise with results, one for each input transaction.
      */
-    simulateTransactions(sender: ISender, txs: CrosschainTx[]): Promise<TACSimulationResult[]>;
+    simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]>;
     /**
      * Suggests the TON executor fee for a given set of assets and target fee symbol.
      * @param assets Assets involved in execution.
@@ -32,7 +32,7 @@ export interface ISimulator {
      * @returns Promise with suggested fee information.
      */
     getTVMExecutorFeeInfo(
-        assets: IAsset[],
+        assets: Asset[],
         feeSymbol: string,
         tvmValidExecutors?: string[],
     ): Promise<SuggestedTONExecutorFee>;
@@ -45,8 +45,8 @@ export interface ISimulator {
      */
     getTransactionSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
-        sender: ISender,
-        assets?: IAsset[],
+        sender: SenderAbstraction,
+        assets?: Asset[],
     ): Promise<ExecutionFeeEstimationResult>;
     /**
      * Computes simulation info for a transaction tied to an existing TransactionLinker.
@@ -63,7 +63,7 @@ export interface ISimulator {
     getSimulationInfoForTransaction(
         evmProxyMsg: EvmProxyMsg,
         transactionLinker: TransactionLinker,
-        assets: IAsset[],
+        assets: Asset[],
         allowSimulationError?: boolean,
         isRoundTrip?: boolean,
         evmValidExecutors?: string[],

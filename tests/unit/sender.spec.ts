@@ -5,19 +5,19 @@ import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { address, beginCell, SendMode, toNano, WalletContractV4, WalletContractV5R1 } from '@ton/ton';
 
 import { sandboxOpener } from '../../src/adapters/contractOpener';
-import { BatchSender, SenderFactory, ISender, IContractOpener, Network, HighloadWalletV3 } from '../../src';
+import { BatchSender, SenderFactory, SenderAbstraction, ContractOpener, Network, HighloadWalletV3 } from '../../src';
 import { RawSender } from '../../src/sender/RawSender';
 import { SendResult, ShardTransaction } from '../../src/structs/InternalStruct';
 
 describe('RawSender', () => {
     let blockchain: Blockchain;
-    let contractOpener: IContractOpener;
+    let contractOpener: ContractOpener;
     let deployer: SandboxContract<TreasuryContract>;
     const mnemonic =
         'sibling cover host ask camera coin harbor pepper weekend knife sponsor boost top write torch axis horn control puppy speak suit crystal harsh equal';
-    let rawSenderV4: ISender;
-    let rawSenderV5: ISender;
-    let rawSenderHighloadV3: ISender;
+    let rawSenderV4: SenderAbstraction;
+    let rawSenderV5: SenderAbstraction;
+    let rawSenderHighloadV3: SenderAbstraction;
 
     beforeEach(async () => {
         blockchain = await Blockchain.create();

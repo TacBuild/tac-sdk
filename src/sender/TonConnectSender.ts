@@ -4,24 +4,24 @@ import type { SendTransactionRequest } from '@tonconnect/ui';
 import { CHAIN, TonConnectUI } from '@tonconnect/ui';
 
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
-import { IAsset, IContractOpener, Network } from '../structs/Struct';
-import { ISender } from '../interfaces';
+import { Asset, ContractOpener, Network } from '../structs/Struct';
+import { SenderAbstraction } from '../interfaces';
 import { sleep } from '../sdk/Utils';
 
 const CHUNK_SIZE = 4;
 
-export class TonConnectSender implements ISender {
+export class TonConnectSender implements SenderAbstraction {
     readonly tonConnect: TonConnectUI;
 
     constructor(tonConnect: TonConnectUI) {
         this.tonConnect = tonConnect;
     }
 
-    async getBalanceOf(asset: IAsset): Promise<bigint> {
+    async getBalanceOf(asset: Asset): Promise<bigint> {
         return asset.getBalanceOf(this.getSenderAddress());
     }
 
-    async getBalance(contractOpener: IContractOpener): Promise<bigint> {
+    async getBalance(contractOpener: ContractOpener): Promise<bigint> {
         return this.tonConnect.account
             ? (await contractOpener.getContractState(address(this.tonConnect.account?.address))).balance
             : 0n;

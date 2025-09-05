@@ -1,6 +1,6 @@
 import type { Contract, ContractProvider, MessageRelaxed, SendMode } from '@ton/ton';
 
-export interface IWallet extends Contract {
+export interface WalletInstanse extends Contract {
     /**
      * Returns current wallet seqno, used for nonce/ordering.
      * @param provider Contract provider to query the wallet.

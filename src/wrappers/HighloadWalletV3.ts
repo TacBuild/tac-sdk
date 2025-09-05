@@ -16,7 +16,7 @@ import {
 import { sign } from 'ton-crypto';
 
 import { HighloadQueryId } from './HighloadQueryId';
-import { IWallet } from '../interfaces';
+import { WalletInstanse } from '../interfaces';
 
 export enum OP {
     InternalTransfer = 0xae42e5a4,
@@ -50,7 +50,7 @@ export function highloadWalletV3ConfigToCell(config: HighloadWalletV3Config): Ce
         .endCell();
 }
 
-export class HighloadWalletV3 implements IWallet {
+export class HighloadWalletV3 implements WalletInstanse {
     constructor(
         readonly address: Address,
         readonly init?: { code: Cell; data: Cell },
