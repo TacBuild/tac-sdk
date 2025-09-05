@@ -3,7 +3,7 @@ import { mainnet, testnet } from '@tonappchain/artifacts';
 import { AbstractProvider, ethers } from 'ethers';
 
 import {
-    IContractOpener,
+    ContractOpener,
     ExecutionStagesByOperationId,
     Network,
     OperationIdsByShardsKey,
@@ -39,7 +39,7 @@ export type RandomNumberByTimestamp = {
 };
 
 export type InternalTONParams = {
-    contractOpener: IContractOpener;
+    contractOpener: ContractOpener;
     jettonProxyAddress: string;
     nftProxyAddress: string;
     crossChainLayerAddress: string;

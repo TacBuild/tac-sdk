@@ -1,7 +1,7 @@
 import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 
-import { IAsset, AssetFactory, AssetType, CrosschainTx, EvmProxyMsg, Network, SenderFactory, TacSdk } from '../../src';
+import { Asset, AssetFactory, AssetType, CrosschainTx, EvmProxyMsg, Network, SenderFactory, TacSdk } from '../../src';
 import { localSDKParams } from '../utils';
 
 const EVM_SETTINGS_ADDRESS = '0x87B6a0ab90d826189cC004Dc2ff16E2b472309db';
@@ -62,7 +62,7 @@ async function main() {
         methodName: 'addLiquidity',
         encodedParameters,
     };
-    const jettons: IAsset[] = [tokenA, tokenB];
+    const jettons: Asset[] = [tokenA, tokenB];
 
     // 5 Jetton transfers
     const txs: CrosschainTx[] = Array.from({ length: 5 }, () => ({

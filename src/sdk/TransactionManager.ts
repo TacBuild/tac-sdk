@@ -2,11 +2,11 @@ import { Cell } from '@ton/ton';
 import { Wallet } from 'ethers';
 
 import { AssetFactory, FT, NFT, TON } from '../assets';
-import type { ISender } from '../sender';
+import type { SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
 import { IConfiguration, ILogger, IOperationTracker, ISimulator, ITransactionManager } from '../interfaces';
 import {
-    IAsset,
+    Asset,
     AssetType,
     CrossChainTransactionOptions,
     CrosschainTx,
@@ -58,7 +58,7 @@ export class TransactionManager implements ITransactionManager {
     private async prepareCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         caller: string,
-        assets?: IAsset[],
+        assets?: Asset[],
         options?: CrossChainTransactionOptions,
     ): Promise<{ transaction: ShardTransaction; transactionLinker: TransactionLinker }> {
         this.logger.debug('Preparing cross-chain transaction');
@@ -222,8 +222,8 @@ export class TransactionManager implements ITransactionManager {
 
     async sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
-        sender: ISender,
-        assets?: IAsset[],
+        sender: SenderAbstraction,
+        assets?: Asset[],
         options?: CrossChainTransactionOptions,
         waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId> {
@@ -265,7 +265,7 @@ export class TransactionManager implements ITransactionManager {
     }
 
     async sendCrossChainTransactions(
-        sender: ISender,
+        sender: SenderAbstraction,
         txs: CrosschainTx[],
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]> {
@@ -339,7 +339,7 @@ export class TransactionManager implements ITransactionManager {
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: IAsset[],
+        assets?: Asset[],
         tvmExecutorFee?: bigint,
         tvmValidExecutors?: string[],
     ): Promise<string> {

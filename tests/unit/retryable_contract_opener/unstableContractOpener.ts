@@ -1,9 +1,9 @@
 import { Blockchain, SandboxContract } from '@ton/sandbox';
 import { Address, Cell, Contract } from '@ton/ton';
 
-import { IContractOpener, ContractState } from '../../../src';
+import { ContractOpener, ContractState } from '../../../src';
 
-export class UnstableContractOpener implements IContractOpener {
+export class UnstableContractOpener implements ContractOpener {
     public callCounts = new Map<string, number>();
 
     constructor(

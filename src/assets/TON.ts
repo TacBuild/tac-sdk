@@ -3,12 +3,12 @@ import { Address, beginCell, Cell } from '@ton/ton';
 import { insufficientBalanceError } from '../errors';
 import { TON_SYMBOL } from '../sdk/Consts';
 import { calculateRawAmount, generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
-import type { ISender } from '../sender';
+import type { SenderAbstraction } from '../sender';
 import type { ShardTransaction } from '../structs/InternalStruct';
-import { IAsset, IConfiguration } from '../interfaces';
+import { Asset, IConfiguration } from '../interfaces';
 import { AssetType, FeeParams } from '../structs/Struct';
 
-export class TON implements IAsset {
+export class TON implements Asset {
     readonly address: string;
     readonly type: AssetType = AssetType.FT;
 
@@ -95,7 +95,7 @@ export class TON implements IAsset {
     }
 
     static async checkBalance(
-        sender: ISender,
+        sender: SenderAbstraction,
         config: IConfiguration,
         transactions: ShardTransaction[],
     ): Promise<void> {

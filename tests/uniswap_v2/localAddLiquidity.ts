@@ -4,7 +4,7 @@ import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 
 import {
-    IAsset,
+    Asset,
     AssetFactory,
     AssetType,
     EvmProxyMsg,
@@ -78,7 +78,7 @@ async function addLiquidity() {
         encodedParameters,
     };
 
-    const jettons: IAsset[] = [tokenA, tokenB];
+    const jettons: Asset[] = [tokenA, tokenB];
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons);
 }

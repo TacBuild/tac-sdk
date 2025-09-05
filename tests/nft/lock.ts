@@ -1,5 +1,5 @@
 import {
-    IAsset,
+    Asset,
     AssetFactory,
     AssetType,
     EvmProxyMsg,
@@ -34,7 +34,7 @@ async function lock() {
         mnemonic: mnemonic,
     });
 
-    const nfts: IAsset[] = [
+    const nfts: Asset[] = [
         await AssetFactory.from(tacSdk.config, {
             address: NFT_ITEM_ADDRESS,
             tokenType: AssetType.NFT,

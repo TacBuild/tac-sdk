@@ -13,13 +13,13 @@ import {
 } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { IAsset, IConfiguration, IContractOpener } from '../interfaces';
+import { Asset, IConfiguration, ContractOpener } from '../interfaces';
 import { AssetType, EVMAddress, FeeParams, TVMAddress, UserWalletBalanceExtended } from '../structs/Struct';
 import { Origin } from '../structs/Struct';
 import { JettonMaster, JettonMasterData } from '../wrappers/JettonMaster';
 import { JettonWallet } from '../wrappers/JettonWallet';
 
-export class FT implements IAsset {
+export class FT implements Asset {
     private _tvmAddress: Address;
 
     readonly type: AssetType = AssetType.FT;
@@ -36,7 +36,7 @@ export class FT implements IAsset {
         return this._tvmAddress.toString({ bounceable: true });
     }
 
-    static async getJettonData(contractOpener: IContractOpener, address: TVMAddress): Promise<JettonMasterData> {
+    static async getJettonData(contractOpener: ContractOpener, address: TVMAddress): Promise<JettonMasterData> {
         Validator.validateTVMAddress(address);
         const jetton = contractOpener.open(JettonMaster.createFromAddress(Address.parse(address)));
         return jetton.getJettonData();

@@ -1,8 +1,8 @@
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
-import type { IAsset, IContractOpener } from './index';
+import type { Asset, ContractOpener } from './index';
 import { Network } from '../structs/Struct';
 
-export interface ISender {
+export interface SenderAbstraction {
     /**
      * Sends a single shard transaction on the specified chain.
      * @param shardTransaction Prepared transaction payload to send.
@@ -13,7 +13,7 @@ export interface ISender {
     sendShardTransaction(
         shardTransaction: ShardTransaction,
         chain?: Network,
-        contractOpener?: IContractOpener,
+        contractOpener?: ContractOpener,
     ): Promise<SendResult>;
 
     /**
@@ -26,7 +26,7 @@ export interface ISender {
     sendShardTransactions(
         shardTransactions: ShardTransaction[],
         chain?: Network,
-        contractOpener?: IContractOpener,
+        contractOpener?: ContractOpener,
     ): Promise<SendResult[]>;
 
     /**
@@ -38,11 +38,11 @@ export interface ISender {
      * Returns the TON balance of the sender wallet using the provided opener.
      * @param contractOpener Contract opener used for on-chain queries.
      */
-    getBalance(contractOpener: IContractOpener): Promise<bigint>;
+    getBalance(contractOpener: ContractOpener): Promise<bigint>;
 
     /**
      * Returns the balance of a given asset for the sender wallet.
      * @param asset Asset wrapper instance to query balance for.
      */
-    getBalanceOf(asset: IAsset): Promise<bigint>;
+    getBalanceOf(asset: Asset): Promise<bigint>;
 }

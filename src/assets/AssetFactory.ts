@@ -1,5 +1,5 @@
 import { indexRequiredError, unknownTokenTypeError } from '../errors';
-import { IConfiguration, IAsset } from '../interfaces';
+import { IConfiguration, Asset } from '../interfaces';
 import {
     AssetFromFTArg,
     AssetFromNFTCollectionArg,
@@ -18,7 +18,7 @@ export class AssetFactory {
     static async from(
         configuration: IConfiguration,
         token: AssetFromFTArg | AssetFromNFTCollectionArg | AssetFromNFTItemArg,
-    ): Promise<IAsset> {
+    ): Promise<Asset> {
         if (token.address === '' || token.address === configuration.nativeTONAddress) {
             if (token.tokenType !== AssetType.FT)
                 throw unknownTokenTypeError(token.address, 'detected TON, but token type is not FT');
@@ -44,7 +44,7 @@ export class AssetFactory {
         return asset;
     }
 
-    static async createFTAsset(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<IAsset> {
+    static async createFTAsset(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<Asset> {
         if (address === configuration.nativeTONAddress || address === '') {
             return TON.create(configuration);
         }
@@ -57,7 +57,7 @@ export class AssetFactory {
         address: TVMAddress | EVMAddress,
         addressType: NFTAddressType,
         index?: bigint,
-    ): Promise<IAsset> {
+    ): Promise<Asset> {
         if (addressType === NFTAddressType.ITEM) {
             return NFT.fromItem(configuration, address);
         }

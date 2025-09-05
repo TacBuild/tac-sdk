@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 
 import {
-    IAsset,
+    Asset,
     AssetFactory,
     AssetType,
     EvmProxyMsg,
@@ -67,7 +67,7 @@ async function removeLiquidity() {
         encodedParameters,
     };
 
-    const assets: IAsset[] = [tokenLP];
+    const assets: Asset[] = [tokenLP];
 
     const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
     tacSdk.closeConnections();

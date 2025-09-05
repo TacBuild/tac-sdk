@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 
 import {
-    IAsset,
+    Asset,
     AssetFactory,
     AssetType,
     EvmProxyMsg,
@@ -51,7 +51,7 @@ async function rollback() {
         encodedParameters,
     };
 
-    const jettons: IAsset[] = [token];
+    const jettons: Asset[] = [token];
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons, {
         allowSimulationError: true,

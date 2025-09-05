@@ -1,7 +1,7 @@
 import type { Cell } from '@ton/ton';
 import { AssetType, FeeParams } from '../structs/Struct';
 
-export interface IAsset {
+export interface Asset {
     // Address of the token on the blockchain
     address: string;
     // Type of the token
@@ -9,7 +9,7 @@ export interface IAsset {
     // Raw amount of the token to be transferred
     rawAmount: bigint;
     // Clone to create new token with the same parameters
-    clone: IAsset;
+    clone: Asset;
     /**
      * Returns a new asset instance with the specified transfer amount.
      * Use { rawAmount } for base units (e.g., nano units), or { amount } for human-readable units if supported by the implementation.
@@ -17,14 +17,14 @@ export interface IAsset {
      * @param amount Object specifying either rawAmount (bigint base units) or amount (number in human units).
      * @returns Promise that resolves to a new IAsset reflecting the requested amount.
      */
-    withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<IAsset>;
+    withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
     /**
      * Increases the transfer amount by the specified value and returns a new asset instance.
      * Does not mutate the current asset instance.
      * @param amount Object specifying either rawAmount (bigint base units) or amount (number in human units).
      * @returns Promise that resolves to a new IAsset with the increased amount.
      */
-    addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<IAsset>;
+    addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
     /**
      * Resolves the corresponding EVM token address for this asset.
      * Useful when bridging or interacting with EVM-compatible networks.
