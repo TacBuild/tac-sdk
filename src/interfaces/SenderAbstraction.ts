@@ -1,6 +1,6 @@
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
-import type { Asset, ContractOpener } from './index';
 import { Network } from '../structs/Struct';
+import type { Asset, ContractOpener } from './index';
 
 export interface SenderAbstraction {
     /**

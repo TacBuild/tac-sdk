@@ -3,6 +3,7 @@ import { Address, beginCell, Cell, OpenedContract } from '@ton/ton';
 import { isAddress as isEthereumAddress } from 'ethers';
 
 import { ContractError, emptyContractError, insufficientBalanceError, unknownTokenTypeError } from '../errors';
+import { Asset, ContractOpener,IConfiguration } from '../interfaces';
 import { JETTON_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import {
     calculateAmount,
@@ -13,7 +14,6 @@ import {
 } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { Asset, IConfiguration, ContractOpener } from '../interfaces';
 import { AssetType, EVMAddress, FeeParams, TVMAddress, UserWalletBalanceExtended } from '../structs/Struct';
 import { Origin } from '../structs/Struct';
 import { JettonMaster, JettonMasterData } from '../wrappers/JettonMaster';

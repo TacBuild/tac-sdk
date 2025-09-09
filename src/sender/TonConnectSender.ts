@@ -3,10 +3,10 @@ import { Base64 } from '@tonconnect/protocol';
 import type { SendTransactionRequest } from '@tonconnect/ui';
 import { CHAIN, TonConnectUI } from '@tonconnect/ui';
 
-import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
-import { Asset, ContractOpener, Network } from '../structs/Struct';
-import { SenderAbstraction } from '../interfaces';
+import { Asset, ContractOpener, SenderAbstraction } from '../interfaces';
 import { sleep } from '../sdk/Utils';
+import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
+import { Network } from '../structs/Struct';
 
 const CHUNK_SIZE = 4;
 

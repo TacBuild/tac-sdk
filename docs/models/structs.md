@@ -12,17 +12,18 @@ This file documents the primary data structures (types and interfaces often refe
 
 ### Contract Openers
 - [`ContractState`](#contractstate-type)
-- [`IContractOpener`](#icontractopener-interface)
+- [`ContractOpener`](#contractopener-interface)
 - [`RetryableContractOpener`](#retryablecontractopener-class)
 
 ### Crosschain Transaction
 - [`EvmProxyMsg`](#evmproxymsg-type)
 - [`CrossChainTransactionOptions`](#crosschaintransactionoptions)
-- [`AssetBridgingData`](#assetbridgingdata-type)
 - [`CrosschainTx`](#crosschaintx)
 ### Transaction Tracking
 - [`TransactionLinker`](#transactionlinker-type)
 - [`TransactionLinkerWithOperationId`](#transactionlinkerwithoperationid-type)
+- [`OperationIds`](#operationids-type)
+- [`OperationIdsByShardsKey`](#operationidsbyshardskey-type)
 
 ### Simulation Structures
 - [`TACSimulationRequest`](#tacsimulationrequest)
@@ -40,7 +41,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`ExecutionStages`](#executionstages)
 - [`ExecutionStagesByOperationId`](#executionstagesbyoperationid)
 - [`StatusInfosByOperationId`](#statusinfosbyoperationid)
-- [`WaitOptions`](#waitoptions)
+- [`WaitOptions`](#waitoptions-interface)
 
 ### Metadata & Fees
 - [`MetaInfo`](#metainfo)
@@ -54,18 +55,9 @@ This file documents the primary data structures (types and interfaces often refe
 
 ### NFT
 - [`NFTItemData`](#nftitemdata)
+- [`NFTCollectionData`](#nftcollectiondata)
 
-# SDK Data Structures (Structs)
-
-This file documents the primary data structures (types and interfaces often referred to as structs) used for configuration, data transfer, and results within the TAC SDK.
-
-**Table of Contents**
-
-- [Core Data Structures](#core-data-structures)
-- [Simulation & Tracking Structures](#simulation--tracking-structures)
-- [Execution & Status Structures](#execution--status-structures)
-- [Metadata & Fee Structures](#metadata--fee-structures)
-- [Jetton Structures](#jetton-structures)
+---
 
 ## Core Data Structures
 
@@ -132,10 +124,10 @@ Represents the state of a TON smart contract:
     - **`frozen`**: The contract is frozen (inactive).
 - **`code`**: The contract's code as a Buffer, or null if the contract has no code.
 
-### `IContractOpener (Interface)`
+### `ContractOpener (Interface)`
 
 ```typescript
-export interface IContractOpener {
+export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
     getContractState(address: Address): Promise<ContractState>;
     closeConnections?: () => unknown;
@@ -151,12 +143,12 @@ Interface for opening and interacting with TON smart contracts:
 
 ```typescript
 export interface OpenerConfig {
-    opener: IContractOpener;
+    opener: ContractOpener;
     retries: number;
     retryDelay: number;
 }
 
-export class RetryableContractOpener implements IContractOpener {
+export class RetryableContractOpener implements ContractOpener {
     constructor(openerConfigs: OpenerConfig[]);
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
     getContractState(address: Address): Promise<ContractState>;
@@ -168,7 +160,7 @@ A resilient implementation of IContractOpener that provides retry capabilities a
 
 #### **Constructor Parameters**
 - **`openerConfigs`**: An array of `OpenerConfig` objects, each containing:
-  - **`opener`**: A IContractOpener instance.
+  - **`opener`**: A ContractOpener instance.
   - **`retries`**: Number of retry attempts for failed operations.
   - **`retryDelay`**: Delay in milliseconds between retry attempts.
 
@@ -257,84 +249,6 @@ export type CrossChainTransactionOptions = {
 - **tvmExecutorFee** *(optional)*:  
   Fee in bigint to be paid (in TON token) to the executor on the TON side.
 
-### `AssetBridgingData (Type)`
-
-This structure is used to specify the details of the Assets you want to bridge for your operation. This allows you to precisely control the tokens and amounts involved in your crosschain transaction.
-
-```typescript
-export type WithAddressFT = {
-    type: AssetType.FT;
-    /**
-     * Address of TAC or TON token.
-     * Empty if sending native TON coin.
-     */
-    address?: string;
-};
-
-export type WithAddressNFTItem = {
-    type: AssetType.NFT;
-    /**
-     * Address NFT item token.
-     */
-    address: string;
-};
-
-export type WithAddressNFTCollectionItem = {
-    type: AssetType.NFT;
-    /**
-     * Address NFT collection.
-     */
-    collectionAddress: string;
-    /**
-     * Index of NFT item in collection.
-     */
-    itemIndex: bigint;
-};
-
-export type WithAddressNFT = WithAddressNFTItem | WithAddressNFTCollectionItem;
-
-export type WithAddress = WithAddressFT | WithAddressNFT;
-
-export type RawAssetBridgingData<NFTFormatRequired extends WithAddressNFT = WithAddressNFTItem> = {
-    /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
-    rawAmount: bigint;
-} & (WithAddressFT | NFTFormatRequired);
-
-export type UserFriendlyAssetBridgingData = {
-    /**
-     * User friendly format, e.g. 12.34 tokens 
-     * Specified value will be converted automatically to raw format: 12.34 * (10^decimals).
-     * No decimals should be specified.
-     */
-    amount: number;
-    /**
-     * Decimals may be specified manually.
-     * Otherwise, SDK tries to extract them from chain.
-     */
-    decimals?: number;
-} & WithAddress;
-
-export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridgingData;
-```
-
-Represents general data for Asset operations.
-
-For fungible tokens:
-- **`type`**: Type of the asset. Should be [`AssetType.FT`](./enums.md#assettype) for fungible tokens.
-- **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred taking into account the number of decimals.
-- **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred.
-- **`decimals`** *(optional)*: Number of decimals for the asset. If not specified, the SDK will attempt to extract the decimals from the chain.
-- **`address`** *(optional)*: TVM or EVM asset's address.
-
-> **Note:** If you need to transfer a native TON coin, do not specify address.
-
-For non-fungible tokens:
-- **`type`**: Type of the asset. Should be [`AssetType.NFT`](./enums.md#assettype) for non-fungible tokens.
-- **`rawAmount`** *(required if `amount` is not specified): Amount of Assets to be transferred. Should be 1 for NFTs.
-- **`amount`** *(required if `rawAmount` is not specified): Amount of Assets to be transferred. Should be 1 for NFTs.
-- **`address`** *(required if `collectionAddress` is not specified): TVM or EVM asset's address.
-- **`collectionAddress`** *(required if `address` is not specified): TVM or EVM asset's collection address.
-- **`itemIndex`** *(required if `address` is not specified): Index of the NFT item in the collection.
 
 
 ### `CrosschainTx`
@@ -342,7 +256,7 @@ For non-fungible tokens:
 ```ts
 export type CrosschainTx = {
     evmProxyMsg: EvmProxyMsg;
-    assets?: IAsset[];
+    assets?: Asset[];
     options?: CrossChainTransactionOptions;
 };
 ```
@@ -381,6 +295,26 @@ export type TransactionLinkerWithOperationId = TransactionLinker & {
 ```
 
 This structure is extended version of `TransactionLinker` with `operationId` field that is retrieved automatically by `TacSDK` when sending crosschain transaction.
+
+### `OperationIds (Type)`
+
+```typescript
+export type OperationIds = {
+    operationIds: string[];
+};
+```
+
+Contains a collection of operation identifiers for tracking multiple operations.
+
+- **`operationIds`**: Array of operation ID strings for tracking crosschain operations.
+
+### `OperationIdsByShardsKey (Type)`
+
+```typescript
+export type OperationIdsByShardsKey = Record<string, OperationIds>;
+```
+
+Maps shard keys to their corresponding operation IDs, allowing efficient lookup of operations by shard identifier.
 
 
 ### `TACSimulationRequest`
@@ -606,8 +540,8 @@ Holds metadata associated with a crosschain transaction, including the initiatin
 export type AssetMovementInfo = {
     caller: InitialCallerInfo;
     target: InitialCallerInfo;
-    transactionHash: TransactionHash | null;
-    assetMovements: AssetMovement[] | null;
+    transactionHash: TransactionHash;
+    assetMovements: AssetMovement[];
 };
 ```
 
@@ -730,7 +664,7 @@ Provides profiling information for a specific stage.
 ```typescript
 export type ExecutionStages = {
   operationType: OperationType;
-  metaInfo: MetaInfo | null;
+  metaInfo: MetaInfo;
 } & Record<StageName, ProfilingStageData>;
 
 ```
@@ -790,13 +724,13 @@ Provides extended information about a user's Jetton balance.
 Provides information about NFT item.
 
 ```typescript
-{
+export type NFTItemData = {
     init: boolean;
     index: number;
     collectionAddress: Address;
     ownerAddress: Address | null;
     content: Cell | null;
-}
+};
 ```
 
 - **`init`**: Indicates whether item is active, i.e initialized by NFT collection and has not been burnt
@@ -804,6 +738,22 @@ Provides information about NFT item.
 - **`collectionAddress`**: Address of collection
 - **`ownerAddress`**: Address of the item owner
 - **`content`**: Content(metadata) of the item
+
+### `NFTCollectionData`
+
+Provides information about NFT collection.
+
+```typescript
+export type NFTCollectionData = {
+    nextIndex: number;
+    content: Cell;
+    adminAddress: Address;
+};
+```
+
+- **`nextIndex`**: Next item index to be minted in the collection
+- **`content`**: Content(metadata) of the collection
+- **`adminAddress`**: Address of the collection admin
 
 ### `TACSimulationResult`
 
@@ -918,18 +868,18 @@ Represents additional fee information attached to the transaction.
 
 ```ts
 export type FeeInfo = {
-    additionalFeeInfo: AdditionalFeeInfo | null;
-    tac: GeneralFeeInfo | null;
-    ton: GeneralFeeInfo | null;
+    additionalFeeInfo: AdditionalFeeInfo;
+    tac: GeneralFeeInfo;
+    ton: GeneralFeeInfo;
 };
 ```
 Contains fee information for both TAC and TON blockchain networks, plus additional fee information.
 
-- **`additionalFeeInfo`**: Additional fee information attached to the transaction (may be null).
-- **`tac`**: Complete fee structure for transactions on the TAC blockchain (may be null if not applicable or not yet available).
-- **`ton`**: Complete fee structure for transactions on the TON blockchain (may be null if not applicable or not yet available).
+- **`additionalFeeInfo`**: Additional fee information attached to the transaction.
+- **`tac`**: Complete fee structure for transactions on the TAC blockchain.
+- **`ton`**: Complete fee structure for transactions on the TON blockchain.
 
-### `WaitOptions`
+### `WaitOptions (Interface)`
 
 ```typescript
 export interface WaitOptions<T = unknown> {
@@ -943,11 +893,11 @@ export interface WaitOptions<T = unknown> {
 
 Allows to specify custom options for waiting for operation resolution.
 
-- **`timeout`** *(optional)*: The maximum time to wait for the operation to complete.
-- **`maxAttempts`** *(optional)*: The maximum number of attempts to check the operation status.
-- **`delay`** *(optional)*: The delay between attempts to check the operation status.
+- **`timeout`** *(optional)*: Timeout in milliseconds. Default is 300000 (5 minutes).
+- **`maxAttempts`** *(optional)*: Maximum number of attempts. Default is 30.
+- **`delay`** *(optional)*: Delay between attempts in milliseconds. Default is 10000 (10 seconds).
 - **`logger`** *(optional)*: Logger used to output debug information during waiting.
-- **`successCheck`** *(optional)*: A function to check if the operation is successful.
+- **`successCheck`** *(optional)*: Function to check if the result is successful. If not provided, any non-error result is considered successful.
 
 
 ---
@@ -998,31 +948,28 @@ Utilities for converting amounts and reporting price information.
 
 ```ts
 export type ConvertCurrencyParams = {
-    rawValue: bigint;
-    currencyType: CurrencyType;
+    value: bigint;
+    currency: CurrencyType;
 };
 
-export type TokenPriceInfo = {
+export type USDPriceInfo = {
     spot: bigint;
     ema: bigint;
 };
 
 export type ConvertedCurrencyResult = {
-    spotRawValue: bigint;
-    spotFriendlyValue: string;
+    spotValue: bigint;
     emaValue: bigint;
-    emaFriendlyValue: string;
-    spotValueInUSD: number;
-    emaValueInUSD: number;
-    currencyType: CurrencyType;
-    tacPrice: TokenPriceInfo;
-    tonPrice: TokenPriceInfo;
+    decimals: number;
+    currency: CurrencyType;
+    tacPrice: USDPriceInfo;
+    tonPrice: USDPriceInfo;
 };
 ```
 
 - ConvertCurrencyParams: Input parameters to convert a raw bigint amount for the selected currency type.
-- TokenPriceInfo: Price data in raw bigint units for both spot and EMA values.
-- ConvertedCurrencyResult: Human-friendly and raw values for both spot and EMA, with USD approximations and underlying price references for TAC and TON.
+- USDPriceInfo: Price data in raw bigint units for both spot and EMA values.
+- ConvertedCurrencyResult: Contains spot and EMA values with decimal information and underlying price references for TAC and TON.
 
 
 ### WaitOptions Defaults

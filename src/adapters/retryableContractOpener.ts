@@ -3,9 +3,9 @@ import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 
 import { allContractOpenerFailedError } from '../errors/instances';
+import { ContractOpener } from '../interfaces';
 import { ContractState, Network } from '../structs/Struct';
 import { orbsOpener, orbsOpener4 } from './contractOpener';
-import { ContractOpener } from '../interfaces';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 

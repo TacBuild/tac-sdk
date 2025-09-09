@@ -1,5 +1,6 @@
-import type { Address, Contract, OpenedContract } from '@ton/ton';
 import { SandboxContract } from '@ton/sandbox';
+import type { Address, Contract, OpenedContract } from '@ton/ton';
+
 import { ContractState } from '../structs/Struct';
 
 export interface ContractOpener {

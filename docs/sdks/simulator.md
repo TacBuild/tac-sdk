@@ -8,27 +8,10 @@
   - [Creating an Instance of `Simulator`](#creating-an-instance-of-simulator)
   - [Core Functions](#core-functions)
     - [`simulateTACMessage`](#simulatetacmessage)
-      - [**Purpose**](#purpose)
-      - [**Parameters**](#parameters)
-      - [**Returns** `TACSimulationResult`](#returns-tacsimulationresult)
-      - [**Possible exceptions**](#possible-exceptions)
     - [`getTVMExecutorFeeInfo`](#gettvmexecutorfeeinfo)
-      - [**Purpose**](#purpose-1)
-      - [**Parameters**](#parameters-1)
-      - [**Returns** `SuggestedTONExecutorFee`](#returns-suggestedtonexecutorfee)
-      - [**Possible exceptions**](#possible-exceptions-1)
     - [`getTransactionSimulationInfo`](#gettransactionsimulationinfo)
-      - [**Purpose**](#purpose-2)
-      - [**Parameters**](#parameters-2)
-      - [**Returns** `ExecutionFeeEstimationResult`](#returns-executionfeeestimationresult)
     - [`getSimulationInfoForTransaction`](#getsimulationinfofortransaction)
-      - [**Purpose**](#purpose-3)
-      - [**Parameters**](#parameters-3)
-      - [**Returns** `ExecutionFeeEstimationResult`](#returns-executionfeeestimationresult-1)
     - [`simulateTransactions`](#simulatetransactions)
-      - [**Purpose**](#purpose-4)
-      - [**Parameters**](#parameters-4)
-      - [**Returns** `TACSimulationResult[]`](#returns-tacsimulationresult-1)
   - [Internal Methods](#internal-methods)
     - [`aggregateTokens`](#aggregatetokens)
   - [Example Usage](#example-usage)
@@ -70,7 +53,7 @@ Simulates a TAC message by sending the request to lite sequencer endpoints. This
 
 #### **Parameters**
 
-- **`req`**: A [`TACSimulationRequest`](./../models/structs.md#tacsimulationrequest-type) object containing:
+- **`req`**: A [`TACSimulationRequest`](./../models/structs.md#tacsimulationrequest) object containing:
   - **`tacCallParams`**: EVM call parameters including target, method name, and arguments
   - **`evmValidExecutors`** *(optional)*: Array of trusted EVM executor addresses (defaults to `config.TACParams.trustedTACExecutors` if omitted)
   - **`tvmValidExecutors`** *(optional)*: Array of trusted TVM executor addresses (defaults to `config.TACParams.trustedTONExecutors` if omitted)
@@ -80,7 +63,7 @@ Simulates a TAC message by sending the request to lite sequencer endpoints. This
   - **`tonAssets`**: Array of TON assets to be included in the simulation
   - **`tonCaller`**: TON caller address
 
-#### **Returns** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult-type)
+#### **Returns** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)
 
 Returns detailed simulation results including:
 - `simulationStatus`: Boolean indicating if simulation was successful
@@ -99,7 +82,7 @@ Returns detailed simulation results including:
 ### `getTVMExecutorFeeInfo`
 
 ```ts
-getTVMExecutorFeeInfo(assets: IAsset[], feeSymbol: string, tvmValidExecutors?: string[]): Promise<SuggestedTONExecutorFee>
+getTVMExecutorFeeInfo(assets: Asset[], feeSymbol: string, tvmValidExecutors?: string[]): Promise<SuggestedTONExecutorFee>
 ```
 
 #### **Purpose**
@@ -108,13 +91,13 @@ Calculates the suggested TON executor fee based on the provided assets and fee s
 
 #### **Parameters**
 
-- **`assets`**: Array of [`IAsset`](./assets.md#iasset-interface) objects representing the assets to be processed
+- **`assets`**: Array of [`Asset`](./assets.md#asset-interface) objects representing the assets to be processed
 - **`feeSymbol`**: String representing the fee symbol (e.g., "TON", "TAC")
 - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation. Defaults to `config.TACParams.trustedTONExecutors` if omitted.
 
 Note: The TON executor fee is determined as max(rollback_message, normal_execution) to account for the worst-case path.
 
-#### **Returns** [`SuggestedTONExecutorFee`](./../models/structs.md#suggestedtonexecutorfee-type)
+#### **Returns** [`SuggestedTONExecutorFee`](./../models/structs.md#suggestedtonexecutorfee)
 
 Returns an object containing:
 - `inTAC`: Suggested fee amount in TAC
@@ -131,8 +114,8 @@ Returns an object containing:
 ```ts
 getTransactionSimulationInfo(
   evmProxyMsg: EvmProxyMsg,
-  sender: ISender,
-  assets?: IAsset[]
+  sender: SenderAbstraction,
+  assets?: Asset[]
 ): Promise<ExecutionFeeEstimationResult>
 ```
 
@@ -143,10 +126,10 @@ Provides comprehensive simulation information for a cross-chain transaction, inc
 #### **Parameters**
 
 - **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
-- **`sender`**: An [`ISender`](./sender.md) instance representing the transaction sender
-- **`assets`** *(optional)*: Array of [`IAsset`](./assets.md#iasset-interface) objects to be included in the transaction
+- **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the transaction sender
+- **`assets`** *(optional)*: Array of [`Asset`](./assets.md#asset-interface) objects to be included in the transaction
 
-#### **Returns** [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult-type)
+#### **Returns** [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult)
 
 Returns detailed execution fee estimation including:
 - `feeParams`: Detailed fee parameters (protocol fee, executor fees, gas limit)
@@ -160,7 +143,7 @@ Returns detailed execution fee estimation including:
 getSimulationInfoForTransaction(
   evmProxyMsg: EvmProxyMsg,
   transactionLinker: TransactionLinker,
-  assets: IAsset[],
+  assets: Asset[],
   allowSimulationError?: boolean,
   isRoundTrip?: boolean,
   evmValidExecutors?: string[],
@@ -177,14 +160,14 @@ Gets simulation information for a specific transaction using a pre-defined trans
 
 - **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
 - **`transactionLinker`**: A [`TransactionLinker`](./../models/structs.md#transactionlinker-type) object for the transaction
-- **`assets`**: Array of [`IAsset`](./assets.md#iasset-interface) objects to be included
+- **`assets`**: Array of [`Asset`](./assets.md#asset-interface) objects to be included
 - **`allowSimulationError`** *(optional)*: Boolean to skip simulation (default: `false`)
 - **`isRoundTrip`** *(optional)*: Boolean indicating if this is a round-trip operation. If omitted, it is auto-detected as `assets.length !== 0`.
 - **`evmValidExecutors`** *(optional)*: Array of trusted EVM executor addresses
 - **`tvmValidExecutors`** *(optional)*: Array of trusted TVM executor addresses
 - **`calculateRollbackFee`** *(optional)*: Whether to include rollback path fee in estimation (default: `true`)
 
-#### **Returns** [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult-type)
+#### **Returns** [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult)
 
 Returns comprehensive execution fee estimation with simulation results.
 
@@ -193,7 +176,7 @@ Returns comprehensive execution fee estimation with simulation results.
 ### `simulateTransactions`
 
 ```ts
-simulateTransactions(sender: ISender, txs: CrosschainTx[]): Promise<TACSimulationResult[]>
+simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]>
 ```
 
 #### **Purpose**
@@ -202,13 +185,13 @@ Simulates multiple cross-chain transactions in batch, similar to how `sendCrossC
 
 #### **Parameters**
 
-- **`sender`**: An [`ISender`](./sender.md) instance representing the transaction sender
-- **`txs`**: An array of [`CrosschainTx`](./../models/structs.md#crosschaintx-type) objects, each containing:
+- **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the transaction sender
+- **`txs`**: An array of [`CrosschainTx`](./../models/structs.md#crosschaintx) objects, each containing:
   - **`evmProxyMsg`**: EVM proxy message defining the operation
   - **`assets`** *(optional)*: Array of assets to be included
   - **`options`** *(optional)*: Transaction options including executor settings
 
-#### **Returns** [`TACSimulationResult[]`](./../models/structs.md#tacsimulationresult-type)
+#### **Returns** [`TACSimulationResult[]`](./../models/structs.md#tacsimulationresult)
 
 Returns an array of simulation results, one for each transaction in the input array. Each result contains:
 - `simulationStatus`: Boolean indicating if simulation was successful
@@ -224,10 +207,10 @@ Returns an array of simulation results, one for each transaction in the input ar
 ### `aggregateTokens`
 
 ```ts
-private aggregateTokens(assets?: IAsset[]): Promise<{
-  jettons: IAsset[];
-  nfts: IAsset[];
-  ton?: IAsset; // native TON asset, if present
+private aggregateTokens(assets?: Asset[]): Promise<{
+  jettons: Asset[];
+  nfts: Asset[];
+  ton?: Asset; // native TON asset, if present
 }>
 ```
 

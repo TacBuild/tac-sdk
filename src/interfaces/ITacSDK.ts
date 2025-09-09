@@ -1,5 +1,6 @@
 import { Wallet } from 'ethers';
 
+import { FT, NFT } from '../assets';
 import type { SenderAbstraction } from '../sender';
 import {
     AssetFromFTArg,
@@ -21,10 +22,9 @@ import {
     UserWalletBalanceExtended,
     WaitOptions,
 } from '../structs/Struct';
-import { IConfiguration } from './IConfiguration';
-import { Asset } from './Asset';
-import { FT, NFT } from '../assets';
 import { JettonMasterData } from '../wrappers/JettonMaster';
+import { Asset } from './Asset';
+import { IConfiguration } from './IConfiguration';
 
 export interface ITacSDK {
     readonly config: IConfiguration;
@@ -61,7 +61,7 @@ export interface ITacSDK {
      * Creates a typed asset wrapper instance based on provided arguments.
      * Pass FT, NFT collection or NFT item parameters; the returned type will match the input.
      * @param args Parameters that describe the asset to wrap (FT/NFT collection/NFT item).
-     * @returns Promise resolving to a generic IAsset. Use overloads for stronger typing.
+     * @returns Promise resolving to a generic Asset. Use overloads for stronger typing.
      */
     getAsset(args: AssetFromFTArg | AssetFromNFTCollectionArg | AssetFromNFTItemArg): Promise<Asset>;
     getAsset(args: AssetFromFTArg): Promise<FT>;

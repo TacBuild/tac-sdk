@@ -1,11 +1,11 @@
 import { Address, beginCell, Cell } from '@ton/ton';
 
 import { insufficientBalanceError } from '../errors';
+import { Asset, IConfiguration } from '../interfaces';
 import { TON_SYMBOL } from '../sdk/Consts';
 import { calculateRawAmount, generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import type { SenderAbstraction } from '../sender';
 import type { ShardTransaction } from '../structs/InternalStruct';
-import { Asset, IConfiguration } from '../interfaces';
 import { AssetType, FeeParams } from '../structs/Struct';
 
 export class TON implements Asset {

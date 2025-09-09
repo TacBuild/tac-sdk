@@ -1,9 +1,9 @@
 import { fromNano, internal, MessageRelaxed, SendMode } from '@ton/ton';
 
 import { noValidGroupFoundError, prepareMessageGroupError } from '../errors/instances';
+import type { Asset, ContractOpener, SenderAbstraction } from '../interfaces';
 import { MAX_EXT_MSG_SIZE, MAX_HIGHLOAD_GROUP_MSG_NUM, MAX_MSG_DEPTH } from '../sdk/Consts';
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
-import type { Asset, ContractOpener, SenderAbstraction } from '../interfaces';
 import { Network } from '../structs/Struct';
 import { HighloadWalletV3 } from '../wrappers/HighloadWalletV3';
 

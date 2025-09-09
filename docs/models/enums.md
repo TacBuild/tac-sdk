@@ -15,6 +15,20 @@ import { Network } from '@tonappchain/sdk';
 const currentNetwork = Network.TESTNET;
 ```
 
+## `BlockchainType`
+
+Identifies the blockchain network type used in cross-chain operations.
+
+- **`TAC = 'TAC'`**: The TAC (EVM-compatible) blockchain network.
+- **`TON = 'TON'`**: The TON blockchain network.
+
+```ts
+export enum BlockchainType {
+    TAC = 'TAC',
+    TON = 'TON',
+}
+```
+
 ## `SimplifiedStatuses`
 
 High-level statuses for cross-chain operations, typically returned by `OperationTracker.getSimplifiedOperationStatus`.
@@ -80,7 +94,7 @@ function checkTacExecution(stages: ExecutionStages) {
 }
 ``` 
 
-### `TokenSymbol`
+## `TokenSymbol`
 
 ```ts
 export enum TokenSymbol {
@@ -98,7 +112,7 @@ Enumeration of supported token symbols.
   Represents the native token on the TON network.
 
 
-## ``AssetType``
+## `AssetType`
 
 ```ts
 export enum AssetType {
@@ -114,7 +128,7 @@ Enumeration of supported asset types.
 - **`FT`**:
   Represents a fungible token (FT).
 
-## ``NFTAddressType``
+## `NFTAddressType`
 ```ts
 export enum NFTAddressType {
     ITEM = 'ITEM',
@@ -122,7 +136,7 @@ export enum NFTAddressType {
 }
 ```
 
-Identifies the type of a contract address belongs to.
+Identifies the type of contract address.
 
 - **`ITEM`**:
   Represents an NFT item contract.

@@ -4,11 +4,11 @@ import { NFTCollection, NFTItem } from '@tonappchain/artifacts/dist/src/ton/wrap
 import { isAddress as isEthereumAddress } from 'ethers';
 
 import { ContractError, emptyContractError, insufficientBalanceError } from '../errors';
+import { Asset, ContractOpener,IConfiguration } from '../interfaces';
 import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import { generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { Asset, IConfiguration, ContractOpener } from '../interfaces';
 import {
     AssetType,
     EVMAddress,

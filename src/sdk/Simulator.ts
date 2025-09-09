@@ -1,11 +1,11 @@
 import { Address, toNano } from '@ton/ton';
 
 import { simulationError } from '../errors';
+import { Asset, IConfiguration, ILogger, ISimulator } from '../interfaces';
+import { IHttpClient } from '../interfaces';
 import type { SenderAbstraction } from '../sender';
 import { SuggestedTONExecutorFeeResponse, TACSimulationResponse } from '../structs/InternalStruct';
-import { IConfiguration, ILogger, ISimulator } from '../interfaces';
 import {
-    Asset,
     CrosschainTx,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
@@ -15,6 +15,7 @@ import {
     TACSimulationResult,
     TransactionLinker,
 } from '../structs/Struct';
+import { AxiosHttpClient } from './AxiosHttpClient';
 import { NoopLogger } from './Logger';
 import {
     aggregateTokens,
@@ -24,8 +25,6 @@ import {
     toCamelCaseTransformer,
 } from './Utils';
 import { Validator } from './Validator';
-import { IHttpClient } from '../interfaces';
-import { AxiosHttpClient } from './AxiosHttpClient';
 
 export class Simulator implements ISimulator {
     private readonly config: IConfiguration;

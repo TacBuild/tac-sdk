@@ -1,10 +1,10 @@
 import { fromNano, internal } from '@ton/ton';
 import { MessageRelaxed, SendMode } from '@ton/ton';
 
-import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import type { Asset, ContractOpener } from '../interfaces';
-import { Network } from '../structs/Struct';
 import { SenderAbstraction, WalletInstanse } from '../interfaces';
+import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
+import { Network } from '../structs/Struct';
 
 export class RawSender implements SenderAbstraction {
     constructor(

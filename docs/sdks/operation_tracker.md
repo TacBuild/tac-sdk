@@ -21,7 +21,6 @@
     - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
   - [Detailed Operation Info](#detailed-operation-info)
     - [`getOperationStatus`](#getoperationstatus)
-  - [**Note:** This method internally calls `getOperationStatuses` with a single operation ID and extracts the result.](#note-this-method-internally-calls-getoperationstatuses-with-a-single-operation-id-and-extracts-the-result)
     - [`getOperationStatuses`](#getoperationstatuses)
   - [Execution Profiling](#execution-profiling)
     - [`getStageProfiling`](#getstageprofiling)
@@ -371,4 +370,4 @@ Maps TON shard keys (with caller address) to operation IDs. Processes requests i
 - `waitOptions` *(optional)*: Wait configuration for automatic retrying
 - `chunkSize` *(optional)*: Number of items to process per request (default: 100)
 
-**Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey)
+**Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey-type)

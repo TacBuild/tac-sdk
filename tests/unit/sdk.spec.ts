@@ -7,8 +7,8 @@ import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
 import { Asset, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
-import { sandboxOpener } from '../../src/adapters/contractOpener';
 import { TON } from '../../src';
+import { sandboxOpener } from '../../src/adapters/contractOpener';
 
 describe('TacSDK', () => {
     const {

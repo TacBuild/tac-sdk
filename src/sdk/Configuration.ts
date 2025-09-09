@@ -3,8 +3,8 @@ import { mainnet, testnet } from '@tonappchain/artifacts';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
 import { createDefaultRetryableOpener } from '../adapters/retryableContractOpener';
-import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
 import { IConfiguration } from '../interfaces';
+import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
 import { Network, TACParams, TONParams } from '../structs/Struct';
 import { Settings } from '../wrappers/Settings';
 import { Validator } from './Validator';

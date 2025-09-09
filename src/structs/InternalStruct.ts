@@ -2,8 +2,9 @@ import { Cell } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { AbstractProvider, ethers } from 'ethers';
 
+import { ContractOpener } from '../interfaces';
 import {
-    ContractOpener,
+    CurrencyType,
     ExecutionStagesByOperationId,
     Network,
     OperationIdsByShardsKey,
@@ -11,7 +12,6 @@ import {
     StatusInfosByOperationId,
     SuggestedTONExecutorFee,
     TACSimulationResult,
-    CurrencyType,
 } from './Struct';
 
 export type ShardMessage = {
@@ -118,18 +118,15 @@ export type TxFinalizerConfig = {
     authorization: { header: string; value: string };
 };
 
-export type TokenPriceInfoRaw = {
+export type USDPriceInfoRaw = {
     spot: string;
     ema: string;
 };
 export type ConvertedCurrencyRawResult = {
-    spotRawValue: string;
-    spotFriendlyValue: string;
+    spotValue: string;
     emaValue: string;
-    emaFriendlyValue: string;
-    spotValueInUSD: string;
-    emaValueInUSD: string;
-    currencyType: CurrencyType;
-    tacPrice: TokenPriceInfoRaw;
-    tonPrice: TokenPriceInfoRaw;
+    decimals: number;
+    currency: CurrencyType;
+    tacPrice: USDPriceInfoRaw;
+    tonPrice: USDPriceInfoRaw;
 };

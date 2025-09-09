@@ -88,7 +88,7 @@ getOperationIdsByShardsKeys(
 
 Maps TON shard keys (with caller address) to operation IDs. Handles request chunking automatically.
 
-**Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey)
+**Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey-type)
 
 ---
 
