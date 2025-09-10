@@ -3,8 +3,8 @@ import { AbiCoder, ethers } from 'ethers';
 
 import { FT, NFT, TON } from '../assets';
 import { invalidMethodNameError } from '../errors';
-import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import { Asset } from '../interfaces';
+import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import { AssetType, EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors, WaitOptions } from '../structs/Struct';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
 

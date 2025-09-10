@@ -10,7 +10,7 @@
     - [`RawSender`](#rawsender)
     - [`BatchSender`](#batchsender)
   - [Supported Wallet Versions](#supported-wallet-versions)
-  - [ISender Interface](#isender-interface)
+  - [SenderAbstraction Interface](#senderabstraction-interface)
   - [Errors](#errors)
 
 ---
@@ -18,7 +18,7 @@
 ## Overview
 
 Senders are responsible for signing and broadcasting TON-side transactions.  
-The SDK abstracts this logic via the `ISender` interface.  
+The SDK abstracts this logic via the `SenderAbstraction` interface.
 Senders are obtained through `SenderFactory.getSender(...)`.
 
 ---
@@ -38,10 +38,10 @@ SenderFactory.getSender(
         };
       }
     | { tonConnect: TonConnectUI }
-): Promise<ISender>
+): Promise<SenderAbstraction>
 ```
 
-Returns a `ISender` based on the provided configuration:
+Returns a `SenderAbstraction` based on the provided configuration:
 
 - If `tonConnect` is provided → returns `TonConnectSender`
 - If `mnemonic`, `network`, and `version` are provided → returns `RawSender` or `BatchSender`
@@ -66,7 +66,7 @@ const sender = await SenderFactory.getSender({
 });
 ```
 
-**Returns:** `Promise<TonConnectSender extends ISender>`
+**Returns:** `Promise<TonConnectSender extends SenderAbstraction>`
 
 **Methods:**
 - `sendShardTransaction`: Sends a single shard transaction
@@ -97,7 +97,7 @@ const sender = await SenderFactory.getSender({
 
 ```
 
-**Returns:** `Promise<RawSender extends ISender>`
+**Returns:** `Promise<RawSender extends SenderAbstraction>`
 
 **Methods:**
 - `sendShardTransaction`: Sends a single shard transaction
@@ -137,7 +137,7 @@ const sender = await SenderFactory.getSender({
 });
 ```
 
-**Returns:** `Promise<BatchSender extends ISender>`
+**Returns:** `Promise<BatchSender extends SenderAbstraction>`
 
 **Methods:**
 - `sendShardTransaction`: Sends a single shard transaction
@@ -167,27 +167,27 @@ These versions are supported in `RawSender` and `BatchSender` configuration:
 
 ---
 
-## ISender Interface
+## SenderAbstraction Interface
 
-All senders implement the `ISender` interface:
+All senders implement the `SenderAbstraction` interface:
 
 ```ts
-interface ISender {
+interface SenderAbstraction {
   sendShardTransaction(
     shardTransaction: ShardTransaction,
     chain?: Network,
-    contractOpener?: IContractOpener
+    contractOpener?: ContractOpener
   ): Promise<SendResult>;
   
   sendShardTransactions(
     shardTransactions: ShardTransaction[],
     chain?: Network,
-    contractOpener?: IContractOpener
+    contractOpener?: ContractOpener
   ): Promise<SendResult[]>;
   
   getSenderAddress(): string;
-  getBalance(contractOpener: IContractOpener): Promise<bigint>;
-  getBalanceOf(asset: IAsset): Promise<bigint>;
+  getBalance(contractOpener: ContractOpener): Promise<bigint>;
+  getBalanceOf(asset: Asset): Promise<bigint>;
 }
 ```
 

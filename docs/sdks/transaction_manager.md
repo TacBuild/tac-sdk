@@ -8,18 +8,8 @@
   - [Creating an Instance of `TransactionManager`](#creating-an-instance-of-transactionmanager)
   - [Core Functions](#core-functions)
     - [`sendCrossChainTransaction`](#sendcrosschaintransaction)
-      - [**Purpose**](#purpose)
-      - [**Parameters**](#parameters)
-      - [**Returns** `TransactionLinkerWithOperationId`](#returns-transactionlinkerwithoperationid)
-      - [**Possible exceptions**](#possible-exceptions)
     - [`sendCrossChainTransactions`](#sendcrosschaintransactions)
-      - [**Purpose**](#purpose-1)
-      - [**Parameters**](#parameters-1)
-      - [**Returns** `Promise<TransactionLinkerWithOperationId[]>`](#returns-promisetransactionlinkerwithoperationid)
     - [`bridgeTokensToTON`](#bridgetokenstoton)
-      - [**Purpose**](#purpose-2)
-      - [**Parameters**](#parameters-2)
-      - [**Returns** `Promise<string>`](#returns-promisestring)
   - [Example Usage](#example-usage)
     - [Integration with Other Components](#integration-with-other-components)
 
@@ -77,8 +67,8 @@ Creates a TransactionManager instance with the required dependencies.
 ```ts
 sendCrossChainTransaction(
   evmProxyMsg: EvmProxyMsg,
-  sender: ISender,
-  assets?: IAsset[],
+  sender: SenderAbstraction,
+  assets?: Asset[],
   options?: CrossChainTransactionOptions,
   waitOptions?: WaitOptions<string>
 ): Promise<TransactionLinkerWithOperationId>
@@ -91,9 +81,9 @@ Sends a single cross-chain transaction from TON to TAC. This method prepares the
 #### **Parameters**
 
 - **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
-- **`sender`**: An [`ISender`](./sender.md) instance representing the transaction sender
-- **`assets`** *(optional)*: Array of `IAsset` objects to be included
-- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions-type) for transaction customization
+- **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the transaction sender
+- **`assets`** *(optional)*: Array of `Asset` objects to be included
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) for transaction customization
 - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for operation tracking
 
 Notes:
@@ -119,7 +109,7 @@ Returns an object containing:
 
 ```ts
 sendCrossChainTransactions(
-  sender: ISender,
+  sender: SenderAbstraction,
   txs: CrosschainTx[],
   waitOptions?: WaitOptions<OperationIdsByShardsKey>
 ): Promise<TransactionLinkerWithOperationId[]>
@@ -131,8 +121,8 @@ Sends multiple cross-chain transactions in a batch. This method is useful for sc
 
 #### **Parameters**
 
-- **`sender`**: An [`ISender`](./sender.md) instance representing the transaction sender
-- **`txs`**: Array of [`CrosschainTx`](./../models/structs.md#crosschaintx-type) objects, each defining a single cross-chain transaction
+- **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the transaction sender
+- **`txs`**: Array of [`CrosschainTx`](./../models/structs.md#crosschaintx) objects, each defining a single cross-chain transaction
 - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for operation tracking
 
 #### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
@@ -148,7 +138,7 @@ bridgeTokensToTON(
   signer: Wallet,
   value: bigint,
   tonTarget: string,
-  assets?: IAsset[],
+  assets?: Asset[],
   tvmExecutorFee?: bigint,
   tvmValidExecutors?: string[]
 ): Promise<string>
@@ -163,7 +153,7 @@ Bridges tokens from TAC to TON by sending a message to the TAC cross-chain layer
 - **`signer`**: An ethers `Wallet` instance for signing the transaction
 - **`value`**: Amount of native TAC tokens to send with the transaction
 - **`tonTarget`**: Target address on TON network
-- **`assets`** *(optional)*: Array of [`IAsset`](./assets.md#iasset-interface) objects to bridge
+- **`assets`** *(optional)*: Array of [`Asset`](./assets.md#asset-interface) objects to bridge
 - **`tvmExecutorFee`** *(optional)*: Custom TVM executor fee (if not provided, will be calculated)
 - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
 

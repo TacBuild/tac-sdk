@@ -2,11 +2,10 @@ import { Cell } from '@ton/ton';
 import { Wallet } from 'ethers';
 
 import { AssetFactory, FT, NFT, TON } from '../assets';
+import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator, ITransactionManager } from '../interfaces';
 import type { SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
-import { IConfiguration, ILogger, IOperationTracker, ISimulator, ITransactionManager } from '../interfaces';
 import {
-    Asset,
     AssetType,
     CrossChainTransactionOptions,
     CrosschainTx,

@@ -15,8 +15,8 @@ import {
 } from '@ton/ton';
 import { sign } from 'ton-crypto';
 
-import { HighloadQueryId } from './HighloadQueryId';
 import { WalletInstanse } from '../interfaces';
+import { HighloadQueryId } from './HighloadQueryId';
 
 export enum OP {
     InternalTransfer = 0xae42e5a4,

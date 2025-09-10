@@ -1,7 +1,7 @@
 import { mainnet, testnet } from '@tonappchain/artifacts';
 
 import { allEndpointsFailedError } from '../errors';
-import { ILogger, IOperationTracker, ILiteSequencerClientFactory, ILiteSequencerClient } from '../interfaces';
+import { ILiteSequencerClient, ILiteSequencerClientFactory, ILogger, IOperationTracker } from '../interfaces';
 import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,

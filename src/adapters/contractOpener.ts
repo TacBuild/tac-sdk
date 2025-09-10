@@ -4,8 +4,8 @@ import { TonClient, TonClient4 } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
-import { Network } from '../structs/Struct';
 import { ContractOpener } from '../interfaces';
+import { Network } from '../structs/Struct';
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
 

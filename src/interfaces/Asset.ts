@@ -1,4 +1,5 @@
 import type { Cell } from '@ton/ton';
+
 import { AssetType, FeeParams } from '../structs/Struct';
 
 export interface Asset {
@@ -15,14 +16,14 @@ export interface Asset {
      * Use { rawAmount } for base units (e.g., nano units), or { amount } for human-readable units if supported by the implementation.
      * Does not mutate the current asset instance.
      * @param amount Object specifying either rawAmount (bigint base units) or amount (number in human units).
-     * @returns Promise that resolves to a new IAsset reflecting the requested amount.
+     * @returns Promise that resolves to a new Asset reflecting the requested amount.
      */
     withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
     /**
      * Increases the transfer amount by the specified value and returns a new asset instance.
      * Does not mutate the current asset instance.
      * @param amount Object specifying either rawAmount (bigint base units) or amount (number in human units).
-     * @returns Promise that resolves to a new IAsset with the increased amount.
+     * @returns Promise that resolves to a new Asset with the increased amount.
      */
     addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
     /**

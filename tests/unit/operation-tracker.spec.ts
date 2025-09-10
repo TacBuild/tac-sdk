@@ -4,8 +4,12 @@ import { ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } f
 import {
     AssetType,
     BlockchainType,
+    ConvertCurrencyParams,
+    ConvertedCurrencyResult,
+    CurrencyType,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    ILogger,
     Network,
     OperationIdsByShardsKey,
     OperationType,
@@ -16,10 +20,6 @@ import {
     TokenSymbol,
     TransactionLinker,
     WaitOptions,
-    ILogger,
-    ConvertCurrencyParams,
-    ConvertedCurrencyResult,
-    CurrencyType,
 } from '../../src';
 
 // Mock implementations
@@ -441,17 +441,14 @@ describe('OperationTracker', () => {
     describe('convertCurrency', () => {
         it('should successfully convert currency using first client', async () => {
             const params: ConvertCurrencyParams = {
-                rawValue: 123n,
-                currencyType: CurrencyType.TON,
+                value: 123n,
+                currency: CurrencyType.TON,
             };
             const expected: ConvertedCurrencyResult = {
-                spotRawValue: 100n,
-                spotFriendlyValue: '0.000000100',
+                spotValue: 100n,
                 emaValue: 200n,
-                emaFriendlyValue: '0.000000200',
-                spotValueInUSD: 0.01,
-                emaValueInUSD: 0.02,
-                currencyType: CurrencyType.TON,
+                decimals: 9,
+                currency: CurrencyType.TON,
                 tacPrice: { spot: 1n, ema: 2n },
                 tonPrice: { spot: 3n, ema: 4n },
             } as unknown as ConvertedCurrencyResult;
@@ -470,17 +467,14 @@ describe('OperationTracker', () => {
 
         it('should retry on second client if first fails', async () => {
             const params: ConvertCurrencyParams = {
-                rawValue: 999n,
-                currencyType: CurrencyType.TAC,
+                value: 999n,
+                currency: CurrencyType.TAC,
             };
             const expected = {
-                spotRawValue: 1n,
-                spotFriendlyValue: '1',
+                spotValue: 1n,
                 emaValue: 2n,
-                emaFriendlyValue: '2',
-                spotValueInUSD: 0.1,
-                emaValueInUSD: 0.2,
-                currencyType: CurrencyType.TAC,
+                decimals: 18,
+                currency: CurrencyType.TAC,
                 tacPrice: { spot: 10n, ema: 11n },
                 tonPrice: { spot: 12n, ema: 13n },
             } as unknown as ConvertedCurrencyResult;
@@ -498,8 +492,8 @@ describe('OperationTracker', () => {
 
         it('should throw error if all endpoints fail', async () => {
             const params: ConvertCurrencyParams = {
-                rawValue: 1n,
-                currencyType: CurrencyType.TON,
+                value: 1n,
+                currency: CurrencyType.TON,
             };
             const error = new Error('Network error');
 
@@ -512,17 +506,14 @@ describe('OperationTracker', () => {
 
         it('should support waitOptions and still return result', async () => {
             const params: ConvertCurrencyParams = {
-                rawValue: 123n,
-                currencyType: CurrencyType.TON,
+                value: 123n,
+                currency: CurrencyType.TON,
             };
             const expected = {
-                spotRawValue: 7n,
-                spotFriendlyValue: '7',
+                spotValue: 7n,
                 emaValue: 8n,
-                emaFriendlyValue: '8',
-                spotValueInUSD: 0.7,
-                emaValueInUSD: 0.8,
-                currencyType: CurrencyType.TON,
+                decimals: 9,
+                currency: CurrencyType.TON,
                 tacPrice: { spot: 9n, ema: 10n },
                 tonPrice: { spot: 11n, ema: 12n },
             } as unknown as ConvertedCurrencyResult;

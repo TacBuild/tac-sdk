@@ -1,9 +1,12 @@
 import { Wallet } from 'ethers';
 
-import { AssetFactory, FT, TON, NFT } from '../assets';
+import { AssetFactory, FT, NFT, TON } from '../assets';
+import { Asset, IConfiguration, ILogger, ISimulator, ITacSDK, ITransactionManager } from '../interfaces';
 import type { SenderAbstraction } from '../sender';
 import {
-    Asset,
+    AssetFromFTArg,
+    AssetFromNFTCollectionArg,
+    AssetFromNFTItemArg,
     AssetType,
     CrossChainTransactionOptions,
     CrosschainTx,
@@ -22,18 +25,14 @@ import {
     TVMAddress,
     UserWalletBalanceExtended,
     WaitOptions,
-    AssetFromFTArg,
-    AssetFromNFTCollectionArg,
-    AssetFromNFTItemArg,
 } from '../structs/Struct';
+import { JettonMasterData } from '../wrappers/JettonMaster';
 import { Configuration } from './Configuration';
 import { DEFAULT_DELAY } from './Consts';
 import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
 import { TransactionManager } from './TransactionManager';
-import { IConfiguration, ILogger, ISimulator, ITacSDK, ITransactionManager } from '../interfaces';
-import { JettonMasterData } from '../wrappers/JettonMaster';
 
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;

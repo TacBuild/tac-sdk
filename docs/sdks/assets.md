@@ -5,7 +5,7 @@
 - [Assets Module](#assets-module)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
-  - [IAsset Interface](#iasset-interface)
+  - [Asset Interface](#asset-interface)
   - [AssetFactory Class](#assetfactory-class)
     - [Static Methods](#static-methods)
       - [`from`](#from)
@@ -24,29 +24,29 @@
       - [`getBalanceOf`](#getbalanceof)
       - [`generatePayload`](#generatepayload)
   - [NFT Class](#nft-class)
-    - [Creating Instances](#creating-instances-1)
-    - [Static Methods](#static-methods-1)
+    - [Creating Instances](#creating-instances)
+    - [Static Methods](#static-methods)
       - [`getItemData`](#getitemdata)
       - [`getCollectionData`](#getcollectiondata)
-      - [`getOrigin`](#getorigin-1)
-      - [`getTVMAddress`](#gettvmaddress-1)
+      - [`getOrigin`](#getorigin)
+      - [`getTVMAddress`](#gettvmaddress)
       - [`getItemAddress`](#getitemaddress)
     - [Instance Methods](#instance-methods)
-      - [`getItemData`](#getitemdata-1)
-      - [`getCollectionData`](#getcollectiondata-1)
-      - [`getUserBalance`](#getuserbalance-1)
+      - [`getItemData`](#getitemdata)
+      - [`getCollectionData`](#getcollectiondata)
+      - [`getUserBalance`](#getuserbalance)
       - [`isOwnedBy`](#isownedby)
-      - [`checkCanBeTransferredBy`](#checkcanbetransferredby-1)
-      - [`getBalanceOf`](#getbalanceof-1)
-      - [`generatePayload`](#generatepayload-1)
+      - [`checkCanBeTransferredBy`](#checkcanbetransferredby)
+      - [`getBalanceOf`](#getbalanceof)
+      - [`generatePayload`](#generatepayload)
   - [TON Class](#ton-class)
-    - [Creating Instances](#creating-instances-2)
-    - [Core Methods](#core-methods-1)
-      - [`generatePayload`](#generatepayload-2)
-      - [`getUserBalance`](#getuserbalance-2)
-      - [`checkCanBeTransferredBy`](#checkcanbetransferredby-2)
-      - [`getBalanceOf`](#getbalanceof-2)
-      - [`checkBalance`](#checkbalance-1)
+    - [Creating Instances](#creating-instances)
+    - [Core Methods](#core-methods)
+      - [`generatePayload`](#generatepayload)
+      - [`getUserBalance`](#getuserbalance)
+      - [`checkCanBeTransferredBy`](#checkcanbetransferredby)
+      - [`getBalanceOf`](#getbalanceof)
+      - [`checkBalance`](#checkbalance)
   - [Example Usage](#example-usage)
     - [Integration with TransactionManager](#integration-with-transactionmanager)
 
@@ -56,20 +56,20 @@
 
 The assets module provides implementations for different types of assets in the TAC–TON cross-chain ecosystem. It includes classes for native TON coins, Jettons (fungible tokens), NFTs (non-fungible tokens), and utility functions for asset management.
 
-All asset classes implement the `IAsset` interface, providing a consistent API across different types.
+All asset classes implement the `Asset` interface, providing a consistent API across different types.
 
 ---
 
-## IAsset Interface
+## Asset Interface
 
 ```ts
-interface IAsset {
+interface Asset {
   address: string;
   type: AssetType;
   rawAmount: bigint;
-  clone: IAsset;
-  withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<IAsset>;
-  addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<IAsset>;
+  clone: Asset;
+  withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
+  addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
   getEVMAddress(): Promise<string>;
   getTVMAddress(): Promise<string>;
   generatePayload(params: {
@@ -84,7 +84,7 @@ interface IAsset {
 }
 ```
 
-The `IAsset` interface defines the contract for all token implementations in the SDK.
+The `Asset` interface defines the contract for all token implementations in the SDK.
 
 **Properties:**
 - `address`: Token address on the respective blockchain
@@ -115,7 +115,7 @@ The `IAsset` interface defines the contract for all token implementations in the
 static from(
   configuration: IConfiguration,
   token: AssetFromFTArg | AssetFromNFTItemArg | AssetFromNFTCollectionArg
-): Promise<IAsset>
+): Promise<Asset>
 ```
 
 Creates an asset instance from the given parameters. This method handles address conversion between EVM and TVM addresses and creates the appropriate asset type.
@@ -124,13 +124,13 @@ Creates an asset instance from the given parameters. This method handles address
 - `configuration`: SDK configuration
 - `token`: Asset configuration object. For NFTs, specify `addressType` (ITEM or COLLECTION). When using `COLLECTION`, `index` is required. For native TON, use `TON.create(config)` or pass `address: configuration.nativeTONAddress` with `tokenType: AssetType.FT`.
 
-**Returns:** Promise resolving to an `IAsset` instance
+**Returns:** Promise resolving to an `Asset` instance
 
 ---
 
 ## FT Class
 
-`FT` represents fungible tokens (Jettons) on the TON network. It implements the `IAsset` interface and provides methods for fungible token-specific operations.
+`FT` represents fungible tokens (Jettons) on the TON network. It implements the `Asset` interface and provides methods for fungible token-specific operations.
 
 ### Creating Instances
 
@@ -325,7 +325,7 @@ Generates the payload for cross-chain operations involving this Jetton using the
 
 ## NFT Class
 
-`NFT` represents non-fungible tokens on the TON network. It implements the `IAsset` interface and provides methods for NFT-specific operations.
+`NFT` represents non-fungible tokens on the TON network. It implements the `Asset` interface and provides methods for NFT-specific operations.
 
 ### Creating Instances
 
@@ -353,7 +353,7 @@ NFT.fromCollection(
 #### `getItemData`
 
 ```ts
-static getItemData(contractOpener: IContractOpener, address: string)
+static getItemData(contractOpener: ContractOpener, address: string)
 ```
 
 Retrieves NFT item data from the contract at the given address.
@@ -363,7 +363,7 @@ Retrieves NFT item data from the contract at the given address.
 #### `getCollectionData`
 
 ```ts
-static getCollectionData(contractOpener: IContractOpener, address: string)
+static getCollectionData(contractOpener: ContractOpener, address: string)
 ```
 
 Retrieves NFT collection data from the contract at the given address.
@@ -403,7 +403,7 @@ Computes the TVM address for an NFT given its EVM address and optional token ID.
 
 ```ts
 static getItemAddress(
-  contractOpener: IContractOpener,
+  contractOpener: ContractOpener,
   collectionAddress: string,
   index: bigint
 ): Promise<string>
@@ -523,7 +523,7 @@ Generates the payload for cross-chain operations involving this NFT using the un
 
 ## TON Class
 
-`TON` represents the native TON coin. It implements the `IAsset` interface and provides methods for native TON operations.
+`TON` represents the native TON coin. It implements the `Asset` interface and provides methods for native TON operations.
 
 ### Creating Instances
 
@@ -612,7 +612,7 @@ Gets the balance of the token for the given user address.
 
 ```ts
 static checkBalance(
-  sender: ISender,
+  sender: SenderAbstraction,
   config: IConfiguration,
   transactions: ShardTransaction[]
 ): Promise<void>

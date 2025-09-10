@@ -1,4 +1,5 @@
 import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
+import { IHttpClient } from '../interfaces';
 import {
     ConvertCurrencyResponse,
     OperationIdsByShardsKeyResponse,
@@ -16,9 +17,8 @@ import {
     StatusInfosByOperationId,
     TransactionLinker,
 } from '../structs/Struct';
-import { toCamelCaseTransformer } from './Utils';
-import { IHttpClient } from '../interfaces';
 import { AxiosHttpClient } from './AxiosHttpClient';
+import { toCamelCaseTransformer } from './Utils';
 
 export class LiteSequencerClient {
     private readonly endpoint: string;
@@ -184,8 +184,8 @@ export class LiteSequencerClient {
     async convertCurrency(params: ConvertCurrencyParams): Promise<ConvertedCurrencyResult> {
         try {
             const payload = {
-                currencyType: params.currencyType,
-                rawValue: params.rawValue.toString(),
+                currency: params.currency,
+                value: params.value.toString(),
             } as const;
 
             const response = await this.httpClient.post<ConvertCurrencyResponse>(
@@ -199,13 +199,10 @@ export class LiteSequencerClient {
             const raw = response.data.response;
 
             return {
-                spotRawValue: BigInt(raw.spotRawValue),
-                spotFriendlyValue: raw.spotFriendlyValue,
+                decimals: raw.decimals,
+                spotValue: BigInt(raw.spotValue),
                 emaValue: BigInt(raw.emaValue),
-                emaFriendlyValue: raw.emaFriendlyValue,
-                spotValueInUSD: Number(raw.spotValueInUSD),
-                emaValueInUSD: Number(raw.emaValueInUSD),
-                currencyType: raw.currencyType,
+                currency: raw.currency,
                 tacPrice: {
                     spot: BigInt(raw.tacPrice.spot),
                     ema: BigInt(raw.tacPrice.ema),

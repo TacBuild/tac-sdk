@@ -1,7 +1,7 @@
 import type { Address, Cell } from '@ton/ton';
 import { AbstractProvider, Addressable } from 'ethers';
-import type { ILogger, ContractOpener, Asset } from '../interfaces';
-export type { ContractOpener, Asset } from '../interfaces';
+
+import type { Asset, ContractOpener, ILogger } from '../interfaces';
 
 export type ContractState = {
     balance: bigint;
@@ -419,23 +419,20 @@ export type AssetFromNFTItemArg = {
 };
 
 export type ConvertCurrencyParams = {
-    rawValue: bigint;
-    currencyType: CurrencyType;
+    value: bigint;
+    currency: CurrencyType;
 };
 
-export type TokenPriceInfo = {
+export type USDPriceInfo = {
     spot: bigint;
     ema: bigint;
 };
 
 export type ConvertedCurrencyResult = {
-    spotRawValue: bigint;
-    spotFriendlyValue: string;
+    spotValue: bigint;
     emaValue: bigint;
-    emaFriendlyValue: string;
-    spotValueInUSD: number;
-    emaValueInUSD: number;
-    currencyType: CurrencyType;
-    tacPrice: TokenPriceInfo;
-    tonPrice: TokenPriceInfo;
+    decimals: number;
+    currency: CurrencyType;
+    tacPrice: USDPriceInfo;
+    tonPrice: USDPriceInfo;
 };

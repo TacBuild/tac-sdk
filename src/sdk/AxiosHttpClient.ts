@@ -1,5 +1,6 @@
-import { IHttpClient } from '../interfaces';
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+
+import { IHttpClient } from '../interfaces';
 
 /**
  * Axios-based HTTP client that isolates SDK traffic from any global axios configuration.

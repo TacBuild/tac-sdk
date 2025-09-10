@@ -1,12 +1,12 @@
 import axios from 'axios';
 
+import { ILogger } from '../interfaces';
 import {
     AdjacentTransactionsResponse,
     ToncenterTransaction,
     TransactionDepth,
     TxFinalizerConfig,
 } from '../structs/InternalStruct';
-import { ILogger } from '../interfaces';
 import { NoopLogger } from './Logger';
 import { sleep, toCamelCaseTransformer } from './Utils';
 
