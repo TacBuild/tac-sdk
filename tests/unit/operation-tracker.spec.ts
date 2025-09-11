@@ -449,8 +449,8 @@ describe('OperationTracker', () => {
                 emaValue: 200n,
                 decimals: 9,
                 currency: CurrencyType.TON,
-                tacPrice: { spot: 1n, ema: 2n },
-                tonPrice: { spot: 3n, ema: 4n },
+                tacPrice: { spot: 1n, ema: 2n, decimals: 18 },
+                tonPrice: { spot: 3n, ema: 4n, decimals: 18 },
             } as unknown as ConvertedCurrencyResult;
 
             mockClients[0].convertCurrency.mockResolvedValue(expected);
@@ -475,8 +475,8 @@ describe('OperationTracker', () => {
                 emaValue: 2n,
                 decimals: 18,
                 currency: CurrencyType.TAC,
-                tacPrice: { spot: 10n, ema: 11n },
-                tonPrice: { spot: 12n, ema: 13n },
+                tacPrice: { spot: 10n, ema: 11n, decimals: 18 },
+                tonPrice: { spot: 12n, ema: 13n, decimals: 18 },
             } as unknown as ConvertedCurrencyResult;
 
             mockClients[0].convertCurrency.mockRejectedValue(new Error('Network error'));
@@ -514,8 +514,8 @@ describe('OperationTracker', () => {
                 emaValue: 8n,
                 decimals: 9,
                 currency: CurrencyType.TON,
-                tacPrice: { spot: 9n, ema: 10n },
-                tonPrice: { spot: 11n, ema: 12n },
+                tacPrice: { spot: 9n, ema: 10n, decimals: 18 },
+                tonPrice: { spot: 11n, ema: 12n, decimals: 18 },
             } as unknown as ConvertedCurrencyResult;
 
             mockClients[0].convertCurrency.mockResolvedValue(expected);

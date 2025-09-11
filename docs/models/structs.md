@@ -955,6 +955,7 @@ export type ConvertCurrencyParams = {
 export type USDPriceInfo = {
     spot: bigint;
     ema: bigint;
+    decimals: number;
 };
 
 export type ConvertedCurrencyResult = {
@@ -967,9 +968,19 @@ export type ConvertedCurrencyResult = {
 };
 ```
 
-- ConvertCurrencyParams: Input parameters to convert a raw bigint amount for the selected currency type.
-- USDPriceInfo: Price data in raw bigint units for both spot and EMA values.
-- ConvertedCurrencyResult: Contains spot and EMA values with decimal information and underlying price references for TAC and TON.
+- **ConvertCurrencyParams**: Input parameters to convert a raw bigint amount for the selected currency type.
+- **USDPriceInfo**: Contains USD price information for a token with proper decimal handling:
+  - **`spot`**: Current spot price in USD, represented as a bigint value multiplied by 10^decimals
+  - **`ema`**: Exponential Moving Average price in USD, represented as a bigint value multiplied by 10^decimals  
+  - **`decimals`**: Number of decimal places used in the price representation. Typically 18 for most tokens.
+  
+  **Price Format Example**: A price value of `3090143663312000000` with `decimals: 18` represents `3.090143663312` USD (the value divided by 10^18).
+
+- **ConvertedCurrencyResult**: Contains conversion results with detailed price information:
+  - **`spotValue`** & **`emaValue`**: Converted amounts using spot and EMA prices respectively
+  - **`decimals`**: Decimal places for the converted values
+  - **`currency`**: The currency type that was converted
+  - **`tacPrice`** & **`tonPrice`**: Reference USD price information for TAC and TON tokens used in the conversion calculation
 
 
 ### WaitOptions Defaults

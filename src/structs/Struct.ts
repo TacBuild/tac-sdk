@@ -426,6 +426,7 @@ export type ConvertCurrencyParams = {
 export type USDPriceInfo = {
     spot: bigint;
     ema: bigint;
+    decimals: number;
 };
 
 export type ConvertedCurrencyResult = {

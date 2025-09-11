@@ -206,10 +206,12 @@ export class LiteSequencerClient {
                 tacPrice: {
                     spot: BigInt(raw.tacPrice.spot),
                     ema: BigInt(raw.tacPrice.ema),
+                    decimals: raw.tacPrice.decimals,
                 },
                 tonPrice: {
                     spot: BigInt(raw.tonPrice.spot),
                     ema: BigInt(raw.tonPrice.ema),
+                    decimals: raw.tonPrice.decimals,
                 },
             };
         } catch (error) {
