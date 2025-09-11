@@ -121,6 +121,7 @@ export type TxFinalizerConfig = {
 export type USDPriceInfoRaw = {
     spot: string;
     ema: string;
+    decimals: number;
 };
 export type ConvertedCurrencyRawResult = {
     spotValue: string;
