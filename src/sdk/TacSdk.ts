@@ -33,7 +33,7 @@ import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
 import { TransactionManager } from './TransactionManager';
-
+import { AgnosticProxySDK } from '@tonappchain/agnostic-sdk';
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
     private readonly simulator: ISimulator;
@@ -74,6 +74,10 @@ export class TacSdk implements ITacSDK {
 
     get nativeTONAddress(): string {
         return this.config.nativeTONAddress;
+    }
+
+    get agnosticProxySDK(): AgnosticProxySDK {
+        return new AgnosticProxySDK("",this.config.TACParams.provider, "");
     }
 
     async nativeTACAddress(): Promise<string> {
