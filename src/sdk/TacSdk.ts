@@ -76,8 +76,12 @@ export class TacSdk implements ITacSDK {
         return this.config.nativeTONAddress;
     }
 
-    get agnosticProxySDK(): AgnosticProxySDK {
-        return new AgnosticProxySDK("",this.config.TACParams.provider, "");
+    getAgnosticProxySDK(agnosticProxyAddress: string, smartAccountFactoryAddress?: string): AgnosticProxySDK {
+        return new AgnosticProxySDK(smartAccountFactoryAddress ?? this.config.artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS, this.config.TACParams.provider, agnosticProxyAddress);
+    }
+
+    async getSmartAccountAddressForTvmWallet(tvmWallet: string, applicationAddress: string): Promise<string> {
+        return await this.config.TACParams.smartAccountFactory.getSmartAccountForApplication(tvmWallet, applicationAddress);
     }
 
     async nativeTACAddress(): Promise<string> {

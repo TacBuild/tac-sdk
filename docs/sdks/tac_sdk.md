@@ -26,6 +26,8 @@
     - [`getUserJettonBalance`](#getuserjettonbalance)
     - [`getUserJettonBalanceExtended`](#getuserjettonbalanceextended)
   - [Advanced](#advanced)
+    - [`getAgnosticProxySDK`](#getagnosticproxysdk)
+    - [`getSmartAccountAddressForTvmWallet`](#getsmartaccountaddressfortvmwallet)
     - [`simulateTACMessage`](#simulatetacmessage)
     - [`simulateTransactions`](#simulatetransactions)
     - [`getTVMExecutorFeeInfo`](#gettvmexecutorfeeinfo)
@@ -333,6 +335,22 @@ getUserJettonBalanceExtended(userAddress: string, tokenAddress: string): Promise
 ---
 
 ## Advanced
+
+### `getAgnosticProxySDK`
+
+```ts
+getAgnosticProxySDK(agnosticProxyAddress: string, smartAccountFactoryAddress?: string): AgnosticProxySDK
+```
+
+Get instance of Agnostic proxy SDK. See [Agnostic SDK docs](./agnostic_proxy_sdk.md) to get more information
+
+### `getSmartAccountAddressForTvmWallet`
+
+```ts
+getSmartAccountAddressForTvmWallet(tvmWallet: string, applicationAddress: string): Promise<string>
+```
+
+Get Smart Account address for specified TVM Wallet for specified application
 
 ### `simulateTACMessage`
 
