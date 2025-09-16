@@ -7,7 +7,6 @@ async function main() {
             contractOpener: await liteClientOpener({ network: Network.TESTNET }),
         },
     });
-
     const tokenAddress = 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK';
     const token1 = await sdk.getFT(tokenAddress);
     const token2 = await sdk.getAsset({

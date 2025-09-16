@@ -1,5 +1,6 @@
 import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers } from 'ethers';
+import { sha256_sync } from 'ton-crypto';
 
 import { FT, NFT, TON } from '../assets';
 import { invalidMethodNameError } from '../errors';
@@ -244,3 +245,11 @@ export async function aggregateTokens(assets?: Asset[]): Promise<{
         ton,
     };
 }
+
+export function sha256toBigInt(ContractName: string): bigint {
+    const hash = sha256_sync(ContractName);
+
+    return BigInt('0x' + hash.toString('hex'));
+}
+
+

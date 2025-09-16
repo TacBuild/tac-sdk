@@ -1,4 +1,4 @@
-import { Address } from '@ton/ton';
+import { Address, Dictionary } from '@ton/ton';
 import { mainnet, testnet } from '@tonappchain/artifacts';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
@@ -6,7 +6,8 @@ import { createDefaultRetryableOpener } from '../adapters/retryableContractOpene
 import { IConfiguration } from '../interfaces';
 import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
 import { Network, TACParams, TONParams } from '../structs/Struct';
-import { Settings } from '../wrappers/Settings';
+import { getAddressString, Settings } from '../wrappers/Settings';
+import { sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
 
 export class Configuration implements IConfiguration {
@@ -38,8 +39,10 @@ export class Configuration implements IConfiguration {
         customLiteSequencerEndpoints?: string[],
         delay?: number,
     ): Promise<Configuration> {
-        const internalTONParams = await this.prepareTONParams(artifacts, TONParams, delay);
-        const internalTACParams = await this.prepareTACParams(artifacts, TACParams);
+        const [internalTONParams, internalTACParams] = await Promise.all([
+            this.prepareTONParams(artifacts, TONParams, delay),
+            this.prepareTACParams(artifacts, TACParams),
+        ]);
 
         const liteSequencerEndpoints =
             customLiteSequencerEndpoints ??
@@ -57,15 +60,17 @@ export class Configuration implements IConfiguration {
     ): Promise<InternalTONParams> {
         const contractOpener = TONParams?.contractOpener ?? (await createDefaultRetryableOpener(artifacts, 3, delay));
         const settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
-        const settings = contractOpener.open(new Settings(Address.parse(settingsAddress)));
+        const settings = contractOpener.open(Settings.create(Address.parse(settingsAddress)));
+        const allSettingsSlice = (await settings.getAll()).beginParse();
+        const allSettings = allSettingsSlice.loadDictDirect(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
 
-        const jettonProxyAddress = await settings.getAddressSetting('JettonProxyAddress');
-        const crossChainLayerAddress = await settings.getAddressSetting('CrossChainLayerAddress');
-        const jettonMinterCode = await settings.getCellSetting('JettonMinterCode');
-        const jettonWalletCode = await settings.getCellSetting('JettonWalletCode');
-        const nftProxyAddress = await settings.getAddressSetting('NFTProxyAddress');
-        const nftItemCode = await settings.getCellSetting('NFTItemCode');
-        const nftCollectionCode = await settings.getCellSetting('NFTCollectionCode');
+        const crossChainLayerAddress = getAddressString(allSettings.get(sha256toBigInt('CrossChainLayerAddress')));
+        const jettonProxyAddress = getAddressString(allSettings.get(sha256toBigInt('JettonProxyAddress')));
+        const nftProxyAddress = getAddressString(allSettings.get(sha256toBigInt('NFTProxyAddress')));
+        const jettonWalletCode = allSettings.get(sha256toBigInt('JettonWalletCode'))!;
+        const jettonMinterCode = allSettings.get(sha256toBigInt('JettonMinterCode'))!;
+        const nftItemCode = allSettings.get(sha256toBigInt('NFTItemCode'))!;
+        const nftCollectionCode = allSettings.get(sha256toBigInt('NFTCollectionCode'))!;
 
         return {
             contractOpener,

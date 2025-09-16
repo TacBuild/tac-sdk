@@ -5,7 +5,42 @@ import { mainnet, testnet } from '@tonappchain/artifacts';
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
 import { ContractOpener } from '../interfaces';
+import { sleep } from '../sdk/Utils';
 import { Network } from '../structs/Struct';
+
+async function getHttpEndpointWithRetry(network: Network, maxRetries = 5, delay = 1000): Promise<string> {
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            return await getHttpEndpoint({ network });
+        } catch (error) {
+            lastError = error as Error;
+            if (attempt <= maxRetries) {
+                await sleep(delay);
+            }
+        }
+    }
+
+    throw lastError || new Error('Failed to get HTTP endpoint after retries');
+}
+
+async function getHttpV4EndpointWithRetry(network: Network, maxRetries = 5, delay = 1000): Promise<string> {
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            return await getHttpV4Endpoint({ network });
+        } catch (error) {
+            lastError = error as Error;
+            if (attempt <= maxRetries) {
+                await sleep(delay);
+            }
+        }
+    }
+
+    throw lastError || new Error('Failed to get HTTP V4 endpoint after retries');
+}
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
 
@@ -77,14 +112,12 @@ export function sandboxOpener(blockchain: Blockchain): ContractOpener {
 }
 
 export async function orbsOpener(network: Network): Promise<ContractOpener> {
-    const endpoint = await getHttpEndpoint({
-        network,
-    });
+    const endpoint = await getHttpEndpointWithRetry(network);
     return new TonClient({ endpoint });
 }
 
 export async function orbsOpener4(network: Network, timeout = 10000): Promise<ContractOpener> {
-    const endpoint = await getHttpV4Endpoint({ network });
+    const endpoint = await getHttpV4EndpointWithRetry(network);
     const client4 = new TonClient4({ endpoint, timeout });
     return {
         open: (contract) => client4.open(contract),

@@ -1,4 +1,4 @@
-import type { Cell, Contract, ContractProvider } from '@ton/ton';
+import { beginCell, Cell, Contract, ContractProvider } from '@ton/ton';
 import { Address } from '@ton/ton';
 import { ethers } from 'ethers';
 
@@ -41,4 +41,22 @@ export class Settings implements Contract {
         }
         return cell;
     }
+
+    async getAll(provider: ContractProvider): Promise<Cell> {
+        const { stack } = await provider.get('get_all', []);
+        return stack.readCellOpt() ?? beginCell().endCell();
+    }
+
+}
+
+export function getAddressString(cell?: Cell): string {
+    return cell?.beginParse().loadAddress().toString({bounceable: true, testOnly: false}) ?? '';
+}
+
+export function getNumber(len: number, cell?: Cell): number {
+    return cell?.beginParse().loadUint(len) ?? 0;
+}
+
+export function getString(cell?: Cell): string {
+    return cell?.beginParse().loadStringTail() ?? '';
 }

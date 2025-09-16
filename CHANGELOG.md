@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- Performance optimizations for SDK initialization: Significantly improved SDK creation speed by parallelizing blockchain queries and initialization steps.
 - Sender and adapter updates: refactored `BatchSender`/`RawSender`/`TonConnectSender`, `contractOpener` and `retryableContractOpener`.
 - Errors and structs: updated errors (errors/*), structs (structs/*), utilities (Utils.ts), operation tracker (OperationTracker), StartTracking.
 - Documentation: added/updated SDK pages (assets, logger, simulator, transaction_manager, utilities, etc.).
