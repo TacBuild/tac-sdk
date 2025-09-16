@@ -34,6 +34,7 @@ import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
 import { TransactionManager } from './TransactionManager';
 import { AgnosticProxySDK } from '@tonappchain/agnostic-sdk';
+import { getBouncedAddress } from './Utils';
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
     private readonly simulator: ISimulator;
@@ -81,7 +82,8 @@ export class TacSdk implements ITacSDK {
     }
 
     async getSmartAccountAddressForTvmWallet(tvmWallet: string, applicationAddress: string): Promise<string> {
-        return await this.config.TACParams.smartAccountFactory.getSmartAccountForApplication(tvmWallet, applicationAddress);
+        const bouncedAddress = getBouncedAddress(tvmWallet);
+        return await this.config.TACParams.smartAccountFactory.getSmartAccountForApplication(bouncedAddress, applicationAddress);
     }
 
     async nativeTACAddress(): Promise<string> {

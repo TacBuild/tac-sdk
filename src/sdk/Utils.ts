@@ -204,6 +204,12 @@ export function formatObjectForLogging(obj: unknown): string {
     return JSON.stringify(obj, (key, value) => (typeof value === 'bigint' ? value.toString() : value));
 }
 
+export function getBouncedAddress(tvmAddress: string): string {
+    return Address.parse(tvmAddress).toString({
+        bounceable: true,
+    });
+}
+
 export async function aggregateTokens(assets?: Asset[]): Promise<{
     jettons: FT[];
     nfts: NFT[];
