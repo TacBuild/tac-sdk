@@ -108,10 +108,13 @@ export class Configuration implements IConfiguration {
         const trustedTACExecutors = await settings.getTrustedEVMExecutors();
         const trustedTONExecutors = await settings.getTrustedTVMExecutors();
 
+        const smartAccountFactory = artifacts.tac.wrappers.TacSAFactory_factoryTAC.connect(artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS, provider);
+
         return {
             provider,
             settings,
             tokenUtils,
+            smartAccountFactory,
             crossChainLayer,
             trustedTACExecutors,
             trustedTONExecutors,

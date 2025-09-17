@@ -33,7 +33,8 @@ import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
 import { TransactionManager } from './TransactionManager';
-
+import { AgnosticProxySDK } from '@tonappchain/agnostic-sdk';
+import { getBouncedAddress } from './Utils';
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
     private readonly simulator: ISimulator;
@@ -74,6 +75,15 @@ export class TacSdk implements ITacSDK {
 
     get nativeTONAddress(): string {
         return this.config.nativeTONAddress;
+    }
+
+    getAgnosticProxySDK(agnosticProxyAddress?: string, smartAccountFactoryAddress?: string): AgnosticProxySDK {
+        return new AgnosticProxySDK(smartAccountFactoryAddress ?? this.config.artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS, this.config.TACParams.provider, agnosticProxyAddress ?? this.config.artifacts.AGNOSTIC_PROXY_ADDRESS);
+    }
+
+    async getSmartAccountAddressForTvmWallet(tvmWallet: string, applicationAddress: string): Promise<string> {
+        const bouncedAddress = getBouncedAddress(tvmWallet);
+        return await this.config.TACParams.smartAccountFactory.getSmartAccountForApplication(bouncedAddress, applicationAddress);
     }
 
     async nativeTACAddress(): Promise<string> {

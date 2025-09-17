@@ -54,6 +54,7 @@ export type InternalTACParams = {
     crossChainLayer: testnet.tac.wrappers.CrossChainLayerTAC | mainnet.tac.wrappers.CrossChainLayerTAC;
     settings: testnet.tac.wrappers.SettingsTAC | mainnet.tac.wrappers.SettingsTAC;
     tokenUtils: testnet.tac.wrappers.TokenUtilsTAC | mainnet.tac.wrappers.TokenUtilsTAC;
+    smartAccountFactory: testnet.tac.wrappers.TacSAFactoryTAC | mainnet.tac.wrappers.TacSAFactoryTAC;
     trustedTACExecutors: string[];
     trustedTONExecutors: string[];
     abiCoder: ethers.AbiCoder;
