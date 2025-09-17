@@ -339,7 +339,7 @@ getUserJettonBalanceExtended(userAddress: string, tokenAddress: string): Promise
 ### `getAgnosticProxySDK`
 
 ```ts
-getAgnosticProxySDK(agnosticProxyAddress: string, smartAccountFactoryAddress?: string): AgnosticProxySDK
+getAgnosticProxySDK(agnosticProxyAddress?: string, smartAccountFactoryAddress?: string): AgnosticProxySDK
 ```
 
 Get instance of Agnostic proxy SDK. See [Agnostic SDK docs](./agnostic_proxy_sdk.md) to get more information

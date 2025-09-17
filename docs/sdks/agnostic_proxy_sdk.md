@@ -18,11 +18,11 @@ What you need to do is just to adapt your existing front/back code with this too
 - 🛡️ **Type Safety**: Full TypeScript support with proper interfaces
 - 📊 **Performance Analytics**: Gas estimation, size comparison, and efficiency metrics
 - 🔍 **Smart Account Integration**: Built-in TVM wallet and smart account address management
-- 📚 **Pre-built Examples**: Common DeFi patterns ready to use
 
 ## Table of Contents
 
 - [🚀 Quick Start](#quick-start)
+- [📋 Full Usage Example With TacSdk](#full-usage-example-with-tac-sdk-integration)
 - [🧠 Core Concepts](#core-concepts)
 - [📄 ABI Support](#abi-support)
 - [📖 API Reference](#api-reference)
@@ -32,7 +32,6 @@ What you need to do is just to adapt your existing front/back code with this too
 - [🌉 Bridge Integration](#bridge-integration)
 - [❌ Error Handling](#error-handling)
 - [✅ Best Practices](#best-practices)
-- [📋 Full Usage Example](#full-usage-example-complete-defi-strategy)
 - [🔧 Troubleshooting](#troubleshooting)
 
 ## Quick Start
@@ -73,6 +72,181 @@ sdk.visualizeZapCall(zapCall);
 
 // Encode for transaction
 const encodedCall = sdk.encodeZapCall(zapCall);
+```
+
+## Full Usage Example with Tac SDK integration 
+
+Here's a comprehensive example showing AgnosticSDK usage with TacSDK
+You can retreive Agnostic SDK from TacSDK *@tonappchain/sdk*
+
+```typescript
+import { ethers } from "ethers";
+import { AgnosticProxySDK } from "./AgnosticProxySDK";
+import { Network, SenderFactory, TacSdk, type EvmProxyMsg, type AssetBridgingData, type SDKParams } from '@tonappchain/sdk';
+import { TonConnectUI } from '@tonconnect/ui';
+
+
+
+// Contract addresses
+const CONTRACTS = {
+    UNISWAP_ROUTER: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+    STAKING: "0xc00e94Cb662C3520282E6f5717214004A7f26888",
+};
+
+const TOKENS = {
+    USDC: "0xA0b86a33E6417aB8C6C2C4e6C1F7A6D8E9F2B3C4",
+    WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    STAKE_SHARE_TOKEN: "0xA0b86a33E6417aB8C6C2C4e6C1F7A6D8E9F2B3C4"
+};
+
+// ABIs
+const UNISWAP_ROUTER_ABI = [
+    "function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] calldata path, address to, uint256 deadline) external returns (uint256[] memory amounts)"
+];
+
+const STAKING_CONTRACT_ABI = [
+    "function stake(uint256 amount) external"
+];
+
+async function executeCompleteStrategy() {
+    console.log("🚀 Starting Complete Strategy with TacSDK");
+    const sdkParams: SDKParams = {
+        network: Network.MAINNET
+    };
+    const tacSdk = await TacSdk.create(sdkParams);
+
+    const tonConnectUI = new TonConnectUI({
+        manifestUrl: config.tonconnectManifestUrl as string
+    });
+
+    const sender = await SenderFactory.getSender({
+        tonConnect: tonConnectUI
+    });
+
+    const tvmWalletAddress = sender.getSenderAddress();
+
+    // Initialize SDK
+    // Here we will use deployed by TAC Agnostic proxy and TAC Smart Account Factory. 
+    // If you want to use your own, just provide addresses inside constructor.
+    const agnosticSdk = tacSdk.getAgnosticProxySDK();
+    
+    // Register contract interfaces
+    agnosticSdk.addContractInterface(CONTRACTS.UNISWAP_ROUTER, UNISWAP_ROUTER_ABI);
+    agnosticSdk.addContractInterface(CONTRACTS.COMPOUND_STAKING, STAKING_CONTRACT_ABI);
+
+    // Build complex strategy: USDC → WETH → Stake
+    const hooks = [];
+
+    // All money flows will be done through smart account to avoid potential money leaks.
+    const smartAccountAddress = await agnosticSdk.getSmartAccountAddress(tvmWalletAddress);
+
+    // All incoming money on the moment of transaction executing are inside agnostic proxy, so
+    // we should transfer them to smart account proxy, thats why last param is set to false.
+    // This action will be done from proxy perspective, so, proxy will transfer money to smart account
+    hooks.push(agnosticSdk.createFullBalanceTransferHook(TOKENS.USDC, smartAccountAddress, false));
+
+    // Approve USDC for Uniswap from smart account perspective
+    hooks.push(agnosticSdk.createFullBalanceApproveHook(TOKENS.USDC, CONTRACTS.UNISWAP_ROUTER, true));
+
+    // Swap USDC to WETH from smart account perspective
+    hooks.push(agnosticSdk.createCustomHook(
+        CONTRACTS.UNISWAP_ROUTER,
+        "swapExactTokensForTokens",
+        [
+            ethers.parseUnits("2000", 6), // 2000 USDC
+            ethers.parseEther("1"), // min 1 WETH
+            [TOKENS.USDC, TOKENS.WETH],
+            smartAccountAddress,
+            Math.floor(Date.now() / 1000) + 3600
+        ],
+        {
+            isFromSAPerspective: true
+        }
+    ));
+
+    // Approve WETH for staking. Staking here is an just example contract.
+    hooks.push(agnosticSdk.createFullBalanceApproveHook(TOKENS.WETH, CONTRACTS.STAKING, true));
+
+    // Stake WETH tokens (dynamic amount). Here we will use dynamic replacement, since we don't know 
+    // exact amount of tokens that we will have after swap due to slippage.
+    const replacement1 = agnosticSdk.createAmountReplacement(0, TOKENS.WETH, EVM_RECEIVER_ADDRESS);
+
+    // Previous method is more advanced usage. We can do the same in a more native way
+    const replacement2 = agnosticSdk.calculateReplacementData(
+        CONTRACTS.STAKING,
+        "stake", // function name
+        "amount", // parameter name
+        TOKENS.WETH, // token wich balance will be ftched
+        smartAccountAddress // Holder of the token, in our case all actions are done via smart account
+    );
+
+    // Also there is very handy and interactive tool to build replacement data
+    const replacement3 = agnosticSdk.buildReplacementInteractive(
+        CONTRACTS.STAKING,
+        "stake",
+        "amount",
+        TOKENS.WETH,
+        smartAccountAddress,
+        {
+            showCalculation: true,
+            validate: true
+        }
+    );
+
+    hooks.push(agnosticSdk.createCustomHook(
+        CONTRACTS.STAKING,
+        "stake",
+        [0n], // This will be replaced with actual WETH balance, so we can paste 0 here
+        { 
+            dynamicReplacements: [replacement1], // or replacement2 or replacement3, they are equal
+            isFromSAPerspective: true
+        }
+    ));
+
+
+    // Build ZapCall
+    const zapCall = agnosticSdk.buildZapCall(
+        hooks,
+        [ TOKENS.STAKE_SHARE_TOKEN ], // Bridge tokens after operation
+        []  // No NFTs to bridge back
+    );
+
+    // Visualize call to understand what will happen. Very usefull for debug
+    console.log("📋 Strategy Visualization:");
+    agnosticSdk.visualizeZapCall(zapCall);
+
+    // Get detailed breakdown. Also a debug tool
+    const breakdown = agnosticSdk.getZapCallBreakdown(zapCall);
+    console.log("\n📈 Strategy Analytics:");
+    console.log(`   Total Operations: ${breakdown.totalHooks}`);
+    console.log(`   Hook Types:`, breakdown.hookTypes);
+    console.log(`   Estimated Gas: ${breakdown.gasEstimate.toLocaleString()}`);
+    console.log(`   Encoded Size: ${breakdown.encodedSize} bytes`);
+    console.log(`   Bridge Required: ${breakdown.bridgeRequired}`);
+
+    // Encode call to get raw data that will be used in message
+    const encodedCall = agnosticSdk.encodeZapCall(zapCall);
+    console.log(`\n📦 Encoded Call: ${encodedCall.substring(0, 50)}...`);
+    console.log(`📏 Total Size: ${encodedCall.length / 2} bytes`);
+
+    // Prepare TAC -> TON tx
+    const evmProxyMsg: EvmProxyMsg = {
+        evmTargetAddress: AgnosticProxyAddress,
+        methodName: agnosticSdk.getMethodName(),
+        encodedCall
+    };
+
+// Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
+    const assets: AssetBridgingData[] = [
+        {
+            address: USDCTvmAddress,
+            amount: usdcAmount,
+            type: AssetType.FT,
+        }   
+    ];
+    await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    
+}
 ```
 
 ## Core Concepts
@@ -496,7 +670,7 @@ The SDK includes advanced tools to automatically calculate dynamic value replace
 ### Quick Replacement Calculation
 
 ```typescript
-// NEW: Automatic calculation based on function signature
+// Automatic calculation based on function signature
 const replacement = sdk.calculateReplacementData(
     UNISWAP_ROUTER,
     "swapExactTokensForTokens",
@@ -505,7 +679,7 @@ const replacement = sdk.calculateReplacementData(
     userAddress
 );
 
-// OLD: Manual calculation (still supported)
+// Manual calculation
 const manualReplacement = sdk.createAmountReplacement(0, TOKENS.USDC, userAddress);
 ```
 
@@ -580,177 +754,7 @@ try {
 4. **Consider gas optimization** when chaining multiple operations
 5. **Test thoroughly** with small amounts first
 
-## Full Usage Example: Complete DeFi Strategy
 
-Here's a comprehensive example showing all SDK features in a real-world scenario:
-
-```typescript
-import { ethers } from "ethers";
-import { AgnosticProxySDK } from "./AgnosticProxySDK";
-
-// Contract addresses
-const CONTRACTS = {
-    UNISWAP_ROUTER: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-    AAVE_LENDING_POOL: "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
-    COMPOUND_STAKING: "0xc00e94Cb662C3520282E6f5717214004A7f26888",
-    AGNOSTIC_PROXY: "0x1234567890123456789012345678901234567890"
-};
-
-const TOKENS = {
-    USDC: "0xA0b86a33E6417aB8C6C2C4e6C1F7A6D8E9F2B3C4",
-    WETH: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-    COMP: "0xc00e94Cb662C3520282E6f5717214004A7f26888"
-};
-
-// ABIs
-const UNISWAP_ROUTER_ABI = [
-    "function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] calldata path, address to, uint256 deadline) external returns (uint256[] memory amounts)"
-];
-
-const AAVE_LENDING_POOL_ABI = [
-    "function deposit(address asset, uint256 amount, address onBehalfOf, uint16 referralCode) external"
-];
-
-const STAKING_CONTRACT_ABI = [
-    "function stake(uint256 amount) external"
-];
-
-async function executeCompleteStrategy() {
-    console.log("🚀 Starting Complete DeFi Strategy");
-    console.log("=".repeat(50));
-
-    // 1. Initialize SDK
-    const sdk = new AgnosticProxySDK();
-    
-    // 2. Register contract interfaces
-    sdk.addContractInterface(CONTRACTS.UNISWAP_ROUTER, UNISWAP_ROUTER_ABI);
-    sdk.addContractInterface(CONTRACTS.AAVE_LENDING_POOL, AAVE_LENDING_POOL_ABI);
-    sdk.addContractInterface(CONTRACTS.COMPOUND_STAKING, STAKING_CONTRACT_ABI);
-
-    // 3. Build complex strategy: USDC → WETH → Lend → Stake
-    const hooks = [];
-
-    // Step 1: Approve USDC for Uniswap
-    hooks.push(sdk.createFullBalanceApproveHook(TOKENS.USDC, CONTRACTS.UNISWAP_ROUTER, true));
-
-    // Step 2: Swap USDC to WETH
-    hooks.push(sdk.createCustomHook(
-        CONTRACTS.UNISWAP_ROUTER,
-        "swapExactTokensForTokens",
-        [
-            ethers.parseUnits("2000", 6), // 2000 USDC
-            ethers.parseEther("1"), // min 1 WETH
-            [TOKENS.USDC, TOKENS.WETH],
-            EVM_RECEIVER_ADDRESS,
-            Math.floor(Date.now() / 1000) + 3600
-        ]
-    ));
-
-    // Step 3: Approve WETH for Aave
-    hooks.push(sdk.createFullBalanceApproveHook(TOKENS.WETH, CONTRACTS.AAVE_LENDING_POOL, true));
-
-    // Step 4: Deposit WETH to Aave (dynamic amount - use all received WETH)
-    const depositReplacement = sdk.createAmountReplacement(1, TOKENS.WETH, EVM_RECEIVER_ADDRESS);
-    hooks.push(sdk.createCustomHook(
-        CONTRACTS.AAVE_LENDING_POOL,
-        "deposit",
-        [TOKENS.WETH, 0n, EVM_RECEIVER_ADDRESS, 0], // amount will be replaced
-        { dynamicReplacements: [depositReplacement] }
-    ));
-
-    // Step 5: Approve COMP for staking
-    hooks.push(sdk.createFullBalanceApproveHook(TOKENS.COMP, CONTRACTS.COMPOUND_STAKING, true));
-
-    // Step 6: Stake COMP tokens (dynamic amount)
-    const stakeReplacement = sdk.createAmountReplacement(0, TOKENS.COMP, EVM_RECEIVER_ADDRESS);
-    hooks.push(sdk.createCustomHook(
-        CONTRACTS.COMPOUND_STAKING,
-        "stake",
-        [0n], // This will be replaced with actual COMP balance
-        { dynamicReplacements: [stakeReplacement] }
-    ));
-
-    // 4. Build ZapCall
-    const zapCall = sdk.buildZapCall(
-        hooks,
-        [TOKENS.WETH, TOKENS.COMP], // Bridge these tokens
-        []  // No NFTs
-    );
-
-    // 5. 🎨 Visualize the complete strategy
-    console.log("📋 Strategy Visualization:");
-    sdk.visualizeZapCall(zapCall);
-
-    // 6. 📊 Get detailed breakdown
-    const breakdown = sdk.getZapCallBreakdown(zapCall);
-    console.log("\n📈 Strategy Analytics:");
-    console.log(`   Total Operations: ${breakdown.totalHooks}`);
-    console.log(`   Hook Types:`, breakdown.hookTypes);
-    console.log(`   Estimated Gas: ${breakdown.gasEstimate.toLocaleString()}`);
-    console.log(`   Encoded Size: ${breakdown.encodedSize} bytes`);
-    console.log(`   Bridge Required: ${breakdown.bridgeRequired}`);
-
-    // 7. Encode for transaction
-    const encodedCall = sdk.encodeZapCall(zapCall);
-    console.log(`\n📦 Encoded Call: ${encodedCall.substring(0, 50)}...`);
-    console.log(`📏 Total Size: ${encodedCall.length / 2} bytes`);
-
-    // 8. Execute transaction (example)
-    //!TODO
-}
-
-// Alternative: Compare different strategies
-async function compareStrategies() {
-    const sdk = new AgnosticProxySDK();
-    sdk.addContractInterface(CONTRACTS.UNISWAP_ROUTER, UNISWAP_ROUTER_ABI);
-    sdk.addContractInterface(CONTRACTS.COMPOUND_STAKING, STAKING_CONTRACT_ABI);
-
-    // Strategy A: Simple swap
-    const simpleStrategy = sdk.buildZapCall([
-        sdk.createFullBalanceApproveHook(TOKENS.USDC, CONTRACTS.UNISWAP_ROUTER, true),
-        sdk.createCustomHook(CONTRACTS.UNISWAP_ROUTER, "swapExactTokensForTokens", [
-            ethers.parseUnits("1000", 6), ethers.parseEther("0.4"), 
-            [TOKENS.USDC, TOKENS.WETH], EVM_RECEIVER_ADDRESS, 
-            Math.floor(Date.now() / 1000) + 3600
-        ])
-    ], [TOKENS.WETH], []);
-
-    // Strategy B: Swap + stake with dynamic amounts
-    const complexStrategy = sdk.buildZapCall([
-        sdk.createFullBalanceApproveHook(TOKENS.USDC, CONTRACTS.UNISWAP_ROUTER, true),
-        sdk.createCustomHook(CONTRACTS.UNISWAP_ROUTER, "swapExactTokensForTokens", [
-            ethers.parseUnits("1000", 6), ethers.parseEther("50"), 
-            [TOKENS.USDC, TOKENS.COMP], EVM_RECEIVER_ADDRESS, 
-            Math.floor(Date.now() / 1000) + 3600
-        ]),
-        sdk.createFullBalanceApproveHook(TOKENS.COMP, CONTRACTS.COMPOUND_STAKING, true),
-        sdk.createCustomHook(CONTRACTS.COMPOUND_STAKING, "stake", [0n], {
-            dynamicReplacements: [sdk.createAmountReplacement(0, TOKENS.COMP, EVM_RECEIVER_ADDRESS)]
-        })
-    ], [], []);
-
-    // Compare strategies
-    sdk.compareZapCalls(simpleStrategy, complexStrategy, "Simple Swap", "Swap + Stake");
-
-    return { simpleStrategy, complexStrategy };
-}
-
-// Export for use
-export { executeCompleteStrategy, compareStrategies };
-
-// Run if executed directly
-if (require.main === module) {
-    executeCompleteStrategy()
-        .then(result => {
-            console.log("\n🎉 Strategy executed successfully!");
-            console.log("Result:", result);
-        })
-        .catch(error => {
-            console.error("\n💥 Strategy failed:", error);
-            process.exit(1);
-        });
-}
-```
 
 ## Troubleshooting
 
@@ -764,17 +768,17 @@ if (require.main === module) {
 
 ```typescript
 // Visualize operations
-sdk.visualizeZapCall(zapCall);
+agnosticSdk.visualizeZapCall(zapCall);
 
 // Get detailed breakdown
-const breakdown = sdk.getZapCallBreakdown(zapCall);
+const breakdown = agnosticSdk.getZapCallBreakdown(zapCall);
 console.log("Breakdown:", breakdown);
 
 // Compare strategies
-sdk.compareZapCalls(strategyA, strategyB, "Strategy A", "Strategy B");
+agnosticSdk.compareZapCalls(strategyA, strategyB, "Strategy A", "Strategy B");
 
 // Debug individual hooks
 zapCall.hooks.forEach((hook, i) => {
-    console.log(`Hook ${i}:`, sdk.decodeHookData(hook));
+    console.log(`Hook ${i}:`, agnosticSdk.decodeHookData(hook));
 });
 ```
