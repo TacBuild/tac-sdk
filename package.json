@@ -20,7 +20,7 @@
     "@aws-crypto/sha256-js": "^5.2.0",
     "@orbs-network/ton-access": "^2.3.3",
     "@ton/ton": "15.1.0",
-    "@tonappchain/agnostic-sdk": "0.0.6",
+    "@tonappchain/agnostic-sdk": "0.0.8",
     "@tonappchain/artifacts": "0.0.19-smart-accounts-5",
     "@tonappchain/ton-lite-client": "3.0.6",
     "@tonconnect/ui": "^2.0.11",
