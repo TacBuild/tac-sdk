@@ -1,7 +1,17 @@
+import { AgnosticProxySDK } from '@tonappchain/agnostic-sdk';
 import { Wallet } from 'ethers';
 
 import { AssetFactory, FT, NFT, TON } from '../assets';
-import { Asset, IConfiguration, ILogger, ISimulator, ITacSDK, ITransactionManager } from '../interfaces';
+import {
+    Asset,
+    IConfiguration,
+    ILogger,
+    IOperationTracker,
+    ISimulator,
+    ITacSDK,
+    ITACTransactionManager,
+    ITONTransactionManager,
+} from '../interfaces';
 import type { SenderAbstraction } from '../sender';
 import {
     AssetFromFTArg,
@@ -18,8 +28,8 @@ import {
     NFTItemData,
     OperationIdsByShardsKey,
     SDKParams,
-    SuggestedTONExecutorFee,
-    TACSimulationRequest,
+    SuggestedTVMExecutorFee,
+    TACSimulationParams,
     TACSimulationResult,
     TransactionLinkerWithOperationId,
     TVMAddress,
@@ -32,18 +42,28 @@ import { DEFAULT_DELAY } from './Consts';
 import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
-import { TransactionManager } from './TransactionManager';
-import { AgnosticProxySDK } from '@tonappchain/agnostic-sdk';
+import { TACTransactionManager } from './TACTransactionManager';
+import { TONTransactionManager } from './TONTransactionManager';
 import { getBouncedAddress } from './Utils';
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
+    readonly operationTracker: IOperationTracker;
     private readonly simulator: ISimulator;
-    private readonly transactionManager: ITransactionManager;
+    private readonly tonTransactionManager: ITONTransactionManager;
+    private readonly tacTransactionManager: ITACTransactionManager;
 
-    private constructor(config: IConfiguration, simulator: ISimulator, transactionManager: ITransactionManager) {
+    private constructor(
+        config: IConfiguration,
+        simulator: ISimulator,
+        tonTransactionManager: ITONTransactionManager,
+        tacTransactionManager: ITACTransactionManager,
+        operationTracker: IOperationTracker,
+    ) {
         this.config = config;
         this.simulator = simulator;
-        this.transactionManager = transactionManager;
+        this.tonTransactionManager = tonTransactionManager;
+        this.tacTransactionManager = tacTransactionManager;
+        this.operationTracker = operationTracker;
     }
 
     static async create(sdkParams: SDKParams, logger: ILogger = new NoopLogger()): Promise<TacSdk> {
@@ -62,11 +82,12 @@ export class TacSdk implements ITacSDK {
             delay,
         );
 
-        const simulator = new Simulator(config, logger);
         const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints);
-        const transactionManager = new TransactionManager(config, simulator, operationTracker, logger);
+        const simulator = new Simulator(config, operationTracker, logger);
+        const tonTransactionManager = new TONTransactionManager(config, simulator, operationTracker, logger);
+        const tacTransactionManager = new TACTransactionManager(config, operationTracker, logger);
 
-        return new TacSdk(config, simulator, transactionManager);
+        return new TacSdk(config, simulator, tonTransactionManager, tacTransactionManager, operationTracker);
     }
 
     closeConnections(): unknown {
@@ -78,12 +99,19 @@ export class TacSdk implements ITacSDK {
     }
 
     getAgnosticProxySDK(agnosticProxyAddress?: string, smartAccountFactoryAddress?: string): AgnosticProxySDK {
-        return new AgnosticProxySDK(smartAccountFactoryAddress ?? this.config.artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS, this.config.TACParams.provider, agnosticProxyAddress ?? this.config.artifacts.AGNOSTIC_PROXY_ADDRESS);
+        return new AgnosticProxySDK(
+            smartAccountFactoryAddress ?? this.config.artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS,
+            this.config.TACParams.provider,
+            agnosticProxyAddress ?? this.config.artifacts.AGNOSTIC_PROXY_ADDRESS,
+        );
     }
 
     async getSmartAccountAddressForTvmWallet(tvmWallet: string, applicationAddress: string): Promise<string> {
         const bouncedAddress = getBouncedAddress(tvmWallet);
-        return await this.config.TACParams.smartAccountFactory.getSmartAccountForApplication(bouncedAddress, applicationAddress);
+        return await this.config.TACParams.smartAccountFactory.getSmartAccountForApplication(
+            bouncedAddress,
+            applicationAddress,
+        );
     }
 
     async nativeTACAddress(): Promise<string> {
@@ -98,20 +126,31 @@ export class TacSdk implements ITacSDK {
         return this.config.getTrustedTONExecutors;
     }
 
-    async getTransactionSimulationInfo(
+    async getSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
         assets?: Asset[],
+        options?: CrossChainTransactionOptions,
     ): Promise<ExecutionFeeEstimationResult> {
-        return this.simulator.getTransactionSimulationInfo(evmProxyMsg, sender, assets);
+        const tx: CrosschainTx = { evmProxyMsg, assets, options };
+        return this.simulator.getSimulationInfo(sender, tx);
     }
 
     async getTVMExecutorFeeInfo(
         assets: Asset[],
         feeSymbol: string,
         tvmValidExecutors?: string[],
-    ): Promise<SuggestedTONExecutorFee> {
-        return this.simulator.getTVMExecutorFeeInfo(assets, feeSymbol, tvmValidExecutors);
+    ): Promise<SuggestedTVMExecutorFee> {
+        const params = {
+            tonAssets: assets.map((asset) => ({
+                amount: asset.rawAmount.toString(),
+                tokenAddress: asset.address || '',
+                assetType: asset.type,
+            })),
+            feeSymbol: feeSymbol,
+            tvmValidExecutors: tvmValidExecutors ?? [],
+        }
+        return this.operationTracker.getTVMExecutorFee(params);
     }
 
     async sendCrossChainTransaction(
@@ -121,7 +160,8 @@ export class TacSdk implements ITacSDK {
         options?: CrossChainTransactionOptions,
         waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId> {
-        return this.transactionManager.sendCrossChainTransaction(evmProxyMsg, sender, assets, options, waitOptions);
+        const tx: CrosschainTx = { evmProxyMsg, assets: assets ?? [], options };
+        return this.tonTransactionManager.sendCrossChainTransaction(evmProxyMsg, sender, tx, waitOptions);
     }
 
     async sendCrossChainTransactions(
@@ -129,7 +169,7 @@ export class TacSdk implements ITacSDK {
         txs: CrosschainTx[],
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]> {
-        return this.transactionManager.sendCrossChainTransactions(sender, txs, waitOptions);
+        return this.tonTransactionManager.sendCrossChainTransactions(sender, txs, waitOptions);
     }
 
     async bridgeTokensToTON(
@@ -140,7 +180,7 @@ export class TacSdk implements ITacSDK {
         tvmExecutorFee?: bigint,
         tvmValidExecutors?: string[],
     ): Promise<string> {
-        return this.transactionManager.bridgeTokensToTON(
+        return this.tacTransactionManager.bridgeTokensToTON(
             signer,
             value,
             tonTarget,
@@ -154,12 +194,12 @@ export class TacSdk implements ITacSDK {
         return this.config.isContractDeployedOnTVM(address);
     }
 
-    async simulateTACMessage(req: TACSimulationRequest): Promise<TACSimulationResult> {
-        return this.simulator.simulateTACMessage(req);
+    async simulateTACMessage(req: TACSimulationParams): Promise<TACSimulationResult> {
+        return this.operationTracker.simulateTACMessage(req);
     }
 
-    async simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]> {
-        return this.simulator.simulateTransactions(sender, txs);
+    async simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<ExecutionFeeEstimationResult[]> {
+        return this.simulator.getSimulationsInfo(sender, txs);
     }
 
     // Asset methods
@@ -245,5 +285,9 @@ export class TacSdk implements ITacSDK {
             const nftCollection = await NFT.fromCollection(this.config, { collection: tvmNFTAddress, index: 0n });
             return nftCollection.getEVMAddress();
         }
+    }
+
+    getOperationTracker(): IOperationTracker {
+        return this.operationTracker;
     }
 }

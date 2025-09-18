@@ -3,11 +3,15 @@ import {
     ConvertedCurrencyResult,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
     OperationType,
     SimplifiedStatuses,
     StatusInfo,
     StatusInfosByOperationId,
+    SuggestedTVMExecutorFee,
+    TACSimulationParams,
+    TACSimulationResult,
     TransactionLinker,
     WaitOptions,
 } from '../structs/Struct';
@@ -92,4 +96,8 @@ export interface IOperationTracker {
         params: ConvertCurrencyParams,
         waitOptions?: WaitOptions<ConvertedCurrencyResult>,
     ): Promise<ConvertedCurrencyResult>;
+
+    simulateTACMessage(params: TACSimulationParams, waitOptions?: WaitOptions<TACSimulationResult>,): Promise<TACSimulationResult>
+
+    getTVMExecutorFee(params: GetTVMExecutorFeeParams, waitOptions?: WaitOptions<SuggestedTVMExecutorFee>,): Promise<SuggestedTVMExecutorFee>
 }

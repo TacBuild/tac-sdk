@@ -2,9 +2,13 @@ import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,
     ExecutionStagesByOperationId,
+    GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
     OperationType,
     StatusInfosByOperationId,
+    SuggestedTVMExecutorFee,
+    TACSimulationParams,
+    TACSimulationResult,
     TransactionLinker,
 } from '../structs/Struct';
 
@@ -38,6 +42,11 @@ export interface ILiteSequencerClient {
      * @param chunkSize Optional batching size.
      */
     getOperationStatuses(operationIds: string[], chunkSize?: number): Promise<StatusInfosByOperationId>;
+
     /** Converts currency amount using the sequencer-provided rate source. */
     convertCurrency(params: ConvertCurrencyParams): Promise<ConvertedCurrencyResult>;
+
+    getTVMExecutorFee(params: GetTVMExecutorFeeParams): Promise<SuggestedTVMExecutorFee>
+
+    simulateTACMessage(params: TACSimulationParams): Promise<TACSimulationResult>
 }

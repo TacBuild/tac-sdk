@@ -17,3 +17,5 @@ export const MAX_MSG_DEPTH = 512;
 
 export const TON_SYMBOL = 'TON';
 export const TAC_SYMBOL = 'TAC';
+
+export const FIFTEEN_MINUTES = 15 * 60 * 1000;

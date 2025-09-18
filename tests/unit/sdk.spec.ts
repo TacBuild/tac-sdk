@@ -244,7 +244,7 @@ describe('TacSDK', () => {
 
             await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
 
-            const spy = jest.spyOn(sdk['simulator'], 'getSimulationInfoForTransaction').mockResolvedValue({
+            const spy = jest.spyOn(sdk['simulator'], 'getSimulationInfo').mockResolvedValue({
                 feeParams: {
                     isRoundTrip: true,
                     gasLimit: 1000000000000000000n,

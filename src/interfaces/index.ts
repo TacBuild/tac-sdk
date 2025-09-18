@@ -8,6 +8,7 @@ export * from './ILogger';
 export * from './IOperationTracker';
 export * from './ISimulator';
 export * from './ITacSDK';
-export * from './ITransactionManager';
+export * from './ITACTransactionManager';
+export * from './ITONTransactionManager';
 export * from './SenderAbstraction';
 export * from './WalletInstanse';

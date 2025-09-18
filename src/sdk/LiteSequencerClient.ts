@@ -1,5 +1,11 @@
-import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
-import { IHttpClient } from '../interfaces';
+import {
+    emptyArrayError,
+    operationFetchError,
+    profilingFetchError,
+    statusFetchError,
+} from '../errors';
+import { convertCurrencyFetchError, getTONFeeInfoFetchError, simulationFetchError } from '../errors/instances';
+import { IHttpClient, ILiteSequencerClient } from '../interfaces';
 import {
     ConvertCurrencyResponse,
     OperationIdsByShardsKeyResponse,
@@ -7,20 +13,26 @@ import {
     StageProfilingResponse,
     StatusesResponse,
     StringResponse,
+    SuggestedTVMExecutorFeeResponse,
+    TACSimulationResponse,
 } from '../structs/InternalStruct';
 import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,
     ExecutionStagesByOperationId,
+    GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
     OperationType,
     StatusInfosByOperationId,
+    SuggestedTVMExecutorFee,
+    TACSimulationParams,
+    TACSimulationResult,
     TransactionLinker,
 } from '../structs/Struct';
 import { AxiosHttpClient } from './AxiosHttpClient';
 import { toCamelCaseTransformer } from './Utils';
 
-export class LiteSequencerClient {
+export class LiteSequencerClient implements ILiteSequencerClient{
     private readonly endpoint: string;
     private readonly maxChunkSize: number;
     private readonly httpClient: IHttpClient;
@@ -215,19 +227,51 @@ export class LiteSequencerClient {
                 },
             };
         } catch (error) {
-            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw convertCurrencyFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+        }
+    }
+
+    async simulateTACMessage(params: TACSimulationParams): Promise<TACSimulationResult> {
+        try {
+            const response = await this.httpClient.post<TACSimulationResponse>(
+                new URL('tac/simulator/simulate-message', this.endpoint).toString(),
+                params,
+                {
+                    transformResponse: [toCamelCaseTransformer],
+                },
+            );
+
+            return response.data.response;
+        } catch (error) {
+            throw simulationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+        }
+    }
+
+    async getTVMExecutorFee(params: GetTVMExecutorFeeParams): Promise<SuggestedTVMExecutorFee> {
+        try {
+            const response = await this.httpClient.post<SuggestedTVMExecutorFeeResponse>(
+                new URL('/ton/calculator/ton-executor-fee', this.endpoint).toString(),
+                params,
+                {
+                    transformResponse: [toCamelCaseTransformer],
+                },
+            );
+
+            return response.data.response;
+        } catch (error) {
+            throw getTONFeeInfoFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
         }
     }
 
     private async processChunkedRequest<T>(
-        identificators: string[],
+        identifiers: string[],
         requestFn: (chunk: string[]) => Promise<T>,
         chunkSize: number = this.maxChunkSize,
     ): Promise<T> {
         const results: T[] = [];
 
-        for (let i = 0; i < identificators.length; i += chunkSize) {
-            const chunk = identificators.slice(i, i + chunkSize);
+        for (let i = 0; i < identifiers.length; i += chunkSize) {
+            const chunk = identifiers.slice(i, i + chunkSize);
             const result = await requestFn(chunk);
             results.push(result);
         }

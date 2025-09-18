@@ -44,7 +44,6 @@ export class TonTxFinalizer {
     // Fetches adjacent transactions from toncenter
     private async fetchAdjacentTransactions(hash: string, retries = 5, delay = 1000): Promise<ToncenterTransaction[]> {
         for (let i = retries; i >= 0; i--) {
-            await sleep(delay);
             try {
                 const url = this.apiConfig.urlBuilder(hash);
                 const response = await axios.get<AdjacentTransactionsResponse>(url, {
@@ -68,6 +67,7 @@ export class TonTxFinalizer {
                     console.warn(`Failed to fetch adjacent transactions for ${hash}:`, logMessage);
                 }
             }
+            await sleep(delay);
         }
         return [];
     }

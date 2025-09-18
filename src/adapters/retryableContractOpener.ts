@@ -126,7 +126,7 @@ export class RetryableContractOpener implements ContractOpener {
 
 export async function createDefaultRetryableOpener(
     artifacts: typeof testnet | typeof mainnet,
-    maxRetries = 3,
+    maxRetries = 5,
     retryDelay = 1000,
 ): Promise<ContractOpener> {
     const tonClient = new TonClient({

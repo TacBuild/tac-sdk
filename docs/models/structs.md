@@ -92,18 +92,21 @@ TON Parameters for SDK:
 - **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that combines TonClient (TAC endpoint), orbsOpener4, and orbsOpener as fallbacks. Provide your own opener primarily for tests or custom setups.
 - **`settingsAddress`** (optional): TON settings contract address. Needed to retrieve protocol data. Set for tests only
 
-
 ### `TACParams (Type)`
 ```typescript
 export type TACParams = {
     provider?: AbstractProvider;
-    settingsAddress?: string | Addressable;  
+    settingsAddress?: string | Addressable;
+    multicallAddress?: string | Addressable;
+    multicallABI?: Interface | InterfaceAbi;
 }
 ```
 
 TAC Parameters for SDK:
 - **`provider`** *(optional)*: Provider used for TAC smart contract interaction. Set for increasing rate limit or tests only
 - **`settingsAddress`** *(optional)*: TAC settings contract address. Needed to retrieve protocol data. Set for tests only
+- **`multicallAddress`** (optional): TAC multicall contract address. Needed to batch retrieve protocol data. Set for tests only
+- **`multicallABI`** (optional): TAC multicall contract ABI. Set for tests only
 
 
 ### `ContractState (Type)`

@@ -1,5 +1,5 @@
 import type { Address, Cell } from '@ton/ton';
-import { AbstractProvider, Addressable } from 'ethers';
+import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
 
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
 
@@ -50,6 +50,16 @@ export type TACParams = {
      * Address of TAC settings contract. Use only for tests.
      */
     settingsAddress?: string | Addressable;
+
+    /**
+     * Address of multicall contract. Use only for tests.
+     */
+    multicallAddress?: string | Addressable;
+
+    /**
+     * ABI of multicall contract. Use only for tests.
+     */
+    multicallABI?: Interface | InterfaceAbi;
 };
 
 export type TONParams = {
@@ -132,21 +142,25 @@ export type TransactionLinkerWithOperationId = TransactionLinker & {
     operationId?: string;
 };
 
-export type TACSimulationRequest = {
-    tacCallParams: {
-        arguments: string;
-        methodName: string;
-        target: string;
-    };
+export type TONAsset = {
+    amount: string;
+    tokenAddress: string;
+    assetType: AssetType;
+};
+
+export type TACCallParams = {
+    arguments: string;
+    methodName: string;
+    target: string;
+};
+
+export type TACSimulationParams = {
+    tacCallParams: TACCallParams;
     evmValidExecutors?: string[];
     tvmValidExecutors?: string[];
     extraData?: string;
     shardsKey: string;
-    tonAssets: {
-        amount: string;
-        tokenAddress: string;
-        assetType: string;
-    }[];
+    tonAssets: TONAsset[];
     tonCaller: string;
     calculateRollbackFee?: boolean;
 };
@@ -309,7 +323,7 @@ export type TACSimulationResult = {
     };
 };
 
-export type SuggestedTONExecutorFee = {
+export type SuggestedTVMExecutorFee = {
     inTAC: string;
     inTON: string;
 };
@@ -331,6 +345,8 @@ export type CrossChainTransactionOptions = {
     tvmValidExecutors?: string[];
     tvmExecutorFee?: bigint;
     calculateRollbackFee?: boolean;
+    withoutSimulation?: boolean;
+    validateAssetsBalance?: boolean;
 };
 
 export type ExecutionFeeEstimationResult = {
@@ -436,4 +452,10 @@ export type ConvertedCurrencyResult = {
     currency: CurrencyType;
     tacPrice: USDPriceInfo;
     tonPrice: USDPriceInfo;
+};
+
+export type GetTVMExecutorFeeParams = {
+    feeSymbol: string;
+    tonAssets: TONAsset[];
+    tvmValidExecutors: string[];
 };

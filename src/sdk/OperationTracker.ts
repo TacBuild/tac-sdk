@@ -7,18 +7,23 @@ import {
     ConvertedCurrencyResult,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    GetTVMExecutorFeeParams,
     Network,
     OperationIdsByShardsKey,
     OperationType,
     SimplifiedStatuses,
     StatusInfo,
     StatusInfosByOperationId,
+    SuggestedTVMExecutorFee,
+    TACSimulationParams,
+    TACSimulationResult,
     TransactionLinker,
     WaitOptions,
 } from '../structs/Struct';
 import { LiteSequencerClient } from './LiteSequencerClient';
 import { NoopLogger } from './Logger';
 import { formatObjectForLogging, waitUntilSuccess } from './Utils';
+import { Validator } from './Validator';
 
 export class DefaultLiteSequencerClientFactory implements ILiteSequencerClientFactory {
     createClients(endpoints: string[]): ILiteSequencerClient[] {
@@ -291,6 +296,57 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to convert currency');
+            throw allEndpointsFailedError(lastError);
+        };
+
+        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+    }
+
+    async simulateTACMessage(
+        params: TACSimulationParams,
+        waitOptions?: WaitOptions<TACSimulationResult>,
+    ): Promise<TACSimulationResult> {
+        Validator.validateTACSimulationParams(params);
+        this.logger.debug(`Simulating TAC message: ${formatObjectForLogging(params)}`);
+
+        const requestFn = async (): Promise<TACSimulationResult> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const result = await client.simulateTACMessage(params);
+                    this.logger.debug(`Simulation result retrieved successfully`);
+                    return result;
+                } catch (error) {
+                    this.logger.warn(`Failed to simulate TAC message using one of the endpoints`);
+                    lastError = error;
+                }
+            }
+            this.logger.error('All endpoints failed to simulate TAC message');
+            throw allEndpointsFailedError(lastError);
+        };
+
+        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+    }
+
+    async getTVMExecutorFee(
+        params: GetTVMExecutorFeeParams,
+        waitOptions?: WaitOptions<SuggestedTVMExecutorFee>,
+    ): Promise<SuggestedTVMExecutorFee> {
+        this.logger.debug(`get TVM executor fee: ${formatObjectForLogging(params)}`);
+
+        const requestFn = async (): Promise<SuggestedTVMExecutorFee> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const result = await client.getTVMExecutorFee(params);
+                    this.logger.debug(`Suggested TVM executor fee retrieved successfully`);
+                    return result;
+                } catch (error) {
+                    this.logger.warn(`Failed to get TVM executor fee using one of the endpoints`);
+                    lastError = error;
+                }
+            }
+            this.logger.error('All endpoints failed to get TVM executor fee');
             throw allEndpointsFailedError(lastError);
         };
 

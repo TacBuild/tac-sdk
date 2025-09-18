@@ -10,7 +10,7 @@ import {
     OperationIdsByShardsKey,
     OperationType,
     StatusInfosByOperationId,
-    SuggestedTONExecutorFee,
+    SuggestedTVMExecutorFee,
     TACSimulationResult,
 } from './Struct';
 
@@ -74,7 +74,7 @@ export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
 
 export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
 
-export type SuggestedTONExecutorFeeResponse = ResponseBase<SuggestedTONExecutorFee>;
+export type SuggestedTVMExecutorFeeResponse = ResponseBase<SuggestedTVMExecutorFee>;
 
 export type ConvertCurrencyResponse = ResponseBase<ConvertedCurrencyRawResult>;
 

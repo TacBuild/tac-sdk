@@ -6,7 +6,7 @@ import { FT, NFT, TON } from '../assets';
 import { invalidMethodNameError } from '../errors';
 import { Asset } from '../interfaces';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
-import { AssetType, EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors, WaitOptions } from '../structs/Struct';
+import { AssetType, EvmProxyMsg, FeeParams, TONAsset, TransactionLinker, ValidExecutors, WaitOptions } from '../structs/Struct';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -256,6 +256,14 @@ export function sha256toBigInt(ContractName: string): bigint {
     const hash = sha256_sync(ContractName);
 
     return BigInt('0x' + hash.toString('hex'));
+}
+
+export function mapAssetsToTonAssets(assets: Asset[]): TONAsset[] {
+    return assets.map((asset) => ({
+        amount: asset.rawAmount.toString(),
+        tokenAddress: asset.address || '',
+        assetType: asset.type,
+    }));
 }
 
 

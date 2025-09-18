@@ -6,7 +6,6 @@ import {
     AssetFromFTArg,
     AssetFromNFTCollectionArg,
     AssetFromNFTItemArg,
-    CrossChainTransactionOptions,
     CrosschainTx,
     EVMAddress,
     EvmProxyMsg,
@@ -14,8 +13,9 @@ import {
     NFTAddressType,
     NFTItemData,
     OperationIdsByShardsKey,
-    SuggestedTONExecutorFee,
-    TACSimulationRequest,
+    CrossChainTransactionOptions,
+    SuggestedTVMExecutorFee,
+    TACSimulationParams,
     TACSimulationResult,
     TransactionLinkerWithOperationId,
     TVMAddress,
@@ -25,6 +25,7 @@ import {
 import { JettonMasterData } from '../wrappers/JettonMaster';
 import { Asset } from './Asset';
 import { IConfiguration } from './IConfiguration';
+import { IOperationTracker } from './IOperationTracker';
 
 export interface ITacSDK {
     readonly config: IConfiguration;
@@ -89,25 +90,27 @@ export interface ITacSDK {
      * @param req Simulation request with encoded message and context.
      * @returns Promise with the detailed simulation result.
      */
-    simulateTACMessage(req: TACSimulationRequest): Promise<TACSimulationResult>;
+    simulateTACMessage(req: TACSimulationParams): Promise<TACSimulationResult>;
     /**
      * Simulates a batch of cross-chain transactions from a given sender.
      * @param sender Abstracted sender used for simulation context (not broadcasting).
      * @param txs Array of cross-chain transactions to simulate.
-     * @returns Promise with an array of results matching the input order.
+     * @returns Promise with an array of fee estimation results matching the input order.
      */
-    simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]>;
+    simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<ExecutionFeeEstimationResult[]>;
     /**
-     * Computes fee and execution information for a prospective transaction.
+     * Get tvm fees and simulation info for a tvm transaction using sender abstraction.
      * @param evmProxyMsg Encoded EVM proxy message.
-     * @param sender Sender abstraction providing context (e.g., seqno, wallet info).
-     * @param assets Optional list of assets attached to the transaction.
-     * @returns Promise with the fee estimation and execution breakdown.
+     * @param sender Sender abstraction used to provide context (e.g., wallet state).
+     * @param assets Assets to be included in the transaction.
+     * @param options Optional transaction configuration including error handling and executor settings.
+     * @returns Promise with fee estimation and execution info.
      */
-    getTransactionSimulationInfo(
+    getSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
         assets?: Asset[],
+        options?: CrossChainTransactionOptions,
     ): Promise<ExecutionFeeEstimationResult>;
     /**
      * Suggests optimal TON-side executor fee for a given asset set and fee symbol.
@@ -120,7 +123,7 @@ export interface ITacSDK {
         assets: Asset[],
         feeSymbol: string,
         tvmValidExecutors?: string[],
-    ): Promise<SuggestedTONExecutorFee>;
+    ): Promise<SuggestedTVMExecutorFee>;
 
     // Transaction methods
     /**
@@ -212,4 +215,6 @@ export interface ITacSDK {
 
     // Utility methods
     isContractDeployedOnTVM(address: string): Promise<boolean>;
+
+    getOperationTracker(): IOperationTracker;
 }

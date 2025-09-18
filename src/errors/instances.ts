@@ -46,35 +46,45 @@ export const invalidMethodNameError = (methodName: string) =>
         111,
     );
 
-export const simulationError = (inner: unknown) =>
-    // try to get meaningful error message from axios error
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    new FetchError(`Failed to simulate EVM call: ${(inner as any)?.response?.data?.error}`, 112, inner);
-
 export const profilingFetchError = (msg: string, inner?: unknown) =>
-    new FetchError(`failed to fetch stage profiling: ${msg}`, 113, inner);
+    new FetchError(`failed to fetch stage profiling: ${msg}`, 112, inner);
 
-export const emptyArrayError = (msg: string) => new FetchError(`empty array: ${msg}`, 114);
+export const emptyArrayError = (msg: string) => new FetchError(`empty array: ${msg}`, 113);
 
-export const invalidAssetType = new FormatError('Invalid asset type', 115);
+export const invalidAssetType = new FormatError('Invalid asset type', 114);
 
 export const prepareMessageGroupError = (isBocSizeValid: boolean, isDepthValid: boolean) =>
     new PrepareMessageGroupError(
         `Failed to prepare message group: BOC size valid: ${isBocSizeValid}, depth valid: ${isDepthValid}`,
-        116,
+        115,
     );
 
-export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 117);
+export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 116);
 
-export const allEndpointsFailedError = (inner: unknown) => new FetchError('All endpoints failed', 118, inner);
+export const allEndpointsFailedError = (inner: unknown) => new FetchError('All endpoints failed', 117, inner);
 
 export const allContractOpenerFailedError = (inner: unknown) =>
-    new FetchError('All contract opener failed', 119, inner);
+    new FetchError('All contract opener failed', 118, inner);
 
 export const insufficientBalanceError = (token: string) =>
-    new InsufficientBalanceError(`Insufficient balance of ${token}`, 120);
+    new InsufficientBalanceError(`Insufficient balance of ${token}`, 119);
 
 export const unknownTokenTypeError = (token: string, reason?: string) =>
-    new TokenError(`Unknown token type of ${token}: ${reason}`, 121);
+    new TokenError(`Unknown token type of ${token}: ${reason}`, 120);
 
-export const indexRequiredError = (token: string) => new TokenError(`Index is required for collection ${token}`, 122);
+export const indexRequiredError = (token: string) => new TokenError(`Index is required for collection ${token}`, 121);
+
+export const convertCurrencyFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`failed to fetch convert currency: ${msg}`, 122, inner);
+
+export const simulationFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`failed to fetch simulate tac msg: ${msg}`, 123, inner);
+
+export const getTONFeeInfoFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`failed to fetch simulate tac msg: ${msg}`, 124, inner);
+
+export const missingFeeParamsError = new FormatError('When withoutSimulation is true, protocolFee and evmExecutorFee must be provided in options', 125);
+
+export const missingTvmExecutorFeeError = new FormatError('When withoutSimulation is true and isRoundTrip is true, tvmExecutorFee must be provided in options', 126);
+
+export const missingGasLimitError = new FormatError('When withoutSimulation is true, gasLimit must be provided in evmProxyMsg', 127);
