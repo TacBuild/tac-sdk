@@ -81,7 +81,12 @@ export class TONTransactionManager implements ITONTransactionManager {
     ): Promise<{ transaction: ShardTransaction; transactionLinker: TransactionLinker }> {
         this.logger.debug('Preparing cross-chain transaction');
         const caller = sender.getSenderAddress();
-        const { allowSimulationError = false, isRoundTrip = undefined, calculateRollbackFee = true } = options || {};
+        const {
+            allowSimulationError = false,
+            isRoundTrip = undefined,
+            calculateRollbackFee = true,
+            validateAssetsBalance = true
+        } = options || {};
         const { evmValidExecutors = [], tvmValidExecutors = [] } = options || {};
 
         Validator.validateEVMAddress(evmProxyMsg.evmTargetAddress);
@@ -90,7 +95,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         Validator.validateEVMAddresses(evmValidExecutors);
         Validator.validateTVMAddresses(tvmValidExecutors);
 
-        const shouldValidateAssets = (options?.validateAssetsBalance ?? true) && !skipAssetsBalanceValidation;
+        const shouldValidateAssets = validateAssetsBalance && !skipAssetsBalanceValidation;
         if (shouldValidateAssets) {
             await Promise.all(
                 [
@@ -207,7 +212,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         );
 
         await TON.checkBalance(sender, this.config, [transaction]);
-        this.logger.debug(`Sending transaction: ${formatObjectForLogging(transaction)}`);
+        this.logger.debug(`Sending transaction: ${formatObjectForLogging(transactionLinker)}`);
 
         const sendTransactionResult = await sender.sendShardTransaction(
             transaction,
@@ -219,8 +224,7 @@ export class TONTransactionManager implements ITONTransactionManager {
             return { sendTransactionResult, ...transactionLinker };
         }
 
-        const operationId = await this.operationTracker
-            .getOperationId(transactionLinker, {
+        const operationId = await this.operationTracker.getOperationId(transactionLinker, {
                 ...waitOptions,
                 successCheck: (id: string) => !!id,
                 logger: this.logger,
@@ -244,7 +248,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         const { transactions, transactionLinkers } = await this.prepareBatchTransactions(txs, sender);
 
         await TON.checkBalance(sender, this.config, transactions);
-        this.logger.debug(`Sending transactions: ${formatObjectForLogging(transactions)}`);
+        this.logger.debug(`Sending transactions: ${formatObjectForLogging(transactionLinkers)}`);
 
         await sender.sendShardTransactions(transactions, this.config.network, this.config.TONParams.contractOpener);
 
@@ -257,7 +261,6 @@ export class TONTransactionManager implements ITONTransactionManager {
         const caller = sender.getSenderAddress();
 
         const txsRequiringValidation = txs.filter((tx) => tx.options?.validateAssetsBalance ?? true);
-
         if (txsRequiringValidation.length) {
             // Aggregate only assets from txs that require validation and validate once per unique asset
             const assetsToValidate: Asset[] = txsRequiringValidation.flatMap((tx) => tx.assets ?? []);

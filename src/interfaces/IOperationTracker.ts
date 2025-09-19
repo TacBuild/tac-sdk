@@ -97,7 +97,26 @@ export interface IOperationTracker {
         waitOptions?: WaitOptions<ConvertedCurrencyResult>,
     ): Promise<ConvertedCurrencyResult>;
 
-    simulateTACMessage(params: TACSimulationParams, waitOptions?: WaitOptions<TACSimulationResult>,): Promise<TACSimulationResult>
+    /**
+     * Simulates execution of a TAC message without broadcasting it, optionally waiting until the result is available.
+     * Useful to validate inputs and estimate effects before sending a real transaction.
+     * @param params Simulation parameters and context.
+     * @param waitOptions Optional waiting settings (polling/timeout policy).
+     * @returns Promise with detailed simulation result.
+     */
+    simulateTACMessage(
+        params: TACSimulationParams,
+        waitOptions?: WaitOptions<TACSimulationResult>,
+    ): Promise<TACSimulationResult>;
 
-    getTVMExecutorFee(params: GetTVMExecutorFeeParams, waitOptions?: WaitOptions<SuggestedTVMExecutorFee>,): Promise<SuggestedTVMExecutorFee>
+    /**
+     * Suggests/calculates a TVM executor fee for the provided parameters, optionally waiting for completion.
+     * @param params Parameters affecting fee calculation.
+     * @param waitOptions Optional waiting settings (polling/timeout policy).
+     * @returns Promise with suggested fee information.
+     */
+    getTVMExecutorFee(
+        params: GetTVMExecutorFeeParams,
+        waitOptions?: WaitOptions<SuggestedTVMExecutorFee>,
+    ): Promise<SuggestedTVMExecutorFee>;
 }

@@ -6,6 +6,7 @@ import {
     AssetFromFTArg,
     AssetFromNFTCollectionArg,
     AssetFromNFTItemArg,
+    CrossChainTransactionOptions,
     CrosschainTx,
     EVMAddress,
     EvmProxyMsg,
@@ -13,7 +14,6 @@ import {
     NFTAddressType,
     NFTItemData,
     OperationIdsByShardsKey,
-    CrossChainTransactionOptions,
     SuggestedTVMExecutorFee,
     TACSimulationParams,
     TACSimulationResult,
@@ -205,16 +205,51 @@ export interface ITacSDK {
     getJettonData(itemAddress: TVMAddress): Promise<JettonMasterData>;
 
     // NFT methods
+    /**
+     * Returns NFT item data for the specified TVM address.
+     * @param itemAddress TVM address of the NFT item.
+     * @returns Promise resolving to the NFT item data.
+     */
     getNFTItemData(itemAddress: TVMAddress): Promise<NFTItemData>;
 
     // Address conversion methods
+    /**
+     * Resolves the EVM token address that corresponds to the provided TVM token address.
+     * @param tvmTokenAddress TVM token (Jetton) master address.
+     * @returns Promise resolving to the EVM token address.
+     */
     getEVMTokenAddress(tvmTokenAddress: string): Promise<string>;
+    /**
+     * Resolves the TVM token address that corresponds to the provided EVM token address.
+     * @param evmTokenAddress EVM token contract address (checksum string).
+     * @returns Promise resolving to the TVM token (Jetton) master address.
+     */
     getTVMTokenAddress(evmTokenAddress: string): Promise<string>;
+    /**
+     * Resolves the TVM NFT address for a given EVM NFT contract and optional token id.
+     * @param evmNFTAddress EVM NFT contract address.
+     * @param tokenId Optional NFT token id; when omitted, returns the collection address if applicable.
+     * @returns Promise resolving to the TVM NFT address.
+     */
     getTVMNFTAddress(evmNFTAddress: string, tokenId?: number | bigint): Promise<string>;
+    /**
+     * Resolves the EVM NFT address for a given TVM NFT address and desired address type.
+     * @param tvmNFTAddress TVM NFT item or collection address.
+     * @param addressType Desired address type on EVM side (collection or item).
+     * @returns Promise resolving to the EVM NFT address.
+     */
     getEVMNFTAddress(tvmNFTAddress: string, addressType: NFTAddressType): Promise<string>;
 
     // Utility methods
+    /**
+     * Checks whether a contract is deployed at the provided TVM address on the current network.
+     * @param address TVM address to check.
+     * @returns Promise resolving to true if deployed, false otherwise.
+     */
     isContractDeployedOnTVM(address: string): Promise<boolean>;
 
+    /**
+     * Returns the operation tracker instance used for querying operation statuses and utilities.
+     */
     getOperationTracker(): IOperationTracker;
 }

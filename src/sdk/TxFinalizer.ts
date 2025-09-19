@@ -1,12 +1,11 @@
-import axios from 'axios';
-
-import { ILogger } from '../interfaces';
+import { IHttpClient, ILogger } from '../interfaces';
 import {
     AdjacentTransactionsResponse,
     ToncenterTransaction,
     TransactionDepth,
     TxFinalizerConfig,
 } from '../structs/InternalStruct';
+import { AxiosHttpClient } from './AxiosHttpClient';
 import { NoopLogger } from './Logger';
 import { sleep, toCamelCaseTransformer } from './Utils';
 
@@ -18,10 +17,12 @@ const IGNORE_OPCODE = [
 export class TonTxFinalizer {
     private logger: ILogger;
     private apiConfig: TxFinalizerConfig;
+    private readonly httpClient: IHttpClient;
 
-    constructor(apiConfig: TxFinalizerConfig, logger: ILogger = new NoopLogger()) {
+    constructor(apiConfig: TxFinalizerConfig, logger: ILogger = new NoopLogger(), httpClient: IHttpClient = new AxiosHttpClient()) {
         this.apiConfig = apiConfig;
         this.logger = logger;
+        this.httpClient = httpClient;
     }
 
     private logHashFormats(hash: string) {
@@ -46,7 +47,7 @@ export class TonTxFinalizer {
         for (let i = retries; i >= 0; i--) {
             try {
                 const url = this.apiConfig.urlBuilder(hash);
-                const response = await axios.get<AdjacentTransactionsResponse>(url, {
+                const response = await this.httpClient.get<AdjacentTransactionsResponse>(url, {
                     headers: {
                         [this.apiConfig.authorization.header]: this.apiConfig.authorization.value,
                     },
@@ -113,7 +114,9 @@ export class TonTxFinalizer {
                         );
                     }
                     if (currentDepth + 1 < maxDepth) {
-                        queue.push({ hash: tx.hash, depth: currentDepth + 1 });
+                        if (tx.outMsgs.length > 0){
+                            queue.push({ hash: tx.hash, depth: currentDepth + 1 });
+                        }
                     }
                 } else {
                     this.logger.debug(

@@ -261,10 +261,7 @@ export class OperationTracker implements IOperationTracker {
             this.logger.warn('Operation ID not found');
             return SimplifiedStatuses.OPERATION_ID_NOT_FOUND;
         }
-        this.logger.debug(`Operation ID: ${operationId}`);
-
         const operationType = await this.getOperationType(operationId);
-        this.logger.debug(`Operation type: ${operationType}`);
 
         if (operationType == OperationType.PENDING || operationType == OperationType.UNKNOWN) {
             return SimplifiedStatuses.PENDING;

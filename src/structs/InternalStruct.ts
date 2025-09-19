@@ -103,6 +103,9 @@ export type ToncenterTransaction = {
         hash: string;
         opcode: string;
     };
+    outMsgs: {
+        hash: string;
+    } []
 };
 
 export type TransactionDepth = {
