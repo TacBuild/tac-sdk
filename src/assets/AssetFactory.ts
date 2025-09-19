@@ -27,7 +27,7 @@ export class AssetFactory {
 
         const cachedAsset = AssetCache.get(token);
         if (cachedAsset) {
-            return cachedAsset.clone.withAmount({ rawAmount: 0n });
+            return cachedAsset.clone.withRawAmount(0n);
         }
 
         const asset =

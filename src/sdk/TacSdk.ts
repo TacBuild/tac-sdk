@@ -1,7 +1,7 @@
 import { AgnosticProxySDK } from '@tonappchain/agnostic-sdk';
 import { Wallet } from 'ethers';
 
-import { AssetFactory, FT, NFT, TON } from '../assets';
+import { AssetFactory, FT, NFT } from '../assets';
 import {
     Asset,
     IConfiguration,
@@ -17,9 +17,11 @@ import {
     AssetFromFTArg,
     AssetFromNFTCollectionArg,
     AssetFromNFTItemArg,
+    AssetLike,
     AssetType,
     CrossChainTransactionOptions,
     CrosschainTx,
+    CrosschainTxWithAssetLike,
     EVMAddress,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
@@ -44,7 +46,7 @@ import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
 import { TACTransactionManager } from './TACTransactionManager';
 import { TONTransactionManager } from './TONTransactionManager';
-import { getBouncedAddress } from './Utils';
+import { getBouncedAddress, mapAssetsToTonAssets,normalizeAssets } from './Utils';
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
     readonly operationTracker: IOperationTracker;
@@ -129,62 +131,69 @@ export class TacSdk implements ITacSDK {
     async getSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
-        assets?: Asset[],
+        assets?: AssetLike[],
         options?: CrossChainTransactionOptions,
     ): Promise<ExecutionFeeEstimationResult> {
-        const tx: CrosschainTx = { evmProxyMsg, assets, options };
+        const normalizedAssets = await normalizeAssets(this.config, assets);
+        const tx: CrosschainTx = { evmProxyMsg, assets: normalizedAssets, options };
         return this.simulator.getSimulationInfo(sender, tx);
     }
 
     async getTVMExecutorFeeInfo(
-        assets: Asset[],
+        assets: AssetLike[],
         feeSymbol: string,
         tvmValidExecutors?: string[],
     ): Promise<SuggestedTVMExecutorFee> {
+        const normalized = await normalizeAssets(this.config, assets);
         const params = {
-            tonAssets: assets.map((asset) => ({
-                amount: asset.rawAmount.toString(),
-                tokenAddress: asset.address || '',
-                assetType: asset.type,
-            })),
+            tonAssets: mapAssetsToTonAssets(normalized),
             feeSymbol: feeSymbol,
             tvmValidExecutors: tvmValidExecutors ?? [],
-        }
+        };
         return this.operationTracker.getTVMExecutorFee(params);
     }
 
     async sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
-        assets?: Asset[],
+        assets: AssetLike[] = [],
         options?: CrossChainTransactionOptions,
         waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId> {
-        const tx: CrosschainTx = { evmProxyMsg, assets: assets ?? [], options };
+        const normalizedAssets = await normalizeAssets(this.config, assets);
+        const tx: CrosschainTx = { evmProxyMsg, assets: normalizedAssets, options };
         return this.tonTransactionManager.sendCrossChainTransaction(evmProxyMsg, sender, tx, waitOptions);
     }
 
     async sendCrossChainTransactions(
         sender: SenderAbstraction,
-        txs: CrosschainTx[],
+        txs: CrosschainTxWithAssetLike[],
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]> {
-        return this.tonTransactionManager.sendCrossChainTransactions(sender, txs, waitOptions);
+        const normalizedTxs: CrosschainTx[] = await Promise.all(
+            txs.map(async (tx) => ({
+                evmProxyMsg: tx.evmProxyMsg,
+                options: tx.options,
+                assets: await normalizeAssets(this.config, tx.assets),
+            })),
+        );
+        return this.tonTransactionManager.sendCrossChainTransactions(sender, normalizedTxs, waitOptions);
     }
 
     async bridgeTokensToTON(
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: Asset[],
+        assets?: AssetLike[],
         tvmExecutorFee?: bigint,
         tvmValidExecutors?: string[],
     ): Promise<string> {
+        const normalizedAssets = await normalizeAssets(this.config, assets);
         return this.tacTransactionManager.bridgeTokensToTON(
             signer,
             value,
             tonTarget,
-            assets,
+            normalizedAssets,
             tvmExecutorFee,
             tvmValidExecutors,
         );
@@ -262,11 +271,11 @@ export class TacSdk implements ITacSDK {
 
     // Address conversion methods
     async getEVMTokenAddress(tvmTokenAddress: string): Promise<string> {
-        if (tvmTokenAddress === this.nativeTONAddress || tvmTokenAddress === '') {
-            return TON.create(this.config).getEVMAddress();
-        }
-
-        return FT.getEVMAddress(this.config, tvmTokenAddress);
+        const asset = await AssetFactory.from(this.config, {
+            address: tvmTokenAddress,
+            tokenType: AssetType.FT,
+        });
+        return asset.getEVMAddress();
     }
 
     async getTVMTokenAddress(evmTokenAddress: string): Promise<string> {

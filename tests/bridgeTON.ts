@@ -28,15 +28,15 @@ const bridgeTonSawSender = async (amount: number) => {
 
     // create JettonTransferData (transfer jetton in TVM to swap)
     const assets = [
-        await (
+        (
             await AssetFactory.from(tacSdk.config, { address: tacSdk.config.nativeTONAddress, tokenType: AssetType.FT })
-        ).withAmount({ amount: amount }),
-        await (
+        ).withAmount(amount),
+        (
             await AssetFactory.from(tacSdk.config, { address: tacSdk.config.nativeTONAddress, tokenType: AssetType.FT })
-        ).withAmount({ amount: amount }),
-        await (
+        ).withAmount(amount),
+        (
             await AssetFactory.from(tacSdk.config, { address: tacSdk.config.nativeTONAddress, tokenType: AssetType.FT })
-        ).withAmount({ amount: amount }),
+        ).withAmount(amount),
     ];
 
     const result = await tacSdk.sendCrossChainTransaction(

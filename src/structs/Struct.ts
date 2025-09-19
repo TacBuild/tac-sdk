@@ -1,6 +1,7 @@
 import type { Address, Cell } from '@ton/ton';
 import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
 
+import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
 
 export type ContractState = {
@@ -359,6 +360,19 @@ export type CrosschainTx = {
     assets?: Asset[];
     options?: CrossChainTransactionOptions;
 };
+
+export type AssetLike =
+    | Asset
+    | FT
+    | NFT
+    | { rawAmount: bigint }
+    | { amount: number }
+    | { address: TVMAddress | EVMAddress }
+    | { address: TVMAddress | EVMAddress; rawAmount: bigint }
+    | { address: TVMAddress | EVMAddress; amount: number }
+    | { address: TVMAddress | EVMAddress; itemIndex: bigint };
+
+export type CrosschainTxWithAssetLike = Omit<CrosschainTx, 'assets'> & { assets?: AssetLike[] };
 
 export type NFTItemData = {
     init: boolean;

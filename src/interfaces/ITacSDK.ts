@@ -6,8 +6,10 @@ import {
     AssetFromFTArg,
     AssetFromNFTCollectionArg,
     AssetFromNFTItemArg,
+    AssetLike,
     CrossChainTransactionOptions,
     CrosschainTx,
+    CrosschainTxWithAssetLike,
     EVMAddress,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
@@ -109,7 +111,7 @@ export interface ITacSDK {
     getSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
-        assets?: Asset[],
+        assets?: AssetLike[],
         options?: CrossChainTransactionOptions,
     ): Promise<ExecutionFeeEstimationResult>;
     /**
@@ -120,7 +122,7 @@ export interface ITacSDK {
      * @returns Promise with suggested fee details.
      */
     getTVMExecutorFeeInfo(
-        assets: Asset[],
+        assets: AssetLike[],
         feeSymbol: string,
         tvmValidExecutors?: string[],
     ): Promise<SuggestedTVMExecutorFee>;
@@ -138,7 +140,7 @@ export interface ITacSDK {
     sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
-        assets?: Asset[],
+        assets?: AssetLike[],
         options?: CrossChainTransactionOptions,
         waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId>;
@@ -151,7 +153,7 @@ export interface ITacSDK {
      */
     sendCrossChainTransactions(
         sender: SenderAbstraction,
-        txs: CrosschainTx[],
+        txs: CrosschainTxWithAssetLike[],
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]>;
 
@@ -170,7 +172,7 @@ export interface ITacSDK {
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: Asset[],
+        assets?: AssetLike[],
         tvmExecutorFee?: bigint,
         tvmValidExecutors?: string[],
     ): Promise<string>;

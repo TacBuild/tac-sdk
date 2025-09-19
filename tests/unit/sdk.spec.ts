@@ -240,7 +240,7 @@ describe('TacSDK', () => {
             const token = TON.create(sdk.config);
 
             // sending TON
-            const assets: Asset[] = [await token.withAmount({ rawAmount: 1n })];
+            const assets: Asset[] = [token.withRawAmount(1n)];
 
             await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
 

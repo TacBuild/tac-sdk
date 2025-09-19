@@ -38,9 +38,9 @@ async function rollback() {
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
-    const token = await (
+    const token = (
         await AssetFactory.from(tacSdk.config, { address: TVM_TKA_ADDRESS, tokenType: AssetType.FT })
-    ).withAmount({ amount: amountA });
+    ).withAmount(amountA);
 
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(['string'], [`error`]);

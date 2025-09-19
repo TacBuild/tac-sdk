@@ -35,28 +35,33 @@ export class TON implements Asset {
         return ton;
     }
 
-    async withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<TON> {
+    withAmount(amount: number): TON {
         if (this._rawAmount > 0n) {
-            // clone token if withAmount set before to avoid changing the original token
             const newToken = this.clone;
-            newToken._rawAmount = 'rawAmount' in amount ? amount.rawAmount : calculateRawAmount(amount.amount, 9);
+            newToken._rawAmount = calculateRawAmount(amount, 9);
             return newToken;
         }
-
-        if ('rawAmount' in amount) {
-            this._rawAmount = amount.rawAmount;
-        } else {
-            this._rawAmount = calculateRawAmount(amount.amount, 9);
-        }
+        this._rawAmount = calculateRawAmount(amount, 9);
         return this;
     }
 
-    async addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<TON> {
-        if ('rawAmount' in amount) {
-            this._rawAmount = this._rawAmount + amount.rawAmount;
-        } else {
-            this._rawAmount = this._rawAmount + calculateRawAmount(amount.amount, 9);
+    withRawAmount(rawAmount: bigint): TON {
+        if (this._rawAmount > 0n) {
+            const newToken = this.clone;
+            newToken._rawAmount = rawAmount;
+            return newToken;
         }
+        this._rawAmount = rawAmount;
+        return this;
+    }
+
+    addAmount(amount: number): TON {
+        this._rawAmount = this._rawAmount + calculateRawAmount(amount, 9);
+        return this;
+    }
+
+    addRawAmount(rawAmount: bigint): TON {
+        this._rawAmount = this._rawAmount + rawAmount;
         return this;
     }
 

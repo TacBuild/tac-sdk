@@ -88,3 +88,5 @@ export const missingFeeParamsError = new FormatError('When withoutSimulation is 
 export const missingTvmExecutorFeeError = new FormatError('When withoutSimulation is true and isRoundTrip is true, tvmExecutorFee must be provided in options', 126);
 
 export const missingGasLimitError = new FormatError('When withoutSimulation is true, gasLimit must be provided in evmProxyMsg', 127);
+
+export const missingDecimals = new MetadataError('Missing decimals in jetton metadata', 128);

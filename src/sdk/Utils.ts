@@ -2,11 +2,25 @@ import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers } from 'ethers';
 import { sha256_sync } from 'ton-crypto';
 
-import { FT, NFT, TON } from '../assets';
+import type { FT, NFT, TON } from '../assets';
+import { AssetFactory } from '../assets';
 import { invalidMethodNameError } from '../errors';
-import { Asset } from '../interfaces';
+import { Asset, IConfiguration } from '../interfaces';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
-import { AssetType, EvmProxyMsg, FeeParams, TONAsset, TransactionLinker, ValidExecutors, WaitOptions } from '../structs/Struct';
+import {
+    AssetFromFTArg,
+    AssetFromNFTCollectionArg,
+    AssetFromNFTItemArg,
+    AssetLike,
+    AssetType,
+    EvmProxyMsg,
+    FeeParams,
+    NFTAddressType,
+    TONAsset,
+    TransactionLinker,
+    ValidExecutors,
+    WaitOptions,
+} from '../structs/Struct';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -223,7 +237,7 @@ export async function aggregateTokens(assets?: Asset[]): Promise<{
         if (asset.type !== AssetType.FT) continue;
 
         if (!asset.address) {
-            ton = ton ? await ton.addAmount({ rawAmount: asset.rawAmount }) : (asset.clone as TON);
+            ton = ton ? (ton.addRawAmount(asset.rawAmount) as TON) : (asset.clone as TON);
             continue;
         }
 
@@ -231,7 +245,7 @@ export async function aggregateTokens(assets?: Asset[]): Promise<{
         if (!jetton) {
             jetton = asset.clone;
         } else {
-            jetton = await jetton.addAmount({ rawAmount: asset.rawAmount });
+            jetton = jetton.addRawAmount(asset.rawAmount);
         }
 
         uniqueAssetsMap.set(asset.address, jetton);
@@ -266,4 +280,49 @@ export function mapAssetsToTonAssets(assets: Asset[]): TONAsset[] {
     }));
 }
 
+export async function normalizeAsset(config: IConfiguration, input: AssetLike): Promise<Asset> {
+    if (typeof (input as Asset).generatePayload === 'function') {
+        return input as Asset;
+    }
 
+    const address = 'address' in input && input.address ? input.address : '';
+
+    if ('itemIndex' in input) {
+        const args: AssetFromNFTCollectionArg = {
+            address,
+            tokenType: AssetType.NFT,
+            addressType: NFTAddressType.COLLECTION,
+            index: BigInt(input.itemIndex),
+        };
+        return await AssetFactory.from(config, args as AssetFromNFTCollectionArg);
+    }
+
+    if ('rawAmount' in input || 'amount' in input) {
+        const ftArgs: AssetFromFTArg = {
+            address,
+            tokenType: AssetType.FT,
+        };
+        try {
+            const asset = await AssetFactory.from(config, ftArgs);
+            return 'rawAmount' in input
+                ? asset.withRawAmount(input.rawAmount as bigint)
+                : asset.withAmount(input.amount as number);
+        } catch { /* Fallback to NFT item; ignore amount for NFTs (always 1) */ }
+    }
+
+    const itemArgs: AssetFromNFTItemArg = {
+        address,
+        tokenType: AssetType.NFT,
+        addressType: NFTAddressType.ITEM,
+    };
+    return await AssetFactory.from(config, itemArgs);
+}
+
+export async function normalizeAssets(config: IConfiguration, assets?: AssetLike[]): Promise<Asset[]> {
+    if (!assets || assets.length === 0) return [];
+    const normalized: Asset[] = [];
+    for (const a of assets) {
+        normalized.push(await normalizeAsset(config, a));
+    }
+    return normalized;
+}

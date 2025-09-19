@@ -35,9 +35,9 @@ async function removeLiquidity() {
 
     const amountLP = 1;
 
-    const tokenLP = await (
+    const tokenLP = (
         await AssetFactory.from(tacSdk.config, { address: TVM_LP_ADDRESS, tokenType: AssetType.FT })
-    ).withAmount({ amount: amountLP });
+    ).withAmount(amountLP);
 
     const tokenA = await AssetFactory.from(tacSdk.config, { address: TVM_TKA_ADDRESS, tokenType: AssetType.FT });
     const tokenB = await AssetFactory.from(tacSdk.config, { address: TVM_TKB_ADDRESS, tokenType: AssetType.FT });

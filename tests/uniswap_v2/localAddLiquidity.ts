@@ -46,12 +46,12 @@ async function addLiquidity() {
     const amountA = 1;
     const amountB = 2;
 
-    const tokenA = await (
+    const tokenA = (
         await AssetFactory.from(tacSdk.config, { address: TVM_TKA_ADDRESS, tokenType: AssetType.FT })
-    ).withAmount({ amount: amountA });
-    const tokenB = await (
+    ).withAmount(amountA);
+    const tokenB = (
         await AssetFactory.from(tacSdk.config, { address: TVM_TKB_ADDRESS, tokenType: AssetType.FT })
-    ).withAmount({ amount: amountB });
+    ).withAmount(amountB);
     const EVM_TKA_ADDRESS = await tokenA.getEVMAddress();
     const EVM_TKB_ADDRESS = await tokenB.getEVMAddress();
 

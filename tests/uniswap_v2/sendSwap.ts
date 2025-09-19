@@ -70,7 +70,7 @@ const swapUniswapRawSender = async (amountsIn: number[], amountOutMin: number) =
     // create JettonTransferData (transfer jetton in TVM to swap)
     const assets: Asset[] = [];
     for (const amount of amountsIn) {
-        assets.push(await tokenA.withAmount({ amount }));
+        assets.push(tokenA.withAmount(amount));
     }
 
     const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);

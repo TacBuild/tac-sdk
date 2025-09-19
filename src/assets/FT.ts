@@ -2,7 +2,13 @@ import { SandboxContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, OpenedContract } from '@ton/ton';
 import { isAddress as isEthereumAddress } from 'ethers';
 
-import { ContractError, emptyContractError, insufficientBalanceError, unknownTokenTypeError } from '../errors';
+import {
+    ContractError,
+    emptyContractError,
+    insufficientBalanceError,
+    missingDecimals,
+    unknownTokenTypeError,
+} from '../errors';
 import { Asset, ContractOpener,IConfiguration } from '../interfaces';
 import { JETTON_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import {
@@ -28,7 +34,7 @@ export class FT implements Asset {
     private _configuration: IConfiguration;
     private _jettonMinter: OpenedContract<JettonMaster> | SandboxContract<JettonMaster>;
 
-    private _decimals?: number;
+    private _decimals: number;
     private _transferAmount: bigint;
     private _evmAddress?: string;
 
@@ -126,12 +132,13 @@ export class FT implements Asset {
         }
     }
 
-    private constructor(address: TVMAddress, origin: Origin, configuration: IConfiguration) {
+    private constructor(address: TVMAddress, origin: Origin, configuration: IConfiguration, decimals: number) {
         this._tvmAddress = Address.parse(address);
         this._configuration = configuration;
         this._jettonMinter = this._configuration.TONParams.contractOpener.open(new JettonMaster(this._tvmAddress));
         this.origin = origin;
         this._transferAmount = 0n;
+        this._decimals = decimals;
     }
 
     static async fromAddress(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<FT> {
@@ -144,11 +151,19 @@ export class FT implements Asset {
             throw e;
         });
 
-        const token = new FT(tvmAddress, origin, configuration);
+        const givenMinter = configuration.TONParams.contractOpener.open(
+            new JettonMaster(Address.parse(tvmAddress)),
+        );
+        const jettonData = await givenMinter.getJettonData();
+        const decimalsRaw = jettonData.content.metadata.decimals;
+        if (decimalsRaw === undefined) {
+            throw missingDecimals;
+        }
+
+        const token = new FT(tvmAddress, origin, configuration, Number(decimalsRaw));
         if (isEthereumAddress(address)) {
             token._evmAddress = address;
         }
-
         return token;
     }
 
@@ -157,47 +172,47 @@ export class FT implements Asset {
     }
 
     get clone(): FT {
-        const ft = new FT(this._tvmAddress.toString(), this.origin, this._configuration);
+        const ft = new FT(this._tvmAddress.toString(), this.origin, this._configuration, this._decimals);
         ft._transferAmount = this._transferAmount;
         ft._evmAddress = this._evmAddress;
-        ft._decimals = this._decimals;
         return ft;
     }
 
-    async withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<FT> {
+    withAmount(amount: number): FT {
         if (this._transferAmount > 0n) {
-            // clone token if withAmount set before to avoid changing the original token
             const newToken = this.clone;
-            newToken._transferAmount =
-                'rawAmount' in amount ? amount.rawAmount : calculateRawAmount(amount.amount, await this.getDecimals());
+            const decimals = this._decimals;
+            newToken._transferAmount = calculateRawAmount(amount, decimals);
             return newToken;
         }
 
-        if ('rawAmount' in amount) {
-            this._transferAmount = amount.rawAmount;
-        } else {
-            const decimals = await this.getDecimals();
-            this._transferAmount = calculateRawAmount(amount.amount, decimals);
-        }
-
+        const decimals = this._decimals;
+        this._transferAmount = calculateRawAmount(amount, decimals);
         return this;
     }
 
-    async addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<FT> {
-        if ('rawAmount' in amount) {
-            this._transferAmount = this._transferAmount + amount.rawAmount;
-        } else {
-            const decimals = await this.getDecimals();
-            this._transferAmount = this._transferAmount + calculateRawAmount(amount.amount, decimals);
+    withRawAmount(rawAmount: bigint): FT {
+        if (this._transferAmount > 0n) {
+            const newToken = this.clone;
+            newToken._transferAmount = rawAmount;
+            return newToken;
         }
+        this._transferAmount = rawAmount;
+        return this;
+    }
+
+    addAmount(amount: number): FT {
+        const decimals = this._decimals;
+        this._transferAmount = this._transferAmount + calculateRawAmount(amount, decimals);
+        return this;
+    }
+
+    addRawAmount(rawAmount: bigint): FT {
+        this._transferAmount = this._transferAmount + rawAmount;
         return this;
     }
 
     async getDecimals(): Promise<number> {
-        if (!this._decimals) {
-            const decimalsRaw = (await this._jettonMinter.getJettonData()).content.metadata.decimals;
-            this._decimals = decimalsRaw ? Number(decimalsRaw) : 9;
-        }
         return this._decimals;
     }
 

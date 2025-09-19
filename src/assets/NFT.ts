@@ -243,11 +243,25 @@ export class NFT implements Asset {
         return new NFT(this._addresses, this.origin, this._configuration);
     }
 
-    async withAmount(): Promise<NFT> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    withAmount(_amount?: number): NFT {
+        // NFTs are non-fungible; amount is always 1. Keep API consistent.
         return this;
     }
 
-    async addAmount(): Promise<NFT> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    withRawAmount(_rawAmount?: bigint): NFT {
+        // NFTs are non-fungible; raw amount concept is not applicable. Keep API consistent.
+        return this;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    addAmount(_amount?: number): NFT {
+        return this;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    addRawAmount(_rawAmount?: bigint): NFT {
         return this;
     }
 

@@ -5,7 +5,7 @@ import { Asset, IConfiguration, ILogger, IOperationTracker, ITACTransactionManag
 import { AssetType } from '../structs/Struct';
 import { TAC_SYMBOL } from './Consts';
 import { NoopLogger } from './Logger';
-import { formatObjectForLogging } from './Utils';
+import { formatObjectForLogging, mapAssetsToTonAssets } from './Utils';
 import { Validator } from './Validator';
 
 export class TACTransactionManager implements ITACTransactionManager {
@@ -46,21 +46,17 @@ export class TACTransactionManager implements ITACTransactionManager {
 
         // Add native TAC asset if value > 0
         if (value > 0n) {
-            const nativeTacAsset = await (await AssetFactory.from(this.config, {
+            const nativeTacAsset = (await AssetFactory.from(this.config, {
                 address: await this.config.nativeTACAddress(),
                 tokenType: AssetType.FT,
-            })).withAmount({ rawAmount: value });
+            })).withRawAmount(value);
             assets = [...assets, nativeTacAsset];
         }
 
         // Calculate executor fee if not provided
         if (!tvmExecutorFee) {
             const feeParams = {
-                tonAssets: assets.map(asset => ({
-                    amount: asset.rawAmount.toString(),
-                    tokenAddress: asset.address || '',
-                    assetType: asset.type,
-                })),
+                tonAssets: mapAssetsToTonAssets(assets),
                 feeSymbol: TAC_SYMBOL,
                 tvmValidExecutors: tvmValidExecutors ?? [],
             };

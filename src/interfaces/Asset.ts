@@ -12,20 +12,33 @@ export interface Asset {
     // Clone to create new token with the same parameters
     clone: Asset;
     /**
-     * Returns a new asset instance with the specified transfer amount.
-     * Use { rawAmount } for base units (e.g., nano units), or { amount } for human-readable units if supported by the implementation.
+     * Returns a new asset instance with the specified transfer amount in human-readable units.
      * Does not mutate the current asset instance.
-     * @param amount Object specifying either rawAmount (bigint base units) or amount (number in human units).
-     * @returns Promise that resolves to a new Asset reflecting the requested amount.
+     * @param amount Amount in human units (e.g., 1.5 TON). Decimals are resolved during asset creation.
+     * @returns A new Asset reflecting the requested amount.
      */
-    withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
+    withAmount(amount: number): Asset;
     /**
-     * Increases the transfer amount by the specified value and returns a new asset instance.
+     * Returns a new asset instance with the specified transfer amount in raw base units.
      * Does not mutate the current asset instance.
-     * @param amount Object specifying either rawAmount (bigint base units) or amount (number in human units).
-     * @returns Promise that resolves to a new Asset with the increased amount.
+     * @param rawAmount Amount in raw base units (bigint).
+     * @returns A new Asset reflecting the requested raw amount.
      */
-    addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
+    withRawAmount(rawAmount: bigint): Asset;
+    /**
+     * Increases the transfer amount by the specified value (human-readable units) and returns a new asset instance.
+     * Does not mutate the current asset instance.
+     * @param amount Amount in human units (e.g., 1.5 TON). Decimals are resolved during asset creation.
+     * @returns A new Asset with the increased amount.
+     */
+    addAmount(amount: number): Asset;
+    /**
+     * Increases the transfer amount by the specified raw base units and returns a new asset instance.
+     * Does not mutate the current asset instance.
+     * @param rawAmount Amount in raw base units (bigint).
+     * @returns A new Asset with the increased amount in raw units.
+     */
+    addRawAmount(rawAmount: bigint): Asset;
     /**
      * Resolves the corresponding EVM token address for this asset.
      * Useful when bridging or interacting with EVM-compatible networks.

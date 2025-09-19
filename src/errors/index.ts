@@ -20,6 +20,7 @@ export {
     indexRequiredError,
     insufficientBalanceError,
     invalidMethodNameError,
+    missingDecimals,
     missingFeeParamsError,
     missingGasLimitError,
     missingTvmExecutorFeeError,
@@ -33,5 +34,4 @@ export {
     unknownTokenTypeError,
     unknownWalletError,
     unsupportedFormatError,
-    unsupportedKeyError,
-} from './instances';
+    unsupportedKeyError} from './instances';
