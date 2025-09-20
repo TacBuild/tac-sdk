@@ -225,4 +225,7 @@ async function sendTransactionWithManualTracking() {
         tacSdk.closeConnections();
     }
 }
+
 ```
+
+[Another example](../../tests/bridgeTONEnhanced.ts)
