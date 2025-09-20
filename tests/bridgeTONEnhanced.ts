@@ -21,7 +21,7 @@ interface TransactionContext {
 const createEnhancedWaitOptions = (
     operationTracker: IOperationTracker,
     logger: ConsoleLogger,
-): WaitOptions<string> & { context: TransactionContext } => {
+): WaitOptions<string,unknown> => {
     const context: TransactionContext = {
         operationTracker: operationTracker,
     };

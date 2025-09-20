@@ -11,6 +11,9 @@
     - [`getSimulationInfo`](#getsimulationinfo)
     - [`sendCrossChainTransactions`](#sendcrosschaintransactions)
   - [Asset Helpers](#asset-helpers)
+    - [`getAsset`](#getasset)
+    - [`getFT`](#getft)
+    - [`getNFT`](#getnft)
     - [`getEVMTokenAddress`](#getevmtokenaddress)
     - [`getTVMTokenAddress`](#gettvmtokenaddress)
     - [`nativeTONAddress`](#nativetonaddress)
@@ -22,6 +25,7 @@
     - [`getTVMNFTAddress`](#gettvmnftaddress)
     - [`getEVMNFTAddress`](#getevmnftaddress)
   - [Jetton Helpers](#jetton-helpers)
+    - [`getJettonData`](#getjettondata)
     - [`getUserJettonWalletAddress`](#getuserjettonwalletaddress)
     - [`getUserJettonBalance`](#getuserjettonbalance)
     - [`getUserJettonBalanceExtended`](#getuserjettonbalanceextended)
@@ -136,7 +140,7 @@ Simulates the full transaction lifecycle and estimates fees.
 ### `sendCrossChainTransactions`
 
 ```ts
-sendCrossChainTransactions(sender: SenderAbstraction, txs: CrosschainTx[], waitOptions?: WaitOptions<OperationIdsByShardsKey>): Promise<TransactionLinkerWithOperationId[]>
+sendCrossChainTransactions(sender: SenderAbstraction, txs: CrosschainTxWithAssetLike[], waitOptions?: WaitOptions<OperationIdsByShardsKey>): Promise<TransactionLinkerWithOperationId[]>
 ```
 
 Sends multiple cross-chain transactions in a batch. This is useful for scenarios where multiple independent operations need to be initiated from TON to TAC.
@@ -144,7 +148,7 @@ Sends multiple cross-chain transactions in a batch. This is useful for scenarios
 #### **Parameters**
 
 - **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the user's wallet.
-- **`txs`**: An array of [`CrosschainTx`](./../models/structs.md#crosschaintx) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`.
+- **`txs`**: An array of [`CrosschainTxWithAssetLike`](./../models/structs.md#crosschaintxwithassetlike) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`.
 - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct.
 
 #### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
@@ -168,7 +172,7 @@ Creates an asset wrapper based on the provided arguments. If you pass FT params 
 ### `getFT`
 
 ```ts
-getFT(address: string): Promise<FT>
+getFT(address: TVMAddress | EVMAddress): Promise<FT>
 ```
 
 Returns a fungible token (Jetton) wrapper by its TVM or EVM address.
@@ -300,7 +304,7 @@ Returns the EVM NFT collection address as a string.
 ### `getJettonData`
 
 ```ts
-getJettonData(itemAddress: string): Promise<JettonMasterData>
+getJettonData(itemAddress: TVMAddress): Promise<JettonMasterData>
 ```
 
 Returns Jetton master contract data (metadata, total supply, mintable flag, etc.) by its TVM address.
