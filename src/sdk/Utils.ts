@@ -302,12 +302,10 @@ export async function normalizeAsset(config: IConfiguration, input: AssetLike): 
             address,
             tokenType: AssetType.FT,
         };
-        try {
-            const asset = await AssetFactory.from(config, ftArgs);
-            return 'rawAmount' in input
-                ? asset.withRawAmount(input.rawAmount as bigint)
-                : asset.withAmount(input.amount as number);
-        } catch { /* Fallback to NFT item; ignore amount for NFTs (always 1) */ }
+        const asset = await AssetFactory.from(config, ftArgs);
+        return 'rawAmount' in input
+            ? asset.withRawAmount(input.rawAmount as bigint)
+            : asset.withAmount(input.amount as number);
     }
 
     const itemArgs: AssetFromNFTItemArg = {
