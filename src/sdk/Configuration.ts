@@ -175,7 +175,7 @@ export class Configuration implements IConfiguration {
                 crossChainLayerAddress: abiCoder.decode(['address'], results[0].returnData)[0] as string,
                 tokenUtilsAddress: abiCoder.decode(['address'], results[1].returnData)[0] as string,
                 trustedTACExecutors: abiCoder.decode(['address[]'], results[2].returnData)[0] as string[],
-                trustedTONExecutors: abiCoder.decode(['address[]'], results[3].returnData)[0] as string[],
+                trustedTONExecutors: abiCoder.decode(['string[]'], results[3].returnData)[0] as string[],
             };
         } catch {
             return null;

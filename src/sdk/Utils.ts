@@ -166,18 +166,22 @@ export const generateFeeData = (feeParams?: FeeParams): Cell | undefined => {
     }
 };
 
-export async function waitUntilSuccess<T, A extends unknown[]>(
-    options: WaitOptions<T> = {},
+export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[] = unknown[]>(
+    options: WaitOptions<T, TContext> = {},
     operation: (...args: A) => Promise<T>,
+    operationDescription?: string,
     ...args: A
 ): Promise<T> {
     const timeout = options.timeout ?? 300000;
     const maxAttempts = options.maxAttempts ?? 30;
     const delay = options.delay ?? 10000;
     const successCheck = options.successCheck;
+    const context = options.context;
 
+    const contextPrefix = operationDescription ? `[${operationDescription}] ` : '';
+    
     options.logger?.debug(
-        `Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`,
+        `${contextPrefix}Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`,
     );
     const startTime = Date.now();
     let attempt = 1;
@@ -187,28 +191,37 @@ export async function waitUntilSuccess<T, A extends unknown[]>(
         const elapsedTime = currentTime - startTime;
         try {
             const result = await operation(...args);
-            if (!result) {
+            if (result === undefined || result === null) {
                 throw new Error(`Empty result`);
             }
-            options.logger?.debug(`Result: ${formatObjectForLogging(result)}`);
-            if (successCheck && !successCheck(result)) {
+            options.logger?.debug(`${contextPrefix}Result: ${formatObjectForLogging(result)}`);
+            if (successCheck && !successCheck(result, context)) {
                 throw new Error(`Result is not successful`);
             }
-            options.logger?.debug(`Attempt ${attempt} successful`);
+            options.logger?.debug(`${contextPrefix}Attempt ${attempt} successful`);
+
+            // Execute custom onSuccess callback if provided
+            if (options.onSuccess) {
+                try {
+                    await options.onSuccess(result, context);
+                } catch (callbackError) {
+                    options.logger?.warn(`${contextPrefix}onSuccess callback error: ${callbackError}`);
+                }
+            }
 
             return result;
         } catch (error) {
             if (elapsedTime >= timeout) {
-                options.logger?.debug(`Timeout after ${elapsedTime}ms`);
+                options.logger?.debug(`${contextPrefix}Timeout after ${elapsedTime}ms`);
                 throw error;
             }
 
             if (attempt >= maxAttempts) {
-                options.logger?.debug(`Max attempts (${maxAttempts}) reached`);
+                options.logger?.debug(`${contextPrefix}Max attempts (${maxAttempts}) reached`);
                 throw error;
             }
-            options.logger?.debug(`Error on attempt ${attempt}: ${error}`);
-            options.logger?.debug(`Waiting ${delay}ms before next attempt`);
+            options.logger?.debug(`${contextPrefix}Error on attempt ${attempt}: ${error}`);
+            options.logger?.debug(`${contextPrefix}Waiting ${delay}ms before next attempt`);
             await sleep(delay);
             attempt++;
         }

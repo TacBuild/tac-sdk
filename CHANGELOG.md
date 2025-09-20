@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 
 - New assets module: added classes/utilities for working with assets (`FT`, `NFT`, `TON`), `AssetFactory`, `AssetCache`, and export indexes.
 - New SDK components: `Configuration`, `Logger` (`ConsoleLogger`/`NoopLogger`), `Simulator`, `TxFinalizer`, `Validator`.
-- **Transaction Manager Architecture Split**: Replaced single `TransactionManager` with specialized components:
+- Transaction Manager Architecture Split: Replaced single `TransactionManager` with specialized components:
   - `TACTransactionManager` (`ITACTransactionManager`): Handles TAC->TON bridging operations
   - `TONTransactionManager` (`ITONTransactionManager`): Handles TON->TAC cross-chain transactions
 - Debug mode for `TacSDK` and `OperationTracker`: SDK and OperationTracker don't write to console by default.
@@ -17,6 +17,7 @@ All notable changes to this project will be documented in this file.
 - Check balance before sending crosschain transaction.
 - `RawSender` can send transactions in batches(size is 254 for W5, 4 for others).
 - Check for transaction tree success on TON using `TonTxFinalizer`.
+- Enhanced WaitOptions Interface with Context Parameter Support.
 
 ### Changed
 

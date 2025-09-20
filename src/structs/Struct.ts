@@ -389,7 +389,7 @@ export type NFTCollectionData = {
     adminAddress: Address;
 };
 
-export interface WaitOptions<T = unknown> {
+export interface WaitOptions<T = unknown, TContext = unknown> {
     /**
      * Timeout in milliseconds
      * @default 300000 (5 minutes)
@@ -410,10 +410,20 @@ export interface WaitOptions<T = unknown> {
      */
     logger?: ILogger;
     /**
+     * Optional context object to pass additional parameters to callbacks
+     * This allows passing custom data like OperationTracker instances, configurations, etc.
+     */
+    context?: TContext;
+    /**
      * Function to check if the result is successful
      * If not provided, any non-error result is considered successful
      */
-    successCheck?: (result: T) => boolean;
+    successCheck?: (result: T, context?: TContext) => boolean;
+    /**
+     * Custom callback function that executes when request is successful
+     * Receives both the result and optional context with additional parameters
+     */
+    onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
 }
 
 export const defaultWaitOptions: WaitOptions = {

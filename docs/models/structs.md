@@ -998,23 +998,30 @@ Contains fee information for both TAC and TON blockchain networks, plus addition
 ### `WaitOptions (Interface)`
 
 ```typescript
-export interface WaitOptions<T = unknown> {
+export interface WaitOptions<T = unknown, TContext = unknown> {
     timeout?: number;
     maxAttempts?: number;
     delay?: number;
     logger?: ILogger;
-    successCheck?: (result: T) => boolean;
+    context?: TContext;
+    successCheck?: (result: T, context?: TContext) => boolean;
+    onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
 }
 ```
 
-Allows to specify custom options for waiting for operation resolution.
+Allows to specify custom options for waiting for operation resolution with enhanced callback capabilities and context parameter support.
 
 - **`timeout`** *(optional)*: Timeout in milliseconds. Default is 300000 (5 minutes).
 - **`maxAttempts`** *(optional)*: Maximum number of attempts. Default is 30.
 - **`delay`** *(optional)*: Delay between attempts in milliseconds. Default is 10000 (10 seconds).
 - **`logger`** *(optional)*: Logger used to output debug information during waiting.
-- **`successCheck`** *(optional)*: Function to check if the result is successful. If not provided, any non-error result is considered successful.
+- **`context`** *(optional)*: Optional context object to pass additional parameters to callbacks. This allows passing custom data like OperationTracker instances, configurations, user settings, and other dependencies without relying on closures.
+- **`successCheck`** *(optional)*: Function to check if the result is successful. Receives both the result and optional context parameter. If not provided, any non-error result is considered successful.
+- **`onSuccess`** *(optional)*: Custom callback function that executes when operation is successful. Receives both the result and optional context with additional parameters. Can be used for additional processing like profiling data retrieval. Supports both synchronous and asynchronous callbacks.
 
+#### Usage Examples
+
+For comprehensive examples and usage patterns, including detailed context parameter usage, see the [Enhanced WaitOptions Examples](../examples/enhanced-waitoptions.md) documentation.
 
 ---
 ### `TVMAddress`

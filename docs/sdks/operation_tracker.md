@@ -134,7 +134,7 @@ For more details about the underlying client, see [`LiteSequencerClient`](./lite
 All methods in `OperationTracker` support an optional `waitOptions` parameter that enables automatic retrying and waiting for successful results:
 
 ```ts
-interface WaitOptions<T = unknown> {
+interface WaitOptions<T = unknown, TContext = unknown> {
     /**
      * Timeout in milliseconds
      * @default 300000 (5 minutes)
@@ -155,23 +155,27 @@ interface WaitOptions<T = unknown> {
      */
     logger?: ILogger;
     /**
+     * Optional context object to pass additional parameters to callbacks
+     * This allows passing custom data like OperationTracker instances, configurations, etc.
+     */
+    context?: TContext;
+    /**
      * Function to check if the result is successful
      * If not provided, any non-error result is considered successful
      */
-    successCheck?: (result: T) => boolean;
+    successCheck?: (result: T, context?: TContext) => boolean;
+    /**
+     * Custom callback function that executes when operation is successful
+     * Receives both the result and optional context with additional parameters
+     * Can be used for additional processing like profiling data retrieval
+     */
+    onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
 }
 ```
 
-Example usage:
-```ts
-// Wait for operation ID with custom options
-const operationId = await tracker.getOperationId(transactionLinker, {
-    timeout: 60000,     // 1 minute timeout
-    maxAttempts: 10,    // 10 attempts
-    delay: 5000,        // 5 seconds between attempts
-    successCheck: (result) => result !== '' // Custom success check
-});
-```
+### Usage Examples
+
+For comprehensive examples and usage patterns, including detailed context parameter usage, see the [Enhanced WaitOptions Examples](../examples/enhanced-waitoptions.md) documentation.
 
 ---
 
