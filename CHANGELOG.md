@@ -7,7 +7,10 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - New assets module: added classes/utilities for working with assets (`FT`, `NFT`, `TON`), `AssetFactory`, `AssetCache`, and export indexes.
-- New SDK components: `Configuration`, `Logger` (`ConsoleLogger`/`NoopLogger`), `Simulator`, `TransactionManager`, `TxFinalizer`, `Validator`.
+- New SDK components: `Configuration`, `Logger` (`ConsoleLogger`/`NoopLogger`), `Simulator`, `TxFinalizer`, `Validator`.
+- **Transaction Manager Architecture Split**: Replaced single `TransactionManager` with specialized components:
+  - `TACTransactionManager` (`ITACTransactionManager`): Handles TAC->TON bridging operations
+  - `TONTransactionManager` (`ITONTransactionManager`): Handles TON->TAC cross-chain transactions
 - Debug mode for `TacSDK` and `OperationTracker`: SDK and OperationTracker don't write to console by default.
 - Optional waiting for operation resolution in `TacSDK` and `OperationTracker` while using `waitOptions` argument.
 - RetryableContractOpener for stable work of SDK

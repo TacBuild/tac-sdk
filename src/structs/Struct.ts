@@ -1,8 +1,9 @@
-import type { Address, Cell } from '@ton/ton';
+import  { Address, Cell, OpenedContract } from '@ton/ton';
 import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
 
 import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
+import { JettonMaster, JettonMasterData } from '../wrappers/JettonMaster';
 
 export type ContractState = {
     balance: bigint;
@@ -472,4 +473,11 @@ export type GetTVMExecutorFeeParams = {
     feeSymbol: string;
     tonAssets: TONAsset[];
     tvmValidExecutors: string[];
+};
+
+export type FTOriginAndData = {
+    origin: Origin;
+    jettonMinter: OpenedContract<JettonMaster>;
+    evmAddress?: string;
+    jettonData?: JettonMasterData;
 };

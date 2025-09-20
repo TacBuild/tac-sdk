@@ -40,16 +40,16 @@ The TAC SDK enables you to create frontends that:
 ### SDK Components
 
 - **[`TacSdk`](./docs/sdks/tac_sdk.md)**: The main class for interacting with the TAC protocol.
-  - [`create`](./docs/sdks/tac_sdk.md#create-static): Initializes the SDK instance.
+  - [`create`](./docs/sdks/tac_sdk.md#creating-an-instance-of-tacsdk): Initializes the SDK instance.
   - [`sendCrossChainTransaction`](./docs/sdks/tac_sdk.md#sendcrosschaintransaction): Sends a cross-chain transaction from TON to TAC.
   - [`getEVMTokenAddress`](./docs/sdks/tac_sdk.md#getevmtokenaddress): Gets the TAC address for a TON token.
   - [`getTVMTokenAddress`](./docs/sdks/tac_sdk.md#gettvmtokenaddress): Gets the TON address for a TAC token.
-  - [`getTransactionSimulationInfo`](./docs/sdks/tac_sdk.md#gettransactionsimulationinfo): Performs a complete simulation of a crosschain transaction to estimate fees and gather execution-related metadata.  
+  - [`getSimulationInfo`](./docs/sdks/tac_sdk.md#getsimulationinfo): Performs a complete simulation of a crosschain transaction to estimate fees and gather execution-related metadata.
   - [`getUserJettonBalance`](./docs/sdks/tac_sdk.md#getuserjettonbalance): Gets a user's Jetton balance (raw).
   - [`getUserJettonBalanceExtended`](./docs/sdks/tac_sdk.md#getuserjettonbalanceextended): Gets extended Jetton balance info (including decimals).
   - [`getUserJettonWalletAddress`](./docs/sdks/tac_sdk.md#getuserjettonwalletaddress): Calculates a user's Jetton wallet address.
-  - [`nativeTONAddress (getter)`](./docs/sdks/tac_sdk.md#nativetonaddress-getter): Placeholder address for native TON.
-  - [`nativeTACAddress (getter)`](./docs/sdks/tac_sdk.md#nativetacaddress-getter): Gets the native asset address on the TAC chain.
+  - [`nativeTONAddress (getter)`](./docs/sdks/tac_sdk.md#nativetonaddress): Placeholder address for native TON.
+  - [`nativeTACAddress (getter)`](./docs/sdks/tac_sdk.md#nativetacaddress): Gets the native asset address on the TAC chain.
   - *(See file for more...)*
 
 - **[`OperationTracker`](./docs/sdks/operation_tracker.md)**: Tools for monitoring cross-chain operation status.
@@ -75,9 +75,9 @@ The TAC SDK enables you to create frontends that:
   - [`StageName`](./docs/models/enums.md#stagename): Identifiers for tracking stages (`COLLECTED_IN_TAC`, `EXECUTED_IN_TAC`, etc.).
 
 - **[`Structs`](./docs/models/structs.md)**: Core data structures.
-  - [`AssetBridgingData`](./docs/models/structs.md#assetbridgingdata): Specifies assets to bridge (TON or Jettons).
-  - [`EvmProxyMsg`](./docs/models/structs.md#evmproxymsg): Defines the target EVM call details.
-  - [`TransactionLinker`](./docs/models/structs.md#transactionlinker): Identifies a cross-chain operation.
+  - [`AssetLike`](./docs/models/structs.md#assetlike): Flexible asset specification for cross-chain operations.
+  - [`EvmProxyMsg`](./docs/models/structs.md#evmproxymsg-type): Defines the target EVM call details.
+  - [`TransactionLinker`](./docs/models/structs.md#transactionlinker-type): Identifies a cross-chain operation.
   - *(See file for more...)*
 
 Navigate through the linked files for full details on parameters, return types, examples, and more.

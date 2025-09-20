@@ -23,6 +23,7 @@ export {
     missingDecimals,
     missingFeeParamsError,
     missingGasLimitError,
+    missingJettonDataError,
     missingTvmExecutorFeeError,
     notMultiplyOf8Error,
     operationFetchError,

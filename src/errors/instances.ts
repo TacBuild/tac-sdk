@@ -90,3 +90,5 @@ export const missingTvmExecutorFeeError = new FormatError('When withoutSimulatio
 export const missingGasLimitError = new FormatError('When withoutSimulation is true, gasLimit must be provided in evmProxyMsg', 127);
 
 export const missingDecimals = new MetadataError('Missing decimals in jetton metadata', 128);
+
+export const missingJettonDataError = new MetadataError('Jetton data should be available for TON origin', 129);

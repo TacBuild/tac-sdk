@@ -13,6 +13,9 @@
     - [Operation IDs by Shards Keys](#operation-ids-by-shards-keys)
     - [Stage Profiling](#stage-profiling)
     - [Operation Statuses](#operation-statuses)
+    - [Currency Conversion](#currency-conversion)
+    - [TVM Executor Fee](#tvm-executor-fee)
+    - [TAC Message Simulation](#tac-message-simulation)
 
 ---
 
@@ -118,4 +121,49 @@ getOperationStatuses(
 
 Fetches status information for multiple operations. Handles request chunking automatically.
 
-**Returns:** [`StatusInfosByOperationId`](./../models/structs.md#statusinfosbyoperationid) 
+**Returns:** [`StatusInfosByOperationId`](./../models/structs.md#statusinfosbyoperationid)
+
+---
+
+### Currency Conversion
+
+```ts
+convertCurrency(params: ConvertCurrencyParams): Promise<ConvertedCurrencyResult>
+```
+
+Converts currency amount using the sequencer-provided rate source.
+
+**Parameters:**
+- **`params`**: [`ConvertCurrencyParams`](./../models/structs.md#convertcurrencyparams) - Parameters for currency conversion
+
+**Returns:** [`ConvertedCurrencyResult`](./../models/structs.md#convertedcurrencyresult)
+
+---
+
+### TVM Executor Fee
+
+```ts
+getTVMExecutorFee(params: GetTVMExecutorFeeParams): Promise<SuggestedTVMExecutorFee>
+```
+
+Gets TVM executor fee information for cross-chain operations.
+
+**Parameters:**
+- **`params`**: [`GetTVMExecutorFeeParams`](./../models/structs.md#gettvmexecutorfeeparams) - Parameters for fee calculation
+
+**Returns:** [`SuggestedTVMExecutorFee`](./../models/structs.md#suggestedtvmexecutorfee)
+
+---
+
+### TAC Message Simulation
+
+```ts
+simulateTACMessage(params: TACSimulationParams): Promise<TACSimulationResult>
+```
+
+Simulates TAC message execution without broadcasting it on-chain. Useful for estimating fees and validating transaction inputs.
+
+**Parameters:**
+- **`params`**: [`TACSimulationParams`](./../models/structs.md#tacsimulationparams) - Simulation request with encoded message and context
+
+**Returns:** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)

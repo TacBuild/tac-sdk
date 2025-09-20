@@ -125,12 +125,14 @@ new TonTxFinalizer(
     urlBuilder: (hash: string) => string;
     authorization: { header: string; value: string };
   },
-  logger?: ILogger
+  logger?: ILogger,
+  httpClient?: IHttpClient
 )
 ```
 - `apiConfig.urlBuilder`: Function to build the API URL for fetching adjacent transactions by hash
 - `apiConfig.authorization`: Object specifying the header and value for API authorization
 - `logger`: Optional logger implementing ILogger. Pass a ConsoleLogger to enable verbose output; defaults to NoopLogger
+- `httpClient`: Optional HTTP client for making API requests; defaults to AxiosHttpClient
 
 #### Methods
 - `trackTransactionTree(hash: string, maxDepth?: number): Promise<void>`

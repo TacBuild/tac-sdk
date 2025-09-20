@@ -7,9 +7,10 @@ import {
     emptyContractError,
     insufficientBalanceError,
     missingDecimals,
+    missingJettonDataError,
     unknownTokenTypeError,
 } from '../errors';
-import { Asset, ContractOpener,IConfiguration } from '../interfaces';
+import { Asset, ContractOpener, IConfiguration } from '../interfaces';
 import { JETTON_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import {
     calculateAmount,
@@ -20,7 +21,14 @@ import {
 } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { AssetType, EVMAddress, FeeParams, TVMAddress, UserWalletBalanceExtended } from '../structs/Struct';
+import {
+    AssetType,
+    EVMAddress,
+    FeeParams,
+    FTOriginAndData,
+    TVMAddress,
+    UserWalletBalanceExtended,
+} from '../structs/Struct';
 import { Origin } from '../structs/Struct';
 import { JettonMaster, JettonMasterData } from '../wrappers/JettonMaster';
 import { JettonWallet } from '../wrappers/JettonWallet';
@@ -53,6 +61,11 @@ export class FT implements Asset {
     }
 
     static async getOrigin(configuration: IConfiguration, address: TVMAddress): Promise<Origin> {
+        const result = await this.getOriginAndData(configuration, address);
+        return result.origin;
+    }
+
+    static async getOriginAndData(configuration: IConfiguration, address: TVMAddress): Promise<FTOriginAndData> {
         const { jettonMinterCode, crossChainLayerAddress, jettonWalletCode } = configuration.TONParams;
 
         const { code: thisCodeBOC } = await configuration.TONParams.contractOpener.getContractState(
@@ -63,13 +76,15 @@ export class FT implements Asset {
         }
         const thisCode = Cell.fromBoc(thisCodeBOC)[0];
 
-        if (!jettonMinterCode.equals(thisCode)) {
-            return Origin.TON;
-        }
-
         const jettonMinter = configuration.TONParams.contractOpener.open(
             JettonMaster.createFromAddress(Address.parse(address)),
         );
+
+        if (!jettonMinterCode.equals(thisCode)) {
+            const jettonData = await jettonMinter.getJettonData();
+            return { origin: Origin.TON, jettonMinter, jettonData };
+        }
+
         const evmAddress = await jettonMinter.getEVMAddress();
 
         const expectedMinterAddress = await calculateContractAddress(
@@ -85,16 +100,16 @@ export class FT implements Asset {
         );
 
         if (!expectedMinterAddress.equals(Address.parse(address))) {
-            return Origin.TON;
+            const jettonData = await jettonMinter.getJettonData();
+            return { origin: Origin.TON, jettonMinter, jettonData };
         }
 
-        return Origin.TAC;
+        return { origin: Origin.TAC, jettonMinter, evmAddress };
     }
 
     static async getTVMAddress(configuration: IConfiguration, address: EVMAddress): Promise<string> {
         Validator.validateEVMAddress(address);
 
-        // If token is TON native
         const fromTVM = await configuration.TACParams.tokenUtils['exists(address)'](address);
 
         if (fromTVM) {
@@ -107,7 +122,6 @@ export class FT implements Asset {
             return info.tvmAddress;
         }
 
-        // If token is TAC native
         const jettonMaster = JettonMaster.createFromConfig({
             evmTokenAddress: address,
             crossChainLayerAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
@@ -141,29 +155,67 @@ export class FT implements Asset {
         this._decimals = decimals;
     }
 
+    private static async getTACDecimals(configuration: IConfiguration, evmAddress: string): Promise<number> {
+        const nativeTACAddress = await configuration.nativeTACAddress();
+
+        if (evmAddress === nativeTACAddress) {
+            return 18; // Native TAC always has 18 decimals
+        }
+
+        // For ERC20 contracts, get decimals from contract
+        const erc20Token = configuration.artifacts.tac.wrappers.ERC20FactoryTAC.connect(
+            evmAddress,
+            configuration.TACParams.provider,
+        );
+
+        return Number(await erc20Token.decimals());
+    }
+
     static async fromAddress(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<FT> {
         const tvmAddress = isEthereumAddress(address) ? await this.getTVMAddress(configuration, address) : address;
 
-        const origin = await FT.getOrigin(configuration, tvmAddress).catch((e) => {
+        const {
+            origin,
+            jettonMinter,
+            evmAddress: cachedEvmAddress,
+            jettonData,
+        } = await this.getOriginAndData(configuration, tvmAddress).catch((e) => {
             if (e instanceof ContractError) {
-                return Origin.TAC;
+                const jettonMinter = configuration.TONParams.contractOpener.open(
+                    JettonMaster.createFromAddress(Address.parse(tvmAddress)),
+                );
+                return { origin: Origin.TAC, jettonMinter, evmAddress: undefined, jettonData: undefined };
             }
             throw e;
         });
 
-        const givenMinter = configuration.TONParams.contractOpener.open(
-            new JettonMaster(Address.parse(tvmAddress)),
-        );
-        const jettonData = await givenMinter.getJettonData();
-        const decimalsRaw = jettonData.content.metadata.decimals;
-        if (decimalsRaw === undefined) {
-            throw missingDecimals;
+        let decimals: number;
+        let finalEvmAddress: string | undefined;
+
+        if (origin === Origin.TON) {
+            if (!jettonData) {
+                throw missingJettonDataError;
+            }
+            const decimalsRaw = jettonData.content.metadata.decimals;
+            if (decimalsRaw === undefined) {
+                throw missingDecimals;
+            }
+            decimals = Number(decimalsRaw);
+        } else {
+            if (isEthereumAddress(address)) {
+                finalEvmAddress = address;
+            } else {
+                finalEvmAddress = cachedEvmAddress || (await jettonMinter.getEVMAddress());
+            }
+
+            decimals = await this.getTACDecimals(configuration, finalEvmAddress);
         }
 
-        const token = new FT(tvmAddress, origin, configuration, Number(decimalsRaw));
-        if (isEthereumAddress(address)) {
-            token._evmAddress = address;
+        const token = new FT(tvmAddress, origin, configuration, decimals);
+        if (finalEvmAddress || isEthereumAddress(address)) {
+            token._evmAddress = finalEvmAddress || address;
         }
+
         return token;
     }
 

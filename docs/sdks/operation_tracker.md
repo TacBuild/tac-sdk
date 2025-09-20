@@ -28,6 +28,9 @@
   - [Other Metadata](#other-metadata)
     - [`getOperationType`](#getoperationtype)
     - [`getOperationIdsByShardsKeys`](#getoperationidsbyshardskeys)
+    - [`convertCurrency`](#convertcurrency)
+    - [`simulateTACMessage`](#simulatetacmessage)
+    - [`getTVMExecutorFee`](#gettvmexecutorfee)
 
 ---
 
@@ -371,3 +374,60 @@ Maps TON shard keys (with caller address) to operation IDs. Processes requests i
 - `chunkSize` *(optional)*: Number of items to process per request (default: 100)
 
 **Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey-type)
+
+---
+
+### `convertCurrency`
+
+```ts
+convertCurrency(
+    params: ConvertCurrencyParams,
+    waitOptions?: WaitOptions<ConvertedCurrencyResult>
+): Promise<ConvertedCurrencyResult>
+```
+
+Converts currency amount using the tracker service with automatic failover across multiple sequencer endpoints.
+
+**Parameters:**
+- `params`: [`ConvertCurrencyParams`](./../models/structs.md#convertcurrencyparams) - Parameters for currency conversion
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`ConvertedCurrencyResult`](./../models/structs.md#convertedcurrencyresult)
+
+---
+
+### `simulateTACMessage`
+
+```ts
+simulateTACMessage(
+    params: TACSimulationParams,
+    waitOptions?: WaitOptions<TACSimulationResult>
+): Promise<TACSimulationResult>
+```
+
+Simulates TAC message execution without broadcasting it on-chain. Useful for estimating fees and validating transaction inputs before sending real transactions.
+
+**Parameters:**
+- `params`: [`TACSimulationParams`](./../models/structs.md#tacsimulationparams) - Simulation request with encoded message and context
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)
+
+---
+
+### `getTVMExecutorFee`
+
+```ts
+getTVMExecutorFee(
+    params: GetTVMExecutorFeeParams,
+    waitOptions?: WaitOptions<SuggestedTVMExecutorFee>
+): Promise<SuggestedTVMExecutorFee>
+```
+
+Calculates suggested TVM executor fee for cross-chain operations with automatic failover across multiple sequencer endpoints.
+
+**Parameters:**
+- `params`: [`GetTVMExecutorFeeParams`](./../models/structs.md#gettvmexecutorfeeparams) - Parameters for fee calculation
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`SuggestedTVMExecutorFee`](./../models/structs.md#suggestedtvmexecutorfee)
