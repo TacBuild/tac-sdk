@@ -11,8 +11,6 @@ import {
     WaitOptions,
 } from '../src';
 import { ConsoleLogger } from '../src';
-import { MAX_ITERATION_COUNT } from '../src/sdk/Consts';
-import { sleep } from '../src/sdk/Utils';
 
 interface TransactionContext {
     operationTracker: IOperationTracker;
@@ -37,81 +35,44 @@ const createEnhancedWaitOptions = (
                 return;
             }
 
-            try {
-                logger.debug('🔍 Starting enhanced operation finalization tracking...');
+            logger.debug('🔍 Starting enhanced operation finalization tracking...');
 
-                const tracker = transactionCtx.operationTracker;
-                const maxIterationCount = MAX_ITERATION_COUNT;
-                const delay = 10;
+            const tracker = transactionCtx.operationTracker;
 
-                let iteration = 0; // number of iterations
-                let operationType = '';
-                let ok = true; // finished successfully
-                let errorMessage: string = '';
+            logger.debug(`🎯 Target Operation ID: ${operationId}`);
+            logger.debug('🔄 Starting manual operation finalization tracking...');
 
-                logger.debug(`🎯 Target Operation ID: ${operationId}`);
-                logger.debug('🔄 Starting manual operation finalization tracking...');
-                logger.debug(`⚙️  Max iterations: ${maxIterationCount}, Delay: ${delay}s`);
+            const operationType = await tracker.getOperationType(operationId, {
+                logger: logger,
+                successCheck: (type: OperationType) => ((type != OperationType.PENDING) && (type != OperationType.UNKNOWN))
+            });
 
-                while (true) {
-                    ++iteration;
-                    if (iteration >= maxIterationCount) {
-                        ok = false;
-                        errorMessage = 'maximum number of iterations has been exceeded';
-                        break;
-                    }
+            logger.debug('📊 Retrieving profiling data after finalization...');
+            const profilingData = await tracker.getStageProfiling(operationId);
 
-                    try {
-                        operationType = await tracker.getOperationType(operationId);
-                        if (operationType != OperationType.PENDING && operationType != OperationType.UNKNOWN) {
-                            break;
-                        }
-                    } catch (err) {
-                        logger.debug('failed to get operation type: ' + err);
-                    }
+            // Display profiling results
+            logger.debug('='.repeat(60));
+            logger.debug('📈 OPERATION FINALIZATION COMPLETE');
+            logger.debug('='.repeat(60));
+            logger.debug(`🔹 Operation ID: ${operationId}`);
+            logger.debug(`🔹 Operation Type: ${operationType}`);
+            logger.debug(`🔹 Profiling Data Retrieved:`);
 
-                    logger.debug(`operationType: ${operationType} iteration: ${iteration}/${maxIterationCount}`);
-                    await sleep(delay * 1000);
-                }
-
-                logger.debug('Tracking finished');
-                if (!ok) {
-                    throw Error(errorMessage);
-                }
-
-                logger.debug('📊 Retrieving profiling data after finalization...');
-                const profilingData = await tracker.getStageProfiling(operationId);
-
-                // Display profiling results
-                logger.debug('='.repeat(60));
-                logger.debug('📈 OPERATION FINALIZATION COMPLETE');
-                logger.debug('='.repeat(60));
-                logger.debug(`🔹 Operation ID: ${operationId}`);
-                logger.debug(`🔹 Operation Type: ${operationType}`);
-                logger.debug(`🔹 Total Iterations: ${iteration}`);
-                logger.debug(`🔹 Profiling Data Retrieved:`);
-
-                // Show profiling stages summary
-                for (const [stageName, stageInfo] of Object.entries(profilingData)) {
-                    if (stageName !== 'operationType' && stageName !== 'metaInfo') {
-                        const isProfilingStage = stageInfo && typeof stageInfo === 'object' && 'exists' in stageInfo;
-                        if (isProfilingStage && stageInfo.exists) {
-                            logger.debug(`   • ${stageName}: ✅ Completed`);
-                        }
+            // Show profiling stages summary
+            for (const [stageName, stageInfo] of Object.entries(profilingData)) {
+                if (stageName !== 'operationType' && stageName !== 'metaInfo') {
+                    const isProfilingStage = stageInfo && typeof stageInfo === 'object' && 'exists' in stageInfo;
+                    if (isProfilingStage && stageInfo.exists) {
+                        logger.debug(`   • ${stageName}: ✅ Completed`);
                     }
                 }
-                logger.debug('='.repeat(60));
-
-                logger.debug('✅ Manual finalization tracking completed successfully!');
-
-                return;
-            } catch (finalizationError) {
-                logger.error(`❌ Error during enhanced finalization tracking: ${finalizationError}`);
-                logger.debug(
-                    '\nℹ️  Note: The transaction was successful, but finalization tracking encountered an error.',
-                );
-                throw finalizationError;
             }
+            logger.debug('='.repeat(60));
+
+            logger.debug('✅ Manual finalization tracking completed successfully!');
+
+            return;
+
         },
     };
 };
