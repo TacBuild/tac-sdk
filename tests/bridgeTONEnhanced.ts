@@ -19,7 +19,7 @@ interface TransactionContext {
 const createEnhancedWaitOptions = (
     operationTracker: IOperationTracker,
     logger: ConsoleLogger,
-): WaitOptions<string,unknown> => {
+): WaitOptions<string, unknown> => {
     const context: TransactionContext = {
         operationTracker: operationTracker,
     };
@@ -44,7 +44,7 @@ const createEnhancedWaitOptions = (
 
             const operationType = await tracker.getOperationType(operationId, {
                 logger: logger,
-                successCheck: (type: OperationType) => ((type != OperationType.PENDING) && (type != OperationType.UNKNOWN))
+                successCheck: (type: OperationType) => type != OperationType.PENDING && type != OperationType.UNKNOWN,
             });
 
             logger.debug('📊 Retrieving profiling data after finalization...');
@@ -72,7 +72,6 @@ const createEnhancedWaitOptions = (
             logger.debug('✅ Manual finalization tracking completed successfully!');
 
             return;
-
         },
     };
 };
@@ -111,7 +110,7 @@ const bridgeTonSawSender = async (amount: number) => {
         evmProxyMsg,
         sender,
         assets,
-        { allowSimulationError: true },
+        { allowSimulationError: true, calculateRollbackFee: false },
         manualTrackingOptions,
     );
 
