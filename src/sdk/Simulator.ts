@@ -73,8 +73,11 @@ export class Simulator implements ISimulator {
 
         const isRoundTrip = options.isRoundTrip ?? assets.length !== 0;
 
-        const crossChainLayer = this.config.TONParams.contractOpener.open(
-            this.config.artifacts.ton.wrappers.CrossChainLayer.createFromAddress(
+        const CrossChainLayerC = this.config.artifacts.ton.wrappers.CrossChainLayer;
+
+        // @ts-expect-error: CrossChainLayerC was built inside l1_tvm_ton submodule and it's safe in runtime
+        const crossChainLayer = this.config.TONParams.contractOpener.open<CrossChainLayerC>(
+            CrossChainLayerC.createFromAddress(
                 Address.parse(this.config.TONParams.crossChainLayerAddress),
             ),
         );
