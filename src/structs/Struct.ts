@@ -21,6 +21,7 @@ export enum SimplifiedStatuses {
 export enum Network {
     TESTNET = 'testnet',
     MAINNET = 'mainnet',
+    DEV = 'dev',
 }
 
 export enum BlockchainType {

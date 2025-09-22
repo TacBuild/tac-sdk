@@ -1,4 +1,3 @@
-import { AgnosticProxySDK } from '@tonappchain/agnostic-sdk';
 import { Wallet } from 'ethers';
 
 import { AssetFactory, FT, NFT } from '../assets';
@@ -72,8 +71,12 @@ export class TacSdk implements ITacSDK {
         const network = sdkParams.network;
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
 
-        const { testnet, mainnet } = await import('@tonappchain/artifacts');
-        const artifacts = network === Network.TESTNET ? testnet : mainnet;
+        const { dev, testnet, mainnet } = await import('../../artifacts');
+        let artifacts;
+        if (network === Network.MAINNET) artifacts = mainnet;
+        else if (network === Network.TESTNET) artifacts = testnet;
+        else if (network === Network.DEV) artifacts = dev;
+        else throw new Error(`Unsupported network: ${network}`);
 
         const config = await Configuration.create(
             network,
@@ -98,14 +101,6 @@ export class TacSdk implements ITacSDK {
 
     get nativeTONAddress(): string {
         return this.config.nativeTONAddress;
-    }
-
-    getAgnosticProxySDK(agnosticProxyAddress?: string, smartAccountFactoryAddress?: string): AgnosticProxySDK {
-        return new AgnosticProxySDK(
-            smartAccountFactoryAddress ?? this.config.artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS,
-            this.config.TACParams.provider,
-            agnosticProxyAddress ?? this.config.artifacts.AGNOSTIC_PROXY_ADDRESS,
-        );
     }
 
     async getSmartAccountAddressForTvmWallet(tvmWallet: string, applicationAddress: string): Promise<string> {

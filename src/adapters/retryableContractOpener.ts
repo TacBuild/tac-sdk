@@ -1,6 +1,6 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
-import { mainnet, testnet } from '@tonappchain/artifacts';
+import { dev, mainnet, testnet } from '../../artifacts';
 
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener } from '../interfaces';
@@ -125,7 +125,7 @@ export class RetryableContractOpener implements ContractOpener {
 }
 
 export async function createDefaultRetryableOpener(
-    artifacts: typeof testnet | typeof mainnet,
+    artifacts: typeof testnet | typeof mainnet | typeof dev,
     maxRetries = 5,
     retryDelay = 1000,
 ): Promise<ContractOpener> {

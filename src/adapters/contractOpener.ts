@@ -1,7 +1,7 @@
 import { getHttpEndpoint, getHttpV4Endpoint } from '@orbs-network/ton-access';
 import { Blockchain } from '@ton/sandbox';
 import { TonClient, TonClient4 } from '@ton/ton';
-import { mainnet, testnet } from '@tonappchain/artifacts';
+import { mainnet, testnet } from '../../artifacts';
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
 import { ContractOpener } from '../interfaces';

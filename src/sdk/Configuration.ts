@@ -1,5 +1,5 @@
 import { Address, Dictionary } from '@ton/ton';
-import { mainnet, testnet } from '@tonappchain/artifacts';
+import { dev, mainnet, testnet } from '../../artifacts';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
 import { createDefaultRetryableOpener } from '../adapters/retryableContractOpener';
@@ -12,14 +12,14 @@ import { Validator } from './Validator';
 
 export class Configuration implements IConfiguration {
     readonly network: Network;
-    readonly artifacts: typeof testnet | typeof mainnet;
+    readonly artifacts: typeof testnet | typeof mainnet | typeof dev;
     readonly TONParams: InternalTONParams;
     readonly TACParams: InternalTACParams;
     readonly liteSequencerEndpoints: string[];
 
     constructor(
         network: Network,
-        artifacts: typeof testnet | typeof mainnet,
+        artifacts: typeof testnet | typeof mainnet | typeof dev,
         TONParams: InternalTONParams,
         TACParams: InternalTACParams,
         liteSequencerEndpoints: string[],
@@ -33,7 +33,7 @@ export class Configuration implements IConfiguration {
 
     static async create(
         network: Network,
-        artifacts: typeof testnet | typeof mainnet,
+        artifacts: typeof testnet | typeof mainnet | typeof dev,
         TONParams?: TONParams,
         TACParams?: TACParams,
         customLiteSequencerEndpoints?: string[],
@@ -54,7 +54,7 @@ export class Configuration implements IConfiguration {
     }
 
     private static async prepareTONParams(
-        artifacts: typeof testnet | typeof mainnet,
+        artifacts: typeof testnet | typeof mainnet | typeof dev,
         TONParams?: TONParams,
         delay?: number,
     ): Promise<InternalTONParams> {
@@ -85,7 +85,7 @@ export class Configuration implements IConfiguration {
     }
 
     private static async prepareTACParams(
-        artifacts: typeof testnet | typeof mainnet,
+        artifacts: typeof testnet | typeof mainnet | typeof dev,
         TACParams?: TACParams,
     ): Promise<InternalTACParams> {
         const provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
@@ -136,7 +136,7 @@ export class Configuration implements IConfiguration {
     }
 
     private static async loadSettingsViaMulticall(
-        artifacts: typeof testnet | typeof mainnet,
+        artifacts: typeof testnet | typeof mainnet | typeof dev,
         provider: ethers.AbstractProvider,
         settingsAddress: string,
         TACParams?: TACParams,
