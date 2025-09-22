@@ -1,0 +1,6 @@
+[submodule "artifacts/l2-evm"]
+	path = artifacts/l2-evm
+	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l2-evm
+[submodule "artifacts/l1_tvm_ton"]
+	path = artifacts/l1_tvm_ton
+	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l1_tvm_ton

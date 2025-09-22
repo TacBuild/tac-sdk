@@ -10,6 +10,8 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsc --declaration",
+    "build:artifacts:tac": "",
+    "build:artifacts:ton": "",
     "test": "jest --verbose --runInBand",
     "release": "yarn build && yarn release-it --npm.yarn1",
     "lint": "eslint .",
