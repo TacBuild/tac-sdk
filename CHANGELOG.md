@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 - `RawSender` can send transactions in batches(size is 254 for W5, 4 for others).
 - Check for transaction tree success on TON using `TonTxFinalizer`.
 - Enhanced WaitOptions Interface with Context Parameter Support.
+- Artifacts package was removed. Now artifacts built from submodules for mainnet, testnet and dev evns. Submudules are in ./artifacts folder.
 
 ### Changed
 

@@ -1,4 +1,4 @@
-import { dev, mainnet, testnet } from '../../artifacts';
+import { mainnet, testnet } from '../../artifacts';
 
 import { allEndpointsFailedError } from '../errors';
 import { ILiteSequencerClient, ILiteSequencerClientFactory, ILogger, IOperationTracker } from '../interfaces';
@@ -42,20 +42,17 @@ export class OperationTracker implements IOperationTracker {
         clientFactory: ILiteSequencerClientFactory = new DefaultLiteSequencerClientFactory(),
     ) {
         let endpoints: string[];
-        if (network === Network.MAINNET) {
-            endpoints = mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
-        }
-        else if (network === Network.TESTNET){
-            endpoints = testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
-        }
-        else if (network === Network.DEV) {
-            if (!customLiteSequencerEndpoints) {
+        if (network === Network.DEV) {
+            if (!customLiteSequencerEndpoints || customLiteSequencerEndpoints.length === 0) {
                 throw new Error('For DEV network, custom lite sequencer endpoints must be provided');
             }
             endpoints = customLiteSequencerEndpoints;
+        } else {
+            endpoints =
+                network === Network.MAINNET ?
+                    mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS :
+                    testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
         }
-        else throw new Error(`Unsupported network: ${network}`);
-
         this.clients = clientFactory.createClients(endpoints);
         this.logger = logger;
     }

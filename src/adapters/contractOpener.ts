@@ -7,13 +7,15 @@ import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '
 import { ContractOpener } from '../interfaces';
 import { sleep } from '../sdk/Utils';
 import { Network } from '../structs/Struct';
+import { Network as TonNetwork } from '@orbs-network/ton-access';
 
 async function getHttpEndpointWithRetry(network: Network, maxRetries = 5, delay = 1000): Promise<string> {
     let lastError: Error | undefined;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            return await getHttpEndpoint({ network });
+            let tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
+            return await getHttpEndpoint({ network: tonNetwork });
         } catch (error) {
             lastError = error as Error;
             if (attempt <= maxRetries) {
@@ -30,7 +32,8 @@ async function getHttpV4EndpointWithRetry(network: Network, maxRetries = 5, dela
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            return await getHttpV4Endpoint({ network });
+            let tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
+            return await getHttpV4Endpoint({ network: tonNetwork });
         } catch (error) {
             lastError = error as Error;
             if (attempt <= maxRetries) {
@@ -54,7 +57,7 @@ function intToIP(int: number) {
 }
 
 async function getDefaultLiteServers(network: Network): Promise<LiteServer[]> {
-    const url = network === Network.TESTNET ? testnet.DEFAULT_LITESERVERS : mainnet.DEFAULT_LITESERVERS;
+    const url = network === Network.TESTNET || network === Network.DEV ? testnet.DEFAULT_LITESERVERS : mainnet.DEFAULT_LITESERVERS;
     const resp = await fetch(url);
     const liteClients = await resp.json();
     return liteClients.liteservers;

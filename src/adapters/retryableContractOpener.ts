@@ -125,18 +125,18 @@ export class RetryableContractOpener implements ContractOpener {
 }
 
 export async function createDefaultRetryableOpener(
-    artifacts: typeof testnet | typeof mainnet | typeof dev,
+    tonRpcEndpoint: string,
+    networkType: Network,
     maxRetries = 5,
     retryDelay = 1000,
 ): Promise<ContractOpener> {
+
     const tonClient = new TonClient({
-        endpoint: new URL('api/v2/jsonRPC', artifacts.TON_RPC_ENDPOINT_BY_TAC).toString(),
+        endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString(),
     });
 
-    const network: Network = artifacts === testnet ? Network.TESTNET : Network.MAINNET;
-
-    const opener4 = await orbsOpener4(network);
-    const opener = await orbsOpener(network);
+    const opener4 = await orbsOpener4(networkType);
+    const opener = await orbsOpener(networkType);
 
     return new RetryableContractOpener([
         { opener: tonClient, retries: maxRetries, retryDelay },

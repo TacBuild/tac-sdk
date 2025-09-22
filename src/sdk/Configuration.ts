@@ -40,26 +40,49 @@ export class Configuration implements IConfiguration {
         delay?: number,
     ): Promise<Configuration> {
         const [internalTONParams, internalTACParams] = await Promise.all([
-            this.prepareTONParams(artifacts, TONParams, delay),
-            this.prepareTACParams(artifacts, TACParams),
+            this.prepareTONParams(network, TONParams, delay),
+            this.prepareTACParams(network, TACParams),
         ]);
 
-        const liteSequencerEndpoints =
-            customLiteSequencerEndpoints ??
-            (network === Network.TESTNET
-                ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
-                : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
+        let liteSequencerEndpoints;
+        if (network === Network.DEV) {
+            if (!customLiteSequencerEndpoints || customLiteSequencerEndpoints.length === 0) {
+                throw new Error('For dev network, custom lite sequencer endpoints must be provided');
+            }
+            liteSequencerEndpoints = customLiteSequencerEndpoints;
+        }
+        else {
+            liteSequencerEndpoints =
+                customLiteSequencerEndpoints ??
+                (network === Network.MAINNET ?
+                    mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS :
+                    testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
+        }
 
         return new Configuration(network, artifacts, internalTONParams, internalTACParams, liteSequencerEndpoints);
     }
 
     private static async prepareTONParams(
-        artifacts: typeof testnet | typeof mainnet | typeof dev,
+        network: Network,
         TONParams?: TONParams,
         delay?: number,
     ): Promise<InternalTONParams> {
-        const contractOpener = TONParams?.contractOpener ?? (await createDefaultRetryableOpener(artifacts, 3, delay));
-        const settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
+        let contractOpener;
+        let settingsAddress: string;
+        if (network === Network.DEV) {
+            if (!TONParams || !TONParams.contractOpener) {
+                throw new Error('For dev network, a custom contract opener must be provided in TONParams');
+            }
+            contractOpener = TONParams.contractOpener;
+            if (!TONParams.settingsAddress) {
+                throw new Error('For dev network, a custom settings address must be provided in TONParams');
+            }
+            settingsAddress = TONParams.settingsAddress;
+        } else {
+            const tonRpcEndpoint = network === Network.MAINNET ? mainnet.TON_RPC_ENDPOINT_BY_TAC : testnet.TON_RPC_ENDPOINT_BY_TAC;
+            contractOpener = (await createDefaultRetryableOpener(tonRpcEndpoint, network, 3, delay))
+            settingsAddress = network === Network.MAINNET ? mainnet.TON_SETTINGS_ADDRESS : testnet.TON_SETTINGS_ADDRESS;
+        }
         const settings = contractOpener.open(Settings.create(Address.parse(settingsAddress)));
         const allSettingsSlice = (await settings.getAll()).beginParse();
         const allSettings = allSettingsSlice.loadDictDirect(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
@@ -85,17 +108,33 @@ export class Configuration implements IConfiguration {
     }
 
     private static async prepareTACParams(
-        artifacts: typeof testnet | typeof mainnet | typeof dev,
+        network: Network,
         TACParams?: TACParams,
     ): Promise<InternalTACParams> {
-        const provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
 
-        const settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.TAC_SETTINGS_ADDRESS;
+        const artifacts = network === Network.MAINNET ? mainnet : network === Network.TESTNET ? testnet : dev;
+        let provider: ethers.AbstractProvider;
+        let settingsAddress: string;
+        if (network === Network.DEV) {
+            if (!TACParams || !TACParams.provider) {
+                throw new Error('For dev network, a custom provider must be provided in TACParams');
+            }
+            provider = TACParams.provider;
+            if (!TACParams.settingsAddress) {
+                throw new Error('For dev network, a custom settings address must be provided in TACParams');
+            }
+            settingsAddress = TACParams.settingsAddress.toString();
+        }
+        else {
+            provider = ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT)
+            settingsAddress = artifacts.TAC_SETTINGS_ADDRESS;
+        }
+
         Validator.validateEVMAddress(settingsAddress);
 
         const settings = artifacts.tac.wrappers.SettingsFactoryTAC.connect(settingsAddress, provider);
 
-        const loaded = await this.loadSettingsViaMulticall(artifacts, provider, settingsAddress, TACParams);
+        const loaded = await this.loadTACSettingsViaMulticall(network, provider, settingsAddress);
         let crossChainLayerAddress: string;
         let tokenUtilsAddress: string;
         let trustedTACExecutors: string[];
@@ -135,14 +174,20 @@ export class Configuration implements IConfiguration {
         };
     }
 
-    private static async loadSettingsViaMulticall(
-        artifacts: typeof testnet | typeof mainnet | typeof dev,
+    private static async loadTACSettingsViaMulticall(
+        network: Network,
         provider: ethers.AbstractProvider,
         settingsAddress: string,
-        TACParams?: TACParams,
     ) {
-        const multicallAddress = TACParams?.multicallAddress?.toString() ?? artifacts.MULTICALL_3_ADDRESS;
-        const multicallAbi = TACParams?.multicallABI ?? artifacts.tac.multicall.MULTICALL_ABI_ETHERS;
+
+        if (network === Network.DEV) {
+            // skip multicall in dev, because it's not guaranteed that multicall contract is deployed
+            return null;
+        }
+
+        const artifacts = network === Network.MAINNET ? mainnet : testnet;
+        const multicallAddress = artifacts.MULTICALL_3_ADDRESS;
+        const multicallAbi = artifacts.tac.multicall.MULTICALL_ABI_ETHERS;
         try {
             Validator.validateEVMAddress(multicallAddress);
             const multicall = new ethers.Contract(multicallAddress, multicallAbi, provider);
