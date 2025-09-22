@@ -4,7 +4,7 @@ import { NFTCollection, NFTItem } from '../../artifacts';
 import { isAddress as isEthereumAddress } from 'ethers';
 
 import { ContractError, emptyContractError, insufficientBalanceError } from '../errors';
-import { Asset, ContractOpener,IConfiguration } from '../interfaces';
+import { Asset,IConfiguration } from '../interfaces';
 import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import { generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';

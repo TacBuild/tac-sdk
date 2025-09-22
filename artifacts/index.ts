@@ -12,7 +12,6 @@ export type ERC721FactoryTAC = dev.tac.wrappers.ERC721FactoryTAC | testnet.tac.w
 export type CrossChainLayerERC721FactoryTAC = dev.tac.wrappers.CrossChainLayerERC721FactoryTAC | testnet.tac.wrappers.CrossChainLayerERC721FactoryTAC | mainnet.tac.wrappers.CrossChainLayerERC721FactoryTAC;
 export type CrossChainLayerERC20FactoryTAC = dev.tac.wrappers.CrossChainLayerERC20FactoryTAC | testnet.tac.wrappers.CrossChainLayerERC20FactoryTAC | mainnet.tac.wrappers.CrossChainLayerERC20FactoryTAC;
 export type TacSAFactoryFactoryTAC = dev.tac.wrappers.TacSAFactoryTAC | testnet.tac.wrappers.TacSAFactoryTAC | mainnet.tac.wrappers.TacSAFactoryTAC;
-export type TacSmartAccountFactoryTAC = dev.tac.wrappers.TacSmartAccountTAC | testnet.tac.wrappers.TacSmartAccountTAC | mainnet.tac.wrappers.TacSmartAccountTAC;
 
 export type CrossChainLayerTAC = dev.tac.wrappers.CrossChainLayerTAC | testnet.tac.wrappers.CrossChainLayerTAC | mainnet.tac.wrappers.CrossChainLayerTAC;
 export type TacSAFactoryTAC = dev.tac.wrappers.TacSAFactoryTAC | testnet.tac.wrappers.TacSAFactoryTAC | mainnet.tac.wrappers.TacSAFactoryTAC;

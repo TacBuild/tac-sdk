@@ -249,7 +249,7 @@ export class TacSdk implements ITacSDK {
 
     // NFT methods
     async getNFTItemData(itemAddress: TVMAddress): Promise<NFTItemData> {
-        return NFT.getItemData(this.config.TONParams.contractOpener, itemAddress);
+        return NFT.getItemData(this.config, itemAddress);
     }
 
     async getNFT(args: AssetFromNFTCollectionArg | AssetFromNFTItemArg): Promise<NFT> {
