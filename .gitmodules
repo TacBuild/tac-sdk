@@ -1,6 +1,24 @@
-[submodule "artifacts/l2-evm"]
-	path = artifacts/l2-evm
+[submodule "testnet-l2-evm"]
+	path = artifacts/testnet/l2-evm
 	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l2-evm
-[submodule "artifacts/l1_tvm_ton"]
-	path = artifacts/l1_tvm_ton
+[submodule "testnet-l1-tvm-ton"]
+	path = artifacts/testnet/l1_tvm_ton
+	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l1_tvm_ton
+[submodule "mainnet-l2-evm"]
+	path = artifacts/mainnet/l2-evm
+	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l2-evm
+[submodule "mainnet-l1-tvm-ton"]
+	path = artifacts/mainnet/l1_tvm_ton
+	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l1_tvm_ton
+[submodule "dev-l2-evm"]
+	path = artifacts/dev/l2-evm
+	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l2-evm
+[submodule "dev-l1-tvm-ton"]
+	path = artifacts/dev/l1_tvm_ton
+	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l1_tvm_ton
+[submodule "artifacts/dev/l2-evm"]
+	path = artifacts/dev/l2-evm
+	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l2-evm
+[submodule "artifacts/dev/l1_tvm_ton"]
+	path = artifacts/dev/l1_tvm_ton
 	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l1_tvm_ton
