@@ -1,8 +1,8 @@
 import { toNano } from '@ton/ton';
 
-export const TRANSACTION_TON_AMOUNT = toNano(0.01);
-export const JETTON_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.06);
-export const NFT_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.06);
+export const TRANSACTION_TON_AMOUNT = toNano(0.55);
+export const JETTON_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.2);
+export const NFT_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.3);
 
 export const MAX_ITERATION_COUNT = 120;
 
