@@ -1,4 +1,4 @@
-import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider, fromNano } from '@ton/ton';
+import { Address, beginCell, Cell, Contract, contractAddress, ContractProvider } from '@ton/ton';
 
 import type { JettonExtendedMetadata } from './ContentUtils';
 import { readJettonMetadata } from './ContentUtils';
@@ -11,7 +11,7 @@ export type JettonMasterInitData = {
 };
 
 export type JettonMasterData = {
-    totalSupply: number;
+    totalSupply: bigint;
     mintable: boolean;
     adminAddress: string;
     content: JettonExtendedMetadata;
@@ -54,7 +54,7 @@ export class JettonMaster implements Contract {
 
     async getJettonData(provider: ContractProvider): Promise<JettonMasterData> {
         const result = await provider.get('get_jetton_data', []);
-        const totalSupply = Number(fromNano(result.stack.readBigNumber()));
+        const totalSupply = result.stack.readBigNumber();
         const mintable = result.stack.readBoolean();
         const adminAddress = result.stack.readAddress().toString();
         const content = await readJettonMetadata(result.stack.readCell());
