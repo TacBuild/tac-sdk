@@ -37,16 +37,21 @@ What you need to do is just to adapt your existing front/back code with this too
 ## Quick Start
 
 ```typescript
-import { AgnosticProxySDK } from "./AgnosticProxySDK";
+import { AgnosticProxySDK } from "@tonappchain/sdk";
 import { ethers } from "ethers"
 
 // Create SDK instance
 const sdk = new AgnosticProxySDK();
 
+// Code for initializing TacSdk
+// const tacSdk = ...
+
 
 // Add contract interfaces
 sdk.addContractInterface(ROUTER_ADDRESS, ROUTER_ABI);
 sdk.addContractInterface(STAKING_ADDRESS, STAKING_ABI);
+
+const agnosticCallParams = tacSdk.getAgnosticCallParams()
 
 const provider = new ethers.JsonRpcProvider(PROVIDER_URL);
 // Create hooks
@@ -56,13 +61,10 @@ const hooks = [
         ethers.parseEther("100"), // amount in
         ethers.parseEther("90"),  // min amount out
         [TOKEN_IN, TOKEN_OUT],
-        sdk.getSmartAccountAddress(TVM_WALLET_ADDRESS, provider, SMART_ACCOUNT_FACTORY_ADDRESS, AGNOSTIC_PROXY_ADDRESS),
+        tacSdk.getSmartAccountAddressForTvmWallet(TVM_WALLET_ADDRESS, agnosticCallParams.evmTargetAddress),
         Math.floor(Date.now() / 1000) + 3600
     ])
 ];
-
-// SMART_ACCOUNT_FACTORY_ADDRESS can be found in TAC sdk docs or you can deploy your own factory
-// AGNOSTIC_PROXY_ADDRESS can be found in TAC sdk docs or you can deploy your own agnostic proxy
 
 // Build ZapCall
 const zapCall = sdk.buildZapCall(hooks, [TOKEN_OUT], []);
@@ -82,7 +84,7 @@ You can retreive Agnostic SDK from TacSDK *@tonappchain/sdk*
 ```typescript
 import { ethers } from "ethers";
 import { AgnosticProxySDK } from "./AgnosticProxySDK";
-import { Network, SenderFactory, TacSdk, type EvmProxyMsg, type AssetBridgingData, type SDKParams } from '@tonappchain/sdk';
+import { Network, SenderFactory, TacSdk, type EvmProxyMsg, type AssetBridgingData, type SDKParams, AgnosticProxySDK } from '@tonappchain/sdk';
 import { TonConnectUI } from '@tonconnect/ui';
 
 
@@ -128,7 +130,8 @@ async function executeCompleteStrategy() {
     // Initialize SDK
     // Here we will use deployed by TAC Agnostic proxy and TAC Smart Account Factory. 
     // If you want to use your own, just provide addresses inside constructor.
-    const agnosticSdk = tacSdk.getAgnosticProxySDK();
+    const agnosticSdk = new AgnosticProxySDK();
+    const agnosticCallParams = tacSdk.getAgnosticCallParams()
     
     // Register contract interfaces
     agnosticSdk.addContractInterface(CONTRACTS.UNISWAP_ROUTER, UNISWAP_ROUTER_ABI);
@@ -138,7 +141,7 @@ async function executeCompleteStrategy() {
     const hooks = [];
 
     // All money flows will be done through smart account to avoid potential money leaks.
-    const smartAccountAddress = await agnosticSdk.getSmartAccountAddress(tvmWalletAddress);
+    const smartAccountAddress = await tacSdk.getSmartAccountAddressForTvmWallet(tvmWalletAddress, agnosticCallParams.evmTargetAddress);
 
     // All incoming money on the moment of transaction executing are inside agnostic proxy, so
     // we should transfer them to smart account proxy, thats why last param is set to false.
@@ -231,8 +234,8 @@ async function executeCompleteStrategy() {
 
     // Prepare TAC -> TON tx
     const evmProxyMsg: EvmProxyMsg = {
-        evmTargetAddress: AgnosticProxyAddress,
-        methodName: agnosticSdk.getMethodName(),
+        evmTargetAddress: agnosticCallParams.evmTargetAddress,
+        methodName: agnosticCallParams.methodName,
         encodedCall
     };
 

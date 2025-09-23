@@ -58,6 +58,7 @@ export type InternalTACParams = {
     trustedTACExecutors: string[];
     trustedTONExecutors: string[];
     abiCoder: ethers.AbiCoder;
+    agnosticProxyAddress: string;
 };
 
 export type ResponseBase<T> = { response: T };

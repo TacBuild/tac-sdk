@@ -125,13 +125,8 @@ export interface ZapCall {
  */
 export class AgnosticProxySDK {
     private contractInterfaces: Map<string, Interface> = new Map();
-    private agnosticProxyAddress: string = "";
 
-    constructor(agnosticProxyAddress?: string) {
-        if (agnosticProxyAddress) {
-            this.agnosticProxyAddress = agnosticProxyAddress;
-        }
-    }
+    constructor() {}
 
     /**
      * Add a contract interface for encoding function calls
@@ -1037,20 +1032,5 @@ export class AgnosticProxySDK {
         console.log(`   Hooks: ${breakdown2.totalHooks - breakdown1.totalHooks > 0 ? "+" : ""}${breakdown2.totalHooks - breakdown1.totalHooks}`);
         console.log(`   Gas: ${breakdown2.gasEstimate - breakdown1.gasEstimate > 0 ? "+" : ""}${(breakdown2.gasEstimate - breakdown1.gasEstimate).toLocaleString()}`);
         console.log(`   Size: ${breakdown2.encodedSize - breakdown1.encodedSize > 0 ? "+" : ""}${breakdown2.encodedSize - breakdown1.encodedSize} bytes`);
-    }
-
-    /**
-     * Get the method name for the Zap call for TacSdk
-     * @returns The method name
-     */
-    public getMethodName() : string {
-        return "Zap(bytes,bytes)";
-    }
-
-    public getEvmTargetAddress() : string {
-        if (!this.agnosticProxyAddress) {
-            throw new Error("Agnostic proxy address not set");
-        }
-        return this.agnosticProxyAddress;
     }
 }
