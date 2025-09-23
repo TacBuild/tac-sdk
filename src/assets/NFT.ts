@@ -106,7 +106,8 @@ export class NFT implements Asset {
         );
     }
 
-    static async getItemData(configuration: IConfiguration,
+    static async getItemData(
+        configuration: IConfiguration,
         itemAddress: TVMAddress
     ): Promise<NFTItemData> {
         Validator.validateTVMAddress(itemAddress);
