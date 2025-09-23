@@ -2,6 +2,9 @@
 /dist/
 /node_modules/
 
+/artifacts/**/ton/wrappers
+/artifacts/**/ton/build
+
 .env
 
 # Yarn >2.0.0

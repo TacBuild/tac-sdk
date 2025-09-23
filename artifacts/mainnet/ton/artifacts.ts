@@ -1,12 +1,12 @@
-import CrossChainLayerCompiled from "../l1_tvm_ton/build/CrossChainLayer.compiled.json";
-import JettonMinterCompiled from "../l1_tvm_ton/build/JettonMinter.compiled.json";
-import JettonWalletCompiled from "../l1_tvm_ton/build/JettonWallet.compiled.json";
-import SettingsCompiled from "../l1_tvm_ton/build/Settings.compiled.json";
-import ExecutorCompiled from "../l1_tvm_ton/build/Executor.compiled.json";
-import JettonProxyCompiled from "../l1_tvm_ton/build/JettonProxy.compiled.json";
-import NFTProxyCompiled from "../l1_tvm_ton/build/NFTProxy.compiled.json";
-import NFTItemCompiled from "../l1_tvm_ton/build/NFTItem.compiled.json";
-import NFTCollectionCompiled from "../l1_tvm_ton/build/NFTCollection.compiled.json";
+import CrossChainLayerCompiled from "./build/CrossChainLayer.compiled.json";
+import JettonMinterCompiled from "./build/JettonMinter.compiled.json";
+import JettonWalletCompiled from "./build/JettonWallet.compiled.json";
+import SettingsCompiled from "./build/Settings.compiled.json";
+import ExecutorCompiled from "./build/Executor.compiled.json";
+import JettonProxyCompiled from "./build/JettonProxy.compiled.json";
+import NFTProxyCompiled from "./build/NFTProxy.compiled.json";
+import NFTItemCompiled from "./build/NFTItem.compiled.json";
+import NFTCollectionCompiled from "./build/NFTCollection.compiled.json";
 
 
 export const compilationArtifacts = {

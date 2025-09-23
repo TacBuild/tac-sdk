@@ -1,8 +1,8 @@
-export { CrossChainLayer, CrossChainLayerOpCodes, OperationType } from "../l1_tvm_ton/wrappers/CrossChainLayer";
-export { JettonMinter, JettonMinterOpCodes } from "../l1_tvm_ton/wrappers/JettonMinter";
-export { JettonWallet, JettonWalletOpCodes } from "../l1_tvm_ton/wrappers/JettonWallet";
-export { JettonProxy, JettonProxyOpCodes } from "../l1_tvm_ton/wrappers/JettonProxy";
-export { Settings } from "../l1_tvm_ton/wrappers/Settings";
-export { NFTCollection, NFTCollectionOpCodes } from "../l1_tvm_ton/wrappers/NFTCollection";
-export { NFTItem, NFTItemOpCodes } from "../l1_tvm_ton/wrappers/NFTItem";
-export { NFTProxy, NFTProxyOpCodes } from "../l1_tvm_ton/wrappers/NFTProxy";
+export { CrossChainLayer, CrossChainLayerOpCodes, OperationType } from "./wrappers/CrossChainLayer";
+export { JettonMinter, JettonMinterOpCodes } from "./wrappers/JettonMinter";
+export { JettonWallet, JettonWalletOpCodes } from "./wrappers/JettonWallet";
+export { JettonProxy, JettonProxyOpCodes } from "./wrappers/JettonProxy";
+export { Settings } from "./wrappers/Settings";
+export { NFTCollection, NFTCollectionOpCodes } from "./wrappers/NFTCollection";
+export { NFTItem, NFTItemOpCodes } from "./wrappers/NFTItem";
+export { NFTProxy, NFTProxyOpCodes } from "./wrappers/NFTProxy";

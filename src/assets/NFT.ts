@@ -45,8 +45,7 @@ export class NFT implements Asset {
         const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
 
         const nftItem = configuration.TONParams.contractOpener.open(
-            // @ts-expect-error: NFTItem was built inside l1_tvm_ton submodule and it's safe in runtime
-            NFTItemC.createFromAddress(Address.parse(item))) as unknown as OpenedContract<NFTItemC>;
+            NFTItemC.createFromAddress(Address.parse(item)));
         const { collectionAddress, index } = await nftItem.getNFTData();
         const origin = await NFT.getOrigin(configuration, item);
 
@@ -77,8 +76,7 @@ export class NFT implements Asset {
         const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
         const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
 
-        // @ts-expect-error: NFTCollectionC was built inside l1_tvm_ton submodule and it's safe in runtime
-        const nftCollection = configuration.TONParams.contractOpener.open<NFTCollectionC>(
+        const nftCollection = configuration.TONParams.contractOpener.open(
            NFTCollectionC.createFromAddress(Address.parse(tvmCollectionAddress))
         );
 
@@ -88,6 +86,7 @@ export class NFT implements Asset {
                       {
                           collectionAddress: nftCollection.address,
                           cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
+                          // TODO: fix index type in wrapper!!!
                           // @ts-expect-error // bigint can be used, wrapper is not typed properly
                           index: item.index,
                       },
@@ -115,8 +114,7 @@ export class NFT implements Asset {
         const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
         const contractOpener = configuration.TONParams.contractOpener;
 
-        // @ts-expect-error: NFTItem was built inside l1_tvm_ton submodule and it's safe in runtime
-        const nftItem = contractOpener.open<NFTItemC>(
+        const nftItem = contractOpener.open(
             NFTItemC.createFromAddress(Address.parse(itemAddress))
         );
         return nftItem.getNFTData();
@@ -134,8 +132,7 @@ export class NFT implements Asset {
 
         const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
 
-        // @ts-expect-error: NFTCollectionC was built inside l1_tvm_ton submodule and it's safe in runtime
-        const nftCollection = configuration.TONParams.contractOpener.open<NFTCollectionC>(
+        const nftCollection = configuration.TONParams.contractOpener.open(
             NFTCollectionC.createFromAddress(Address.parse(collectionAddress)));
         return nftCollection.getCollectionData();
     }
@@ -171,8 +168,7 @@ export class NFT implements Asset {
 
         const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
 
-        // @ts-expect-error: NFTCollectionC was built inside l1_tvm_ton submodule and it's safe in runtime
-        const nftCollection = configuration.TONParams.contractOpener.open<NFTCollectionC>(
+        const nftCollection = configuration.TONParams.contractOpener.open(
             NFTCollectionC.createFromAddress(Address.parse(collectionAddress)));
         const address = await nftCollection.getNFTAddressByIndex(index);
         return address.toString();
@@ -197,8 +193,7 @@ export class NFT implements Asset {
 
             const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
 
-            // @ts-expect-error: NFTCollectionC was built inside l1_tvm_ton submodule and it's safe in runtime
-            const nftCollection = configuration.TONParams.contractOpener.open<NFTCollectionC>(
+            const nftCollection = configuration.TONParams.contractOpener.open(
                 NFTCollectionC.createFromAddress(address(info.tvmAddress)),
             );
 
@@ -207,20 +202,13 @@ export class NFT implements Asset {
                 : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
         } else {
 
-
-            const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
-
-            // @ts-expect-error: NFTCollectionC was built inside l1_tvm_ton submodule and it's safe in runtime
-            const nftCollection = configuration.TONParams.contractOpener.open<NFTCollectionC>(
+            const nftCollection = configuration.TONParams.contractOpener.open(
                 configuration.artifacts.ton.wrappers.NFTCollection.createFromConfig(
                     {
                         adminAddress: address(configuration.TONParams.crossChainLayerAddress),
                         newAdminAddress: null,
-                        // @ts-expect-error
                         collectionContent: beginCell().endCell(),
-                        // @ts-expect-error
                         commonContent: beginCell().endCell(),
-                        // @ts-expect-error
                         nftItemCode: configuration.TONParams.nftItemCode,
                         originalAddress: collectionAddress,
                     },
@@ -234,6 +222,7 @@ export class NFT implements Asset {
                       {
                           collectionAddress: nftCollection.address,
                           cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
+                          // TODO: fix index type in wrapper!!!
                           // @ts-expect-error // bigint can be used, wrapper is not typed properly
                           index: tokenId,
                       },
@@ -258,8 +247,7 @@ export class NFT implements Asset {
 
         const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
 
-        // @ts-expect-error: NFTCollectionC was built inside l1_tvm_ton submodule and it's safe in runtime
-        this._nftCollection = configuration.TONParams.contractOpener.open<NFTCollectionC>(
+        this._nftCollection = configuration.TONParams.contractOpener.open(
             NFTCollectionC.createFromAddress(Address.parse(this._addresses.collection)),
         );
     }
@@ -325,8 +313,7 @@ export class NFT implements Asset {
 
             const NFTCollectionC = this._configuration.artifacts.ton.wrappers.NFTCollection;
 
-            // @ts-expect-error: NFTCollectionC was built inside l1_tvm_ton submodule and it's safe in runtime
-            const nftCollection = this._configuration.TONParams.contractOpener.open<NFTCollectionC>(
+            const nftCollection = this._configuration.TONParams.contractOpener.open(
                 NFTCollectionC.createFromAddress(address(tvmNFTAddress)),
             );
             const evmAddress = await nftCollection.getOriginalAddress();
@@ -406,7 +393,6 @@ export class NFT implements Asset {
 
         const NFTItemC = this._configuration.artifacts.ton.wrappers.NFTItem;
 
-        // @ts-expect-error: NFTItemC was built inside l1_tvm_ton submodule and it's safe in runtime
         return NFTItemC.burnMessage(queryId, address(crossChainLayerAddress), crossChainTonAmount, evmData, feeData);
     }
 
@@ -427,13 +413,11 @@ export class NFT implements Asset {
 
         const NFTItemC = this._configuration.artifacts.ton.wrappers.NFTItem;
 
-        // @ts-expect-error: NFTItemC was built inside l1_tvm_ton submodule and it's safe in runtime
         return NFTItemC.transferMessage(
             queryId,
             address(to),
             address(responseAddress),
             Number(fromNano(NFT_TRANSFER_FORWARD_TON_AMOUNT + forwardFeeAmount + crossChainTonAmount)),
-            // @ts-expect-error
             forwardPayload,
         );
     }

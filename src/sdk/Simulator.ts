@@ -75,8 +75,7 @@ export class Simulator implements ISimulator {
 
         const CrossChainLayerC = this.config.artifacts.ton.wrappers.CrossChainLayer;
 
-        // @ts-expect-error: CrossChainLayerC was built inside l1_tvm_ton submodule and it's safe in runtime
-        const crossChainLayer = this.config.TONParams.contractOpener.open<CrossChainLayerC>(
+        const crossChainLayer = this.config.TONParams.contractOpener.open(
             CrossChainLayerC.createFromAddress(
                 Address.parse(this.config.TONParams.crossChainLayerAddress),
             ),
