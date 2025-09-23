@@ -49,7 +49,7 @@ The TAC SDK enables you to create frontends that:
   - [`getUserJettonBalanceExtended`](./docs/sdks/tac_sdk.md#getuserjettonbalanceextended): Gets extended Jetton balance info (including decimals).
   - [`getUserJettonWalletAddress`](./docs/sdks/tac_sdk.md#getuserjettonwalletaddress): Calculates a user's Jetton wallet address.
   - [`nativeTONAddress (getter)`](./docs/sdks/tac_sdk.md#nativetonaddress): Placeholder address for native TON.
-  - [`nativeTACAddress (getter)`](./docs/sdks/tac_sdk.md#nativetacaddress): Gets the native asset address on the TAC chain.
+  - [`nativeTACAddress (method)`](./docs/sdks/tac_sdk.md#nativetacaddress): Gets the native asset address on the TAC chain.
   - *(See file for more...)*
 
 - **[`OperationTracker`](./docs/sdks/operation_tracker.md)**: Tools for monitoring cross-chain operation status.
