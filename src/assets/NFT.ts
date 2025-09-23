@@ -1,6 +1,6 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, address, beginCell, Cell, fromNano, OpenedContract } from '@ton/ton';
-import { NFTCollection, NFTItem } from '../../artifacts';
+import { NFTCollection } from '../../artifacts';
 import { isAddress as isEthereumAddress } from 'ethers';
 
 import { ContractError, emptyContractError, insufficientBalanceError } from '../errors';

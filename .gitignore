@@ -2,8 +2,8 @@
 /dist/
 /node_modules/
 
-/artifacts/**/ton/wrappers
-/artifacts/**/ton/build
+/artifacts/**/ton/internal
+/artifacts/**/tac/internal
 
 .env
 

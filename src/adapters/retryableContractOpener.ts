@@ -1,6 +1,5 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
-import { dev, mainnet, testnet } from '../../artifacts';
 
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener } from '../interfaces';
@@ -131,16 +130,26 @@ export async function createDefaultRetryableOpener(
     retryDelay = 1000,
 ): Promise<ContractOpener> {
 
+    let openers: OpenerConfig[] = [];
+
     const tonClient = new TonClient({
         endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString(),
     });
 
-    const opener4 = await orbsOpener4(networkType);
-    const opener = await orbsOpener(networkType);
-
-    return new RetryableContractOpener([
+    openers.push(
         { opener: tonClient, retries: maxRetries, retryDelay },
-        { opener: opener4, retries: maxRetries, retryDelay },
-        { opener: opener, retries: maxRetries, retryDelay },
-    ]);
+    );
+
+    if (networkType !== Network.DEV) {
+        const opener4 = await orbsOpener4(networkType);
+        const opener = await orbsOpener(networkType);
+
+        openers.push(
+            { opener: opener4, retries: maxRetries, retryDelay },
+            { opener: opener, retries: maxRetries, retryDelay },
+        );
+    }
+
+
+    return new RetryableContractOpener(openers);
 }

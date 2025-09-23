@@ -79,9 +79,9 @@ export class Configuration implements IConfiguration {
             }
             settingsAddress = TONParams.settingsAddress;
         } else {
-            const tonRpcEndpoint = network === Network.MAINNET ? mainnet.TON_RPC_ENDPOINT_BY_TAC : testnet.TON_RPC_ENDPOINT_BY_TAC;
-            contractOpener = (await createDefaultRetryableOpener(tonRpcEndpoint, network, 3, delay))
-            settingsAddress = network === Network.MAINNET ? mainnet.TON_SETTINGS_ADDRESS : testnet.TON_SETTINGS_ADDRESS;
+            const artifacts = network === Network.MAINNET ? mainnet : testnet;
+            contractOpener = (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 3, delay))
+            settingsAddress = artifacts.TON_SETTINGS_ADDRESS;
         }
         const settings = contractOpener.open(Settings.create(Address.parse(settingsAddress)));
         const allSettingsSlice = (await settings.getAll()).beginParse();
