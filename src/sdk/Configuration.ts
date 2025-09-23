@@ -54,9 +54,7 @@ export class Configuration implements IConfiguration {
         else {
             liteSequencerEndpoints =
                 customLiteSequencerEndpoints ??
-                (network === Network.MAINNET ?
-                    mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS :
-                    testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
+                artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS
         }
 
         return new Configuration(network, artifacts, internalTONParams, internalTACParams, liteSequencerEndpoints);
@@ -80,8 +78,12 @@ export class Configuration implements IConfiguration {
             settingsAddress = TONParams.settingsAddress;
         } else {
             const artifacts = network === Network.MAINNET ? mainnet : testnet;
-            contractOpener = (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 3, delay))
-            settingsAddress = artifacts.TON_SETTINGS_ADDRESS;
+            contractOpener = TONParams?.contractOpener ?
+                TONParams.contractOpener :
+                (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 3, delay))
+            settingsAddress = TONParams?.settingsAddress ?
+                TONParams.settingsAddress :
+                artifacts.TON_SETTINGS_ADDRESS;
         }
         const settings = contractOpener.open(Settings.create(Address.parse(settingsAddress)));
         const allSettingsSlice = (await settings.getAll()).beginParse();
@@ -126,8 +128,12 @@ export class Configuration implements IConfiguration {
             settingsAddress = TACParams.settingsAddress.toString();
         }
         else {
-            provider = ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT)
-            settingsAddress = artifacts.TAC_SETTINGS_ADDRESS;
+            provider = TACParams?.provider ?
+                TACParams.provider :
+                ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT)
+            settingsAddress = TACParams?.settingsAddress ?
+                TACParams.settingsAddress.toString() :
+                artifacts.TAC_SETTINGS_ADDRESS;
         }
 
         Validator.validateEVMAddress(settingsAddress);

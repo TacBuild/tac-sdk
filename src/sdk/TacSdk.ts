@@ -73,10 +73,19 @@ export class TacSdk implements ITacSDK {
 
         const { dev, testnet, mainnet } = await import('../../artifacts');
         let artifacts;
-        if (network === Network.MAINNET) artifacts = mainnet;
-        else if (network === Network.TESTNET) artifacts = testnet;
-        else if (network === Network.DEV) artifacts = dev;
-        else throw new Error(`Unsupported network: ${network}`);
+        switch (network) {
+            case Network.MAINNET:
+                artifacts = mainnet;
+                break;
+            case Network.TESTNET:
+                artifacts = testnet;
+                break;
+            case Network.DEV:
+                artifacts = dev;
+                break;
+            default:
+                throw new Error(`Unsupported network: ${network}`);
+        }
 
         const config = await Configuration.create(
             network,

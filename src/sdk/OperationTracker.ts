@@ -48,10 +48,10 @@ export class OperationTracker implements IOperationTracker {
             }
             endpoints = customLiteSequencerEndpoints;
         } else {
-            endpoints =
-                network === Network.MAINNET ?
-                    mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS :
-                    testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+            const artifacts = network === Network.MAINNET ? mainnet : testnet;
+            endpoints = customLiteSequencerEndpoints && customLiteSequencerEndpoints.length !== 0 ?
+                customLiteSequencerEndpoints :
+                artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
         }
         this.clients = clientFactory.createClients(endpoints);
         this.logger = logger;
