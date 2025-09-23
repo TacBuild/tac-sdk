@@ -9,6 +9,7 @@
     "dist"
   ],
   "scripts": {
+    "prebuild": "git submodule update --init --recursive --remote",
     "build": "rm -rf dist && yarn build:artifacts && tsc --declaration",
     "build:artifacts:tac:dev": "cd artifacts/dev/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",
     "build:artifacts:ton:dev": "cd artifacts/dev/l1_tvm_ton && npm i && npm run compile:ts && npm run build:all && rsync -avh --delete ./build ./wrappers ../ton/internal/",
@@ -18,7 +19,7 @@
     "build:artifacts:ton:mainnet": "cd artifacts/mainnet/l1_tvm_ton && npm i && npm run compile:ts && npm run build:all && rsync -avh --delete ./build ./wrappers ../ton/internal/",
     "build:artifacts:ton:all": "yarn build:artifacts:ton:dev && yarn build:artifacts:ton:testnet && yarn build:artifacts:ton:mainnet",
     "build:artifacts:tac:all": "yarn build:artifacts:tac:dev && yarn build:artifacts:tac:testnet && yarn build:artifacts:tac:mainnet",
-    "build:artifacts": "yarn build:artifacts:ton:all && yarn build:artifacts:tac:all",
+    "build:artifacts": "yarn prebuild && yarn build:artifacts:ton:all && yarn build:artifacts:tac:all",
     "test": "jest --verbose --runInBand",
     "release": "yarn build && yarn release-it --npm.yarn1",
     "lint": "eslint .",
