@@ -22,7 +22,7 @@ What you need to do is just to adapt your existing front/back code with this too
 ## Table of Contents
 
 - [🚀 Quick Start](#quick-start)
-- [📋 Full Usage Example With TacSdk](#full-usage-example-with-tac-sdk-integration)
+- [📋 Full Usage Example With TacSdk](#full-usage-example-with-tac-sdk-integration-)
 - [🧠 Core Concepts](#core-concepts)
 - [📄 ABI Support](#abi-support)
 - [📖 API Reference](#api-reference)
@@ -84,7 +84,7 @@ You can retreive Agnostic SDK from TacSDK *@tonappchain/sdk*
 ```typescript
 import { ethers } from "ethers";
 import { AgnosticProxySDK } from "./AgnosticProxySDK";
-import { Network, SenderFactory, TacSdk, type EvmProxyMsg, type AssetBridgingData, type SDKParams, AgnosticProxySDK } from '@tonappchain/sdk';
+import { Network, SenderFactory, TacSdk, type EvmProxyMsg, type AssetLike, type SDKParams, AgnosticProxySDK } from '@tonappchain/sdk';
 import { TonConnectUI } from '@tonconnect/ui';
 
 

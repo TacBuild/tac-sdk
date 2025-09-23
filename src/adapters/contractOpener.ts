@@ -1,20 +1,20 @@
 import { getHttpEndpoint, getHttpV4Endpoint } from '@orbs-network/ton-access';
+import { Network as TonNetwork } from '@orbs-network/ton-access';
 import { Blockchain } from '@ton/sandbox';
 import { TonClient, TonClient4 } from '@ton/ton';
-import { mainnet, testnet } from '../../artifacts';
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
+import { mainnet, testnet } from '../../artifacts';
 import { ContractOpener } from '../interfaces';
 import { sleep } from '../sdk/Utils';
 import { Network } from '../structs/Struct';
-import { Network as TonNetwork } from '@orbs-network/ton-access';
 
 async function getHttpEndpointWithRetry(network: Network, maxRetries = 5, delay = 1000): Promise<string> {
     let lastError: Error | undefined;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            let tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
+            const tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
             return await getHttpEndpoint({ network: tonNetwork });
         } catch (error) {
             lastError = error as Error;
@@ -32,7 +32,7 @@ async function getHttpV4EndpointWithRetry(network: Network, maxRetries = 5, dela
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            let tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
+            const tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
             return await getHttpV4Endpoint({ network: tonNetwork });
         } catch (error) {
             lastError = error as Error;

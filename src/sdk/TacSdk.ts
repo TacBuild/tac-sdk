@@ -1,5 +1,6 @@
 import { Wallet } from 'ethers';
 
+import { JettonMinterData, NFTItemData } from '../../artifacts';
 import { AssetFactory, FT, NFT } from '../assets';
 import {
     Asset,
@@ -26,7 +27,6 @@ import {
     ExecutionFeeEstimationResult,
     Network,
     NFTAddressType,
-    NFTItemData,
     OperationIdsByShardsKey,
     SDKParams,
     SuggestedTVMExecutorFee,
@@ -37,7 +37,6 @@ import {
     UserWalletBalanceExtended,
     WaitOptions,
 } from '../structs/Struct';
-import { JettonMasterData } from '../wrappers/JettonMaster';
 import { Configuration } from './Configuration';
 import { DEFAULT_DELAY } from './Consts';
 import { NoopLogger } from './Logger';
@@ -45,7 +44,7 @@ import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
 import { TACTransactionManager } from './TACTransactionManager';
 import { TONTransactionManager } from './TONTransactionManager';
-import { getBouncedAddress, mapAssetsToTonAssets,normalizeAssets } from './Utils';
+import { getBouncedAddress, mapAssetsToTonAssets, normalizeAssets } from './Utils';
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
     readonly operationTracker: IOperationTracker;
@@ -248,8 +247,8 @@ export class TacSdk implements ITacSDK {
         return (ft as FT).getUserBalanceExtended(userAddress);
     }
 
-    async getJettonData(itemAddress: TVMAddress): Promise<JettonMasterData> {
-        return FT.getJettonData(this.config.TONParams.contractOpener, itemAddress);
+    async getJettonData(itemAddress: TVMAddress): Promise<JettonMinterData> {
+        return FT.getJettonData(this.config, itemAddress);
     }
 
     public async getFT(address: TVMAddress | EVMAddress): Promise<FT> {

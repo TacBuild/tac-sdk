@@ -1,11 +1,11 @@
-# Simulator Interface
+# Simulator
 
 ## Table of Contents
 
-- [Simulator Interface](#simulator-interface)
+- [Simulator](#simulator)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
-  - [Interface Methods](#interface-methods)
+  - [Methods](#methods)
     - [`getSimulationInfo`](#getsimulationinfo)
     - [`getSimulationsInfo`](#getsimulationsinfo)
   - [Example Usage](#example-usage)
@@ -14,11 +14,13 @@
 
 ## Overview
 
-The `ISimulator` interface defines methods for simulating cross-chain transactions and estimating execution fees. It provides functionality to simulate individual transactions or batches of transactions for fee estimation and validation purposes.
+The `Simulator` class implements the `ISimulator` interface and provides methods for simulating cross-chain transactions and estimating execution fees. It offers functionality to simulate individual transactions or batches of transactions for fee estimation and validation purposes.
+
+The simulator performs TAC-side simulation to estimate gas costs, validate transaction logic, and calculate the required fees for successful cross-chain execution.
 
 ---
 
-## Interface Methods
+## Methods
 
 ### `getSimulationInfo`
 
@@ -28,7 +30,7 @@ getSimulationInfo(sender: SenderAbstraction, tx: CrosschainTx): Promise<Executio
 
 #### **Purpose**
 
-Simulates a single cross-chain transaction and provides fee estimation and execution info. This method uses the sender abstraction to provide transaction context such as wallet state.
+Simulates a single cross-chain transaction and provides TVM fees and simulation info. This method performs TAC-side simulation to estimate gas costs, validate transaction logic, and calculate the required fees including protocol fees, executor fees, and gas limits. The sender abstraction is used to provide transaction context such as wallet state.
 
 #### **Parameters**
 
@@ -49,7 +51,7 @@ getSimulationsInfo(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<Exec
 
 #### **Purpose**
 
-Simulates multiple cross-chain transactions and provides fee estimation results for each transaction. This method is useful for batch simulation and fee estimation.
+Simulates a list of cross-chain transactions for a given sender and provides fee estimation results for each transaction. This method is useful for batch simulation and fee estimation, processing each transaction sequentially and returning results in the same order as the input.
 
 #### **Parameters**
 

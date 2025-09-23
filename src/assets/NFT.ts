@@ -1,8 +1,8 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, address, beginCell, Cell, fromNano, OpenedContract } from '@ton/ton';
-import { NFTCollection } from '../../artifacts';
 import { isAddress as isEthereumAddress } from 'ethers';
 
+import { NFTCollection, NFTCollectionData, NFTItemData } from '../../artifacts';
 import { ContractError, emptyContractError, insufficientBalanceError } from '../errors';
 import { Asset,IConfiguration } from '../interfaces';
 import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
@@ -13,13 +13,11 @@ import {
     AssetType,
     EVMAddress,
     FeeParams,
-    NFTCollectionData,
-    NFTItemData,
     Origin,
     TVMAddress,
 } from '../structs/Struct';
 export class NFT implements Asset {
-    private _addresses: {
+    private readonly _addresses: {
         item: TVMAddress;
         collection: TVMAddress;
         index: bigint;
@@ -86,8 +84,6 @@ export class NFT implements Asset {
                       {
                           collectionAddress: nftCollection.address,
                           cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
-                          // TODO: fix index type in wrapper!!!
-                          // @ts-expect-error // bigint can be used, wrapper is not typed properly
                           index: item.index,
                       },
                       configuration.TONParams.nftItemCode,
@@ -227,8 +223,6 @@ export class NFT implements Asset {
                       {
                           collectionAddress: nftCollection.address,
                           cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
-                          // TODO: fix index type in wrapper!!!
-                          // @ts-expect-error // bigint can be used, wrapper is not typed properly
                           index: tokenId,
                       },
                       configuration.TONParams.nftItemCode,

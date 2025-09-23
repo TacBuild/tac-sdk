@@ -66,6 +66,14 @@ The TAC SDK enables you to create frontends that:
 - **[`Utilities`](./docs/sdks/utilities.md)**: Helper functions and interfaces.
   - [`startTracking`](./docs/sdks/utilities.md#starttracking): Utility function to poll and log operation status to the console.
 
+- **[`AgnosticSdk`](./docs/sdks/agnostic_proxy_sdk.md)**: Agnostic SDK for cross-chain interactions.
+
+- **[`Simulator`](./docs/sdks/simulator.md)**: Transaction simulation capabilities.
+
+- **[`TACTransactionManager`](./docs/sdks/tac_transaction_manager.md)**: Manages TAC-side transactions.
+
+- **[`TONTransactionManager`](./docs/sdks/ton_transaction_manager.md)**: Manages TON-side transactions.
+
 ### Data Models
 
 - **[`Enums`](./docs/models/enums.md)**: Key enumerations used by the SDK.
@@ -128,7 +136,7 @@ More details in [sendAddLiquidity.ts](tests/uniswap_v2/sendAddLiquidity.ts) and 
 ## Usage
 
 ```typescript
-import { TacSdk } from '@tonappchain/sdk';
+import { TacSdk, AssetLike, EvmProxyMsg, SDKParams, Network, SenderFactory } from '@tonappchain/sdk';
 import { TonConnectUI } from '@tonconnect/ui';
 import { ethers } from 'ethers';
 
@@ -152,17 +160,14 @@ const evmProxyMsg: EvmProxyMsg = {
 };
 
 // Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
-const assets: AssetBridgingData[] = [
+const assets: AssetLike[] = [
     {
         address: TVMtokenAAddress,
         amount: tokenAAmount,
-        type: AssetType.FT,
-
     },
     {
         address: TVMtokenBAddress,
         amount: tokenBAmount,
-        type: AssetType.FT,
     }
 ];
 
@@ -183,7 +188,7 @@ await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
 
 tacSdk.closeConnections();
 ```
-For a detailed example, see `test/sendSwap.ts` or `test/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
+For a detailed example, see `tests/uniswap_v2/sendSwap.ts` or `tests/uniswap_v2/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
 
 ---
 

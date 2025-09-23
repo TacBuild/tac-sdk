@@ -87,7 +87,7 @@ export class TON implements Asset {
         return beginCell()
             .storeUint(this._config.artifacts.ton.wrappers.CrossChainLayerOpCodes.anyone_tvmMsgToEVM, 32)
             .storeUint(queryId, 64)
-            .storeUint(this._config.artifacts.ton.wrappers.OperationType.tonTransfer, 32)
+            .storeUint(this._config.artifacts.ton.wrappers.MsgType.tonTransfer, 32)
             .storeCoins(this._rawAmount)
             .storeMaybeRef(feeData)
             .storeAddress(Address.parse(excessReceiver))

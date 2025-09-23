@@ -1,5 +1,4 @@
 import { mainnet, testnet } from '../../artifacts';
-
 import { allEndpointsFailedError } from '../errors';
 import { ILiteSequencerClient, ILiteSequencerClientFactory, ILogger, IOperationTracker } from '../interfaces';
 import {

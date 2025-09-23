@@ -39,10 +39,7 @@ new TONTransactionManager(
   config: IConfiguration,
   simulator: ISimulator,
   operationTracker: IOperationTracker,
-  logger?: ILogger,
-  options?: {
-    evmDataCellBuilder?: (transactionLinker: TransactionLinker, evmProxyMsg: EvmProxyMsg, validExecutors: ValidExecutors) => Cell;
-  }
+  logger?: ILogger
 )
 ```
 
@@ -53,7 +50,6 @@ Creates a TONTransactionManager instance with the required dependencies.
 - **`simulator`**: Simulator instance implementing `ISimulator` for transaction simulation
 - **`operationTracker`**: OperationTracker instance implementing `IOperationTracker` for tracking operations
 - **`logger`** *(optional)*: Logger implementing `ILogger` (defaults to `NoopLogger`)
-- **`options`** *(optional)*: Options object with `evmDataCellBuilder` function for customizing the EVM data cell builder
 
 ---
 

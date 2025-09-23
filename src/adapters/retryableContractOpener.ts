@@ -130,7 +130,7 @@ export async function createDefaultRetryableOpener(
     retryDelay = 1000,
 ): Promise<ContractOpener> {
 
-    let openers: OpenerConfig[] = [];
+    const openers: OpenerConfig[] = [];
 
     const tonClient = new TonClient({
         endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString(),

@@ -1,4 +1,6 @@
+export * as artifacts from '../artifacts';
 export { liteClientOpener, orbsOpener } from './adapters/contractOpener';
+export * from './agnosticSdk/AgnosticSdk';
 export * from './assets';
 export * from './errors';
 export * from './interfaces';
@@ -14,9 +16,5 @@ export { TACTransactionManager } from './sdk/TACTransactionManager';
 export { TONTransactionManager } from './sdk/TONTransactionManager';
 export * from './sender';
 export * from './structs/Struct';
-export { Network, SimplifiedStatuses } from './structs/Struct';
 export { readJettonMetadata } from './wrappers/ContentUtils';
 export { HighloadWalletV3 } from './wrappers/HighloadWalletV3';
-export type { JettonWalletData } from './wrappers/JettonWallet';
-export { JettonWallet, JettonWalletOpCodes } from './wrappers/JettonWallet';
-export * from './agnosticSdk/AgnosticSdk';

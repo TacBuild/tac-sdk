@@ -1,9 +1,10 @@
-import  { Address, Cell, OpenedContract } from '@ton/ton';
-import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
+import { SandboxContract } from '@ton/sandbox';
+import  { OpenedContract } from '@ton/ton';
+import { AbstractProvider, Addressable} from 'ethers';
 
+import { JettonMinter, JettonMinterData } from '../../artifacts';
 import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
-import { JettonMaster, JettonMasterData } from '../wrappers/JettonMaster';
 
 export type ContractState = {
     balance: bigint;
@@ -366,20 +367,6 @@ export type AssetLike =
 
 export type CrosschainTxWithAssetLike = Omit<CrosschainTx, 'assets'> & { assets?: AssetLike[] };
 
-export type NFTItemData = {
-    init: boolean;
-    index: number;
-    collectionAddress: Address;
-    ownerAddress: Address | null;
-    content: Cell | null;
-};
-
-export type NFTCollectionData = {
-    nextIndex: number;
-    content: Cell;
-    adminAddress: Address;
-};
-
 export interface WaitOptions<T = unknown, TContext = unknown> {
     /**
      * Timeout in milliseconds
@@ -478,7 +465,7 @@ export type GetTVMExecutorFeeParams = {
 
 export type FTOriginAndData = {
     origin: Origin;
-    jettonMinter: OpenedContract<JettonMaster>;
+    jettonMinter: OpenedContract<JettonMinter> | SandboxContract<JettonMinter>;
     evmAddress?: string;
-    jettonData?: JettonMasterData;
+    jettonData?: JettonMinterData;
 };

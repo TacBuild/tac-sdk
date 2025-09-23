@@ -68,6 +68,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`GetTVMExecutorFeeParams`](#gettvmexecutorfeeparams)
 
 ### FT Structures
+- [`JettonMinterData`](#jettonminterdata)
 - [`FTOriginAndData`](#ftoriginanddata)
 
 ### Asset Factory
@@ -119,16 +120,12 @@ TON Parameters for SDK:
 export type TACParams = {
     provider?: AbstractProvider;
     settingsAddress?: string | Addressable;
-    multicallAddress?: string | Addressable;
-    multicallABI?: Interface | InterfaceAbi;
 }
 ```
 
 TAC Parameters for SDK:
 - **`provider`** *(optional)*: Provider used for TAC smart contract interaction. Set for increasing rate limit or tests only
 - **`settingsAddress`** *(optional)*: TAC settings contract address. Needed to retrieve protocol data. Set for tests only
-- **`multicallAddress`** (optional): TAC multicall contract address. Needed to batch retrieve protocol data. Set for tests only
-- **`multicallABI`** (optional): TAC multicall contract ABI. Set for tests only
 
 
 ### `ContractState (Type)`
@@ -181,7 +178,7 @@ export class RetryableContractOpener implements ContractOpener {
 }
 ```
 
-A resilient implementation of IContractOpener that provides retry capabilities and fallback mechanisms when interacting with TON contracts.
+A resilient implementation of ContractOpener that provides retry capabilities and fallback mechanisms when interacting with TON contracts.
 
 #### **Constructor Parameters**
 - **`openerConfigs`**: An array of `OpenerConfig` objects, each containing:
@@ -200,7 +197,7 @@ export async function createDefaultRetryableOpener(
     artifacts: typeof testnet | typeof mainnet,
     maxRetries = 3,
     retryDelay = 1000,
-): Promise<IContractOpener>
+): Promise<ContractOpener>
 ```
 
 Creates a default RetryableContractOpener with multiple fallback providers:
@@ -248,6 +245,8 @@ export type CrossChainTransactionOptions = {
     tvmValidExecutors?: string[];
     tvmExecutorFee?: bigint;
     calculateRollbackFee?: boolean;
+    withoutSimulation?: boolean;
+    validateAssetsBalance?: boolean;
 };
 ```
 
@@ -273,6 +272,18 @@ export type CrossChainTransactionOptions = {
 
 - **tvmExecutorFee** *(optional)*:  
   Fee in bigint to be paid (in TON token) to the executor on the TON side.
+
+- **calculateRollbackFee** *(optional)*:  
+  Whether to calculate rollback fee during simulation.  
+  **Default**: false
+
+- **withoutSimulation** *(optional)*:  
+  If true, skips the simulation phase entirely.  
+  **Default**: false
+
+- **validateAssetsBalance** *(optional)*:  
+  If true, validates that the sender has sufficient balance for the specified assets before sending the transaction.  
+  **Default**: true
 
 
 
@@ -841,19 +852,19 @@ Provides information about NFT item.
 
 ```typescript
 export type NFTItemData = {
-    init: boolean;
-    index: number;
+    init?: boolean;
+    index: bigint;
     collectionAddress: Address;
-    ownerAddress: Address | null;
-    content: Cell | null;
+    ownerAddress?: Address;
+    content?: Cell;
 };
 ```
 
-- **`init`**: Indicates whether item is active, i.e initialized by NFT collection and has not been burnt
-- **`index`**: Index of the item in collection
+- **`init`** *(optional)*: Indicates whether item is active, i.e initialized by NFT collection and has not been burnt
+- **`index`**: Index of the item in collection (as bigint)
 - **`collectionAddress`**: Address of collection
-- **`ownerAddress`**: Address of the item owner
-- **`content`**: Content(metadata) of the item
+- **`ownerAddress`** *(optional)*: Address of the item owner
+- **`content`** *(optional)*: Content(metadata) of the item
 
 ### `NFTCollectionData`
 
@@ -861,13 +872,13 @@ Provides information about NFT collection.
 
 ```typescript
 export type NFTCollectionData = {
-    nextIndex: number;
+    nextIndex: bigint;
     content: Cell;
     adminAddress: Address;
 };
 ```
 
-- **`nextIndex`**: Next item index to be minted in the collection
+- **`nextIndex`**: Next item index to be minted in the collection (as bigint)
 - **`content`**: Content(metadata) of the collection
 - **`adminAddress`**: Address of the collection admin
 
@@ -1040,14 +1051,34 @@ export type EVMAddress = string;
 
 EVM-compatible checksum address string.
 
+### `JettonMinterData`
+
+```typescript
+export type JettonMinterData = {
+    totalSupply: bigint;
+    mintable: boolean;
+    adminAddress: Address;
+    content: Cell;
+    walletCode: Cell;
+};
+```
+
+Represents the data structure returned by Jetton minter contracts, containing essential information about a Jetton (fungible token).
+
+- **`totalSupply`**: Total supply of the Jetton in raw units (considering decimals)
+- **`mintable`**: Whether the Jetton can still be minted (true) or if minting is disabled (false)
+- **`adminAddress`**: Address of the admin who controls the Jetton minter contract
+- **`content`**: Cell containing Jetton metadata (name, symbol, decimals, description, image, etc.) encoded according to TEP-64 standard
+- **`walletCode`**: Cell containing the code for Jetton wallet contracts that will be deployed for each holder
+
 ### `FTOriginAndData`
 
 ```typescript
 export type FTOriginAndData = {
     origin: Origin;
-    jettonMinter: OpenedContract<JettonMaster>;
+    jettonMinter: OpenedContract<JettonMinter> | SandboxContract<JettonMinter>;
     evmAddress?: string;
-    jettonData?: JettonMasterData;
+    jettonData?: JettonMinterData;
 };
 ```
 

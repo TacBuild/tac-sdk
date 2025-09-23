@@ -160,16 +160,16 @@ Creates a new FT instance by TVM or EVM address. Origin is detected automaticall
 #### `getJettonData`
 
 ```ts
-static getJettonData(contractOpener: IContractOpener, address: string)
+static getJettonData(configuration: IConfiguration, address: TVMAddress): Promise<JettonMinterData>
 ```
 
 Retrieves fungible token data from the contract at the given address.
 
 **Parameters:**
-- `contractOpener`: Contract opener for reading contract state
-- `address`: Fungible token master contract address
+- `configuration`: SDK configuration instance
+- `address`: Fungible token master contract address (TVM format)
 
-**Returns:** Fungible token data including metadata, total supply, and mintable status
+**Returns:** Promise resolving to [`JettonMinterData`](./../models/structs.md#jettonminterdata) containing metadata, total supply, and mintable status
 
 #### `getOrigin`
 
@@ -383,22 +383,30 @@ NFT.fromCollection(
 #### `getItemData`
 
 ```ts
-static getItemData(contractOpener: ContractOpener, address: string)
+static getItemData(configuration: IConfiguration, itemAddress: TVMAddress): Promise<NFTItemData>
 ```
 
 Retrieves NFT item data from the contract at the given address.
 
-**Returns:** NFT item data including index, collection address, and owner
+**Parameters:**
+- `configuration`: SDK configuration instance
+- `itemAddress`: NFT item contract address (TVM format)
+
+**Returns:** Promise resolving to NFT item data including index, collection address, and owner
 
 #### `getCollectionData`
 
 ```ts
-static getCollectionData(contractOpener: ContractOpener, address: string)
+static getCollectionData(configuration: IConfiguration, collectionAddress: TVMAddress): Promise<NFTCollectionData>
 ```
 
 Retrieves NFT collection data from the contract at the given address.
 
-**Returns:** NFT collection data including metadata and owner
+**Parameters:**
+- `configuration`: SDK configuration instance
+- `collectionAddress`: NFT collection contract address (TVM format)
+
+**Returns:** Promise resolving to NFT collection data including metadata and owner
 
 #### `getOrigin`
 
@@ -433,8 +441,8 @@ Computes the TVM address for an NFT given its EVM address and optional token ID.
 
 ```ts
 static getItemAddress(
-  contractOpener: ContractOpener,
-  collectionAddress: string,
+  configuration: IConfiguration,
+  collectionAddress: TVMAddress,
   index: bigint
 ): Promise<string>
 ```
@@ -442,11 +450,11 @@ static getItemAddress(
 Gets the item address for an NFT in a collection.
 
 **Parameters:**
-- `contractOpener`: Contract opener for reading contract state
-- `collectionAddress`: Collection contract address
+- `configuration`: SDK configuration instance
+- `collectionAddress`: Collection contract address (TVM format)
 - `index`: NFT item index
 
-**Returns:** NFT item address
+**Returns:** Promise resolving to NFT item address
 
 ### Instance Methods
 
@@ -663,7 +671,7 @@ Checks if the sender has sufficient TON balance for the given transactions.
 ## Example Usage
 
 ```ts
-import { AssetFactory, FT, NFT, TON, Configuration, Network } from "@tonappchain/sdk";
+import { AssetFactory, FT, NFT, TON, Configuration, Network, AssetType, NFTAddressType } from "@tonappchain/sdk";
 import { testnet } from "@tonappchain/artifacts";
 
 // Create configuration
@@ -672,17 +680,17 @@ const config = await Configuration.create(Network.TESTNET, testnet);
 // Create tokens using AssetFactory
 const jetton = await AssetFactory.from(
   config,
-  { address: "EQ..." }
+  { address: "EQ...", tokenType: AssetType.FT }
 );
 
 const nft = await AssetFactory.from(
   config,
-  { address: "EQ...", index: 1n }
+  { address: "EQ...", tokenType: AssetType.NFT, addressType: NFTAddressType.COLLECTION, index: 1n }
 );
 
 // Create native TON token
 const tonToken = TON.create(config);
-await tonToken.withAmount({ amount: 1.5 }); // Set amount to 1.5 TON
+tonToken.withAmount(1.5); // Set amount to 1.5 TON
 
 // Work with fungible tokens
 const jettonData = await FT.getJettonData(contractOpener, "EQ...");
@@ -713,7 +721,7 @@ await TON.checkBalance(sender, config, transactions);
 
 // Token operations
 const clonedToken = jetton.clone;
-const tokenWithAmount = await jetton.withAmount({ amount: 10.5 });
+const tokenWithAmount = jetton.withAmount(10.5);
 const evmAddress = await jetton.getEVMAddress();
 const tvmAddress = await jetton.getTVMAddress();
 

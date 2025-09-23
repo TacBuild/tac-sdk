@@ -1,13 +1,12 @@
 import { Address, Dictionary } from '@ton/ton';
-import { dev, mainnet, testnet } from '../../artifacts';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
+import { dev, mainnet, testnet } from '../../artifacts';
 import { createDefaultRetryableOpener } from '../adapters/retryableContractOpener';
 import { IConfiguration } from '../interfaces';
 import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
 import { Network, TACParams, TONParams } from '../structs/Struct';
-import { getAddressString, Settings } from '../wrappers/Settings';
-import { sha256toBigInt } from './Utils';
+import { getAddressString, sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
 
 export class Configuration implements IConfiguration {
@@ -67,6 +66,7 @@ export class Configuration implements IConfiguration {
     ): Promise<InternalTONParams> {
         let contractOpener;
         let settingsAddress: string;
+        const artifacts = network === Network.MAINNET ? mainnet : network === Network.TESTNET ? testnet : dev;
         if (network === Network.DEV) {
             if (!TONParams || !TONParams.contractOpener) {
                 throw new Error('For dev network, a custom contract opener must be provided in TONParams');
@@ -77,15 +77,10 @@ export class Configuration implements IConfiguration {
             }
             settingsAddress = TONParams.settingsAddress;
         } else {
-            const artifacts = network === Network.MAINNET ? mainnet : testnet;
-            contractOpener = TONParams?.contractOpener ?
-                TONParams.contractOpener :
-                (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 3, delay))
-            settingsAddress = TONParams?.settingsAddress ?
-                TONParams.settingsAddress :
-                artifacts.TON_SETTINGS_ADDRESS;
+            contractOpener = TONParams?.contractOpener ?? (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 5, delay))
+            settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
         }
-        const settings = contractOpener.open(Settings.create(Address.parse(settingsAddress)));
+        const settings = contractOpener.open(artifacts.ton.wrappers.Settings.createFromAddress(Address.parse(settingsAddress)));
         const allSettingsSlice = (await settings.getAll()).beginParse();
         const allSettings = allSettingsSlice.loadDictDirect(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
 
@@ -113,7 +108,6 @@ export class Configuration implements IConfiguration {
         network: Network,
         TACParams?: TACParams,
     ): Promise<InternalTACParams> {
-
         const artifacts = network === Network.MAINNET ? mainnet : network === Network.TESTNET ? testnet : dev;
         let provider: ethers.AbstractProvider;
         let settingsAddress: string;
@@ -128,12 +122,8 @@ export class Configuration implements IConfiguration {
             settingsAddress = TACParams.settingsAddress.toString();
         }
         else {
-            provider = TACParams?.provider ?
-                TACParams.provider :
-                ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT)
-            settingsAddress = TACParams?.settingsAddress ?
-                TACParams.settingsAddress.toString() :
-                artifacts.TAC_SETTINGS_ADDRESS;
+            provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT)
+            settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.TAC_SETTINGS_ADDRESS;
         }
 
         Validator.validateEVMAddress(settingsAddress);

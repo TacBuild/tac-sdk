@@ -1,5 +1,4 @@
 import { dev, mainnet, testnet } from '../../artifacts';
-
 import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 

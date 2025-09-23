@@ -1,7 +1,8 @@
 import { ethers, Interface } from "ethers";
-import { Network } from "../structs/Struct";
+
 import { AGNOSTIC_PROXY_ADDRESS as MAINNET_AGNOSTIC_PROXY_ADDRESS } from "../../artifacts/mainnet";
 import { AGNOSTIC_PROXY_ADDRESS as TESTNET_AGNOSTIC_PROXY_ADDRESS } from "../../artifacts/testnet";
+import { Network } from "../structs/Struct";
 
 
 /**
@@ -221,7 +222,7 @@ export class AgnosticProxySDK {
         let returnTypes = '';
         if (func.outputs && func.outputs.length > 0) {
             const outputs = func.outputs.map((output: any) => {
-                let outputType = output.type;
+                const outputType = output.type;
                 if (output.name) {
                     return `${outputType} ${output.name}`;
                 }

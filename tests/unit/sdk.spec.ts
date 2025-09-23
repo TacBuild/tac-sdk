@@ -2,10 +2,10 @@ import '@ton/test-utils';
 
 import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
 import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { testnet } from '../../artifacts';
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
+import { testnet } from '../../artifacts';
 import { Asset, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
 import { TON } from '../../src';
 import { sandboxOpener } from '../../src/adapters/contractOpener';
@@ -164,7 +164,7 @@ describe('TacSDK', () => {
                     content: beginCell().endCell(),
                     jettonWalletCode: JettonWalletCode,
                     evmTokenAddress: '0x1234',
-                    totalSupply: 0,
+                    totalSupply: 0n,
                 },
                 JettonMinterCode,
             ),

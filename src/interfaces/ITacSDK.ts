@@ -1,5 +1,6 @@
 import { Wallet } from 'ethers';
 
+import { JettonMinterData, NFTItemData } from '../../artifacts';
 import { FT, NFT } from '../assets';
 import type { SenderAbstraction } from '../sender';
 import {
@@ -14,7 +15,6 @@ import {
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
     NFTAddressType,
-    NFTItemData,
     OperationIdsByShardsKey,
     SuggestedTVMExecutorFee,
     TACSimulationParams,
@@ -24,7 +24,6 @@ import {
     UserWalletBalanceExtended,
     WaitOptions,
 } from '../structs/Struct';
-import { JettonMasterData } from '../wrappers/JettonMaster';
 import { Asset } from './Asset';
 import { IConfiguration } from './IConfiguration';
 import { IOperationTracker } from './IOperationTracker';
@@ -202,9 +201,9 @@ export interface ITacSDK {
     /**
      * Returns Jetton master data (metadata and configuration) for a given Jetton master address.
      * @param itemAddress Jetton master TVM address.
-     * @returns Promise resolving to JettonMasterData.
+     * @returns Promise resolving to JettonMinterData.
      */
-    getJettonData(itemAddress: TVMAddress): Promise<JettonMasterData>;
+    getJettonData(itemAddress: TVMAddress): Promise<JettonMinterData>;
 
     // NFT methods
     /**

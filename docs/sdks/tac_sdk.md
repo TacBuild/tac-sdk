@@ -219,7 +219,7 @@ Returns the TVM wrapper address for a given EVM token.
 ### `nativeTONAddress`
 
 ```ts
-nativeTONAddress(): string
+get nativeTONAddress(): string
 ```
 
 Returns a symbolic identifier for native TON.
@@ -241,7 +241,7 @@ Returns the address of native TAC coin on the TAC chain.
 ### `getTrustedTACExecutors`
 
 ```ts
-getTrustedTACExecutors(): string[]
+get getTrustedTACExecutors(): string[]
 ```
 
 Returns trusted EVM executor addresses.
@@ -251,7 +251,7 @@ Returns trusted EVM executor addresses.
 ### `getTrustedTONExecutors`
 
 ```ts
-getTrustedTONExecutors(): string[]
+get getTrustedTONExecutors(): string[]
 ```
 
 Returns trusted TON executor addresses.
@@ -303,10 +303,10 @@ Returns the EVM NFT collection address as a string.
 ### `getJettonData`
 
 ```ts
-getJettonData(itemAddress: TVMAddress): Promise<JettonMasterData>
+getJettonData(itemAddress: TVMAddress): Promise<JettonMinterData>
 ```
 
-Returns Jetton master contract data (metadata, total supply, mintable flag, etc.) by its TVM address.
+Returns Jetton minter contract data (metadata, total supply, mintable flag, etc.) by its TVM address.
 
 ### `getUserJettonWalletAddress`
 

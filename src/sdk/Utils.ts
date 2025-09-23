@@ -179,7 +179,7 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
     const context = options.context;
 
     const contextPrefix = operationDescription ? `[${operationDescription}] ` : '';
-    
+
     options.logger?.debug(
         `${contextPrefix}Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`,
     );
@@ -247,6 +247,7 @@ export async function aggregateTokens(assets?: Asset[]): Promise<{
     let ton: TON | undefined;
 
     for await (const asset of assets ?? []) {
+        if (asset.rawAmount === 0n) continue;
         if (asset.type !== AssetType.FT) continue;
 
         if (!asset.address) {
@@ -310,15 +311,17 @@ export async function normalizeAsset(config: IConfiguration, input: AssetLike): 
         return await AssetFactory.from(config, args as AssetFromNFTCollectionArg);
     }
 
-    if ('rawAmount' in input || 'amount' in input) {
+    try {
         const ftArgs: AssetFromFTArg = {
             address,
             tokenType: AssetType.FT,
         };
         const asset = await AssetFactory.from(config, ftArgs);
-        return 'rawAmount' in input
-            ? asset.withRawAmount(input.rawAmount as bigint)
-            : asset.withAmount(input.amount as number);
+        const rawAmount = 'rawAmount' in input ? input.rawAmount : undefined;
+        const amount = 'amount' in input ? input.amount : 0;
+        return rawAmount ? asset.withRawAmount(rawAmount) : asset.withAmount(amount);
+    } catch (e) {
+        console.warn('Failed to normalize FT asset', e);
     }
 
     const itemArgs: AssetFromNFTItemArg = {
@@ -336,4 +339,16 @@ export async function normalizeAssets(config: IConfiguration, assets?: AssetLike
         normalized.push(await normalizeAsset(config, a));
     }
     return normalized;
+}
+
+export function getAddressString(cell?: Cell): string {
+    return cell?.beginParse().loadAddress().toString({ bounceable: true, testOnly: false }) ?? '';
+}
+
+export function getNumber(len: number, cell?: Cell): number {
+    return cell?.beginParse().loadUint(len) ?? 0;
+}
+
+export function getString(cell?: Cell): string {
+    return cell?.beginParse().loadStringTail() ?? '';
 }

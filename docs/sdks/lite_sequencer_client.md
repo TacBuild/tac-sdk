@@ -34,8 +34,8 @@ import { LiteSequencerClient } from "@tonappchain/sdk";
 
 const client = new LiteSequencerClient(
   endpoint: string,
-  // Optional:
-  maxChunkSize: number = 100
+  maxChunkSize?: number, // Optional, defaults to 100
+  httpClient?: IHttpClient // Optional, defaults to AxiosHttpClient
 );
 ```
 

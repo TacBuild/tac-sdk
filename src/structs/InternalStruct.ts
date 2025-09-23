@@ -1,7 +1,7 @@
 import { Cell } from '@ton/ton';
-import { CrossChainLayerTAC, SettingsTAC, TacSAFactoryTAC, TokenUtilsTAC } from '../../artifacts';
 import { AbstractProvider, ethers } from 'ethers';
 
+import { CrossChainLayerTAC, SettingsTAC, TacSAFactoryTAC, TokenUtilsTAC } from '../../artifacts';
 import { ContractOpener } from '../interfaces';
 import {
     CurrencyType,

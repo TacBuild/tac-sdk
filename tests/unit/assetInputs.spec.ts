@@ -26,7 +26,7 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
         expect(ft2.type).toBe(AssetType.FT);
         expect(ft2.rawAmount).toBe(0n);
         expect(ft2.address).toBe(ft.address);
-    });
+    }, 50000);
 
     it('creates NFT asset from ITEM address via AssetFactory', async () => {
         const nftItem = await AssetFactory.from(sdk.config, {
@@ -37,7 +37,7 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
         expect(nftItem.type).toBe(AssetType.NFT);
         expect(typeof nftItem.address).toBe('string');
         expect(nftItem.address.length).toBeGreaterThan(0);
-    });
+    }, 50000);
 
     it('creates NFT asset from COLLECTION+INDEX via AssetFactory', async () => {
         const nftFromCollection = await AssetFactory.from(sdk.config, {
@@ -49,7 +49,7 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
         expect(nftFromCollection.type).toBe(AssetType.NFT);
         expect(typeof nftFromCollection.address).toBe('string');
         expect(nftFromCollection.address.length).toBeGreaterThan(0);
-    });
+    }, 50000);
 
     it('normalizeAsset supports all input shapes (FT amount/rawAmount, NFT item, NFT collection+itemIndex)', async () => {
         // FT with human amount
@@ -72,7 +72,7 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
             itemIndex: NFT_COLLECTION_INDEX,
         });
         expect(a4.type).toBe(AssetType.NFT);
-    });
+    }, 50000);
 
     it('normalizeAsset returns input when it is already an Asset instance', async () => {
         const ft = await AssetFactory.from(sdk.config, { address: FT_ADDRESS, tokenType: AssetType.FT });
@@ -80,7 +80,7 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
 
         expect(normalized).toBe(ft);
         expect(normalized.type).toBe(AssetType.FT);
-    });
+    }, 50000);
 
     it('normalizeAssets supports mixed input shapes and preserves Asset instances', async () => {
         const existingFt = await AssetFactory.from(sdk.config, { address: FT_ADDRESS, tokenType: AssetType.FT });
@@ -110,10 +110,10 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
         expect(res[3].type).toBe(AssetType.NFT);
 
         expect(res[4].type).toBe(AssetType.NFT);
-    });
+    }, 50000);
 
     it('normalizeAssets handles empty and undefined inputs', async () => {
         await expect(normalizeAssets(sdk.config, [])).resolves.toEqual([]);
         await expect(normalizeAssets(sdk.config, undefined)).resolves.toEqual([]);
-    });
+    }, 50000);
 });
