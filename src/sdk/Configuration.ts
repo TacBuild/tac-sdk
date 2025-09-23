@@ -167,7 +167,6 @@ export class Configuration implements IConfiguration {
             artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS,
             provider,
         );
-        const agnosticProxyAddress = artifacts.AGNOSTIC_PROXY_ADDRESS;
 
         return {
             provider,
@@ -178,7 +177,6 @@ export class Configuration implements IConfiguration {
             trustedTACExecutors,
             trustedTONExecutors,
             abiCoder: new ethers.AbiCoder(),
-            agnosticProxyAddress,
         };
     }
 

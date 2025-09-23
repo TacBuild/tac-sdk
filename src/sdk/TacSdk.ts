@@ -120,13 +120,6 @@ export class TacSdk implements ITacSDK {
         );
     }
 
-    getAgnosticCallParams(): { evmTargetAddress: string, methodName: string } {
-        return {
-            evmTargetAddress: this.config.TACParams.agnosticProxyAddress,
-            methodName: "Zap(bytes,bytes)",
-        };
-    }
-
     async nativeTACAddress(): Promise<string> {
         return this.config.nativeTACAddress();
     }

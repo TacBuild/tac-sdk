@@ -37,11 +37,11 @@ What you need to do is just to adapt your existing front/back code with this too
 ## Quick Start
 
 ```typescript
-import { AgnosticProxySDK } from "@tonappchain/sdk";
+import { AgnosticProxySDK, Network } from "@tonappchain/sdk";
 import { ethers } from "ethers"
 
 // Create SDK instance
-const sdk = new AgnosticProxySDK();
+const sdk = new AgnosticProxySDK(Network.MAINNET);
 
 // Code for initializing TacSdk
 // const tacSdk = ...
@@ -51,7 +51,7 @@ const sdk = new AgnosticProxySDK();
 sdk.addContractInterface(ROUTER_ADDRESS, ROUTER_ABI);
 sdk.addContractInterface(STAKING_ADDRESS, STAKING_ABI);
 
-const agnosticCallParams = tacSdk.getAgnosticCallParams()
+const agnosticCallParams = sdk.getAgnosticCallParams()
 
 const provider = new ethers.JsonRpcProvider(PROVIDER_URL);
 // Create hooks
@@ -130,8 +130,8 @@ async function executeCompleteStrategy() {
     // Initialize SDK
     // Here we will use deployed by TAC Agnostic proxy and TAC Smart Account Factory. 
     // If you want to use your own, just provide addresses inside constructor.
-    const agnosticSdk = new AgnosticProxySDK();
-    const agnosticCallParams = tacSdk.getAgnosticCallParams()
+    const agnosticSdk = new AgnosticProxySDK(Network.MAINNET);
+    const agnosticCallParams = agnosticSdk.getAgnosticCallParams()
     
     // Register contract interfaces
     agnosticSdk.addContractInterface(CONTRACTS.UNISWAP_ROUTER, UNISWAP_ROUTER_ABI);
@@ -348,6 +348,15 @@ const hook = sdk.createCustomHook(
 
 ### AgnosticProxySDK
 
+#### Constructor
+
+##### `constructor(network: Network, agnosticProxyAddress?: string)`
+The network enum struct from TacSDK. If will be provided Network.MAINNET || Network.TESTNET, will set 
+Agnostic Proxy address automaticly, which will help you to call getAgnosticCallParams helper function.
+For Network.DEV option, passing agnosticProxyAddress is required, because DEV is for local environment.
+By the way, even if you chosen MAINNET or TESTNET you can pass your own agnosticProxyAddress and work
+with your own instance of this proxy.
+
 #### Core Methods
 
 ##### `addContractInterface(address: string, abi: any[]): this`
@@ -416,8 +425,8 @@ Create multiple approve hooks at once.
 ##### `createHookSequence(calls): Hook[]`
 Create a sequence of custom hooks.
 
-##### `getMethodName(): string`
-Returns method name that should be called within TacSdk to communicate with Agnostic proxy
+##### `getAgnosticCallParams(): {string, string}`
+Returns evmTargetAddress for agnostic function call through TacSDK and method name to call
 
 ## Examples
 

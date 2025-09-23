@@ -1,4 +1,8 @@
 import { ethers, Interface } from "ethers";
+import { Network } from "../structs/Struct";
+import { AGNOSTIC_PROXY_ADDRESS as MAINNET_AGNOSTIC_PROXY_ADDRESS } from "../../artifacts/mainnet";
+import { AGNOSTIC_PROXY_ADDRESS as TESTNET_AGNOSTIC_PROXY_ADDRESS } from "../../artifacts/testnet";
+
 
 /**
  * NFTData is a struct that contains the nft, id, and amount of the nft
@@ -125,8 +129,24 @@ export interface ZapCall {
  */
 export class AgnosticProxySDK {
     private contractInterfaces: Map<string, Interface> = new Map();
+    private agnosticProxyAddress: string;
 
-    constructor() {}
+    constructor(network: Network, agnosticProxyAddress?: string) {
+        switch (network) {
+            case Network.MAINNET:
+                this.agnosticProxyAddress = agnosticProxyAddress ?? MAINNET_AGNOSTIC_PROXY_ADDRESS;
+                break;
+            case Network.TESTNET:
+                this.agnosticProxyAddress = agnosticProxyAddress ?? TESTNET_AGNOSTIC_PROXY_ADDRESS;
+                break;
+            case Network.DEV:
+                if (!agnosticProxyAddress) {
+                    throw new Error("Agnostic proxy address is required for dev network");
+                }
+                this.agnosticProxyAddress = agnosticProxyAddress;
+                break;
+        }
+    }
 
     /**
      * Add a contract interface for encoding function calls
@@ -1032,5 +1052,12 @@ export class AgnosticProxySDK {
         console.log(`   Hooks: ${breakdown2.totalHooks - breakdown1.totalHooks > 0 ? "+" : ""}${breakdown2.totalHooks - breakdown1.totalHooks}`);
         console.log(`   Gas: ${breakdown2.gasEstimate - breakdown1.gasEstimate > 0 ? "+" : ""}${(breakdown2.gasEstimate - breakdown1.gasEstimate).toLocaleString()}`);
         console.log(`   Size: ${breakdown2.encodedSize - breakdown1.encodedSize > 0 ? "+" : ""}${breakdown2.encodedSize - breakdown1.encodedSize} bytes`);
+    }
+
+    getAgnosticCallParams(): { evmTargetAddress: string, methodName: string } {
+        return {
+            evmTargetAddress: this.agnosticProxyAddress,
+            methodName: "Zap(bytes,bytes)",
+        };
     }
 }

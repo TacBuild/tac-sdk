@@ -31,7 +31,6 @@
     - [`getUserJettonBalanceExtended`](#getuserjettonbalanceextended)
   - [Advanced](#advanced)
     - [`getSmartAccountAddressForTvmWallet`](#getsmartaccountaddressfortvmwallet)
-    - [`getAgnosticCallParams`](#getagnosticcallparams)
     - [`simulateTACMessage`](#simulatetacmessage)
     - [`simulateTransactions`](#simulatetransactions)
     - [`getTVMExecutorFeeInfo`](#gettvmexecutorfeeinfo)
@@ -349,15 +348,6 @@ getSmartAccountAddressForTvmWallet(tvmWallet: string, applicationAddress: string
 ```
 
 Get Smart Account address for specified TVM Wallet for specified application
-
-### `getAgnosticCallParams`
-
-```ts
-getAgnosticCallParams(): Promise<{ evmTargetAddress: string, methodName: string }>
-```
-
-Get Agnostic address for chosen network and method name for constructing crosschain transaction
-More about AgnosticSdk you can find [here](./agnostic_proxy_sdk.md)
 
 ### `simulateTACMessage`
 
