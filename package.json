@@ -1,6 +1,6 @@
 {
   "name": "@tonappchain/sdk",
-  "version": "0.7.0-rc21",
+  "version": "0.7.0-rc24",
   "repository": "https://github.com/TacBuild/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
@@ -8,16 +8,35 @@
   "types": "dist/src/index.d.ts",
   "exports": {
     ".": {
+      "node": {
+        "types": "./dist/src/index.d.ts",
+        "require": "./dist/src/index.js",
+        "import": "./dist/src/index.js"
+      },
+      "browser": {
+        "types": "./dist/src/index.d.ts",
+        "import": "./dist/src/index.js"
+      },
       "types": "./dist/src/index.d.ts",
       "require": "./dist/src/index.js",
-      "import": "./dist/src/index.js"
-    }
+      "import": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
+    },
+    "./package.json": "./package.json",
+    "./dist": null,
+    "./dist/*": null,
+    "./src": null,
+    "./src/*": null,
+    "./artifacts": null,
+    "./artifacts/*": null,
+    "./*": null
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "prebuild": "git submodule update --init --recursive --remote",
+    "litebuild": "rm -rf dist && tsc --declaration",
     "build": "rm -rf dist && yarn build:artifacts && tsc --declaration",
     "build:artifacts:tac:dev": "cd artifacts/dev/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",
     "build:artifacts:ton:dev": "cd artifacts/dev/l1_tvm_ton && npm i && npm run compile:ts && npm run build:all && rsync -avh --delete ./build ./wrappers ../ton/internal/",
