@@ -202,8 +202,10 @@ export class NFT implements Asset {
                 : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
         } else {
 
+            const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
             const nftCollection = configuration.TONParams.contractOpener.open(
-                configuration.artifacts.ton.wrappers.NFTCollection.createFromConfig(
+                NFTCollectionC.createFromConfig(
                     {
                         adminAddress: address(configuration.TONParams.crossChainLayerAddress),
                         newAdminAddress: null,
@@ -216,9 +218,11 @@ export class NFT implements Asset {
                 ),
             );
 
-            return tokenId == undefined
-                ? nftCollection.address.toString()
-                :configuration.artifacts.ton.wrappers.NFTItem.createFromConfig(
+            const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
+
+            return tokenId == undefined ?
+                nftCollection.address.toString() :
+                NFTItemC.createFromConfig(
                       {
                           collectionAddress: nftCollection.address,
                           cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
