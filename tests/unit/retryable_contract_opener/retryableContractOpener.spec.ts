@@ -2,7 +2,7 @@ import '@ton/test-utils';
 
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Cell, toNano } from '@ton/ton';
-import { testnet } from '@tonappchain/artifacts';
+import { testnet } from '../../../artifacts';
 
 import { RetryableContractOpener } from '../../../src/adapters/retryableContractOpener';
 import { UnstableContractOpener } from './unstableContractOpener';
