@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 - `RawSender` can send transactions in batches(size is 254 for W5, 4 for others).
 - Check for transaction tree success on TON using `TonTxFinalizer`.
 - Enhanced WaitOptions Interface with Context Parameter Support.
+- Artifacts package was removed. Now artifacts built from submodules for mainnet, testnet and dev evns. Submudules are in ./artifacts folder.
 
 ### Changed
 
@@ -27,6 +28,7 @@ All notable changes to this project will be documented in this file.
 - Documentation: added/updated SDK pages (assets, logger, simulator, transaction_manager, utilities, etc.).
 - Tests: reorganization — removed/replaced some tests (e.g., tests/operation_tracker/tracker.spec.ts, tests/unit/getTokenAddress.spec.ts), added new unit tests (operation-tracker.spec.ts, validator.spec.ts) and updated integration scenarios.
 - Methods in `OperationTracker` and `sendCrossChainTransaction(s)` in `TacSDK` now accept optional `waitOptions` argument. Example:
+- Remove `multicallAddress` and `multicallABI` from SDK params.
 
 ```typescript
 async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>)

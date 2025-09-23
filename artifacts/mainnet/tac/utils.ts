@@ -1,0 +1,1 @@
+export { encodeOutMessageV1 } from '../l2-evm/scripts/utils/encoding';

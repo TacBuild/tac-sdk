@@ -1,10 +1,10 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, address, beginCell, Cell, fromNano, OpenedContract } from '@ton/ton';
-import { NFTCollection, NFTItem } from '@tonappchain/artifacts/dist/src/ton/wrappers';
+import { NFTCollection } from '../../artifacts';
 import { isAddress as isEthereumAddress } from 'ethers';
 
 import { ContractError, emptyContractError, insufficientBalanceError } from '../errors';
-import { Asset, ContractOpener,IConfiguration } from '../interfaces';
+import { Asset,IConfiguration } from '../interfaces';
 import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import { generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
@@ -42,7 +42,10 @@ export class NFT implements Asset {
     static async fromItem(configuration: IConfiguration, item: TVMAddress): Promise<NFT> {
         Validator.validateTVMAddress(item);
 
-        const nftItem = configuration.TONParams.contractOpener.open(NFTItem.createFromAddress(Address.parse(item)));
+        const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
+
+        const nftItem = configuration.TONParams.contractOpener.open(
+            NFTItemC.createFromAddress(Address.parse(item)));
         const { collectionAddress, index } = await nftItem.getNFTData();
         const origin = await NFT.getOrigin(configuration, item);
 
@@ -70,16 +73,20 @@ export class NFT implements Asset {
             throw e;
         });
 
+        const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+        const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
+
         const nftCollection = configuration.TONParams.contractOpener.open(
-            NFTCollection.createFromAddress(Address.parse(tvmCollectionAddress)),
+           NFTCollectionC.createFromAddress(Address.parse(tvmCollectionAddress))
         );
 
         const itemAddress =
             origin === Origin.TAC
-                ? NFTItem.createFromConfig(
+                ? NFTItemC.createFromConfig(
                       {
                           collectionAddress: nftCollection.address,
                           cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
+                          // TODO: fix index type in wrapper!!!
                           // @ts-expect-error // bigint can be used, wrapper is not typed properly
                           index: item.index,
                       },
@@ -99,27 +106,40 @@ export class NFT implements Asset {
         );
     }
 
-    static async getItemData(contractOpener: ContractOpener, itemAddress: TVMAddress): Promise<NFTItemData> {
+    static async getItemData(
+        configuration: IConfiguration,
+        itemAddress: TVMAddress
+    ): Promise<NFTItemData> {
         Validator.validateTVMAddress(itemAddress);
-        const nftItem = contractOpener.open(NFTItem.createFromAddress(Address.parse(itemAddress)));
+
+        const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
+        const contractOpener = configuration.TONParams.contractOpener;
+
+        const nftItem = contractOpener.open(
+            NFTItemC.createFromAddress(Address.parse(itemAddress))
+        );
         return nftItem.getNFTData();
     }
 
     async getItemData(): Promise<NFTItemData> {
-        return NFT.getItemData(this._configuration.TONParams.contractOpener, this._addresses.item);
+        return NFT.getItemData(this._configuration, this._addresses.item);
     }
 
     static async getCollectionData(
-        contractOpener: ContractOpener,
+        configuration: IConfiguration,
         collectionAddress: TVMAddress,
     ): Promise<NFTCollectionData> {
         Validator.validateTVMAddress(collectionAddress);
-        const nftCollection = contractOpener.open(NFTCollection.createFromAddress(Address.parse(collectionAddress)));
+
+        const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
+        const nftCollection = configuration.TONParams.contractOpener.open(
+            NFTCollectionC.createFromAddress(Address.parse(collectionAddress)));
         return nftCollection.getCollectionData();
     }
 
     async getCollectionData(): Promise<NFTCollectionData> {
-        return NFT.getCollectionData(this._configuration.TONParams.contractOpener, this._addresses.collection);
+        return NFT.getCollectionData(this._configuration, this._addresses.collection);
     }
 
     static async getOrigin(configuration: IConfiguration, itemOrCollection: TVMAddress): Promise<Origin> {
@@ -141,12 +161,16 @@ export class NFT implements Asset {
     }
 
     static async getItemAddress(
-        contractOpener: ContractOpener,
+        configuration: IConfiguration,
         collectionAddress: TVMAddress,
         index: bigint,
     ): Promise<string> {
         Validator.validateTVMAddress(collectionAddress);
-        const nftCollection = contractOpener.open(NFTCollection.createFromAddress(Address.parse(collectionAddress)));
+
+        const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
+        const nftCollection = configuration.TONParams.contractOpener.open(
+            NFTCollectionC.createFromAddress(Address.parse(collectionAddress)));
         const address = await nftCollection.getNFTAddressByIndex(index);
         return address.toString();
     }
@@ -167,16 +191,22 @@ export class NFT implements Asset {
             );
 
             const info = await erc721Token.getInfo();
+
+            const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
             const nftCollection = configuration.TONParams.contractOpener.open(
-                NFTCollection.createFromAddress(address(info.tvmAddress)),
+                NFTCollectionC.createFromAddress(address(info.tvmAddress)),
             );
 
             return tokenId == undefined
                 ? nftCollection.address.toString()
                 : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
         } else {
+
+            const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
             const nftCollection = configuration.TONParams.contractOpener.open(
-                NFTCollection.createFromConfig(
+                NFTCollectionC.createFromConfig(
                     {
                         adminAddress: address(configuration.TONParams.crossChainLayerAddress),
                         newAdminAddress: null,
@@ -189,12 +219,15 @@ export class NFT implements Asset {
                 ),
             );
 
-            return tokenId == undefined
-                ? nftCollection.address.toString()
-                : NFTItem.createFromConfig(
+            const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
+
+            return tokenId == undefined ?
+                nftCollection.address.toString() :
+                NFTItemC.createFromConfig(
                       {
                           collectionAddress: nftCollection.address,
                           cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
+                          // TODO: fix index type in wrapper!!!
                           // @ts-expect-error // bigint can be used, wrapper is not typed properly
                           index: tokenId,
                       },
@@ -217,8 +250,10 @@ export class NFT implements Asset {
         this._configuration = configuration;
         this.origin = origin;
 
+        const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
         this._nftCollection = configuration.TONParams.contractOpener.open(
-            NFTCollection.createFromAddress(Address.parse(this._addresses.collection)),
+            NFTCollectionC.createFromAddress(Address.parse(this._addresses.collection)),
         );
     }
 
@@ -280,8 +315,11 @@ export class NFT implements Asset {
             givenNFTCollection &&
             this._configuration.TONParams.nftCollectionCode.equals(Cell.fromBoc(givenNFTCollection)[0])
         ) {
+
+            const NFTCollectionC = this._configuration.artifacts.ton.wrappers.NFTCollection;
+
             const nftCollection = this._configuration.TONParams.contractOpener.open(
-                NFTCollection.createFromAddress(address(tvmNFTAddress)),
+                NFTCollectionC.createFromAddress(address(tvmNFTAddress)),
             );
             const evmAddress = await nftCollection.getOriginalAddress();
             this._addresses.evmAddress = evmAddress.toString();
@@ -290,7 +328,7 @@ export class NFT implements Asset {
                 await this._configuration.TACParams.tokenUtils.computeAddressERC721(tvmNFTAddress);
         }
 
-        return this._addresses.evmAddress;
+        return this._addresses.evmAddress!;
     }
 
     async getTVMAddress(): Promise<string> {
@@ -336,7 +374,7 @@ export class NFT implements Asset {
     }
 
     async isOwnedBy(userAddress: string): Promise<boolean> {
-        const nftData = await NFT.getItemData(this._configuration.TONParams.contractOpener, this.address.toString());
+        const nftData = await NFT.getItemData(this._configuration, this.address.toString());
         return !!nftData.ownerAddress?.equals(Address.parse(userAddress));
     }
 
@@ -358,7 +396,9 @@ export class NFT implements Asset {
     ): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
 
-        return NFTItem.burnMessage(queryId, address(crossChainLayerAddress), crossChainTonAmount, evmData, feeData);
+        const NFTItemC = this._configuration.artifacts.ton.wrappers.NFTItem;
+
+        return NFTItemC.burnMessage(queryId, address(crossChainLayerAddress), crossChainTonAmount, evmData, feeData);
     }
 
     private getTransferPayload(
@@ -376,7 +416,9 @@ export class NFT implements Asset {
             .storeMaybeRef(evmData)
             .endCell();
 
-        return NFTItem.transferMessage(
+        const NFTItemC = this._configuration.artifacts.ton.wrappers.NFTItem;
+
+        return NFTItemC.transferMessage(
             queryId,
             address(to),
             address(responseAddress),

@@ -1,4 +1,4 @@
-import { mainnet, testnet } from '@tonappchain/artifacts';
+import { mainnet, testnet } from '../../artifacts';
 
 import { allEndpointsFailedError } from '../errors';
 import { ILiteSequencerClient, ILiteSequencerClientFactory, ILogger, IOperationTracker } from '../interfaces';
@@ -41,12 +41,18 @@ export class OperationTracker implements IOperationTracker {
         logger: ILogger = new NoopLogger(),
         clientFactory: ILiteSequencerClientFactory = new DefaultLiteSequencerClientFactory(),
     ) {
-        const endpoints =
-            customLiteSequencerEndpoints ??
-            (network === Network.TESTNET
-                ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
-                : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
-
+        let endpoints: string[];
+        if (network === Network.DEV) {
+            if (!customLiteSequencerEndpoints || customLiteSequencerEndpoints.length === 0) {
+                throw new Error('For DEV network, custom lite sequencer endpoints must be provided');
+            }
+            endpoints = customLiteSequencerEndpoints;
+        } else {
+            const artifacts = network === Network.MAINNET ? mainnet : testnet;
+            endpoints = customLiteSequencerEndpoints && customLiteSequencerEndpoints.length !== 0 ?
+                customLiteSequencerEndpoints :
+                artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+        }
         this.clients = clientFactory.createClients(endpoints);
         this.logger = logger;
     }

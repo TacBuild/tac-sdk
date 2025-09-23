@@ -21,6 +21,7 @@ export enum SimplifiedStatuses {
 export enum Network {
     TESTNET = 'testnet',
     MAINNET = 'mainnet',
+    DEV = 'dev',
 }
 
 export enum BlockchainType {
@@ -52,16 +53,6 @@ export type TACParams = {
      * Address of TAC settings contract. Use only for tests.
      */
     settingsAddress?: string | Addressable;
-
-    /**
-     * Address of multicall contract. Use only for tests.
-     */
-    multicallAddress?: string | Addressable;
-
-    /**
-     * ABI of multicall contract. Use only for tests.
-     */
-    multicallABI?: Interface | InterfaceAbi;
 };
 
 export type TONParams = {

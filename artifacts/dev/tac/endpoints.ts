@@ -1,0 +1,2 @@
+export const DEV_TAC_RPC_ENDPOINT = "";
+export const DEV_PUBLIC_LITE_SEQUENCER_ENDPOINTS = [];

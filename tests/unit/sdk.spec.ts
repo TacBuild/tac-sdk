@@ -2,7 +2,7 @@ import '@ton/test-utils';
 
 import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
 import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { testnet } from '@tonappchain/artifacts';
+import { testnet } from '../../artifacts';
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
