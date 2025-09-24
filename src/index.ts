@@ -1,5 +1,6 @@
 export * from './adapters';
-export * from './agnosticSdk/AgnosticSdk';
+export { AgnosticProxySDK } from './agnosticSdk/AgnosticSdk';
+export * as AgnosticStructs from './agnosticSdk/AgnosticStructs';
 export * from './assets';
 export * from './errors';
 export * from './interfaces';
