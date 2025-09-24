@@ -32,7 +32,7 @@ import {
 } from '../structs/Struct';
 import { Origin } from '../structs/Struct';
 import { readJettonMetadata } from '../wrappers/ContentUtils';
-import { ERC20 } from '../../artifacts/tacTypes';
+import { IERC20WithDecimals } from '../../artifacts/tacTypes';
 
 export class FT implements Asset {
     private _tvmAddress: Address;
@@ -116,7 +116,7 @@ export class FT implements Asset {
         const fromTVM = await configuration.TACParams.tokenUtils['exists(address)'](address);
 
         if (fromTVM) {
-            const cclErc20Abi = configuration.artifacts.tac.compilationArtifacts.ERC20.abi;
+            const cclErc20Abi = configuration.artifacts.tac.compilationArtifacts.ICrossChainLayerERC20.abi;
             const erc20Token = new ethers.Contract(address, cclErc20Abi, configuration.TACParams.provider);
 
             const info = await erc20Token.getInfo();
@@ -170,8 +170,8 @@ export class FT implements Asset {
         }
 
         // For ERC20 contracts, get decimals from contract
-        const erc20TokenAbi = configuration.artifacts.tac.compilationArtifacts.ERC20.abi;
-        const erc20Token = new ethers.Contract(evmAddress, erc20TokenAbi, configuration.TACParams.provider) as unknown as ERC20;
+        const erc20TokenAbi = configuration.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi;
+        const erc20Token = new ethers.Contract(evmAddress, erc20TokenAbi, configuration.TACParams.provider) as unknown as IERC20WithDecimals;
 
         return Number(await erc20Token.decimals());
     }

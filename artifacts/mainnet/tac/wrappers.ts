@@ -3,7 +3,7 @@ export { ISettings } from './internal/typechain-types/contracts/interfaces/ISett
 export { ITokenUtils } from './internal/typechain-types/contracts/interfaces/ITokenUtils';
 export { ISAFactory } from './internal/typechain-types/contracts/smart-account/interfaces/ISAFactory';
 export { ITacSmartAccount } from './internal/typechain-types/contracts/smart-account/interfaces/ITacSmartAccount';
-export { ERC20 } from './internal/typechain-types/@openzeppelin/contracts/token/ERC20/ERC20';
-export { ERC721 } from './internal/typechain-types/@openzeppelin/contracts/token/ERC721/ERC721';
+export { IERC20WithDecimals } from './internal/typechain-types/contracts/interfaces/tokens/IERC20WithDecimals';
+export { IERC721 } from './internal/typechain-types/@openzeppelin/contracts/token/ERC721/IERC721';
 export { ICrossChainLayerERC20 } from './internal/typechain-types/contracts/interfaces/tokens/ICrossChainLayerERC20';
 export { ICrossChainLayerERC721 } from './internal/typechain-types/contracts/interfaces/tokens/ICrossChainLayerERC721';

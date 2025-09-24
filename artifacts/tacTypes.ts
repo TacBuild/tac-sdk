@@ -9,8 +9,8 @@ export type ISAFactory = Dev.tac.wrappers.ISAFactory | Testnet.tac.wrappers.ISAF
 export type ITacSmartAccount = Dev.tac.wrappers.ITacSmartAccount | Testnet.tac.wrappers.ITacSmartAccount | Mainnet.tac.wrappers.ITacSmartAccount;
 export type ISettings = Dev.tac.wrappers.ISettings | Testnet.tac.wrappers.ISettings | Mainnet.tac.wrappers.ISettings;
 export type ITokenUtils = Dev.tac.wrappers.ITokenUtils | Testnet.tac.wrappers.ITokenUtils | Mainnet.tac.wrappers.ITokenUtils;
-export type ERC20 = Dev.tac.wrappers.ERC20 | Testnet.tac.wrappers.ERC20 | Mainnet.tac.wrappers.ERC20;
-export type ERC721 = Dev.tac.wrappers.ERC721 | Testnet.tac.wrappers.ERC721 | Mainnet.tac.wrappers.ERC721;
+export type IERC20WithDecimals = Dev.tac.wrappers.IERC20WithDecimals | Testnet.tac.wrappers.IERC20WithDecimals | Mainnet.tac.wrappers.IERC20WithDecimals;
+export type IERC721 = Dev.tac.wrappers.IERC721 | Testnet.tac.wrappers.IERC721 | Mainnet.tac.wrappers.IERC721;
 export type ICrossChainLayerERC20 = Dev.tac.wrappers.ICrossChainLayerERC20 | Testnet.tac.wrappers.ICrossChainLayerERC20 | Mainnet.tac.wrappers.ICrossChainLayerERC20;
 export type ICrossChainLayerERC721 = Dev.tac.wrappers.ICrossChainLayerERC721 | Testnet.tac.wrappers.ICrossChainLayerERC721 | Mainnet.tac.wrappers.ICrossChainLayerERC721;
 
