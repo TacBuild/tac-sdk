@@ -1,6 +1,6 @@
 {
   "name": "@tonappchain/sdk",
-  "version": "0.7.0-rc24",
+  "version": "0.7.0-rc24-test-7",
   "repository": "https://github.com/TacBuild/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
@@ -27,7 +27,21 @@
     "./dist/*": null,
     "./src": null,
     "./src/*": null,
-    "./artifacts": null,
+    "./artifacts": {
+      "types": "./dist/artifacts/index.d.ts",
+      "import": "./dist/artifacts/index.js",
+      "require": "./dist/artifacts/index.js"
+    },
+    "./artifacts/types/ton": {
+      "types": "./dist/artifacts/tonTypes.d.ts",
+      "import": "./dist/artifacts/tonTypes.js",
+      "require": "./dist/artifacts/tonTypes.js"
+    },
+    "./artifacts/types/tac": {
+      "types": "./dist/artifacts/tacTypes.d.ts",
+      "import": "./dist/artifacts/tacTypes.js",
+      "require": "./dist/artifacts/tacTypes.js"
+    },
     "./artifacts/*": null,
     "./*": null
   },
