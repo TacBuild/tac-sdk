@@ -48,9 +48,10 @@ export class OperationTracker implements IOperationTracker {
             endpoints = customLiteSequencerEndpoints;
         } else {
             const artifacts = network === Network.MAINNET ? mainnet : testnet;
-            endpoints = customLiteSequencerEndpoints && customLiteSequencerEndpoints.length !== 0 ?
-                customLiteSequencerEndpoints :
-                artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+            endpoints =
+                customLiteSequencerEndpoints && customLiteSequencerEndpoints.length !== 0
+                    ? customLiteSequencerEndpoints
+                    : artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
         }
         this.clients = clientFactory.createClients(endpoints);
         this.logger = logger;
@@ -75,7 +76,13 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Getting operation ID by transaction hash") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(
+                  waitOptions,
+                  requestFn,
+                  'OperationTracker: Getting operation ID by transaction hash',
+              )
+            : await requestFn();
     }
 
     async getOperationType(operationId: string, waitOptions?: WaitOptions<OperationType>): Promise<OperationType> {
@@ -97,7 +104,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Getting operation type") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation type')
+            : await requestFn();
     }
 
     async getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string>): Promise<string> {
@@ -119,7 +128,13 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Getting operation ID by transaction linker") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(
+                  waitOptions,
+                  requestFn,
+                  'OperationTracker: Getting operation ID by transaction linker',
+              )
+            : await requestFn();
     }
 
     async getOperationIdsByShardsKeys(
@@ -147,7 +162,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Getting operation IDs by shards keys") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation IDs by shards keys')
+            : await requestFn();
     }
 
     async getStageProfiling(operationId: string, waitOptions?: WaitOptions<ExecutionStages>): Promise<ExecutionStages> {
@@ -174,7 +191,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Getting stage profiling") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting stage profiling')
+            : await requestFn();
     }
 
     async getStageProfilings(
@@ -200,7 +219,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Getting stage profilings") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting stage profilings')
+            : await requestFn();
     }
 
     async getOperationStatuses(
@@ -226,7 +247,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Getting operation statuses") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation statuses')
+            : await requestFn();
     }
 
     async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>): Promise<StatusInfo> {
@@ -253,7 +276,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Getting operation status") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation status')
+            : await requestFn();
     }
 
     async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
@@ -301,7 +326,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Converting currency") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Converting currency')
+            : await requestFn();
     }
 
     async simulateTACMessage(
@@ -327,7 +354,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Simulating TAC message") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Simulating TAC message')
+            : await requestFn();
     }
 
     async getTVMExecutorFee(
@@ -352,6 +381,8 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn, "OperationTracker: Getting TVM executor fee") : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting TVM executor fee')
+            : await requestFn();
     }
 }

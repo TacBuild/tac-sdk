@@ -1,5 +1,5 @@
 import { indexRequiredError, unknownTokenTypeError } from '../errors';
-import { Asset,IConfiguration } from '../interfaces';
+import { Asset, IConfiguration } from '../interfaces';
 import {
     AssetFromFTArg,
     AssetFromNFTCollectionArg,

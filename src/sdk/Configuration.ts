@@ -2,13 +2,13 @@ import { Address, Dictionary } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
 import { dev, mainnet, testnet } from '../../artifacts';
-import { createDefaultRetryableOpener } from '../adapters/retryableContractOpener';
+import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
+import { createDefaultRetryableOpener } from '../adapters';
 import { IConfiguration } from '../interfaces';
 import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
 import { Network, TACParams, TONParams } from '../structs/Struct';
 import { getAddressString, sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
-import { ICrossChainLayer, ISettings, ISAFactory, ITokenUtils } from '../../artifacts/tacTypes';
 
 export class Configuration implements IConfiguration {
     readonly network: Network;
@@ -50,11 +50,8 @@ export class Configuration implements IConfiguration {
                 throw new Error('For dev network, custom lite sequencer endpoints must be provided');
             }
             liteSequencerEndpoints = customLiteSequencerEndpoints;
-        }
-        else {
-            liteSequencerEndpoints =
-                customLiteSequencerEndpoints ??
-                artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS
+        } else {
+            liteSequencerEndpoints = customLiteSequencerEndpoints ?? artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
         }
 
         return new Configuration(network, artifacts, internalTONParams, internalTACParams, liteSequencerEndpoints);
@@ -78,10 +75,14 @@ export class Configuration implements IConfiguration {
             }
             settingsAddress = TONParams.settingsAddress;
         } else {
-            contractOpener = TONParams?.contractOpener ?? (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 5, delay))
+            contractOpener =
+                TONParams?.contractOpener ??
+                (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 5, delay));
             settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
         }
-        const settings = contractOpener.open(artifacts.ton.wrappers.Settings.createFromAddress(Address.parse(settingsAddress)));
+        const settings = contractOpener.open(
+            artifacts.ton.wrappers.Settings.createFromAddress(Address.parse(settingsAddress)),
+        );
         const allSettingsSlice = (await settings.getAll()).beginParse();
         const allSettings = allSettingsSlice.loadDictDirect(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
 
@@ -105,10 +106,7 @@ export class Configuration implements IConfiguration {
         };
     }
 
-    private static async prepareTACParams(
-        network: Network,
-        TACParams?: TACParams,
-    ): Promise<InternalTACParams> {
+    private static async prepareTACParams(network: Network, TACParams?: TACParams): Promise<InternalTACParams> {
         const artifacts = network === Network.MAINNET ? mainnet : network === Network.TESTNET ? testnet : dev;
         let provider: ethers.AbstractProvider;
         let settingsAddress: string;
@@ -121,9 +119,8 @@ export class Configuration implements IConfiguration {
                 throw new Error('For dev network, a custom settings address must be provided in TACParams');
             }
             settingsAddress = TACParams.settingsAddress.toString();
-        }
-        else {
-            provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT)
+        } else {
+            provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
             settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.TAC_SETTINGS_ADDRESS;
         }
 
@@ -184,7 +181,6 @@ export class Configuration implements IConfiguration {
         provider: ethers.AbstractProvider,
         settingsAddress: string,
     ) {
-
         if (network === Network.DEV) {
             // skip multicall in dev, because it's not guaranteed that multicall contract is deployed
             return null;

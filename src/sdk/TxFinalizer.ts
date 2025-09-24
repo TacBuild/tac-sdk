@@ -19,7 +19,11 @@ export class TonTxFinalizer {
     private apiConfig: TxFinalizerConfig;
     private readonly httpClient: IHttpClient;
 
-    constructor(apiConfig: TxFinalizerConfig, logger: ILogger = new NoopLogger(), httpClient: IHttpClient = new AxiosHttpClient()) {
+    constructor(
+        apiConfig: TxFinalizerConfig,
+        logger: ILogger = new NoopLogger(),
+        httpClient: IHttpClient = new AxiosHttpClient(),
+    ) {
         this.apiConfig = apiConfig;
         this.logger = logger;
         this.httpClient = httpClient;
@@ -114,7 +118,7 @@ export class TonTxFinalizer {
                         );
                     }
                     if (currentDepth + 1 < maxDepth) {
-                        if (tx.outMsgs.length > 0){
+                        if (tx.outMsgs.length > 0) {
                             queue.push({ hash: tx.hash, depth: currentDepth + 1 });
                         }
                     }

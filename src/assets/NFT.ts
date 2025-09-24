@@ -2,21 +2,15 @@ import { SandboxContract } from '@ton/sandbox';
 import { Address, address, beginCell, Cell, fromNano, OpenedContract } from '@ton/ton';
 import { ethers, isAddress as isEthereumAddress } from 'ethers';
 
+import { ICrossChainLayerERC721 } from '../../artifacts/tacTypes';
 import { NFTCollection, NFTCollectionData, NFTItemData } from '../../artifacts/tonTypes';
 import { ContractError, emptyContractError, insufficientBalanceError } from '../errors';
-import { Asset,IConfiguration } from '../interfaces';
+import { Asset, IConfiguration } from '../interfaces';
 import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import { generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import {
-    AssetType,
-    EVMAddress,
-    FeeParams,
-    Origin,
-    TVMAddress,
-} from '../structs/Struct';
-import { ICrossChainLayerERC721 } from '../../artifacts/tacTypes';
+import { AssetType, EVMAddress, FeeParams, Origin, TVMAddress } from '../structs/Struct';
 export class NFT implements Asset {
     private readonly _addresses: {
         item: TVMAddress;
@@ -43,8 +37,7 @@ export class NFT implements Asset {
 
         const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
 
-        const nftItem = configuration.TONParams.contractOpener.open(
-            NFTItemC.createFromAddress(Address.parse(item)));
+        const nftItem = configuration.TONParams.contractOpener.open(NFTItemC.createFromAddress(Address.parse(item)));
         const { collectionAddress, index } = await nftItem.getNFTData();
         const origin = await NFT.getOrigin(configuration, item);
 
@@ -76,7 +69,7 @@ export class NFT implements Asset {
         const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
 
         const nftCollection = configuration.TONParams.contractOpener.open(
-           NFTCollectionC.createFromAddress(Address.parse(tvmCollectionAddress))
+            NFTCollectionC.createFromAddress(Address.parse(tvmCollectionAddress)),
         );
 
         const itemAddress =
@@ -103,18 +96,13 @@ export class NFT implements Asset {
         );
     }
 
-    static async getItemData(
-        configuration: IConfiguration,
-        itemAddress: TVMAddress
-    ): Promise<NFTItemData> {
+    static async getItemData(configuration: IConfiguration, itemAddress: TVMAddress): Promise<NFTItemData> {
         Validator.validateTVMAddress(itemAddress);
 
         const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
         const contractOpener = configuration.TONParams.contractOpener;
 
-        const nftItem = contractOpener.open(
-            NFTItemC.createFromAddress(Address.parse(itemAddress))
-        );
+        const nftItem = contractOpener.open(NFTItemC.createFromAddress(Address.parse(itemAddress)));
         return nftItem.getNFTData();
     }
 
@@ -131,7 +119,8 @@ export class NFT implements Asset {
         const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
 
         const nftCollection = configuration.TONParams.contractOpener.open(
-            NFTCollectionC.createFromAddress(Address.parse(collectionAddress)));
+            NFTCollectionC.createFromAddress(Address.parse(collectionAddress)),
+        );
         return nftCollection.getCollectionData();
     }
 
@@ -167,7 +156,8 @@ export class NFT implements Asset {
         const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
 
         const nftCollection = configuration.TONParams.contractOpener.open(
-            NFTCollectionC.createFromAddress(Address.parse(collectionAddress)));
+            NFTCollectionC.createFromAddress(Address.parse(collectionAddress)),
+        );
         const address = await nftCollection.getNFTAddressByIndex(index);
         return address.toString();
     }
@@ -201,7 +191,6 @@ export class NFT implements Asset {
                 ? nftCollection.address.toString()
                 : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
         } else {
-
             const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
 
             const nftCollection = configuration.TONParams.contractOpener.open(
@@ -220,9 +209,9 @@ export class NFT implements Asset {
 
             const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
 
-            return tokenId == undefined ?
-                nftCollection.address.toString() :
-                NFTItemC.createFromConfig(
+            return tokenId == undefined
+                ? nftCollection.address.toString()
+                : NFTItemC.createFromConfig(
                       {
                           collectionAddress: nftCollection.address,
                           cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
@@ -312,7 +301,6 @@ export class NFT implements Asset {
             givenNFTCollection &&
             this._configuration.TONParams.nftCollectionCode.equals(Cell.fromBoc(givenNFTCollection)[0])
         ) {
-
             const NFTCollectionC = this._configuration.artifacts.ton.wrappers.NFTCollection;
 
             const nftCollection = this._configuration.TONParams.contractOpener.open(

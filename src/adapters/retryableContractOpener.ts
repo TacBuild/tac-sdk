@@ -129,16 +129,13 @@ export async function createDefaultRetryableOpener(
     maxRetries = 5,
     retryDelay = 1000,
 ): Promise<ContractOpener> {
-
     const openers: OpenerConfig[] = [];
 
     const tonClient = new TonClient({
         endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString(),
     });
 
-    openers.push(
-        { opener: tonClient, retries: maxRetries, retryDelay },
-    );
+    openers.push({ opener: tonClient, retries: maxRetries, retryDelay });
 
     if (networkType !== Network.DEV) {
         const opener4 = await orbsOpener4(networkType);
@@ -149,7 +146,6 @@ export async function createDefaultRetryableOpener(
             { opener: opener, retries: maxRetries, retryDelay },
         );
     }
-
 
     return new RetryableContractOpener(openers);
 }

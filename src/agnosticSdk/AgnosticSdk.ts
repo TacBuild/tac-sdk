@@ -1,9 +1,8 @@
-import { ethers, Interface } from "ethers";
+import { ethers, Interface } from 'ethers';
 
-import { AGNOSTIC_PROXY_ADDRESS as MAINNET_AGNOSTIC_PROXY_ADDRESS } from "../../artifacts/mainnet";
-import { AGNOSTIC_PROXY_ADDRESS as TESTNET_AGNOSTIC_PROXY_ADDRESS } from "../../artifacts/testnet";
-import { Network } from "../structs/Struct";
-
+import { AGNOSTIC_PROXY_ADDRESS as MAINNET_AGNOSTIC_PROXY_ADDRESS } from '../../artifacts/mainnet';
+import { AGNOSTIC_PROXY_ADDRESS as TESTNET_AGNOSTIC_PROXY_ADDRESS } from '../../artifacts/testnet';
+import { Network } from '../structs/Struct';
 
 /**
  * NFTData is a struct that contains the nft, id, and amount of the nft
@@ -38,7 +37,7 @@ export interface BridgeData {
 export enum HookType {
     Custom = 0,
     FullBalanceApprove = 1,
-    FullBalanceTransfer = 2
+    FullBalanceTransfer = 2,
 }
 
 /**
@@ -46,9 +45,8 @@ export enum HookType {
  * @param Amount - The amount replacement
  */
 export enum ReplacementType {
-    Amount = 0
+    Amount = 0,
 }
-
 
 /**
  * AmountChange is a struct that contains the position, length, token, and balance address of the amount change
@@ -142,7 +140,7 @@ export class AgnosticProxySDK {
                 break;
             case Network.DEV:
                 if (!agnosticProxyAddress) {
-                    throw new Error("Agnostic proxy address is required for dev network");
+                    throw new Error('Agnostic proxy address is required for dev network');
                 }
                 this.agnosticProxyAddress = agnosticProxyAddress;
                 break;
@@ -168,14 +166,14 @@ export class AgnosticProxySDK {
      */
     private _parseAbi(abi: any[]): string[] {
         const humanReadableAbi: string[] = [];
-        
+
         for (const item of abi) {
             // If it's already a string (human-readable format), keep it
             if (typeof item === 'string') {
                 humanReadableAbi.push(item);
                 continue;
             }
-            
+
             // If it's a JSON ABI object, parse it
             if (typeof item === 'object' && item.type) {
                 // Only process functions
@@ -188,7 +186,7 @@ export class AgnosticProxySDK {
                 // Skip events, errors, constructor, etc.
             }
         }
-        
+
         return humanReadableAbi;
     }
 
@@ -203,32 +201,36 @@ export class AgnosticProxySDK {
         }
 
         // Build parameter list
-        const params = func.inputs.map((input: any) => {
-            let paramType = input.type;
-            
-            // Handle array types
-            if (input.type.includes('[]')) {
-                paramType = input.type;
-            }
-            
-            // Add parameter name if available
-            if (input.name) {
-                return `${paramType} ${input.name}`;
-            }
-            return paramType;
-        }).join(', ');
+        const params = func.inputs
+            .map((input: any) => {
+                let paramType = input.type;
+
+                // Handle array types
+                if (input.type.includes('[]')) {
+                    paramType = input.type;
+                }
+
+                // Add parameter name if available
+                if (input.name) {
+                    return `${paramType} ${input.name}`;
+                }
+                return paramType;
+            })
+            .join(', ');
 
         // Build return types if available
         let returnTypes = '';
         if (func.outputs && func.outputs.length > 0) {
-            const outputs = func.outputs.map((output: any) => {
-                const outputType = output.type;
-                if (output.name) {
-                    return `${outputType} ${output.name}`;
-                }
-                return outputType;
-            }).join(', ');
-            
+            const outputs = func.outputs
+                .map((output: any) => {
+                    const outputType = output.type;
+                    if (output.name) {
+                        return `${outputType} ${output.name}`;
+                    }
+                    return outputType;
+                })
+                .join(', ');
+
             if (func.outputs.length === 1) {
                 returnTypes = ` returns (${outputs})`;
             } else {
@@ -239,7 +241,7 @@ export class AgnosticProxySDK {
         // Build full signature
         const stateMutability = func.stateMutability || 'nonpayable';
         let mutabilityKeyword = '';
-        
+
         if (stateMutability === 'view') {
             mutabilityKeyword = ' view';
         } else if (stateMutability === 'pure') {
@@ -267,13 +269,9 @@ export class AgnosticProxySDK {
             isFromSAPerspective?: boolean;
             value?: bigint;
             dynamicReplacements?: AmountChange[];
-        } = {}
+        } = {},
     ): Hook {
-        const {
-            isFromSAPerspective = true,
-            value = 0n,
-            dynamicReplacements
-        } = options;
+        const { isFromSAPerspective = true, value = 0n, dynamicReplacements } = options;
 
         const contractInterface = this.contractInterfaces.get(contractAddress.toLowerCase());
         if (!contractInterface) {
@@ -281,21 +279,21 @@ export class AgnosticProxySDK {
         }
 
         const data = contractInterface.encodeFunctionData(functionName, params);
-        let improvedMissionInfo = "0x";
+        let improvedMissionInfo = '0x';
 
         // If dynamic replacements are specified, encode them
         if (dynamicReplacements && dynamicReplacements.length > 0) {
             // For now, support single replacement (can be extended)
             const replacement = dynamicReplacements[0]!;
             const replacementData = ethers.AbiCoder.defaultAbiCoder().encode(
-                ["tuple(uint16,uint16,address,address)"],
-                [[replacement.position, replacement.len, replacement.token, replacement.balanceAddress]]
+                ['tuple(uint16,uint16,address,address)'],
+                [[replacement.position, replacement.len, replacement.token, replacement.balanceAddress]],
             );
-            
+
             // Encode as ReplacementType.Amount with the replacement data
             improvedMissionInfo = ethers.AbiCoder.defaultAbiCoder().encode(
-                ["uint8", "bytes"],
-                [ReplacementType.Amount, replacementData]
+                ['uint8', 'bytes'],
+                [ReplacementType.Amount, replacementData],
             );
         }
 
@@ -304,24 +302,26 @@ export class AgnosticProxySDK {
             contractAddress,
             value,
             data,
-            improvedMissionInfo
+            improvedMissionInfo,
         };
 
         // Encode only the CustomHookData
         const encodedHookData = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["tuple(bool,address,uint256,bytes,bytes)"],
-            [[
-                customHookData.isFromSAPerspective,
-                customHookData.contractAddress,
-                customHookData.value,
-                customHookData.data,
-                customHookData.improvedMissionInfo
-            ]]
+            ['tuple(bool,address,uint256,bytes,bytes)'],
+            [
+                [
+                    customHookData.isFromSAPerspective,
+                    customHookData.contractAddress,
+                    customHookData.value,
+                    customHookData.data,
+                    customHookData.improvedMissionInfo,
+                ],
+            ],
         );
 
         return {
             hookType: HookType.Custom,
-            hookData: encodedHookData
+            hookData: encodedHookData,
         };
     }
 
@@ -332,26 +332,22 @@ export class AgnosticProxySDK {
      * @param isFromSAPerspective - Whether the hook is from the smart account perspective or from proxy perspective
      * @returns The full balance approve hook
      */
-    public createFullBalanceApproveHook(
-        token: string,
-        to: string,
-        isFromSAPerspective: boolean = true
-    ): Hook {
+    public createFullBalanceApproveHook(token: string, to: string, isFromSAPerspective: boolean = true): Hook {
         const approveHookData: ApproveHookData = {
             token,
             to,
-            isFromSAPerspective
+            isFromSAPerspective,
         };
 
         // Encode only the ApproveHookData
         const encodedHookData = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["tuple(address,address,bool)"],
-            [[approveHookData.token, approveHookData.to, approveHookData.isFromSAPerspective]]
+            ['tuple(address,address,bool)'],
+            [[approveHookData.token, approveHookData.to, approveHookData.isFromSAPerspective]],
         );
 
         return {
             hookType: HookType.FullBalanceApprove,
-            hookData: encodedHookData
+            hookData: encodedHookData,
         };
     }
 
@@ -362,26 +358,22 @@ export class AgnosticProxySDK {
      * @param isFromSAPerspective - Whether the hook is from the smart account perspective or from proxy perspective
      * @returns The full balance transfer hook
      */
-    public createFullBalanceTransferHook(
-        token: string,
-        to: string,
-        isFromSAPerspective: boolean = true
-    ): Hook {
+    public createFullBalanceTransferHook(token: string, to: string, isFromSAPerspective: boolean = true): Hook {
         const transferHookData: TransferHookData = {
             token,
             to,
-            isFromSAPerspective
+            isFromSAPerspective,
         };
 
         // Encode only the TransferHookData
         const encodedHookData = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["tuple(address,address,bool)"],
-            [[transferHookData.token, transferHookData.to, transferHookData.isFromSAPerspective]]
+            ['tuple(address,address,bool)'],
+            [[transferHookData.token, transferHookData.to, transferHookData.isFromSAPerspective]],
         );
 
         return {
             hookType: HookType.FullBalanceTransfer,
-            hookData: encodedHookData
+            hookData: encodedHookData,
         };
     }
 
@@ -392,18 +384,14 @@ export class AgnosticProxySDK {
      * @param balanceAddress - The address to replace the parameter with
      * @returns The amount replacement
      */
-    public createAmountReplacement(
-        paramIndex: number,
-        token: string,
-        balanceAddress: string
-    ): AmountChange {
+    public createAmountReplacement(paramIndex: number, token: string, balanceAddress: string): AmountChange {
         // Calculate position in calldata (4 bytes selector + 32 bytes per param)
-        const position = 4 + (paramIndex * 32);
+        const position = 4 + paramIndex * 32;
         return {
             position,
             len: 32, // uint256 is 32 bytes
             token,
-            balanceAddress
+            balanceAddress,
         };
     }
 
@@ -423,11 +411,13 @@ export class AgnosticProxySDK {
         functionName: string,
         parameterName: string,
         token: string,
-        balanceAddress: string
+        balanceAddress: string,
     ): AmountChange {
         const contractInterface = this.contractInterfaces.get(contractAddress.toLowerCase());
         if (!contractInterface) {
-            throw new Error(`Contract interface not found for address: ${contractAddress}. Please add it first using addContractInterface().`);
+            throw new Error(
+                `Contract interface not found for address: ${contractAddress}. Please add it first using addContractInterface().`,
+            );
         }
 
         let functionFragment;
@@ -442,14 +432,16 @@ export class AgnosticProxySDK {
         }
 
         // Find the parameter by name
-        const paramIndex = functionFragment.inputs.findIndex(input => input.name === parameterName);
+        const paramIndex = functionFragment.inputs.findIndex((input) => input.name === parameterName);
         if (paramIndex === -1) {
-            const availableParams = functionFragment.inputs.map(input => `${input.name} (${input.type})`).join(', ');
-            throw new Error(`Parameter '${parameterName}' not found in function '${functionName}'. Available parameters: ${availableParams}`);
+            const availableParams = functionFragment.inputs.map((input) => `${input.name} (${input.type})`).join(', ');
+            throw new Error(
+                `Parameter '${parameterName}' not found in function '${functionName}'. Available parameters: ${availableParams}`,
+            );
         }
 
         const param = functionFragment.inputs[paramIndex];
-        
+
         // Calculate position and length based on parameter type
         const { position, len } = this._calculateParamPositionAndLength(functionFragment.inputs, paramIndex);
 
@@ -457,7 +449,7 @@ export class AgnosticProxySDK {
             position,
             len,
             token,
-            balanceAddress
+            balanceAddress,
         };
     }
 
@@ -484,12 +476,14 @@ export class AgnosticProxySDK {
     } {
         const contractInterface = this.contractInterfaces.get(contractAddress.toLowerCase());
         if (!contractInterface) {
-            throw new Error(`Contract interface not found for address: ${contractAddress}. Please add it first using addContractInterface().`);
+            throw new Error(
+                `Contract interface not found for address: ${contractAddress}. Please add it first using addContractInterface().`,
+            );
         }
 
         const functions = contractInterface.fragments
-            .filter(fragment => fragment.type === 'function')
-            .map(fragment => {
+            .filter((fragment) => fragment.type === 'function')
+            .map((fragment) => {
                 const func = fragment as ethers.FunctionFragment;
                 return {
                     name: func.name,
@@ -501,15 +495,15 @@ export class AgnosticProxySDK {
                             type: input.type,
                             index,
                             canReplace: canReplace.canReplace,
-                            reason: canReplace.reason
+                            reason: canReplace.reason,
                         };
-                    })
+                    }),
                 };
             });
 
         return {
             contractAddress,
-            functions
+            functions,
         };
     }
 
@@ -532,7 +526,7 @@ export class AgnosticProxySDK {
         options: {
             showCalculation?: boolean;
             validate?: boolean;
-        } = {}
+        } = {},
     ): {
         replacement: AmountChange;
         calculation: {
@@ -555,20 +549,26 @@ export class AgnosticProxySDK {
         const { showCalculation = true, validate = true } = options;
 
         // Get the replacement data
-        const replacement = this.calculateReplacementData(contractAddress, functionName, parameterName, token, balanceAddress);
+        const replacement = this.calculateReplacementData(
+            contractAddress,
+            functionName,
+            parameterName,
+            token,
+            balanceAddress,
+        );
 
         // Get function info for calculation details
         const contractInterface = this.contractInterfaces.get(contractAddress.toLowerCase());
         if (!contractInterface) {
             throw new Error(`Contract interface not found for address: ${contractAddress}`);
         }
-        
+
         const functionFragment = contractInterface.getFunction(functionName);
         if (!functionFragment) {
             throw new Error(`Function '${functionName}' not found in contract interface for ${contractAddress}`);
         }
-        
-        const paramIndex = functionFragment.inputs.findIndex(input => input.name === parameterName);
+
+        const paramIndex = functionFragment.inputs.findIndex((input) => input.name === parameterName);
         const param = functionFragment.inputs[paramIndex]!;
 
         const calculation = {
@@ -578,16 +578,16 @@ export class AgnosticProxySDK {
                 type: param.type,
                 index: paramIndex,
                 position: replacement.position,
-                length: replacement.len
+                length: replacement.len,
             },
-            positionCalculation: `Position = 4 bytes (selector) + ${paramIndex} * 32 bytes = ${replacement.position} bytes`
+            positionCalculation: `Position = 4 bytes (selector) + ${paramIndex} * 32 bytes = ${replacement.position} bytes`,
         };
 
         // Validation
         const validation = {
             isValid: true,
             warnings: [] as string[],
-            suggestions: [] as string[]
+            suggestions: [] as string[],
         };
 
         if (validate) {
@@ -620,7 +620,7 @@ export class AgnosticProxySDK {
         return {
             replacement,
             calculation,
-            validation
+            validation,
         };
     }
 
@@ -630,12 +630,15 @@ export class AgnosticProxySDK {
      * @param targetIndex - The index of the parameter to calculate the position and length for
      * @returns The position and length of the parameter
      */
-    private _calculateParamPositionAndLength(inputs: readonly ethers.ParamType[], targetIndex: number): { position: number; len: number } {
+    private _calculateParamPositionAndLength(
+        inputs: readonly ethers.ParamType[],
+        targetIndex: number,
+    ): { position: number; len: number } {
         // For now, we support simple types. Complex types (arrays, structs) would need more sophisticated calculation
         // This is a simplified version that works for basic types like uint256, address, etc.
-        
+
         let position = 4; // Start after function selector
-        
+
         for (let i = 0; i < targetIndex; i++) {
             const paramType = inputs[i]!.type;
             position += this._getTypeSize(paramType);
@@ -654,10 +657,16 @@ export class AgnosticProxySDK {
      */
     private _getTypeSize(type: string): number {
         // Basic types are all 32 bytes in calldata (due to ABI encoding)
-        if (type.startsWith('uint') || type.startsWith('int') || type === 'address' || type === 'bool' || type.startsWith('bytes32')) {
+        if (
+            type.startsWith('uint') ||
+            type.startsWith('int') ||
+            type === 'address' ||
+            type === 'bool' ||
+            type.startsWith('bytes32')
+        ) {
             return 32;
         }
-        
+
         // Dynamic types (bytes, string) are also 32 bytes for the offset
         if (type === 'bytes' || type === 'string') {
             return 32;
@@ -681,14 +690,14 @@ export class AgnosticProxySDK {
         if (type.startsWith('uint') && !type.includes('[]')) {
             return { canReplace: true };
         }
-        
+
         if (type.startsWith('int') && !type.includes('[]')) {
             return { canReplace: true, reason: 'but be careful with signed integers' };
         }
 
-        return { 
-            canReplace: false, 
-            reason: `is not suitable for balance replacement. Only uint/int types are supported.` 
+        return {
+            canReplace: false,
+            reason: `is not suitable for balance replacement. Only uint/int types are supported.`,
         };
     }
 
@@ -699,18 +708,14 @@ export class AgnosticProxySDK {
      * @param bridgeNFTs - The nfts to bridge
      * @returns The zap call
      */
-    public buildZapCall(
-        hooks: Hook[],
-        bridgeTokens: string[] = [],
-        bridgeNFTs: NFTData[] = [],
-    ): ZapCall {
+    public buildZapCall(hooks: Hook[], bridgeTokens: string[] = [], bridgeNFTs: NFTData[] = []): ZapCall {
         return {
             hooks,
             bridgeData: {
-            tokens: bridgeTokens,
-            nfts: bridgeNFTs,
-            isRequired: (bridgeTokens.length > 0 || bridgeNFTs.length > 0) ? true : false
-            }
+                tokens: bridgeTokens,
+                nfts: bridgeNFTs,
+                isRequired: bridgeTokens.length > 0 || bridgeNFTs.length > 0 ? true : false,
+            },
         };
     }
 
@@ -722,21 +727,21 @@ export class AgnosticProxySDK {
     public encodeZapCall(zapCall: ZapCall): string {
         return ethers.AbiCoder.defaultAbiCoder().encode(
             [
-                "tuple(" +
-                    "tuple(uint8,bytes)[]," + // hooks: only hookType and hookData
-                    "tuple(address[],tuple(address,uint256,uint256)[],bool)" + // bridgeData
-                ")"
+                'tuple(' +
+                    'tuple(uint8,bytes)[],' + // hooks: only hookType and hookData
+                    'tuple(address[],tuple(address,uint256,uint256)[],bool)' + // bridgeData
+                    ')',
             ],
             [
                 [
-                    zapCall.hooks.map(hook => [hook.hookType, hook.hookData]),
+                    zapCall.hooks.map((hook) => [hook.hookType, hook.hookData]),
                     [
                         zapCall.bridgeData.tokens,
-                        zapCall.bridgeData.nfts.map(nft => [nft.nft, nft.id, nft.amount]),
-                        zapCall.bridgeData.isRequired
-                    ]
-                ]
-            ]
+                        zapCall.bridgeData.nfts.map((nft) => [nft.nft, nft.id, nft.amount]),
+                        zapCall.bridgeData.isRequired,
+                    ],
+                ],
+            ],
         );
     }
 
@@ -745,15 +750,9 @@ export class AgnosticProxySDK {
      * @param approvals - The approvals to create
      * @returns The multiple approve hooks
      */
-    public createMultipleApproves(
-        approvals: { token: string; spender: string; isFromSA?: boolean }[]
-    ): Hook[] {
-        return approvals.map(approval => 
-            this.createFullBalanceApproveHook(
-                approval.token, 
-                approval.spender, 
-                approval.isFromSA ?? true
-            )
+    public createMultipleApproves(approvals: { token: string; spender: string; isFromSA?: boolean }[]): Hook[] {
+        return approvals.map((approval) =>
+            this.createFullBalanceApproveHook(approval.token, approval.spender, approval.isFromSA ?? true),
         );
     }
 
@@ -772,16 +771,9 @@ export class AgnosticProxySDK {
                 value?: bigint;
                 dynamicReplacements?: AmountChange[];
             };
-        }[]
+        }[],
     ): Hook[] {
-        return calls.map(call => 
-            this.createCustomHook(
-                call.contract,
-                call.functionName,
-                call.params,
-                call.options
-            )
-        );
+        return calls.map((call) => this.createCustomHook(call.contract, call.functionName, call.params, call.options));
     }
 
     /**
@@ -794,19 +786,13 @@ export class AgnosticProxySDK {
             switch (hook.hookType) {
                 case HookType.Custom:
                     return ethers.AbiCoder.defaultAbiCoder().decode(
-                        ["tuple(bool,address,uint256,bytes,bytes)"],
-                        hook.hookData
+                        ['tuple(bool,address,uint256,bytes,bytes)'],
+                        hook.hookData,
                     )[0];
                 case HookType.FullBalanceApprove:
-                    return ethers.AbiCoder.defaultAbiCoder().decode(
-                        ["tuple(address,address,bool)"],
-                        hook.hookData
-                    )[0];
+                    return ethers.AbiCoder.defaultAbiCoder().decode(['tuple(address,address,bool)'], hook.hookData)[0];
                 case HookType.FullBalanceTransfer:
-                    return ethers.AbiCoder.defaultAbiCoder().decode(
-                        ["tuple(address,address,bool)"],
-                        hook.hookData
-                    )[0];
+                    return ethers.AbiCoder.defaultAbiCoder().decode(['tuple(address,address,bool)'], hook.hookData)[0];
                 default:
                     throw new Error(`Unknown hook type: ${hook.hookType}`);
             }
@@ -823,8 +809,8 @@ export class AgnosticProxySDK {
     public estimateGasUsage(zapCall: ZapCall): number {
         // Rough estimation based on hook types and operations
         let gasEstimate = 50000; // Base gas
-        
-        zapCall.hooks.forEach(hook => {
+
+        zapCall.hooks.forEach((hook) => {
             switch (hook.hookType) {
                 case HookType.Custom:
                     gasEstimate += 100000; // Custom calls can vary widely
@@ -850,24 +836,26 @@ export class AgnosticProxySDK {
      * @param zapCall - The zap call to visualize
      */
     public visualizeZapCall(zapCall: ZapCall): void {
-        console.log("🔗 ZapCall Chain Visualization");
-        console.log("================================");
-        
+        console.log('🔗 ZapCall Chain Visualization');
+        console.log('================================');
+
         if (zapCall.hooks.length === 0) {
-            console.log("❌ No hooks in this ZapCall");
+            console.log('❌ No hooks in this ZapCall');
             return;
         }
 
         zapCall.hooks.forEach((hook, index) => {
-            const stepNumber = (index + 1).toString().padStart(2, " ");
+            const stepNumber = (index + 1).toString().padStart(2, ' ');
             console.log(`\n${stepNumber}. ${this._describeHook(hook)}`);
         });
 
         // Bridge information
         if (zapCall.bridgeData.isRequired) {
-            console.log("\n🌉 Bridge Operations:");
+            console.log('\n🌉 Bridge Operations:');
             if (zapCall.bridgeData.tokens.length > 0) {
-                console.log(`   📤 Bridge tokens: ${zapCall.bridgeData.tokens.map(t => this._formatAddress(t)).join(", ")}`);
+                console.log(
+                    `   📤 Bridge tokens: ${zapCall.bridgeData.tokens.map((t) => this._formatAddress(t)).join(', ')}`,
+                );
             }
             if (zapCall.bridgeData.nfts.length > 0) {
                 console.log(`   🖼️  Bridge NFTs: ${zapCall.bridgeData.nfts.length} NFT(s)`);
@@ -876,15 +864,15 @@ export class AgnosticProxySDK {
                 });
             }
         } else {
-            console.log("\n🚫 No bridge operations required");
+            console.log('\n🚫 No bridge operations required');
         }
 
         // Summary
-        console.log("\n📊 Summary:");
+        console.log('\n📊 Summary:');
         console.log(`   Total hooks: ${zapCall.hooks.length}`);
         console.log(`   Estimated gas: ${this.estimateGasUsage(zapCall).toLocaleString()}`);
-        console.log(`   Bridge required: ${zapCall.bridgeData.isRequired ? "Yes" : "No"}`);
-        console.log("================================");
+        console.log(`   Bridge required: ${zapCall.bridgeData.isRequired ? 'Yes' : 'No'}`);
+        console.log('================================');
     }
 
     /**
@@ -917,21 +905,22 @@ export class AgnosticProxySDK {
     private _describeCustomHook(hook: Hook): string {
         const decoded = this.decodeHookData(hook);
         const [isFromSA, contractAddress, value, data, improvedMissionInfo] = decoded;
-        
+
         // Try to decode function name from data
-        let functionDescription = "unknown function";
+        let functionDescription = 'unknown function';
         let hasReplacements = false;
-        
-        if (data && data.length >= 10) { // At least 4 bytes for selector + some data
+
+        if (data && data.length >= 10) {
+            // At least 4 bytes for selector + some data
             const selector = data.slice(0, 10); // "0x" + 8 hex chars
-            
+
             // Try to find function name from registered interfaces
             for (const [address, contractInterface] of this.contractInterfaces) {
                 if (address === contractAddress.toLowerCase()) {
                     try {
                         const fragment = contractInterface.getFunction(selector);
                         if (fragment) {
-                            functionDescription = `${fragment.name}(${fragment.inputs.map(input => input.type).join(", ")})`;
+                            functionDescription = `${fragment.name}(${fragment.inputs.map((input) => input.type).join(', ')})`;
                             break;
                         }
                     } catch {
@@ -939,22 +928,22 @@ export class AgnosticProxySDK {
                     }
                 }
             }
-            
+
             // If not found in registered interfaces, just show selector
-            if (functionDescription === "unknown function") {
+            if (functionDescription === 'unknown function') {
                 functionDescription = `function with selector ${selector}`;
             }
         }
 
         // Check for dynamic replacements
-        if (improvedMissionInfo && improvedMissionInfo !== "0x" && improvedMissionInfo.length > 2) {
+        if (improvedMissionInfo && improvedMissionInfo !== '0x' && improvedMissionInfo.length > 2) {
             hasReplacements = true;
         }
 
-        const perspective = isFromSA ? "Smart Account" : "Proxy Contract";
-        const valueStr = value > 0n ? ` (sending ${ethers.formatEther(value)} ETH)` : "";
-        const replacementStr = hasReplacements ? " 🔄 [with dynamic value replacement]" : "";
-        
+        const perspective = isFromSA ? 'Smart Account' : 'Proxy Contract';
+        const valueStr = value > 0n ? ` (sending ${ethers.formatEther(value)} ETH)` : '';
+        const replacementStr = hasReplacements ? ' 🔄 [with dynamic value replacement]' : '';
+
         return `📞 Custom call to ${this._formatAddress(contractAddress)} from ${perspective}${valueStr}
      Function: ${functionDescription}${replacementStr}`;
     }
@@ -967,9 +956,9 @@ export class AgnosticProxySDK {
     private _describeApproveHook(hook: Hook): string {
         const decoded = this.decodeHookData(hook);
         const [token, to, isFromSA] = decoded;
-        
-        const perspective = isFromSA ? "Smart Account" : "Proxy Contract";
-        
+
+        const perspective = isFromSA ? 'Smart Account' : 'Proxy Contract';
+
         return `✅ Approve full balance of ${this._formatAddress(token)} to ${this._formatAddress(to)} from ${perspective}`;
     }
 
@@ -981,9 +970,9 @@ export class AgnosticProxySDK {
     private _describeTransferHook(hook: Hook): string {
         const decoded = this.decodeHookData(hook);
         const [token, to, isFromSA] = decoded;
-        
-        const perspective = isFromSA ? "Smart Account" : "Proxy Contract";
-        
+
+        const perspective = isFromSA ? 'Smart Account' : 'Proxy Contract';
+
         return `💸 Transfer full balance of ${this._formatAddress(token)} to ${this._formatAddress(to)} from ${perspective}`;
     }
 
@@ -1025,7 +1014,7 @@ export class AgnosticProxySDK {
             gasEstimate: this.estimateGasUsage(zapCall),
             encodedSize: this.encodeZapCall(zapCall).length / 2, // bytes
             bridgeRequired: zapCall.bridgeData.isRequired,
-            hookDescriptions
+            hookDescriptions,
         };
     }
 
@@ -1036,29 +1025,44 @@ export class AgnosticProxySDK {
      * @param label1 - The label of the first zap call
      * @param label2 - The label of the second zap call
      */
-    public compareZapCalls(zapCall1: ZapCall, zapCall2: ZapCall, label1: string = "ZapCall 1", label2: string = "ZapCall 2"): void {
+    public compareZapCalls(
+        zapCall1: ZapCall,
+        zapCall2: ZapCall,
+        label1: string = 'ZapCall 1',
+        label2: string = 'ZapCall 2',
+    ): void {
         console.log(`🔄 Comparing ${label1} vs ${label2}`);
-        console.log("=".repeat(50));
+        console.log('='.repeat(50));
 
         const breakdown1 = this.getZapCallBreakdown(zapCall1);
         const breakdown2 = this.getZapCallBreakdown(zapCall2);
 
         console.log(`📊 ${label1}:`);
-        console.log(`   Hooks: ${breakdown1.totalHooks}, Gas: ${breakdown1.gasEstimate.toLocaleString()}, Size: ${breakdown1.encodedSize} bytes`);
-        
-        console.log(`📊 ${label2}:`);
-        console.log(`   Hooks: ${breakdown2.totalHooks}, Gas: ${breakdown2.gasEstimate.toLocaleString()}, Size: ${breakdown2.encodedSize} bytes`);
+        console.log(
+            `   Hooks: ${breakdown1.totalHooks}, Gas: ${breakdown1.gasEstimate.toLocaleString()}, Size: ${breakdown1.encodedSize} bytes`,
+        );
 
-        console.log("\n📈 Differences:");
-        console.log(`   Hooks: ${breakdown2.totalHooks - breakdown1.totalHooks > 0 ? "+" : ""}${breakdown2.totalHooks - breakdown1.totalHooks}`);
-        console.log(`   Gas: ${breakdown2.gasEstimate - breakdown1.gasEstimate > 0 ? "+" : ""}${(breakdown2.gasEstimate - breakdown1.gasEstimate).toLocaleString()}`);
-        console.log(`   Size: ${breakdown2.encodedSize - breakdown1.encodedSize > 0 ? "+" : ""}${breakdown2.encodedSize - breakdown1.encodedSize} bytes`);
+        console.log(`📊 ${label2}:`);
+        console.log(
+            `   Hooks: ${breakdown2.totalHooks}, Gas: ${breakdown2.gasEstimate.toLocaleString()}, Size: ${breakdown2.encodedSize} bytes`,
+        );
+
+        console.log('\n📈 Differences:');
+        console.log(
+            `   Hooks: ${breakdown2.totalHooks - breakdown1.totalHooks > 0 ? '+' : ''}${breakdown2.totalHooks - breakdown1.totalHooks}`,
+        );
+        console.log(
+            `   Gas: ${breakdown2.gasEstimate - breakdown1.gasEstimate > 0 ? '+' : ''}${(breakdown2.gasEstimate - breakdown1.gasEstimate).toLocaleString()}`,
+        );
+        console.log(
+            `   Size: ${breakdown2.encodedSize - breakdown1.encodedSize > 0 ? '+' : ''}${breakdown2.encodedSize - breakdown1.encodedSize} bytes`,
+        );
     }
 
-    getAgnosticCallParams(): { evmTargetAddress: string, methodName: string } {
+    getAgnosticCallParams(): { evmTargetAddress: string; methodName: string } {
         return {
             evmTargetAddress: this.agnosticProxyAddress,
-            methodName: "Zap(bytes,bytes)",
+            methodName: 'Zap(bytes,bytes)',
         };
     }
 }

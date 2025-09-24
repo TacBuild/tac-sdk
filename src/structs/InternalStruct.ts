@@ -1,7 +1,7 @@
 import { Cell } from '@ton/ton';
 import { AbstractProvider, ethers } from 'ethers';
 
-import { ICrossChainLayer, ISettings, ISAFactory, ITokenUtils} from '../../artifacts/tacTypes';
+import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
 import { ContractOpener } from '../interfaces';
 import {
     CurrencyType,
@@ -105,7 +105,7 @@ export type ToncenterTransaction = {
     };
     outMsgs: {
         hash: string;
-    } []
+    }[];
 };
 
 export type TransactionDepth = {

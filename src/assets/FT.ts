@@ -2,6 +2,7 @@ import { SandboxContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, OpenedContract } from '@ton/ton';
 import { ethers, isAddress as isEthereumAddress } from 'ethers';
 
+import { IERC20WithDecimals } from '../../artifacts/tacTypes';
 import { JettonMinter, JettonMinterData, JettonWallet } from '../../artifacts/tonTypes';
 import {
     ContractError,
@@ -32,7 +33,6 @@ import {
 } from '../structs/Struct';
 import { Origin } from '../structs/Struct';
 import { readJettonMetadata } from '../wrappers/ContentUtils';
-import { IERC20WithDecimals } from '../../artifacts/tacTypes';
 
 export class FT implements Asset {
     private _tvmAddress: Address;
@@ -171,7 +171,11 @@ export class FT implements Asset {
 
         // For ERC20 contracts, get decimals from contract
         const erc20TokenAbi = configuration.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi;
-        const erc20Token = new ethers.Contract(evmAddress, erc20TokenAbi, configuration.TACParams.provider) as unknown as IERC20WithDecimals;
+        const erc20Token = new ethers.Contract(
+            evmAddress,
+            erc20TokenAbi,
+            configuration.TACParams.provider,
+        ) as unknown as IERC20WithDecimals;
 
         return Number(await erc20Token.decimals());
     }

@@ -1,5 +1,6 @@
 import { Wallet } from 'ethers';
 
+import { dev, mainnet, testnet } from '../../artifacts';
 import { JettonMinterData, NFTItemData } from '../../artifacts/tonTypes';
 import { AssetFactory, FT, NFT } from '../assets';
 import {
@@ -70,7 +71,6 @@ export class TacSdk implements ITacSDK {
         const network = sdkParams.network;
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
 
-        const { dev, testnet, mainnet } = await import('../../artifacts');
         let artifacts;
         switch (network) {
             case Network.MAINNET:
@@ -210,7 +210,10 @@ export class TacSdk implements ITacSDK {
         return this.operationTracker.simulateTACMessage(req);
     }
 
-    async simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<ExecutionFeeEstimationResult[]> {
+    async simulateTransactions(
+        sender: SenderAbstraction,
+        txs: CrosschainTx[],
+    ): Promise<ExecutionFeeEstimationResult[]> {
         return this.simulator.getSimulationsInfo(sender, txs);
     }
 

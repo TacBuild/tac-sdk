@@ -1,9 +1,4 @@
-import {
-    emptyArrayError,
-    operationFetchError,
-    profilingFetchError,
-    statusFetchError,
-} from '../errors';
+import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
 import { convertCurrencyFetchError, getTONFeeInfoFetchError, simulationFetchError } from '../errors/instances';
 import { IHttpClient, ILiteSequencerClient } from '../interfaces';
 import {
@@ -32,7 +27,7 @@ import {
 import { AxiosHttpClient } from './AxiosHttpClient';
 import { toCamelCaseTransformer } from './Utils';
 
-export class LiteSequencerClient implements ILiteSequencerClient{
+export class LiteSequencerClient implements ILiteSequencerClient {
     private readonly endpoint: string;
     private readonly maxChunkSize: number;
     private readonly httpClient: IHttpClient;

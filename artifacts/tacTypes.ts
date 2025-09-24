@@ -1,6 +1,6 @@
 import type * as Dev from './dev';
-import type * as Testnet from './testnet';
 import type * as Mainnet from './mainnet';
+import type * as Testnet from './testnet';
 
 // TAC wrappers
 

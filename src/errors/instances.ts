@@ -83,11 +83,20 @@ export const simulationFetchError = (msg: string, inner?: unknown) =>
 export const getTONFeeInfoFetchError = (msg: string, inner?: unknown) =>
     new FetchError(`failed to fetch simulate tac msg: ${msg}`, 124, inner);
 
-export const missingFeeParamsError = new FormatError('When withoutSimulation is true, protocolFee and evmExecutorFee must be provided in options', 125);
+export const missingFeeParamsError = new FormatError(
+    'When withoutSimulation is true, protocolFee and evmExecutorFee must be provided in options',
+    125,
+);
 
-export const missingTvmExecutorFeeError = new FormatError('When withoutSimulation is true and isRoundTrip is true, tvmExecutorFee must be provided in options', 126);
+export const missingTvmExecutorFeeError = new FormatError(
+    'When withoutSimulation is true and isRoundTrip is true, tvmExecutorFee must be provided in options',
+    126,
+);
 
-export const missingGasLimitError = new FormatError('When withoutSimulation is true, gasLimit must be provided in evmProxyMsg', 127);
+export const missingGasLimitError = new FormatError(
+    'When withoutSimulation is true, gasLimit must be provided in evmProxyMsg',
+    127,
+);
 
 export const missingDecimals = new MetadataError('Missing decimals in jetton metadata', 128);
 

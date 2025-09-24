@@ -2,11 +2,7 @@ import { Address, toNano } from '@ton/ton';
 
 import { IConfiguration, ILogger, IOperationTracker, ISimulator } from '../interfaces';
 import type { SenderAbstraction } from '../sender';
-import {
-    CrosschainTx,
-    ExecutionFeeEstimationResult,
-    FeeParams,
-} from '../structs/Struct';
+import { CrosschainTx, ExecutionFeeEstimationResult, FeeParams } from '../structs/Struct';
 import { NoopLogger } from './Logger';
 import { aggregateTokens, formatSolidityMethodName, generateTransactionLinker, mapAssetsToTonAssets } from './Utils';
 import { Validator } from './Validator';
@@ -66,7 +62,7 @@ export class Simulator implements ISimulator {
             tonAssets: mapAssetsToTonAssets(assets),
             tonCaller: transactionLinker.caller,
             calculateRollbackFee,
-        }
+        };
 
         const simulation = await this.operationTracker.simulateTACMessage(tacSimulationParams);
         this.logger.debug(`TAC simulation ${simulation.simulationStatus ? 'success' : 'failed'}`);
@@ -76,9 +72,7 @@ export class Simulator implements ISimulator {
         const CrossChainLayerC = this.config.artifacts.ton.wrappers.CrossChainLayer;
 
         const crossChainLayer = this.config.TONParams.contractOpener.open(
-            CrossChainLayerC.createFromAddress(
-                Address.parse(this.config.TONParams.crossChainLayerAddress),
-            ),
+            CrossChainLayerC.createFromAddress(Address.parse(this.config.TONParams.crossChainLayerAddress)),
         );
         const fullStateCCL = await crossChainLayer.getFullData();
 

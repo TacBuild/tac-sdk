@@ -85,7 +85,7 @@ export class TONTransactionManager implements ITONTransactionManager {
             allowSimulationError = false,
             isRoundTrip = undefined,
             calculateRollbackFee = true,
-            validateAssetsBalance = true
+            validateAssetsBalance = true,
         } = options || {};
         const { evmValidExecutors = [], tvmValidExecutors = [] } = options || {};
 
@@ -224,7 +224,8 @@ export class TONTransactionManager implements ITONTransactionManager {
             return { sendTransactionResult, ...transactionLinker };
         }
 
-        const operationId = await this.operationTracker.getOperationId(transactionLinker, {
+        const operationId = await this.operationTracker
+            .getOperationId(transactionLinker, {
                 ...waitOptions,
                 successCheck: (id: string) => !!id,
                 logger: this.logger,

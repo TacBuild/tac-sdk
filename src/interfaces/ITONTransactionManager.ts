@@ -35,5 +35,4 @@ export interface ITONTransactionManager {
         txs: CrosschainTx[],
         waitOptions?: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]>;
-
 }

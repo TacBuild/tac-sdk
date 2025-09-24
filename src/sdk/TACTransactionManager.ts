@@ -1,5 +1,6 @@
 import { ethers, Wallet } from 'ethers';
 
+import { IERC20WithDecimals, IERC721 } from '../../artifacts/tacTypes';
 import { AssetFactory, NFT } from '../assets';
 import { Asset, IConfiguration, ILogger, IOperationTracker, ITACTransactionManager } from '../interfaces';
 import { AssetType } from '../structs/Struct';
@@ -7,7 +8,6 @@ import { TAC_SYMBOL } from './Consts';
 import { NoopLogger } from './Logger';
 import { formatObjectForLogging, mapAssetsToTonAssets } from './Utils';
 import { Validator } from './Validator';
-import { IERC20WithDecimals, IERC721 } from '../../artifacts/tacTypes';
 
 export class TACTransactionManager implements ITACTransactionManager {
     constructor(
@@ -22,13 +22,21 @@ export class TACTransactionManager implements ITACTransactionManager {
         if (asset.type === AssetType.FT) {
             this.logger.debug(`Approving FT ${evmAddress} for ${spenderAddress}`);
             const erc20Abi = this.config.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi;
-            const contract = new ethers.Contract(evmAddress, erc20Abi, this.config.TACParams.provider) as unknown as IERC20WithDecimals;
+            const contract = new ethers.Contract(
+                evmAddress,
+                erc20Abi,
+                this.config.TACParams.provider,
+            ) as unknown as IERC20WithDecimals;
             const tx = await contract.connect(signer).approve(spenderAddress, asset.rawAmount);
             await tx.wait();
         } else if (asset.type === AssetType.NFT) {
             this.logger.debug(`Approving NFT ${evmAddress} for ${spenderAddress}`);
             const erc721Abi = this.config.artifacts.tac.compilationArtifacts.IERC721.abi;
-            const contract = new ethers.Contract(evmAddress, erc721Abi, this.config.TACParams.provider) as unknown as IERC721;
+            const contract = new ethers.Contract(
+                evmAddress,
+                erc721Abi,
+                this.config.TACParams.provider,
+            ) as unknown as IERC721;
             const tx = await contract.connect(signer).approve(spenderAddress, (asset as NFT).addresses.index);
             await tx.wait();
         }

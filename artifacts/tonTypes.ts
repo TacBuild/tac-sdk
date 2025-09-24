@@ -1,6 +1,6 @@
 import type * as Dev from './dev';
-import type * as Testnet from './testnet';
 import type * as Mainnet from './mainnet';
+import type * as Testnet from './testnet';
 
 // TON wrappers
 export type MsgType = Dev.ton.wrappers.MsgType | Testnet.ton.wrappers.MsgType | Mainnet.ton.wrappers.MsgType;

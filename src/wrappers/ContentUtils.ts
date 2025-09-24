@@ -1,5 +1,3 @@
-// noinspection TypeScriptValidateTypes
-
 import { Sha256 } from '@aws-crypto/sha256-js';
 import { beginCell, Builder, Cell, Dictionary, Slice } from '@ton/ton';
 import axios from 'axios';
