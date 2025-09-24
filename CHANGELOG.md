@@ -29,6 +29,7 @@ All notable changes to this project will be documented in this file.
 - Tests: reorganization — removed/replaced some tests (e.g., tests/operation_tracker/tracker.spec.ts, tests/unit/getTokenAddress.spec.ts), added new unit tests (operation-tracker.spec.ts, validator.spec.ts) and updated integration scenarios.
 - Methods in `OperationTracker` and `sendCrossChainTransaction(s)` in `TacSDK` now accept optional `waitOptions` argument. Example:
 - Remove `multicallAddress` and `multicallABI` from SDK params.
+- Remove evm contract's bytecode from artifacts. Use interfaces and abis only.
 
 ```typescript
 async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>)

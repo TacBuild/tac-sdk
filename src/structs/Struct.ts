@@ -2,7 +2,7 @@ import { SandboxContract } from '@ton/sandbox';
 import  { OpenedContract } from '@ton/ton';
 import { AbstractProvider, Addressable} from 'ethers';
 
-import { JettonMinter, JettonMinterData } from '../../artifacts';
+import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
 

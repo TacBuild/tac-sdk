@@ -1,4 +1,4 @@
-import { Wallet } from 'ethers';
+import { ethers, Wallet } from 'ethers';
 
 import { AssetFactory, NFT } from '../assets';
 import { Asset, IConfiguration, ILogger, IOperationTracker, ITACTransactionManager } from '../interfaces';
@@ -7,6 +7,7 @@ import { TAC_SYMBOL } from './Consts';
 import { NoopLogger } from './Logger';
 import { formatObjectForLogging, mapAssetsToTonAssets } from './Utils';
 import { Validator } from './Validator';
+import { ERC20, ERC721 } from '../../artifacts/tacTypes';
 
 export class TACTransactionManager implements ITACTransactionManager {
     constructor(
@@ -20,18 +21,14 @@ export class TACTransactionManager implements ITACTransactionManager {
 
         if (asset.type === AssetType.FT) {
             this.logger.debug(`Approving FT ${evmAddress} for ${spenderAddress}`);
-            const contract = this.config.artifacts.tac.wrappers.ERC20FactoryTAC.connect(
-                evmAddress,
-                this.config.TACParams.provider,
-            );
+            const erc20Abi = this.config.artifacts.tac.compilationArtifacts.ERC20.abi;
+            const contract = new ethers.Contract(evmAddress, erc20Abi, this.config.TACParams.provider) as unknown as ERC20;
             const tx = await contract.connect(signer).approve(spenderAddress, asset.rawAmount);
             await tx.wait();
         } else if (asset.type === AssetType.NFT) {
             this.logger.debug(`Approving NFT ${evmAddress} for ${spenderAddress}`);
-            const contract = this.config.artifacts.tac.wrappers.ERC721FactoryTAC.connect(
-                evmAddress,
-                this.config.TACParams.provider,
-            );
+            const erc721Abi = this.config.artifacts.tac.compilationArtifacts.ERC721.abi;
+            const contract = new ethers.Contract(evmAddress, erc721Abi, this.config.TACParams.provider) as unknown as ERC721;
             const tx = await contract.connect(signer).approve(spenderAddress, (asset as NFT).addresses.index);
             await tx.wait();
         }

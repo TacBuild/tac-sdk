@@ -8,6 +8,7 @@ import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct'
 import { Network, TACParams, TONParams } from '../structs/Struct';
 import { getAddressString, sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
+import { ICrossChainLayer, ISettings, ISAFactory, ITokenUtils } from '../../artifacts/tacTypes';
 
 export class Configuration implements IConfiguration {
     readonly network: Network;
@@ -128,7 +129,8 @@ export class Configuration implements IConfiguration {
 
         Validator.validateEVMAddress(settingsAddress);
 
-        const settings = artifacts.tac.wrappers.SettingsFactoryTAC.connect(settingsAddress, provider);
+        const settingsAbi = artifacts.tac.compilationArtifacts.ISettings.abi;
+        const settings = new ethers.Contract(settingsAddress, settingsAbi, provider) as unknown as ISettings;
 
         const loaded = await this.loadTACSettingsViaMulticall(network, provider, settingsAddress);
         let crossChainLayerAddress: string;
@@ -148,15 +150,22 @@ export class Configuration implements IConfiguration {
             trustedTONExecutors = await settings.getTrustedTVMExecutors();
         }
 
-        const crossChainLayer = artifacts.tac.wrappers.CrossChainLayerFactoryTAC.connect(
+        const crossChainLayerAbi = artifacts.tac.compilationArtifacts.ICrossChainLayer.abi;
+        const crossChainLayer = new ethers.Contract(
             crossChainLayerAddress,
+            crossChainLayerAbi,
             provider,
-        );
-        const tokenUtils = artifacts.tac.wrappers.TokenUtilsFactoryTAC.connect(tokenUtilsAddress, provider);
-        const smartAccountFactory = artifacts.tac.wrappers.TacSAFactory_factoryTAC.connect(
+        ) as unknown as ICrossChainLayer;
+
+        const tokenUtilsAbi = artifacts.tac.compilationArtifacts.ITokenUtils.abi;
+        const tokenUtils = new ethers.Contract(tokenUtilsAddress, tokenUtilsAbi, provider) as unknown as ITokenUtils;
+
+        const TacSAFactoryAbi = artifacts.tac.compilationArtifacts.ISAFactory.abi;
+        const smartAccountFactory = new ethers.Contract(
             artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS,
+            TacSAFactoryAbi,
             provider,
-        );
+        ) as unknown as ISAFactory;
 
         return {
             provider,

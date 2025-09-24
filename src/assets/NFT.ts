@@ -1,8 +1,8 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, address, beginCell, Cell, fromNano, OpenedContract } from '@ton/ton';
-import { isAddress as isEthereumAddress } from 'ethers';
+import { ethers, isAddress as isEthereumAddress } from 'ethers';
 
-import { NFTCollection, NFTCollectionData, NFTItemData } from '../../artifacts';
+import { NFTCollection, NFTCollectionData, NFTItemData } from '../../artifacts/tonTypes';
 import { ContractError, emptyContractError, insufficientBalanceError } from '../errors';
 import { Asset,IConfiguration } from '../interfaces';
 import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
@@ -16,6 +16,7 @@ import {
     Origin,
     TVMAddress,
 } from '../structs/Struct';
+import { ICrossChainLayerERC721 } from '../../artifacts/tacTypes';
 export class NFT implements Asset {
     private readonly _addresses: {
         item: TVMAddress;
@@ -181,12 +182,14 @@ export class NFT implements Asset {
         const exists = await configuration.TACParams.tokenUtils['exists(address)'](collectionAddress);
 
         if (exists) {
-            const erc721Token = configuration.artifacts.tac.wrappers.CrossChainLayerERC721FactoryTAC.connect(
+            const cclErc721TokenAbi = configuration.artifacts.tac.compilationArtifacts.ICrossChainLayerERC721.abi;
+            const cclErc721Token = new ethers.Contract(
                 collectionAddress,
+                cclErc721TokenAbi,
                 configuration.TACParams.provider,
-            );
+            ) as unknown as ICrossChainLayerERC721;
 
-            const info = await erc721Token.getInfo();
+            const info = await cclErc721Token.getInfo();
 
             const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
 

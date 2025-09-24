@@ -98,7 +98,7 @@ function readSnakeContent(slice: Slice, isFirst: boolean): Buffer {
         throw notMultiplyOf8Error;
     }
 
-    let remainingBytes = Buffer.from('');
+    let remainingBytes: Buffer<ArrayBufferLike> = Buffer.from('');
 
     if (slice.remainingBits != 0) {
         remainingBytes = slice.loadBuffer(slice.remainingBits / 8);

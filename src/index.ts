@@ -1,5 +1,3 @@
-export * as artifacts from '../artifacts';
-export * from '../artifacts';
 export * from './adapters';
 export * from './agnosticSdk/AgnosticSdk';
 export * from './assets';

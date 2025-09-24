@@ -1,6 +1,6 @@
 import { Wallet } from 'ethers';
 
-import { JettonMinterData, NFTItemData } from '../../artifacts';
+import { JettonMinterData, NFTItemData } from '../../artifacts/tonTypes';
 import { FT, NFT } from '../assets';
 import type { SenderAbstraction } from '../sender';
 import {

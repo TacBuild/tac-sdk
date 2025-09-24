@@ -1,7 +1,7 @@
 import { Cell } from '@ton/ton';
 import { AbstractProvider, ethers } from 'ethers';
 
-import { CrossChainLayerTAC, SettingsTAC, TacSAFactoryTAC, TokenUtilsTAC } from '../../artifacts';
+import { ICrossChainLayer, ISettings, ISAFactory, ITokenUtils} from '../../artifacts/tacTypes';
 import { ContractOpener } from '../interfaces';
 import {
     CurrencyType,
@@ -51,10 +51,10 @@ export type InternalTONParams = {
 
 export type InternalTACParams = {
     provider: AbstractProvider;
-    crossChainLayer: CrossChainLayerTAC;
-    settings: SettingsTAC;
-    tokenUtils: TokenUtilsTAC;
-    smartAccountFactory: TacSAFactoryTAC;
+    crossChainLayer: ICrossChainLayer;
+    settings: ISettings;
+    tokenUtils: ITokenUtils;
+    smartAccountFactory: ISAFactory;
     trustedTACExecutors: string[];
     trustedTONExecutors: string[];
     abiCoder: ethers.AbiCoder;

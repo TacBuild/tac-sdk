@@ -1,8 +1,8 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, OpenedContract } from '@ton/ton';
-import { isAddress as isEthereumAddress } from 'ethers';
+import { ethers, isAddress as isEthereumAddress } from 'ethers';
 
-import { JettonMinter, JettonMinterData, JettonWallet } from '../../artifacts';
+import { JettonMinter, JettonMinterData, JettonWallet } from '../../artifacts/tonTypes';
 import {
     ContractError,
     emptyContractError,
@@ -32,6 +32,7 @@ import {
 } from '../structs/Struct';
 import { Origin } from '../structs/Struct';
 import { readJettonMetadata } from '../wrappers/ContentUtils';
+import { ERC20 } from '../../artifacts/tacTypes';
 
 export class FT implements Asset {
     private _tvmAddress: Address;
@@ -115,10 +116,8 @@ export class FT implements Asset {
         const fromTVM = await configuration.TACParams.tokenUtils['exists(address)'](address);
 
         if (fromTVM) {
-            const erc20Token = configuration.artifacts.tac.wrappers.CrossChainLayerERC20FactoryTAC.connect(
-                address,
-                configuration.TACParams.provider,
-            );
+            const cclErc20Abi = configuration.artifacts.tac.compilationArtifacts.ERC20.abi;
+            const erc20Token = new ethers.Contract(address, cclErc20Abi, configuration.TACParams.provider);
 
             const info = await erc20Token.getInfo();
             return info.tvmAddress;
@@ -171,10 +170,8 @@ export class FT implements Asset {
         }
 
         // For ERC20 contracts, get decimals from contract
-        const erc20Token = configuration.artifacts.tac.wrappers.ERC20FactoryTAC.connect(
-            evmAddress,
-            configuration.TACParams.provider,
-        );
+        const erc20TokenAbi = configuration.artifacts.tac.compilationArtifacts.ERC20.abi;
+        const erc20Token = new ethers.Contract(evmAddress, erc20TokenAbi, configuration.TACParams.provider) as unknown as ERC20;
 
         return Number(await erc20Token.decimals());
     }
