@@ -36,4 +36,5 @@ export {
     unknownWalletError,
     unsupportedFormatError,
     unsupportedKeyError,
+    zeroRawAmountError,
 } from './instances';

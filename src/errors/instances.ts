@@ -101,3 +101,6 @@ export const missingGasLimitError = new FormatError(
 export const missingDecimals = new MetadataError('Missing decimals in jetton metadata', 128);
 
 export const missingJettonDataError = new MetadataError('Jetton data should be available for TON origin', 129);
+
+export const zeroRawAmountError = (assetAddress: string) =>
+    new TokenError(`FT asset with zero rawAmount/amount is not allowed: ${assetAddress}`, 130);

@@ -4,7 +4,7 @@ import { sha256_sync } from 'ton-crypto';
 
 import type { FT, NFT, TON } from '../assets';
 import { AssetFactory } from '../assets';
-import { invalidMethodNameError } from '../errors';
+import { invalidMethodNameError, zeroRawAmountError } from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import {
@@ -247,8 +247,10 @@ export async function aggregateTokens(assets?: Asset[]): Promise<{
     let ton: TON | undefined;
 
     for await (const asset of assets ?? []) {
-        if (asset.rawAmount === 0n) continue;
         if (asset.type !== AssetType.FT) continue;
+        if (asset.rawAmount === 0n) {
+            throw zeroRawAmountError(asset.address || 'NATIVE TON');
+        }
 
         if (!asset.address) {
             ton = ton ? (ton.addRawAmount(asset.rawAmount) as TON) : (asset.clone as TON);
