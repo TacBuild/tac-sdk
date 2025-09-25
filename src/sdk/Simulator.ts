@@ -67,7 +67,7 @@ export class Simulator implements ISimulator {
         const simulation = await this.operationTracker.simulateTACMessage(tacSimulationParams);
         this.logger.debug(`TAC simulation ${simulation.simulationStatus ? 'success' : 'failed'}`);
 
-        const isRoundTrip = options.isRoundTrip ?? assets.length !== 0;
+        const isRoundTrip = options.isRoundTrip ?? (assets.length !== 0 || simulation.outMessages?.length !== 0);
 
         const CrossChainLayerC = this.config.artifacts.ton.wrappers.CrossChainLayer;
 
