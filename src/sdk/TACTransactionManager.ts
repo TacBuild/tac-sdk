@@ -83,7 +83,7 @@ export class TACTransactionManager implements ITACTransactionManager {
 
         // Approve all assets
         const crossChainLayerAddress = await this.config.TACParams.crossChainLayer.getAddress();
-        await Promise.all(assets.map((asset) => this.approveAsset(asset, signer, crossChainLayerAddress)));
+        assets.map(async (asset) => await this.approveAsset(asset, signer, crossChainLayerAddress));
 
         const protocolFee = await this.config.TACParams.crossChainLayer.getProtocolFee();
         const shardsKey = BigInt(Math.round(Math.random() * 1e18));
