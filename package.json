@@ -1,6 +1,6 @@
 {
   "name": "@tonappchain/sdk",
-  "version": "0.7.0-rc24-test-10",
+  "version": "0.7.0-rc24-test-14",
   "repository": "https://github.com/TacBuild/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
@@ -77,7 +77,8 @@
     "cli-table3": "^0.6.5",
     "dotenv": "^16.4.7",
     "ethers": "^6.13.5",
-    "ton-crypto": "^3.2.0"
+    "ton-crypto": "^3.2.0",
+    "yarn": "^1.22.22"
   },
   "keywords": [],
   "description": "",

@@ -54,17 +54,12 @@ export class AbiHandler {
         if (!func.name || !Array.isArray(func.inputs)) {
             return null;
         }
-
-        // Build parameter list
+    
+        // Build parameter list with proper tuple handling
         const params = func.inputs
             .map((input: any) => {
-                let paramType = input.type;
-
-                // Handle array types
-                if (input.type.includes('[]')) {
-                    paramType = input.type;
-                }
-
+                let paramType = this._buildParameterType(input);
+                
                 // Add parameter name if available
                 if (input.name) {
                     return `${paramType} ${input.name}`;
@@ -72,31 +67,27 @@ export class AbiHandler {
                 return paramType;
             })
             .join(', ');
-
+    
         // Build return types if available
         let returnTypes = '';
         if (func.outputs && func.outputs.length > 0) {
             const outputs = func.outputs
                 .map((output: any) => {
-                    const outputType = output.type;
+                    const outputType = this._buildParameterType(output);
                     if (output.name) {
                         return `${outputType} ${output.name}`;
                     }
                     return outputType;
                 })
                 .join(', ');
-
-            if (func.outputs.length === 1) {
-                returnTypes = ` returns (${outputs})`;
-            } else {
-                returnTypes = ` returns (${outputs})`;
-            }
+    
+            returnTypes = ` returns (${outputs})`;
         }
-
+    
         // Build full signature
         const stateMutability = func.stateMutability || 'nonpayable';
         let mutabilityKeyword = '';
-
+    
         if (stateMutability === 'view') {
             mutabilityKeyword = ' view';
         } else if (stateMutability === 'pure') {
@@ -104,7 +95,37 @@ export class AbiHandler {
         } else if (stateMutability === 'payable') {
             mutabilityKeyword = ' payable';
         }
-
+    
         return `function ${func.name}(${params})${mutabilityKeyword} external${returnTypes}`;
+    }
+    
+    /**
+     * Build parameter type string, handling tuples/structs properly
+     */
+    private _buildParameterType(param: any): string {
+        if (param.type === 'tuple') {
+            // Handle struct/tuple types
+            if (param.components && Array.isArray(param.components)) {
+                const componentTypes = param.components
+                    .map((component: any) => this._buildParameterType(component))
+                    .join(',');
+                return `(${componentTypes})`;
+            }
+            return 'tuple'; // fallback
+        }
+        
+        if (param.type === 'tuple[]') {
+            // Handle array of structs
+            if (param.components && Array.isArray(param.components)) {
+                const componentTypes = param.components
+                    .map((component: any) => this._buildParameterType(component))
+                    .join(',');
+                return `(${componentTypes})[]`;
+            }
+            return 'tuple[]'; // fallback
+        }
+        
+        // Handle regular types and arrays
+        return param.type;
     }
 }
