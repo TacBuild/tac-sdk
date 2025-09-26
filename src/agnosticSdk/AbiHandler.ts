@@ -107,7 +107,14 @@ export class AbiHandler {
             // Handle struct/tuple types
             if (param.components && Array.isArray(param.components)) {
                 const componentTypes = param.components
-                    .map((component: any) => this._buildParameterType(component))
+                    .map((component: any) => {
+                        const baseType = this._buildParameterType(component);
+                        // Include parameter name for struct components if available
+                        if (component.name) {
+                            return `${baseType} ${component.name}`;
+                        }
+                        return baseType;
+                    })
                     .join(',');
                 return `(${componentTypes})`;
             }
@@ -118,7 +125,14 @@ export class AbiHandler {
             // Handle array of structs
             if (param.components && Array.isArray(param.components)) {
                 const componentTypes = param.components
-                    .map((component: any) => this._buildParameterType(component))
+                    .map((component: any) => {
+                        const baseType = this._buildParameterType(component);
+                        // Include parameter name for struct components if available
+                        if (component.name) {
+                            return `${baseType} ${component.name}`;
+                        }
+                        return baseType;
+                    })
                     .join(',');
                 return `(${componentTypes})[]`;
             }
