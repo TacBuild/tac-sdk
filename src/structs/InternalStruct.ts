@@ -78,6 +78,13 @@ export type SuggestedTVMExecutorFeeResponse = ResponseBase<SuggestedTVMExecutorF
 
 export type ConvertCurrencyResponse = ResponseBase<ConvertedCurrencyRawResult>;
 
+export type OperationIdWithLogIndex = {
+    operationId: string;
+    logIndex: number;
+};
+
+export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogIndex>;
+
 export interface SendResult {
     success: boolean;
     result?: unknown;

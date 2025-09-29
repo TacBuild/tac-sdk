@@ -8,14 +8,14 @@ import {
     AssetFromNFTCollectionArg,
     AssetFromNFTItemArg,
     AssetLike,
+    BatchCrossChainTxWithAssetLike,
     CrossChainTransactionOptions,
+    CrossChainTransactionsOptions,
     CrosschainTx,
-    CrosschainTxWithAssetLike,
     EVMAddress,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
     NFTAddressType,
-    OperationIdsByShardsKey,
     SuggestedTVMExecutorFee,
     TACSimulationParams,
     TACSimulationResult,
@@ -147,13 +147,13 @@ export interface ITacSDK {
      * Sends multiple cross-chain transactions in one batch and optionally waits for tracking info.
      * @param sender Sender abstraction for signing/sending TVM messages.
      * @param txs Array of cross-chain transactions to broadcast.
-     * @param waitOptions Optional waiting policy for operation ids by shard keys.
+     * @param options Optional options controlling waiting behavior for operation ids.
      * @returns Promise with an array of TransactionLinkerWithOperationId for each submitted transaction.
      */
     sendCrossChainTransactions(
         sender: SenderAbstraction,
-        txs: CrosschainTxWithAssetLike[],
-        waitOptions?: WaitOptions<OperationIdsByShardsKey>,
+        txs: BatchCrossChainTxWithAssetLike[],
+        options?: CrossChainTransactionsOptions,
     ): Promise<TransactionLinkerWithOperationId[]>;
 
     // Bridge methods

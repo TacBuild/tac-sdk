@@ -4,6 +4,7 @@ import { IHttpClient, ILiteSequencerClient } from '../interfaces';
 import {
     ConvertCurrencyResponse,
     OperationIdsByShardsKeyResponse,
+    OperationIdWithLogIndexResponse,
     OperationTypeResponse,
     StageProfilingResponse,
     StatusesResponse,
@@ -43,10 +44,20 @@ export class LiteSequencerClient implements ILiteSequencerClient {
         const path = isEthHash ? 'tac/operation-id' : 'ton/operation-id';
 
         try {
-            const response = await this.httpClient.get<StringResponse>(new URL(path, this.endpoint).toString(), {
-                params: { transactionHash },
-            });
-            return response.data.response || '';
+            if (isEthHash) {
+                const response = await this.httpClient.get<OperationIdWithLogIndexResponse>(
+                    new URL(path, this.endpoint).toString(),
+                    {
+                        params: { transactionHash },
+                    },
+                );
+                return response.data.response?.operationId || '';
+            } else {
+                const response = await this.httpClient.get<StringResponse>(new URL(path, this.endpoint).toString(), {
+                    params: { transactionHash },
+                });
+                return response.data.response || '';
+            }
         } catch (error) {
             if ((error as any)?.response?.status === 404) {
                 return '';

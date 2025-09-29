@@ -68,7 +68,6 @@ sendCrossChainTransaction(
   sender: SenderAbstraction,
   assets: AssetLike[] = [],
   options?: CrossChainTransactionOptions,
-  waitOptions?: WaitOptions<string>,
 ): Promise<TransactionLinkerWithOperationId>
 ```
 
@@ -91,9 +90,9 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   
 - **`assets`**: An array of `AssetLike` instances (defaults to empty array), each specifying the asset to bridge. Can be `Asset` instances created via `AssetFactory.from` or other asset-like objects. Use `withAmount`/`addAmount` to set amounts on `Asset` instances.
 
-- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) struct. 
-
-- **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct.
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) struct. This includes:
+  - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the transaction
+  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation ID waiting behavior
 
 > **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 
@@ -139,7 +138,11 @@ Simulates the full transaction lifecycle and estimates fees.
 ### `sendCrossChainTransactions`
 
 ```ts
-sendCrossChainTransactions(sender: SenderAbstraction, txs: CrosschainTxWithAssetLike[], waitOptions?: WaitOptions<OperationIdsByShardsKey>): Promise<TransactionLinkerWithOperationId[]>
+sendCrossChainTransactions(
+  sender: SenderAbstraction, 
+  txs: BatchCrossChainTxWithAssetLike[], 
+  options?: CrossChainTransactionsOptions
+): Promise<TransactionLinkerWithOperationId[]>
 ```
 
 Sends multiple cross-chain transactions in a batch. This is useful for scenarios where multiple independent operations need to be initiated from TON to TAC.
@@ -147,8 +150,11 @@ Sends multiple cross-chain transactions in a batch. This is useful for scenarios
 #### **Parameters**
 
 - **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the user's wallet.
-- **`txs`**: An array of [`CrosschainTxWithAssetLike`](./../models/structs.md#crosschaintxwithassetlike) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`.
-- **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct.
+- **`txs`**: An array of [`BatchCrossChainTxWithAssetLike`](./../models/structs.md#batchcrosschaintxwithassetlike) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`. 
+  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId` or `waitOptions` in their options as these are controlled at the batch level.
+- **`options`** *(optional)*: [`CrossChainTransactionsOptions`](./../models/structs.md#crosschaintransactionsoptions) struct controlling batch-level behavior:
+  - **`waitOperationIds`** *(optional, default: true)*: Whether to wait for operation IDs for all transactions in the batch
+  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation IDs waiting behavior
 
 #### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
   - An array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.

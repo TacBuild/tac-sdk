@@ -247,6 +247,8 @@ export type CrossChainTransactionOptions = {
     calculateRollbackFee?: boolean;
     withoutSimulation?: boolean;
     validateAssetsBalance?: boolean;
+    waitOperationId?: boolean;
+    waitOptions?: WaitOptions<string>;
 };
 ```
 
@@ -285,7 +287,40 @@ export type CrossChainTransactionOptions = {
   If true, validates that the sender has sufficient balance for the specified assets before sending the transaction.  
   **Default**: true
 
+- **waitOperationId** *(optional)*:  
+  If true, waits for operation ID after sending the transaction. When false, the transaction is sent without waiting for operation tracking information.  
+  **Default**: true
 
+- **waitOptions** *(optional)*:  
+  Custom waiting configuration for operation ID resolution. See [`WaitOptions`](#waitoptions-interface) for available options.  
+  **Default**: `{}`
+
+### `BatchCrossChainTransactionOptions`
+A restricted version of CrossChainTransactionOptions for use in batch operations.
+
+```ts
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
+```
+
+This type excludes `waitOperationId` and `waitOptions` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
+
+### `CrossChainTransactionsOptions`
+Configuration options for batch cross-chain transaction operations.
+
+```ts
+export type CrossChainTransactionsOptions = {
+    waitOperationIds?: boolean;
+    waitOptions?: WaitOptions<OperationIdsByShardsKey>;
+};
+```
+
+- **waitOperationIds** *(optional)*:  
+  If true, waits for operation IDs for all transactions in the batch. When false, transactions are sent without waiting for operation tracking information.  
+  **Default**: true
+
+- **waitOptions** *(optional)*:  
+  Custom waiting configuration for operation IDs resolution in batch operations. See [`WaitOptions`](#waitoptions-interface) for available options.  
+  **Default**: `{}`
 
 ### `CrosschainTx`
 
@@ -301,6 +336,21 @@ Represents a crosschain transaction.
 - **`evmProxyMsg`**: The message to be sent to the TAC proxy.
 - **`assets`** *(optional)*: An array of assets involved in the transaction.
 - **`options`** *(optional)*: Additional options for the transaction.
+
+### `BatchCrossChainTx`
+
+```ts
+export type BatchCrossChainTx = {
+    evmProxyMsg: EvmProxyMsg;
+    assets?: Asset[];
+    options?: BatchCrossChainTransactionOptions;
+};
+```
+
+Represents a crosschain transaction for use in batch operations.
+- **`evmProxyMsg`**: The message to be sent to the TAC proxy.
+- **`assets`** *(optional)*: An array of assets involved in the transaction.
+- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId` and `waitOptions` which are controlled at batch level).
 
 ### `AssetLike`
 
@@ -376,6 +426,14 @@ export type CrosschainTxWithAssetLike = Omit<CrosschainTx, 'assets'> & { assets?
 ```
 
 Represents a crosschain transaction using AssetLike objects instead of strict Asset instances. This provides more flexibility when working with different asset representations.
+
+### `BatchCrossChainTxWithAssetLike`
+
+```typescript
+export type BatchCrossChainTxWithAssetLike = Omit<BatchCrossChainTx, 'assets'> & { assets?: AssetLike[] };
+```
+
+Represents a batch crosschain transaction using AssetLike objects instead of strict Asset instances. This provides more flexibility when working with different asset representations in batch operations, while ensuring that individual transactions cannot specify wait-related options (which are controlled at the batch level).
 
 ### `TransactionLinker (Type)`
 ```typescript

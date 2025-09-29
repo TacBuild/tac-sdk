@@ -5,6 +5,9 @@
 - [Simulator](#simulator)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
+  - [Getting Simulator Instance](#getting-simulator-instance)
+    - [Through SDK (Recommended)](#through-sdk-recommended)
+    - [Direct Instantiation](#direct-instantiation)
   - [Methods](#methods)
     - [`getSimulationInfo`](#getsimulationinfo)
     - [`getSimulationsInfo`](#getsimulationsinfo)
@@ -17,6 +20,72 @@
 The `Simulator` class implements the `ISimulator` interface and provides methods for simulating cross-chain transactions and estimating execution fees. It offers functionality to simulate individual transactions or batches of transactions for fee estimation and validation purposes.
 
 The simulator performs TAC-side simulation to estimate gas costs, validate transaction logic, and calculate the required fees for successful cross-chain execution.
+
+---
+
+## Getting Simulator Instance
+
+There are two ways to obtain a simulator instance for transaction simulation. **Using the SDK approach is strongly recommended** as it handles all the configuration and dependencies automatically.
+
+### Through SDK (Recommended)
+
+The recommended approach is to use the `TacSdk` which creates and manages the simulator internally with proper configuration:
+
+```ts
+import { TacSdk, Network } from "@tonappchain/sdk";
+import { TonApiClient } from '@ton-api/client';
+import { getHttpV4Endpoint } from '@orbs-network/ton-access';
+
+// Create SDK instance with simulator
+const sdk = await TacSdk.create({
+    network: Network.TESTNET, // or Network.MAINNET
+});
+
+// Use simulation methods directly on SDK
+const simulationResult = await sdk.getSimulationInfo(evmProxyMsg, sender, assets, options);
+const batchResults = await sdk.simulateTransactions(sender, transactions);
+```
+
+### Direct Instantiation
+
+You can also create a simulator instance directly, but this requires manual setup of all dependencies:
+
+```ts
+import { 
+    Simulator, 
+    Configuration, 
+    OperationTracker, 
+    ConsoleLogger,
+    Network 
+} from "@tonappchain/sdk";
+import { TonApiClient } from '@ton-api/client';
+import { getHttpV4Endpoint } from '@orbs-network/ton-access';
+
+// Create configuration
+const config = await Configuration.create(
+    Network.TESTNET,
+    artifacts, // Network artifacts
+    tonParams, // TON parameters
+    tacParams, // TAC parameters
+    customEndpoints, // Optional custom endpoints
+    delay // Optional delay
+);
+
+// Create operation tracker
+const operationTracker = new OperationTracker(Network.TESTNET, config.liteSequencerEndpoints);
+
+// Create logger (optional)
+const logger = new ConsoleLogger();
+
+// Create simulator instance
+const simulator = new Simulator(config, operationTracker, logger);
+
+// Use simulator methods
+const simulationResult = await simulator.getSimulationInfo(sender, crosschainTx);
+const batchResults = await simulator.getSimulationsInfo(sender, transactions);
+```
+
+**Note**: The direct instantiation approach requires more setup and knowledge of internal dependencies. The SDK approach is recommended for most use cases as it provides a simpler API and handles configuration automatically.
 
 ---
 
@@ -67,12 +136,15 @@ Returns an array of [`ExecutionFeeEstimationResult`](./../models/structs.md#exec
 ## Example Usage
 
 ```ts
-import { ISimulator } from "@tonappchain/sdk";
-import { SenderFactory } from "@tonappchain/sdk";
+import { TacSdk, Network, SenderFactory } from "@tonappchain/sdk";
 import { TonConnectUI } from '@tonconnect/ui';
+import { TonApiClient } from '@ton-api/client';
+import { getHttpV4Endpoint } from '@orbs-network/ton-access';
 
-// Assume you have an ISimulator implementation instance
-const simulator: ISimulator = // ... get simulator instance
+// Create SDK instance (recommended approach)
+const sdk = await TacSdk.create({
+    network: Network.TESTNET
+});
 
 // Create a sender
 const tonConnectUI = new TonConnectUI({
@@ -82,27 +154,33 @@ const sender = await SenderFactory.getSender({
     tonConnect: tonConnectUI
 });
 
-// Create a cross-chain transaction
-const crosschainTx: CrosschainTx = {
-    evmProxyMsg: {
-        evmTargetAddress: "0x...",
-        methodName: "swap",
-        encodedParameters: "0x..."
-    },
-    assets: [asset1, asset2],
-    options: {
-        // transaction options
-    }
+// Create EVM proxy message
+const evmProxyMsg = {
+    evmTargetAddress: "0x...",
+    methodName: "swap",
+    encodedParameters: "0x..."
 };
 
-// Simulate a single transaction
-const simulationResult = await simulator.getSimulationInfo(sender, crosschainTx);
+// Simulate a single transaction using SDK
+const simulationResult = await sdk.getSimulationInfo(
+    evmProxyMsg, 
+    sender, 
+    [asset1, asset2], // optional assets
+    {
+        // optional transaction options
+        calculateRollbackFee: true,
+        allowSimulationError: false
+    }
+);
 
 console.log("Fee estimation:", simulationResult);
 
-// Simulate multiple transactions
-const transactions: CrosschainTx[] = [crosschainTx1, crosschainTx2];
-const simulationResults = await simulator.getSimulationsInfo(sender, transactions);
+// Simulate multiple transactions using SDK
+const transactions = [
+    { evmProxyMsg: evmProxyMsg1, assets: [asset1], options: {} },
+    { evmProxyMsg: evmProxyMsg2, assets: [asset2], options: {} }
+];
+const batchResults = await sdk.simulateTransactions(sender, transactions);
 
-console.log("Batch simulation results:", simulationResults);
+console.log("Batch simulation results:", batchResults);
 ```

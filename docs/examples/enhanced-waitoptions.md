@@ -189,8 +189,8 @@ async function sendTransactionWithManualTracking() {
     // Initialize SDK
     const tacSdk = await TacSdk.create({ network }, logger);
     
-    // Create OperationTracker from SDK (instead of creating inside callback)
-    const operationTracker = new OperationTracker(network, undefined, logger);
+    // Get OperationTracker from SDK (instead of creating inside callback)
+    const operationTracker = tacSdk.operationTracker;
     
     // Create sender and assets (setup code omitted for brevity)
     // ... sender and assets setup ...

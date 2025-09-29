@@ -11,6 +11,8 @@ The TAC SDK makes it possible to create hybrid dApps that let TON users interact
 
 For full documentation and examples, please visit [TAC SDK Documentation](https://docs.tac.build/build/sdk/introduction).
 
+For practical examples and usage patterns, see [Examples Documentation](./docs/examples/examples.md).
+
 ### Installation
 
 ```bash

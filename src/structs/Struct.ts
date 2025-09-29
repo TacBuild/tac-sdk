@@ -341,6 +341,15 @@ export type CrossChainTransactionOptions = {
     calculateRollbackFee?: boolean;
     withoutSimulation?: boolean;
     validateAssetsBalance?: boolean;
+    waitOperationId?: boolean;
+    waitOptions?: WaitOptions<string>;
+};
+
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
+
+export type CrossChainTransactionsOptions = {
+    waitOperationIds?: boolean;
+    waitOptions?: WaitOptions<OperationIdsByShardsKey>;
 };
 
 export type ExecutionFeeEstimationResult = {
@@ -354,6 +363,12 @@ export type CrosschainTx = {
     options?: CrossChainTransactionOptions;
 };
 
+export type BatchCrossChainTx = {
+    evmProxyMsg: EvmProxyMsg;
+    assets?: Asset[];
+    options?: BatchCrossChainTransactionOptions;
+};
+
 export type AssetLike =
     | Asset
     | FT
@@ -365,7 +380,7 @@ export type AssetLike =
     | { address: TVMAddress | EVMAddress; amount: number }
     | { address: TVMAddress | EVMAddress; itemIndex: bigint };
 
-export type CrosschainTxWithAssetLike = Omit<CrosschainTx, 'assets'> & { assets?: AssetLike[] };
+export type BatchCrossChainTxWithAssetLike = Omit<BatchCrossChainTx, 'assets'> & { assets?: AssetLike[] };
 
 export interface WaitOptions<T = unknown, TContext = unknown> {
     /**

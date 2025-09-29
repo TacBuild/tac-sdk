@@ -20,15 +20,16 @@ import {
     AssetFromNFTItemArg,
     AssetLike,
     AssetType,
+    BatchCrossChainTx,
+    BatchCrossChainTxWithAssetLike,
     CrossChainTransactionOptions,
+    CrossChainTransactionsOptions,
     CrosschainTx,
-    CrosschainTxWithAssetLike,
     EVMAddress,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
     Network,
     NFTAddressType,
-    OperationIdsByShardsKey,
     SDKParams,
     SuggestedTVMExecutorFee,
     TACSimulationParams,
@@ -36,7 +37,6 @@ import {
     TransactionLinkerWithOperationId,
     TVMAddress,
     UserWalletBalanceExtended,
-    WaitOptions,
 } from '../structs/Struct';
 import { Configuration } from './Configuration';
 import { DEFAULT_DELAY } from './Consts';
@@ -161,26 +161,25 @@ export class TacSdk implements ITacSDK {
         sender: SenderAbstraction,
         assets: AssetLike[] = [],
         options?: CrossChainTransactionOptions,
-        waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId> {
         const normalizedAssets = await normalizeAssets(this.config, assets);
         const tx: CrosschainTx = { evmProxyMsg, assets: normalizedAssets, options };
-        return this.tonTransactionManager.sendCrossChainTransaction(evmProxyMsg, sender, tx, waitOptions);
+        return this.tonTransactionManager.sendCrossChainTransaction(evmProxyMsg, sender, tx);
     }
 
     async sendCrossChainTransactions(
         sender: SenderAbstraction,
-        txs: CrosschainTxWithAssetLike[],
-        waitOptions?: WaitOptions<OperationIdsByShardsKey>,
+        txs: BatchCrossChainTxWithAssetLike[],
+        options?: CrossChainTransactionsOptions,
     ): Promise<TransactionLinkerWithOperationId[]> {
-        const normalizedTxs: CrosschainTx[] = await Promise.all(
+        const normalizedTxs: BatchCrossChainTx[] = await Promise.all(
             txs.map(async (tx) => ({
                 evmProxyMsg: tx.evmProxyMsg,
                 options: tx.options,
                 assets: await normalizeAssets(this.config, tx.assets),
             })),
         );
-        return this.tonTransactionManager.sendCrossChainTransactions(sender, normalizedTxs, waitOptions);
+        return this.tonTransactionManager.sendCrossChainTransactions(sender, normalizedTxs, options);
     }
 
     async bridgeTokensToTON(

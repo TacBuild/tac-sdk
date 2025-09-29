@@ -6,7 +6,9 @@ import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator, ITONTran
 import type { SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
 import {
+    BatchCrossChainTx,
     CrossChainTransactionOptions,
+    CrossChainTransactionsOptions,
     CrosschainTx,
     EvmProxyMsg,
     FeeParams,
@@ -202,7 +204,6 @@ export class TONTransactionManager implements ITONTransactionManager {
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
         tx: CrosschainTx,
-        waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId> {
         const { transaction, transactionLinker } = await this.prepareCrossChainTransaction(
             evmProxyMsg,
@@ -220,13 +221,15 @@ export class TONTransactionManager implements ITONTransactionManager {
             this.config.TONParams.contractOpener,
         );
 
-        if (!waitOptions) {
+        const shouldWaitForOperationId = tx.options?.waitOperationId ?? true;
+        
+        if (!shouldWaitForOperationId) {
             return { sendTransactionResult, ...transactionLinker };
         }
 
         const operationId = await this.operationTracker
             .getOperationId(transactionLinker, {
-                ...waitOptions,
+                ...(tx.options?.waitOptions ?? {}),
                 successCheck: (id: string) => !!id,
                 logger: this.logger,
             })
@@ -240,8 +243,8 @@ export class TONTransactionManager implements ITONTransactionManager {
 
     async sendCrossChainTransactions(
         sender: SenderAbstraction,
-        txs: CrosschainTx[],
-        waitOptions?: WaitOptions<OperationIdsByShardsKey>,
+        txs: BatchCrossChainTx[],
+        options?: CrossChainTransactionsOptions,
     ): Promise<TransactionLinkerWithOperationId[]> {
         const caller = sender.getSenderAddress();
         this.logger.debug(`Preparing ${txs.length} cross-chain transactions for ${caller}`);
@@ -253,12 +256,13 @@ export class TONTransactionManager implements ITONTransactionManager {
 
         await sender.sendShardTransactions(transactions, this.config.network, this.config.TONParams.contractOpener);
 
-        return waitOptions
-            ? await this.waitForOperationIds(transactionLinkers, caller, waitOptions)
+        const shouldWaitForOperationIds = options?.waitOperationIds ?? true;
+        return shouldWaitForOperationIds
+            ? await this.waitForOperationIds(transactionLinkers, caller, options?.waitOptions ?? {})
             : transactionLinkers;
     }
 
-    private async prepareBatchTransactions(txs: CrosschainTx[], sender: SenderAbstraction) {
+    private async prepareBatchTransactions(txs: BatchCrossChainTx[], sender: SenderAbstraction) {
         const caller = sender.getSenderAddress();
 
         const txsRequiringValidation = txs.filter((tx) => tx.options?.validateAssetsBalance ?? true);

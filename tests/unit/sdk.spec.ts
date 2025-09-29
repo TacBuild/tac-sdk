@@ -6,9 +6,17 @@ import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
 import { testnet } from '../../artifacts';
-import { Asset, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
-import { TON } from '../../src';
-import { sandboxOpener } from '../../src/adapters/contractOpener';
+import {
+    Asset,
+    EvmProxyMsg,
+    Network,
+    sandboxOpener,
+    SenderFactory,
+    TacSdk,
+    TON,
+    wallets,
+    WalletVersion,
+} from '../../src';
 
 describe('TacSDK', () => {
     const {
@@ -215,6 +223,12 @@ describe('TacSDK', () => {
         await blockchain.loadFrom(initialState);
     });
 
+    afterAll(async () => {
+        if (sdk) {
+            await sdk.closeConnections();
+        }
+    });
+
     it('everything should be deployed', async () => {
         expect((await blockchain.getContract(settings.address)).accountState!.type).toBe('active');
         expect((await blockchain.getContract(jettonMinter.address)).accountState!.type).toBe('active');
@@ -254,7 +268,9 @@ describe('TacSDK', () => {
                 },
             });
 
-            const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets);
+            const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets, {
+                waitOperationId: false,
+            });
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect((sendTransactionResult as any).result.transactions).toHaveTransaction({

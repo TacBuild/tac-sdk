@@ -15,6 +15,12 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
         sdk = await TacSdk.create({ network: Network.TESTNET });
     });
 
+    afterAll(async () => {
+        if (sdk) {
+            await sdk.closeConnections();
+        }
+    });
+
     it('creates FT asset from provided testnet address via AssetFactory', async () => {
         const ft = await AssetFactory.from(sdk.config, { address: FT_ADDRESS, tokenType: AssetType.FT });
         expect(ft.type).toBe(AssetType.FT);
