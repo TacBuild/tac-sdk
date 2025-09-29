@@ -30,6 +30,7 @@ All notable changes to this project will be documented in this file.
 - Methods in `OperationTracker` and `sendCrossChainTransaction(s)` in `TacSDK` now accept optional `waitOptions` argument. Example:
 - Remove `multicallAddress` and `multicallABI` from SDK params.
 - Remove evm contract's bytecode from artifacts. Use interfaces and abis only.
+- Renamed `AssetBridgingData` to `AssetLike`.
 
 ```typescript
 async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>)
