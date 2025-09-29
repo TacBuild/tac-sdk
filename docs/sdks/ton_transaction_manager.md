@@ -87,6 +87,7 @@ Returns an object containing:
 - **`InsufficientBalanceError`**: Thrown when sender has insufficient TON balance
 - **`SimulationError`**: Thrown when transaction simulation fails
 - **`ContractError`**: Thrown when required contracts are not deployed
+- **`WalletError`**: Thrown when the transaction fails to send to the blockchain
 
 ---
 
@@ -228,6 +229,8 @@ try {
     console.error('Simulation failed:', error.message);
   } else if (error instanceof ContractError) {
     console.error('Contract not deployed:', error.message);
+  } else if (error instanceof WalletError) {
+    console.error('Transaction send failed:', error.message);
   } else {
     console.error('Transaction failed:', error.message);
   }

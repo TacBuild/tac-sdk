@@ -2,6 +2,7 @@ import { Cell } from '@ton/ton';
 
 import { FT, NFT, TON } from '../assets';
 import { missingFeeParamsError, missingGasLimitError, missingTvmExecutorFeeError } from '../errors';
+import { sendCrossChainTransactionFailedError } from '../errors/instances';
 import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator, ITONTransactionManager } from '../interfaces';
 import type { SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
@@ -221,8 +222,14 @@ export class TONTransactionManager implements ITONTransactionManager {
             this.config.TONParams.contractOpener,
         );
 
+        if (!sendTransactionResult.success || sendTransactionResult.error) {
+            throw sendCrossChainTransactionFailedError(
+                sendTransactionResult.error?.message ?? 'Transaction failed to send',
+            );
+        }
+
         const shouldWaitForOperationId = tx.options?.waitOperationId ?? true;
-        
+
         if (!shouldWaitForOperationId) {
             return { sendTransactionResult, ...transactionLinker };
         }
@@ -254,7 +261,17 @@ export class TONTransactionManager implements ITONTransactionManager {
         await TON.checkBalance(sender, this.config, transactions);
         this.logger.debug(`Sending transactions: ${formatObjectForLogging(transactionLinkers)}`);
 
-        await sender.sendShardTransactions(transactions, this.config.network, this.config.TONParams.contractOpener);
+        const results = await sender.sendShardTransactions(
+            transactions,
+            this.config.network,
+            this.config.TONParams.contractOpener,
+        );
+
+        for (const result of results) {
+            if (!result.success || result.error) {
+                throw sendCrossChainTransactionFailedError(result.error?.message ?? 'Transaction failed to send');
+            }
+        }
 
         const shouldWaitForOperationIds = options?.waitOperationIds ?? true;
         return shouldWaitForOperationIds

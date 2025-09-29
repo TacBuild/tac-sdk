@@ -104,3 +104,6 @@ export const missingJettonDataError = new MetadataError('Jetton data should be a
 
 export const zeroRawAmountError = (assetAddress: string) =>
     new TokenError(`FT asset with zero rawAmount/amount is not allowed: ${assetAddress}`, 130);
+
+export const sendCrossChainTransactionFailedError = (msg: string) =>
+    new WalletError(`failed to send cross chain transaction: ${msg}`, 131);
