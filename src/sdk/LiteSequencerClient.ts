@@ -1,5 +1,5 @@
 import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
-import { convertCurrencyFetchError, getTONFeeInfoFetchError, simulationFetchError } from '../errors/instances';
+import { convertCurrencyFetchError, convertCurrencyZeroValueError, getTONFeeInfoFetchError, simulationFetchError } from '../errors/instances';
 import { IHttpClient, ILiteSequencerClient } from '../interfaces';
 import {
     ConvertCurrencyResponse,
@@ -200,6 +200,10 @@ export class LiteSequencerClient implements ILiteSequencerClient {
     }
 
     async convertCurrency(params: ConvertCurrencyParams): Promise<ConvertedCurrencyResult> {
+        if (params.value === 0n) {
+            throw convertCurrencyZeroValueError;
+        }
+
         try {
             const payload = {
                 currency: params.currency,
