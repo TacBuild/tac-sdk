@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import {
+    ConsoleLogger,
     EvmProxyMsg,
     IOperationTracker,
     Network,
@@ -10,7 +11,6 @@ import {
     TacSdk,
     WaitOptions,
 } from '../src';
-import { ConsoleLogger } from '../src';
 
 interface TransactionContext {
     operationTracker: IOperationTracker;
@@ -110,8 +110,7 @@ const bridgeTonSawSender = async (amount: number) => {
         evmProxyMsg,
         sender,
         assets,
-        { allowSimulationError: true, calculateRollbackFee: false },
-        manualTrackingOptions,
+        { allowSimulationError: true, calculateRollbackFee: false, waitOptions: manualTrackingOptions },
     );
 
     tacSdk.closeConnections();
