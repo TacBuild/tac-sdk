@@ -45,7 +45,7 @@ export class Simulator implements ISimulator {
         Validator.validateEVMAddresses(evmValidExecutors);
         Validator.validateTVMAddresses(tvmValidExecutors);
 
-        const aggregatedData = await aggregateTokens(assets);
+        const aggregatedData = aggregateTokens(assets);
         const shardCount = aggregatedData.jettons.length || 1;
         const transactionLinker = generateTransactionLinker(sender.getSenderAddress(), shardCount);
 

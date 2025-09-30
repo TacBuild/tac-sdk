@@ -93,7 +93,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         const { evmValidExecutors = [], tvmValidExecutors = [] } = options || {};
 
         Validator.validateEVMAddress(evmProxyMsg.evmTargetAddress);
-        const aggregatedData = await aggregateTokens(assets);
+        const aggregatedData = aggregateTokens(assets);
 
         Validator.validateEVMAddresses(evmValidExecutors);
         Validator.validateTVMAddresses(tvmValidExecutors);
@@ -286,7 +286,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         if (txsRequiringValidation.length) {
             // Aggregate only assets from txs that require validation and validate once per unique asset
             const assetsToValidate: Asset[] = txsRequiringValidation.flatMap((tx) => tx.assets ?? []);
-            const aggregatedData = await aggregateTokens(assetsToValidate);
+            const aggregatedData = aggregateTokens(assetsToValidate);
 
             await Promise.all(
                 [

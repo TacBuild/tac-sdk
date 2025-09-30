@@ -4,7 +4,7 @@ import { sha256_sync } from 'ton-crypto';
 
 import type { FT, NFT, TON } from '../assets';
 import { AssetFactory } from '../assets';
-import { invalidMethodNameError, zeroRawAmountError } from '../errors';
+import { invalidMethodNameError, TokenError, zeroRawAmountError } from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import {
@@ -238,46 +238,35 @@ export function getBouncedAddress(tvmAddress: string): string {
     });
 }
 
-export async function aggregateTokens(assets?: Asset[]): Promise<{
+export function aggregateTokens(assets?: Asset[]): {
     jettons: FT[];
     nfts: NFT[];
     ton?: TON;
-}> {
-    const uniqueAssetsMap: Map<string, Asset> = new Map();
+} {
+    const jettonsMap: Map<string, FT> = new Map();
+    const nftsMap: Map<string, NFT> = new Map();
     let ton: TON | undefined;
 
-    for await (const asset of assets ?? []) {
-        if (asset.type !== AssetType.FT) continue;
-        if (asset.rawAmount === 0n) {
+    for (const asset of assets ?? []) {
+        if (asset.rawAmount === 0n && asset.type === AssetType.FT) {
             throw zeroRawAmountError(asset.address || 'NATIVE TON');
         }
 
-        if (!asset.address) {
-            ton = ton ? (ton.addRawAmount(asset.rawAmount) as TON) : (asset.clone as TON);
-            continue;
+        if (asset.type === AssetType.FT) {
+            if (!asset.address) {
+                ton = ton ? (ton.addRawAmount(asset.rawAmount) as TON) : (asset.clone as TON);
+            } else {
+                const existing = jettonsMap.get(asset.address);
+                jettonsMap.set(asset.address, (existing ? existing.addRawAmount(asset.rawAmount) : asset.clone) as FT);
+            }
+        } else if (asset.type === AssetType.NFT) {
+            nftsMap.set(asset.address, asset.clone as NFT);
         }
-
-        let jetton = uniqueAssetsMap.get(asset.address);
-        if (!jetton) {
-            jetton = asset.clone;
-        } else {
-            jetton = jetton.addRawAmount(asset.rawAmount);
-        }
-
-        uniqueAssetsMap.set(asset.address, jetton);
     }
-    const jettons: FT[] = Array.from(uniqueAssetsMap.values()) as FT[];
-
-    uniqueAssetsMap.clear();
-    for await (const asset of assets ?? []) {
-        if (asset.type !== AssetType.NFT) continue;
-        uniqueAssetsMap.set(asset.address, asset.clone);
-    }
-    const nfts: NFT[] = Array.from(uniqueAssetsMap.values()) as NFT[];
 
     return {
-        jettons,
-        nfts,
+        jettons: Array.from(jettonsMap.values()),
+        nfts: Array.from(nftsMap.values()),
         ton,
     };
 }
@@ -289,7 +278,11 @@ export function sha256toBigInt(ContractName: string): bigint {
 }
 
 export function mapAssetsToTonAssets(assets: Asset[]): TONAsset[] {
-    return assets.map((asset) => ({
+    const { jettons, nfts, ton } = aggregateTokens(assets);
+    const result: Asset[] = [...jettons, ...nfts];
+    if (ton) result.push(ton);
+
+    return result.map((asset) => ({
         amount: asset.rawAmount.toString(),
         tokenAddress: asset.address || '',
         assetType: asset.type,
@@ -321,8 +314,16 @@ export async function normalizeAsset(config: IConfiguration, input: AssetLike): 
         const asset = await AssetFactory.from(config, ftArgs);
         const rawAmount = 'rawAmount' in input ? input.rawAmount : undefined;
         const amount = 'amount' in input ? input.amount : 0;
+
+        if (!rawAmount && !amount && asset.type === AssetType.FT) {
+            throw zeroRawAmountError(asset.address || 'NATIVE TON');
+        }
+
         return rawAmount ? asset.withRawAmount(rawAmount) : asset.withAmount(amount);
     } catch (e) {
+        if (e instanceof TokenError && e.errorCode === zeroRawAmountError('').errorCode) {
+            throw e;
+        }
         console.warn('Failed to normalize FT asset', e);
     }
 

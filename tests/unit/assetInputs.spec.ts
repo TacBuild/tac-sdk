@@ -80,6 +80,12 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
         expect(a4.type).toBe(AssetType.NFT);
     }, 50000);
 
+    it('normalizeAsset throws when FT amount is not provided or zero', async () => {
+        await expect(normalizeAsset(sdk.config, { address: FT_ADDRESS })).rejects.toThrow(/FT asset with zero rawAmount\/amount is not allowed:/);
+        await expect(normalizeAsset(sdk.config, { address: FT_ADDRESS, amount: 0 })).rejects.toThrow(/FT asset with zero rawAmount\/amount is not allowed:/);
+        await expect(normalizeAsset(sdk.config, { address: FT_ADDRESS, rawAmount: 0n })).rejects.toThrow(/FT asset with zero rawAmount\/amount is not allowed:/);
+    }, 50000);
+
     it('normalizeAsset returns input when it is already an Asset instance', async () => {
         const ft = await AssetFactory.from(sdk.config, { address: FT_ADDRESS, tokenType: AssetType.FT });
         const normalized = await normalizeAsset(sdk.config, ft);
