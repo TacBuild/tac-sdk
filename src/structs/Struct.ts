@@ -1,6 +1,6 @@
 import { SandboxContract } from '@ton/sandbox';
 import { OpenedContract } from '@ton/ton';
-import { AbstractProvider, Addressable } from 'ethers';
+import { AbstractProvider } from 'ethers';
 
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
@@ -53,7 +53,12 @@ export type TACParams = {
     /**
      * Address of TAC settings contract. Use only for tests.
      */
-    settingsAddress?: string | Addressable;
+    settingsAddress?: string;
+
+    /**
+     * Address of TAC smart account factory contract. Use only for tests.
+     */
+    saFactoryAddress?: string;
 };
 
 export type TONParams = {

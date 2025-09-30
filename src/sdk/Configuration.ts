@@ -9,6 +9,7 @@ import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct'
 import { Network, TACParams, TONParams } from '../structs/Struct';
 import { getAddressString, sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
+import { AddressLike } from 'ethers';
 
 export class Configuration implements IConfiguration {
     readonly network: Network;
@@ -110,6 +111,7 @@ export class Configuration implements IConfiguration {
         const artifacts = network === Network.MAINNET ? mainnet : network === Network.TESTNET ? testnet : dev;
         let provider: ethers.AbstractProvider;
         let settingsAddress: string;
+        let saFactoryAddress: string;
         if (network === Network.DEV) {
             if (!TACParams || !TACParams.provider) {
                 throw new Error('For dev network, a custom provider must be provided in TACParams');
@@ -118,10 +120,15 @@ export class Configuration implements IConfiguration {
             if (!TACParams.settingsAddress) {
                 throw new Error('For dev network, a custom settings address must be provided in TACParams');
             }
-            settingsAddress = TACParams.settingsAddress.toString();
+            settingsAddress = TACParams.settingsAddress;
+            if (!TACParams.saFactoryAddress) {
+                throw new Error('For dev network, a custom smart account factory address must be provided in TACParams');
+            }
+            saFactoryAddress = TACParams.saFactoryAddress;
         } else {
             provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
-            settingsAddress = TACParams?.settingsAddress?.toString() ?? artifacts.TAC_SETTINGS_ADDRESS;
+            settingsAddress = TACParams?.settingsAddress ?? artifacts.TAC_SETTINGS_ADDRESS;
+            saFactoryAddress = TACParams?.saFactoryAddress ?? artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS;
         }
 
         Validator.validateEVMAddress(settingsAddress);
@@ -159,7 +166,7 @@ export class Configuration implements IConfiguration {
 
         const TacSAFactoryAbi = artifacts.tac.compilationArtifacts.ISAFactory.abi;
         const smartAccountFactory = new ethers.Contract(
-            artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS,
+            saFactoryAddress,
             TacSAFactoryAbi,
             provider,
         ) as unknown as ISAFactory;
