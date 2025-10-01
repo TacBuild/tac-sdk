@@ -1,6 +1,14 @@
 import { ethers, Interface } from 'ethers';
 
-import { AmountChange, ApproveHookData, CustomHookData, Hook, HookType, ReplacementType, TransferHookData } from './AgnosticStructs';
+import {
+    AmountChange,
+    ApproveHookData,
+    CustomHookData,
+    Hook,
+    HookType,
+    ReplacementType,
+    TransferHookData,
+} from './AgnosticStructs';
 
 export class HooksHandler {
     /**
@@ -138,5 +146,4 @@ export class HooksHandler {
             this.createFullBalanceApproveHook(approval.token, approval.spender, approval.isFromSA ?? true),
         );
     }
-
 }

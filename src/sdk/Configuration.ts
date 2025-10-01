@@ -121,7 +121,9 @@ export class Configuration implements IConfiguration {
             }
             settingsAddress = TACParams.settingsAddress;
             if (!TACParams.saFactoryAddress) {
-                throw new Error('For dev network, a custom smart account factory address must be provided in TACParams');
+                throw new Error(
+                    'For dev network, a custom smart account factory address must be provided in TACParams',
+                );
             }
             saFactoryAddress = TACParams.saFactoryAddress;
         } else {

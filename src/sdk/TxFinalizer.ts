@@ -74,7 +74,7 @@ export class TonTxFinalizer {
                     const logMessage = error instanceof Error ? error.message : error;
                     console.warn(`Failed to fetch adjacent transactions for ${hash}:`, logMessage);
                 }
-                
+
                 if (i > 0) {
                     await sleep(delay);
                 }

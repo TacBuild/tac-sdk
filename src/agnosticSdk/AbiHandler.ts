@@ -54,12 +54,12 @@ export class AbiHandler {
         if (!func.name || !Array.isArray(func.inputs)) {
             return null;
         }
-    
+
         // Build parameter list with proper tuple handling
         const params = func.inputs
             .map((input: any) => {
                 const paramType = this._buildParameterType(input);
-                
+
                 // Add parameter name if available
                 if (input.name) {
                     return `${paramType} ${input.name}`;
@@ -67,7 +67,7 @@ export class AbiHandler {
                 return paramType;
             })
             .join(', ');
-    
+
         // Build return types if available
         let returnTypes = '';
         if (func.outputs && func.outputs.length > 0) {
@@ -80,14 +80,14 @@ export class AbiHandler {
                     return outputType;
                 })
                 .join(', ');
-    
+
             returnTypes = ` returns (${outputs})`;
         }
-    
+
         // Build full signature
         const stateMutability = func.stateMutability || 'nonpayable';
         let mutabilityKeyword = '';
-    
+
         if (stateMutability === 'view') {
             mutabilityKeyword = ' view';
         } else if (stateMutability === 'pure') {
@@ -95,10 +95,10 @@ export class AbiHandler {
         } else if (stateMutability === 'payable') {
             mutabilityKeyword = ' payable';
         }
-    
+
         return `function ${func.name}(${params})${mutabilityKeyword} external${returnTypes}`;
     }
-    
+
     /**
      * Build parameter type string, handling tuples/structs properly
      */
@@ -120,7 +120,7 @@ export class AbiHandler {
             }
             return 'tuple'; // fallback
         }
-        
+
         if (param.type === 'tuple[]') {
             // Handle array of structs
             if (param.components && Array.isArray(param.components)) {
@@ -138,7 +138,7 @@ export class AbiHandler {
             }
             return 'tuple[]'; // fallback
         }
-        
+
         // Handle regular types and arrays
         return param.type;
     }

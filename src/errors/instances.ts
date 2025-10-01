@@ -61,7 +61,8 @@ export const prepareMessageGroupError = (isBocSizeValid: boolean, isDepthValid: 
 
 export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 116);
 
-export const allEndpointsFailedError = (inner: unknown) => new FetchError('All endpoints failed, last err: ' + (inner as Error).message, 117, inner);
+export const allEndpointsFailedError = (inner: unknown) =>
+    new FetchError('All endpoints failed, last err: ' + (inner as Error).message, 117, inner);
 
 export const allContractOpenerFailedError = (inner: unknown) =>
     new FetchError('All contract opener failed', 118, inner);
@@ -108,4 +109,7 @@ export const zeroRawAmountError = (assetAddress: string) =>
 export const sendCrossChainTransactionFailedError = (msg: string) =>
     new WalletError(`failed to send cross chain transaction: ${msg}`, 131);
 
-export const convertCurrencyNegativeOrZeroValueError = new FormatError('Value cannot be negative or zero for currency conversion', 132);
+export const convertCurrencyNegativeOrZeroValueError = new FormatError(
+    'Value cannot be negative or zero for currency conversion',
+    132,
+);

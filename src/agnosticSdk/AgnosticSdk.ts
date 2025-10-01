@@ -2,7 +2,7 @@ import { AGNOSTIC_PROXY_ADDRESS as MAINNET_AGNOSTIC_PROXY_ADDRESS } from '../../
 import { AGNOSTIC_PROXY_ADDRESS as TESTNET_AGNOSTIC_PROXY_ADDRESS } from '../../artifacts/testnet';
 import { Network } from '../structs/Struct';
 import { AbiHandler } from './AbiHandler';
-import { AmountChange, Hook, NFTData,ZapCall  } from './AgnosticStructs';
+import { AmountChange, Hook, NFTData, ZapCall } from './AgnosticStructs';
 import { DebugHelpers } from './DebugHelpers';
 import { HooksHandler } from './HooksHandler';
 import { ReplacementHelper } from './ReplacementHelper';
@@ -12,7 +12,7 @@ import { ReplacementHelper } from './ReplacementHelper';
  * @param network - The network to use (MAINNET || TESTNET || DEV)
  * @param agnosticProxyAddress - The address of the agnostic proxy(optional)
  */
-export class AgnosticProxySDK  {
+export class AgnosticProxySDK {
     private agnosticProxyAddress: string;
     private abiHandler: AbiHandler;
     private replacementHelper: ReplacementHelper;
@@ -44,7 +44,6 @@ export class AgnosticProxySDK  {
         this.abiHandler.addContractInterface(address, abi);
         return this;
     }
-    
 
     /**
      * Create a custom hook with optional dynamic value replacement
@@ -64,7 +63,13 @@ export class AgnosticProxySDK  {
             dynamicReplacements?: AmountChange[];
         } = {},
     ): Hook {
-        return this.hooksHandler.createCustomHook(contractAddress, functionName, params, this.abiHandler.contractInterfaces, options);
+        return this.hooksHandler.createCustomHook(
+            contractAddress,
+            functionName,
+            params,
+            this.abiHandler.contractInterfaces,
+            options,
+        );
     }
 
     /**
@@ -147,7 +152,14 @@ export class AgnosticProxySDK  {
         token: string,
         balanceAddress: string,
     ): AmountChange {
-        return this.replacementHelper.calculateReplacementData(contractAddress, functionName, parameterName, token, balanceAddress, this.abiHandler.contractInterfaces);
+        return this.replacementHelper.calculateReplacementData(
+            contractAddress,
+            functionName,
+            parameterName,
+            token,
+            balanceAddress,
+            this.abiHandler.contractInterfaces,
+        );
     }
 
     /**
@@ -213,7 +225,15 @@ export class AgnosticProxySDK  {
             suggestions: string[];
         };
     } {
-        return this.replacementHelper.buildReplacementInteractive(contractAddress, functionName, parameterName, token, balanceAddress, this.abiHandler.contractInterfaces, options);
+        return this.replacementHelper.buildReplacementInteractive(
+            contractAddress,
+            functionName,
+            parameterName,
+            token,
+            balanceAddress,
+            this.abiHandler.contractInterfaces,
+            options,
+        );
     }
 
     /**
@@ -270,7 +290,13 @@ export class AgnosticProxySDK  {
         label1: string = 'ZapCall 1',
         label2: string = 'ZapCall 2',
     ): void {
-        return this.debugHelpers.compareZapCalls(zapCall1, zapCall2, label1, label2, this.abiHandler.contractInterfaces);
+        return this.debugHelpers.compareZapCalls(
+            zapCall1,
+            zapCall2,
+            label1,
+            label2,
+            this.abiHandler.contractInterfaces,
+        );
     }
 
     getAgnosticCallParams(): { evmTargetAddress: string; methodName: string } {

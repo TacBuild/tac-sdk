@@ -1,9 +1,8 @@
 import { ethers, Interface } from 'ethers';
 
-import { Hook, HookType,NFTData, ZapCall } from './AgnosticStructs';
+import { Hook, HookType, NFTData, ZapCall } from './AgnosticStructs';
 
 export class DebugHelpers {
-
     /**
      * Build a complete ZapCall
      * @param hooks - The hooks of the zap call
@@ -17,7 +16,7 @@ export class DebugHelpers {
             bridgeData: {
                 tokens: bridgeTokens,
                 nfts: bridgeNFTs,
-                isRequired: bridgeTokens.length > 0 || bridgeNFTs.length > 0 ? true : false,
+                isRequired: bridgeTokens.length > 0 || bridgeNFTs.length > 0,
             },
         };
     }
@@ -237,7 +236,10 @@ export class DebugHelpers {
      * @param zapCall - The zap call to get the breakdown for
      * @returns The breakdown of the zap call
      */
-    public getZapCallBreakdown(zapCall: ZapCall, contractInterfaces: Map<string, Interface>): {
+    public getZapCallBreakdown(
+        zapCall: ZapCall,
+        contractInterfaces: Map<string, Interface>,
+    ): {
         totalHooks: number;
         hookTypes: { [key: string]: number };
         gasEstimate: number;
