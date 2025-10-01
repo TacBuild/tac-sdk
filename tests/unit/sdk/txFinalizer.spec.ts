@@ -80,7 +80,7 @@ describe('TonTxFinalizer', () => {
         await expect(finalizer.trackTransactionTree('hash-1', 1)).rejects.toThrow('Transaction failed');
     });
 
-    it('retries rate limited requests using exponential backoff', async () => {
+    it('retries rate limited requests', async () => {
         const error = new Error('Request failed with status code 429');
         const httpClient = {
             get: jest

@@ -1,6 +1,6 @@
 import { mainnet, testnet } from '../../artifacts';
 import { allEndpointsFailedError } from '../errors';
-import { convertCurrencyZeroValueError } from '../errors/instances';
+import { convertCurrencyNegativeOrZeroValueError } from '../errors/instances';
 import { ILiteSequencerClient, ILiteSequencerClientFactory, ILogger, IOperationTracker } from '../interfaces';
 import {
     ConvertCurrencyParams,
@@ -309,8 +309,8 @@ export class OperationTracker implements IOperationTracker {
         params: ConvertCurrencyParams,
         waitOptions?: WaitOptions<ConvertedCurrencyResult>,
     ): Promise<ConvertedCurrencyResult> {
-        if (params.value === 0n) {
-            throw convertCurrencyZeroValueError;
+        if (params.value <= 0n) {
+            throw convertCurrencyNegativeOrZeroValueError;
         }
         this.logger.debug(`Converting currency: ${formatObjectForLogging(params)}`);
 

@@ -21,6 +21,7 @@ import {
     TransactionLinker,
     WaitOptions,
 } from '../../src';
+import { convertCurrencyNegativeOrZeroValueError } from '../../src/errors/instances';
 
 // Mock implementations
 class MockLogger implements ILogger {
@@ -441,6 +442,22 @@ describe('OperationTracker', () => {
     });
 
     describe('convertCurrency', () => {
+        it('should throw error if value negative or zero', async () => {
+            let params: ConvertCurrencyParams = {
+                value: 0n,
+                currency: CurrencyType.TON,
+            };
+
+            await expect(operationTracker.convertCurrency(params)).rejects.toThrow(convertCurrencyNegativeOrZeroValueError);
+
+            params = {
+                value: -2n,
+                currency: CurrencyType.TON,
+            };
+
+            await expect(operationTracker.convertCurrency(params)).rejects.toThrow(convertCurrencyNegativeOrZeroValueError);
+        });
+
         it('should successfully convert currency using first client', async () => {
             const params: ConvertCurrencyParams = {
                 value: 123n,
@@ -563,7 +580,9 @@ describe('OperationTracker', () => {
 
             expect(result).toBe(expectedId);
             expect(mockClients[0].getOperationIdByTransactionHash).toHaveBeenCalledWith(transactionHash);
-            expect(mockLogger.debug).toHaveBeenCalledWith(`Getting operation ID for transactionHash: "${transactionHash}"`);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `Getting operation ID for transactionHash: "${transactionHash}"`,
+            );
             expect(mockLogger.debug).toHaveBeenCalledWith('Operation ID retrieved successfully');
         });
 
@@ -590,7 +609,9 @@ describe('OperationTracker', () => {
             expect(result).toBe(expectedId);
             expect(mockClients[0].getOperationIdByTransactionHash).toHaveBeenCalledWith(transactionHash);
             expect(mockClients[1].getOperationIdByTransactionHash).toHaveBeenCalledWith(transactionHash);
-            expect(mockLogger.warn).toHaveBeenCalledWith('Failed to get OperationId by transactionHash using one of the endpoints');
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                'Failed to get OperationId by transactionHash using one of the endpoints',
+            );
         });
 
         it('should throw error if all endpoints fail', async () => {
@@ -601,7 +622,9 @@ describe('OperationTracker', () => {
             mockClients[1].getOperationIdByTransactionHash.mockRejectedValue(error);
 
             await expect(operationTracker.getOperationIdByTransactionHash(transactionHash)).rejects.toThrow();
-            expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to get operation id by transactionHash');
+            expect(mockLogger.error).toHaveBeenCalledWith(
+                'All endpoints failed to get operation id by transactionHash',
+            );
         });
 
         it('should use waitUntilSuccess when wait options provided', async () => {
@@ -663,7 +686,9 @@ describe('OperationTracker', () => {
 
             expect(result).toBe(expectedResult);
             expect(mockClients[0].simulateTACMessage).toHaveBeenCalledWith(params);
-            expect(mockLogger.debug).toHaveBeenCalledWith(`Simulating TAC message: ${JSON.stringify(params, (k, v) => typeof v === 'bigint' ? v.toString() : v)}`);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `Simulating TAC message: ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}`,
+            );
             expect(mockLogger.debug).toHaveBeenCalledWith('Simulation result retrieved successfully');
         });
 
@@ -815,7 +840,9 @@ describe('OperationTracker', () => {
 
             expect(result).toBe(expectedResult);
             expect(mockClients[0].getTVMExecutorFee).toHaveBeenCalledWith(params);
-            expect(mockLogger.debug).toHaveBeenCalledWith(`get TVM executor fee: ${JSON.stringify(params, (k, v) => typeof v === 'bigint' ? v.toString() : v)}`);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `get TVM executor fee: ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}`,
+            );
             expect(mockLogger.debug).toHaveBeenCalledWith('Suggested TVM executor fee retrieved successfully');
         });
 

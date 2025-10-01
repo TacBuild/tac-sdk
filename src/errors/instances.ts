@@ -108,4 +108,4 @@ export const zeroRawAmountError = (assetAddress: string) =>
 export const sendCrossChainTransactionFailedError = (msg: string) =>
     new WalletError(`failed to send cross chain transaction: ${msg}`, 131);
 
-export const convertCurrencyZeroValueError = new FormatError('Value cannot be zero for currency conversion', 132);
+export const convertCurrencyNegativeOrZeroValueError = new FormatError('Value cannot be negative or zero for currency conversion', 132);
