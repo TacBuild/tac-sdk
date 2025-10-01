@@ -16,8 +16,16 @@ export class ConsoleLogger implements ILogger {
 }
 
 export class NoopLogger implements ILogger {
-    debug(): void {}
-    info(): void {}
-    warn(): void {}
-    error(): void {}
+    debug(..._arg: unknown[]): void {
+        void _arg;
+    }
+    info(..._arg: unknown[]): void {
+        void _arg;
+    }
+    warn(..._arg: unknown[]): void {
+        void _arg;
+    }
+    error(..._arg: unknown[]): void {
+        void _arg;
+    }
 }

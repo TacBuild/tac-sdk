@@ -2,6 +2,9 @@
 /dist/
 /node_modules/
 
+/artifacts/**/ton/internal
+/artifacts/**/tac/internal
+
 .env
 
 # Yarn >2.0.0
@@ -10,3 +13,4 @@
 !.yarn/plugins
 !.yarn/sdks
 !.yarn/versions
+/coverage/

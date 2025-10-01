@@ -2,11 +2,25 @@ import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers } from 'ethers';
 import { sha256_sync } from 'ton-crypto';
 
-import { FT, NFT, TON } from '../assets';
-import { invalidMethodNameError } from '../errors';
-import { Asset } from '../interfaces';
+import type { FT, NFT, TON } from '../assets';
+import { AssetFactory } from '../assets';
+import { invalidMethodNameError, TokenError, zeroRawAmountError } from '../errors';
+import { Asset, IConfiguration } from '../interfaces';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
-import { AssetType, EvmProxyMsg, FeeParams, TransactionLinker, ValidExecutors, WaitOptions } from '../structs/Struct';
+import {
+    AssetFromFTArg,
+    AssetFromNFTCollectionArg,
+    AssetFromNFTItemArg,
+    AssetLike,
+    AssetType,
+    EvmProxyMsg,
+    FeeParams,
+    NFTAddressType,
+    TONAsset,
+    TransactionLinker,
+    ValidExecutors,
+    WaitOptions,
+} from '../structs/Struct';
 import { SOLIDITY_METHOD_NAME_REGEX, SOLIDITY_SIGNATURE_REGEX } from './Consts';
 
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -152,18 +166,22 @@ export const generateFeeData = (feeParams?: FeeParams): Cell | undefined => {
     }
 };
 
-export async function waitUntilSuccess<T, A extends unknown[]>(
-    options: WaitOptions<T> = {},
+export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[] = unknown[]>(
+    options: WaitOptions<T, TContext> = {},
     operation: (...args: A) => Promise<T>,
+    operationDescription?: string,
     ...args: A
 ): Promise<T> {
     const timeout = options.timeout ?? 300000;
     const maxAttempts = options.maxAttempts ?? 30;
     const delay = options.delay ?? 10000;
     const successCheck = options.successCheck;
+    const context = options.context;
+
+    const contextPrefix = operationDescription ? `[${operationDescription}] ` : '';
 
     options.logger?.debug(
-        `Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`,
+        `${contextPrefix}Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`,
     );
     const startTime = Date.now();
     let attempt = 1;
@@ -173,28 +191,37 @@ export async function waitUntilSuccess<T, A extends unknown[]>(
         const elapsedTime = currentTime - startTime;
         try {
             const result = await operation(...args);
-            if (!result) {
+            if (result === undefined || result === null) {
                 throw new Error(`Empty result`);
             }
-            options.logger?.debug(`Result: ${formatObjectForLogging(result)}`);
-            if (successCheck && !successCheck(result)) {
+            options.logger?.debug(`${contextPrefix}Result: ${formatObjectForLogging(result)}`);
+            if (successCheck && !successCheck(result, context)) {
                 throw new Error(`Result is not successful`);
             }
-            options.logger?.debug(`Attempt ${attempt} successful`);
+            options.logger?.debug(`${contextPrefix}Attempt ${attempt} successful`);
+
+            // Execute custom onSuccess callback if provided
+            if (options.onSuccess) {
+                try {
+                    await options.onSuccess(result, context);
+                } catch (callbackError) {
+                    options.logger?.warn(`${contextPrefix}onSuccess callback error: ${callbackError}`);
+                }
+            }
 
             return result;
         } catch (error) {
             if (elapsedTime >= timeout) {
-                options.logger?.debug(`Timeout after ${elapsedTime}ms`);
+                options.logger?.debug(`${contextPrefix}Timeout after ${elapsedTime}ms`);
                 throw error;
             }
 
             if (attempt >= maxAttempts) {
-                options.logger?.debug(`Max attempts (${maxAttempts}) reached`);
+                options.logger?.debug(`${contextPrefix}Max attempts (${maxAttempts}) reached`);
                 throw error;
             }
-            options.logger?.debug(`Error on attempt ${attempt}: ${error}`);
-            options.logger?.debug(`Waiting ${delay}ms before next attempt`);
+            options.logger?.debug(`${contextPrefix}Error on attempt ${attempt}: ${error}`);
+            options.logger?.debug(`${contextPrefix}Waiting ${delay}ms before next attempt`);
             await sleep(delay);
             attempt++;
         }
@@ -211,43 +238,35 @@ export function getBouncedAddress(tvmAddress: string): string {
     });
 }
 
-export async function aggregateTokens(assets?: Asset[]): Promise<{
+export function aggregateTokens(assets?: Asset[]): {
     jettons: FT[];
     nfts: NFT[];
     ton?: TON;
-}> {
-    const uniqueAssetsMap: Map<string, Asset> = new Map();
+} {
+    const jettonsMap: Map<string, FT> = new Map();
+    const nftsMap: Map<string, NFT> = new Map();
     let ton: TON | undefined;
 
-    for await (const asset of assets ?? []) {
-        if (asset.type !== AssetType.FT) continue;
-
-        if (!asset.address) {
-            ton = ton ? await ton.addAmount({ rawAmount: asset.rawAmount }) : (asset.clone as TON);
-            continue;
+    for (const asset of assets ?? []) {
+        if (asset.rawAmount === 0n && asset.type === AssetType.FT) {
+            throw zeroRawAmountError(asset.address || 'NATIVE TON');
         }
 
-        let jetton = uniqueAssetsMap.get(asset.address);
-        if (!jetton) {
-            jetton = asset.clone;
-        } else {
-            jetton = await jetton.addAmount({ rawAmount: asset.rawAmount });
+        if (asset.type === AssetType.FT) {
+            if (!asset.address) {
+                ton = ton ? (ton.addRawAmount(asset.rawAmount) as TON) : (asset.clone as TON);
+            } else {
+                const existing = jettonsMap.get(asset.address);
+                jettonsMap.set(asset.address, (existing ? existing.addRawAmount(asset.rawAmount) : asset.clone) as FT);
+            }
+        } else if (asset.type === AssetType.NFT) {
+            nftsMap.set(asset.address, asset.clone as NFT);
         }
-
-        uniqueAssetsMap.set(asset.address, jetton);
     }
-    const jettons: FT[] = Array.from(uniqueAssetsMap.values()) as FT[];
-
-    uniqueAssetsMap.clear();
-    for await (const asset of assets ?? []) {
-        if (asset.type !== AssetType.NFT) continue;
-        uniqueAssetsMap.set(asset.address, asset.clone);
-    }
-    const nfts: NFT[] = Array.from(uniqueAssetsMap.values()) as NFT[];
 
     return {
-        jettons,
-        nfts,
+        jettons: Array.from(jettonsMap.values()),
+        nfts: Array.from(nftsMap.values()),
         ton,
     };
 }
@@ -258,4 +277,81 @@ export function sha256toBigInt(ContractName: string): bigint {
     return BigInt('0x' + hash.toString('hex'));
 }
 
+export function mapAssetsToTonAssets(assets: Asset[]): TONAsset[] {
+    const { jettons, nfts, ton } = aggregateTokens(assets);
+    const result: Asset[] = [...jettons, ...nfts];
+    if (ton) result.push(ton);
 
+    return result.map((asset) => ({
+        amount: asset.rawAmount.toString(),
+        tokenAddress: asset.address || '',
+        assetType: asset.type,
+    }));
+}
+
+export async function normalizeAsset(config: IConfiguration, input: AssetLike): Promise<Asset> {
+    if (typeof (input as Asset).generatePayload === 'function') {
+        return input as Asset;
+    }
+
+    const address = 'address' in input && input.address ? input.address : '';
+
+    if ('itemIndex' in input) {
+        const args: AssetFromNFTCollectionArg = {
+            address,
+            tokenType: AssetType.NFT,
+            addressType: NFTAddressType.COLLECTION,
+            index: BigInt(input.itemIndex),
+        };
+        return await AssetFactory.from(config, args as AssetFromNFTCollectionArg);
+    }
+
+    try {
+        const ftArgs: AssetFromFTArg = {
+            address,
+            tokenType: AssetType.FT,
+        };
+        const asset = await AssetFactory.from(config, ftArgs);
+        const rawAmount = 'rawAmount' in input ? input.rawAmount : undefined;
+        const amount = 'amount' in input ? input.amount : 0;
+
+        if (!rawAmount && !amount && asset.type === AssetType.FT) {
+            throw zeroRawAmountError(asset.address || 'NATIVE TON');
+        }
+
+        return rawAmount ? asset.withRawAmount(rawAmount) : asset.withAmount(amount);
+    } catch (e) {
+        if (e instanceof TokenError && e.errorCode === zeroRawAmountError('').errorCode) {
+            throw e;
+        }
+        console.warn('Failed to normalize FT asset', e);
+    }
+
+    const itemArgs: AssetFromNFTItemArg = {
+        address,
+        tokenType: AssetType.NFT,
+        addressType: NFTAddressType.ITEM,
+    };
+    return await AssetFactory.from(config, itemArgs);
+}
+
+export async function normalizeAssets(config: IConfiguration, assets?: AssetLike[]): Promise<Asset[]> {
+    if (!assets || assets.length === 0) return [];
+    const normalized: Asset[] = [];
+    for (const a of assets) {
+        normalized.push(await normalizeAsset(config, a));
+    }
+    return normalized;
+}
+
+export function getAddressString(cell?: Cell): string {
+    return cell?.beginParse().loadAddress().toString({ bounceable: true, testOnly: false }) ?? '';
+}
+
+export function getNumber(len: number, cell?: Cell): number {
+    return cell?.beginParse().loadUint(len) ?? 0;
+}
+
+export function getString(cell?: Cell): string {
+    return cell?.beginParse().loadStringTail() ?? '';
+}

@@ -1,7 +1,7 @@
 import { Cell } from '@ton/ton';
-import { mainnet, testnet } from '@tonappchain/artifacts';
 import { AbstractProvider, ethers } from 'ethers';
 
+import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
 import { ContractOpener } from '../interfaces';
 import {
     CurrencyType,
@@ -10,7 +10,7 @@ import {
     OperationIdsByShardsKey,
     OperationType,
     StatusInfosByOperationId,
-    SuggestedTONExecutorFee,
+    SuggestedTVMExecutorFee,
     TACSimulationResult,
 } from './Struct';
 
@@ -51,10 +51,10 @@ export type InternalTONParams = {
 
 export type InternalTACParams = {
     provider: AbstractProvider;
-    crossChainLayer: testnet.tac.wrappers.CrossChainLayerTAC | mainnet.tac.wrappers.CrossChainLayerTAC;
-    settings: testnet.tac.wrappers.SettingsTAC | mainnet.tac.wrappers.SettingsTAC;
-    tokenUtils: testnet.tac.wrappers.TokenUtilsTAC | mainnet.tac.wrappers.TokenUtilsTAC;
-    smartAccountFactory: testnet.tac.wrappers.TacSAFactoryTAC | mainnet.tac.wrappers.TacSAFactoryTAC;
+    crossChainLayer: ICrossChainLayer;
+    settings: ISettings;
+    tokenUtils: ITokenUtils;
+    smartAccountFactory: ISAFactory;
     trustedTACExecutors: string[];
     trustedTONExecutors: string[];
     abiCoder: ethers.AbiCoder;
@@ -74,9 +74,16 @@ export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
 
 export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
 
-export type SuggestedTONExecutorFeeResponse = ResponseBase<SuggestedTONExecutorFee>;
+export type SuggestedTVMExecutorFeeResponse = ResponseBase<SuggestedTVMExecutorFee>;
 
 export type ConvertCurrencyResponse = ResponseBase<ConvertedCurrencyRawResult>;
+
+export type OperationIdWithLogIndex = {
+    operationId: string;
+    logIndex: number;
+};
+
+export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogIndex>;
 
 export interface SendResult {
     success: boolean;
@@ -103,6 +110,9 @@ export type ToncenterTransaction = {
         hash: string;
         opcode: string;
     };
+    outMsgs: {
+        hash: string;
+    }[];
 };
 
 export type TransactionDepth = {

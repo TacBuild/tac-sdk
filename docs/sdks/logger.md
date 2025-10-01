@@ -156,10 +156,16 @@ Most SDK components accept an optional logger parameter:
 // TacSdk with custom logger (SDK is silent by default if no logger is provided)
 const sdk = await TacSdk.create({ network: Network.TESTNET }, new ConsoleLogger());
 
-// TransactionManager with console logger
-const transactionManager = new TransactionManager(
+// Transaction Managers with console logger
+const tonTransactionManager = new TONTransactionManager(
   config,
   simulator,
+  operationTracker,
+  new ConsoleLogger()
+);
+
+const tacTransactionManager = new TACTransactionManager(
+  config,
   operationTracker,
   new ConsoleLogger()
 );

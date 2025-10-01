@@ -1,0 +1,1 @@
+export const MAINNET_TON_SETTINGS_ADDRESS = 'EQBpUijPLYC9dcmw8Y-d23E9iX-2HBCupc5oqoYgXnORSRmi';

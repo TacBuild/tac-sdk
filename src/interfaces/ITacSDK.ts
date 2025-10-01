@@ -1,30 +1,32 @@
 import { Wallet } from 'ethers';
 
+import { JettonMinterData, NFTItemData } from '../../artifacts/tonTypes';
 import { FT, NFT } from '../assets';
 import type { SenderAbstraction } from '../sender';
 import {
     AssetFromFTArg,
     AssetFromNFTCollectionArg,
     AssetFromNFTItemArg,
+    AssetLike,
+    BatchCrossChainTxWithAssetLike,
     CrossChainTransactionOptions,
+    CrossChainTransactionsOptions,
     CrosschainTx,
     EVMAddress,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
     NFTAddressType,
-    NFTItemData,
-    OperationIdsByShardsKey,
-    SuggestedTONExecutorFee,
-    TACSimulationRequest,
+    SuggestedTVMExecutorFee,
+    TACSimulationParams,
     TACSimulationResult,
     TransactionLinkerWithOperationId,
     TVMAddress,
     UserWalletBalanceExtended,
     WaitOptions,
 } from '../structs/Struct';
-import { JettonMasterData } from '../wrappers/JettonMaster';
 import { Asset } from './Asset';
 import { IConfiguration } from './IConfiguration';
+import { IOperationTracker } from './IOperationTracker';
 
 export interface ITacSDK {
     readonly config: IConfiguration;
@@ -89,25 +91,27 @@ export interface ITacSDK {
      * @param req Simulation request with encoded message and context.
      * @returns Promise with the detailed simulation result.
      */
-    simulateTACMessage(req: TACSimulationRequest): Promise<TACSimulationResult>;
+    simulateTACMessage(req: TACSimulationParams): Promise<TACSimulationResult>;
     /**
      * Simulates a batch of cross-chain transactions from a given sender.
      * @param sender Abstracted sender used for simulation context (not broadcasting).
      * @param txs Array of cross-chain transactions to simulate.
-     * @returns Promise with an array of results matching the input order.
+     * @returns Promise with an array of fee estimation results matching the input order.
      */
-    simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]>;
+    simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<ExecutionFeeEstimationResult[]>;
     /**
-     * Computes fee and execution information for a prospective transaction.
+     * Get tvm fees and simulation info for a tvm transaction using sender abstraction.
      * @param evmProxyMsg Encoded EVM proxy message.
-     * @param sender Sender abstraction providing context (e.g., seqno, wallet info).
-     * @param assets Optional list of assets attached to the transaction.
-     * @returns Promise with the fee estimation and execution breakdown.
+     * @param sender Sender abstraction used to provide context (e.g., wallet state).
+     * @param assets Assets to be included in the transaction.
+     * @param options Optional transaction configuration including error handling and executor settings.
+     * @returns Promise with fee estimation and execution info.
      */
-    getTransactionSimulationInfo(
+    getSimulationInfo(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
-        assets?: Asset[],
+        assets?: AssetLike[],
+        options?: CrossChainTransactionOptions,
     ): Promise<ExecutionFeeEstimationResult>;
     /**
      * Suggests optimal TON-side executor fee for a given asset set and fee symbol.
@@ -117,10 +121,10 @@ export interface ITacSDK {
      * @returns Promise with suggested fee details.
      */
     getTVMExecutorFeeInfo(
-        assets: Asset[],
+        assets: AssetLike[],
         feeSymbol: string,
         tvmValidExecutors?: string[],
-    ): Promise<SuggestedTONExecutorFee>;
+    ): Promise<SuggestedTVMExecutorFee>;
 
     // Transaction methods
     /**
@@ -135,7 +139,7 @@ export interface ITacSDK {
     sendCrossChainTransaction(
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
-        assets?: Asset[],
+        assets?: AssetLike[],
         options?: CrossChainTransactionOptions,
         waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId>;
@@ -143,13 +147,13 @@ export interface ITacSDK {
      * Sends multiple cross-chain transactions in one batch and optionally waits for tracking info.
      * @param sender Sender abstraction for signing/sending TVM messages.
      * @param txs Array of cross-chain transactions to broadcast.
-     * @param waitOptions Optional waiting policy for operation ids by shard keys.
+     * @param options Optional options controlling waiting behavior for operation ids.
      * @returns Promise with an array of TransactionLinkerWithOperationId for each submitted transaction.
      */
     sendCrossChainTransactions(
         sender: SenderAbstraction,
-        txs: CrosschainTx[],
-        waitOptions?: WaitOptions<OperationIdsByShardsKey>,
+        txs: BatchCrossChainTxWithAssetLike[],
+        options?: CrossChainTransactionsOptions,
     ): Promise<TransactionLinkerWithOperationId[]>;
 
     // Bridge methods
@@ -167,7 +171,7 @@ export interface ITacSDK {
         signer: Wallet,
         value: bigint,
         tonTarget: string,
-        assets?: Asset[],
+        assets?: AssetLike[],
         tvmExecutorFee?: bigint,
         tvmValidExecutors?: string[],
     ): Promise<string>;
@@ -197,19 +201,56 @@ export interface ITacSDK {
     /**
      * Returns Jetton master data (metadata and configuration) for a given Jetton master address.
      * @param itemAddress Jetton master TVM address.
-     * @returns Promise resolving to JettonMasterData.
+     * @returns Promise resolving to JettonMinterData.
      */
-    getJettonData(itemAddress: TVMAddress): Promise<JettonMasterData>;
+    getJettonData(itemAddress: TVMAddress): Promise<JettonMinterData>;
 
     // NFT methods
+    /**
+     * Returns NFT item data for the specified TVM address.
+     * @param itemAddress TVM address of the NFT item.
+     * @returns Promise resolving to the NFT item data.
+     */
     getNFTItemData(itemAddress: TVMAddress): Promise<NFTItemData>;
 
     // Address conversion methods
+    /**
+     * Resolves the EVM token address that corresponds to the provided TVM token address.
+     * @param tvmTokenAddress TVM token (Jetton) master address.
+     * @returns Promise resolving to the EVM token address.
+     */
     getEVMTokenAddress(tvmTokenAddress: string): Promise<string>;
+    /**
+     * Resolves the TVM token address that corresponds to the provided EVM token address.
+     * @param evmTokenAddress EVM token contract address (checksum string).
+     * @returns Promise resolving to the TVM token (Jetton) master address.
+     */
     getTVMTokenAddress(evmTokenAddress: string): Promise<string>;
+    /**
+     * Resolves the TVM NFT address for a given EVM NFT contract and optional token id.
+     * @param evmNFTAddress EVM NFT contract address.
+     * @param tokenId Optional NFT token id; when omitted, returns the collection address if applicable.
+     * @returns Promise resolving to the TVM NFT address.
+     */
     getTVMNFTAddress(evmNFTAddress: string, tokenId?: number | bigint): Promise<string>;
+    /**
+     * Resolves the EVM NFT address for a given TVM NFT address and desired address type.
+     * @param tvmNFTAddress TVM NFT item or collection address.
+     * @param addressType Desired address type on EVM side (collection or item).
+     * @returns Promise resolving to the EVM NFT address.
+     */
     getEVMNFTAddress(tvmNFTAddress: string, addressType: NFTAddressType): Promise<string>;
 
     // Utility methods
+    /**
+     * Checks whether a contract is deployed at the provided TVM address on the current network.
+     * @param address TVM address to check.
+     * @returns Promise resolving to true if deployed, false otherwise.
+     */
     isContractDeployedOnTVM(address: string): Promise<boolean>;
+
+    /**
+     * Returns the operation tracker instance used for querying operation statuses and utilities.
+     */
+    getOperationTracker(): IOperationTracker;
 }

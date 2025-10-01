@@ -2,10 +2,10 @@ import { Address } from '@ton/ton';
 import { isAddress as isEthereumAddress } from 'ethers';
 
 import { evmAddressError, tvmAddressError } from '../errors';
-import { EvmProxyMsg, TACSimulationRequest } from '../structs/Struct';
+import { EvmProxyMsg, TACSimulationParams } from '../structs/Struct';
 
 export class Validator {
-    static validateTACSimulationRequest(req: TACSimulationRequest): void {
+    static validateTACSimulationParams(req: TACSimulationParams): void {
         this.validateEVMAddress(req.tacCallParams.target);
         req.evmValidExecutors?.forEach(this.validateEVMAddress);
         req.tvmValidExecutors?.forEach(this.validateTVMAddress);

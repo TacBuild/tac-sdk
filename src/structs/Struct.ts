@@ -1,6 +1,9 @@
-import type { Address, Cell } from '@ton/ton';
-import { AbstractProvider, Addressable } from 'ethers';
+import { SandboxContract } from '@ton/sandbox';
+import { OpenedContract } from '@ton/ton';
+import { AbstractProvider } from 'ethers';
 
+import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
+import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
 
 export type ContractState = {
@@ -19,6 +22,7 @@ export enum SimplifiedStatuses {
 export enum Network {
     TESTNET = 'testnet',
     MAINNET = 'mainnet',
+    DEV = 'dev',
 }
 
 export enum BlockchainType {
@@ -49,7 +53,12 @@ export type TACParams = {
     /**
      * Address of TAC settings contract. Use only for tests.
      */
-    settingsAddress?: string | Addressable;
+    settingsAddress?: string;
+
+    /**
+     * Address of TAC smart account factory contract. Use only for tests.
+     */
+    saFactoryAddress?: string;
 };
 
 export type TONParams = {
@@ -132,21 +141,25 @@ export type TransactionLinkerWithOperationId = TransactionLinker & {
     operationId?: string;
 };
 
-export type TACSimulationRequest = {
-    tacCallParams: {
-        arguments: string;
-        methodName: string;
-        target: string;
-    };
+export type TONAsset = {
+    amount: string;
+    tokenAddress: string;
+    assetType: AssetType;
+};
+
+export type TACCallParams = {
+    arguments: string;
+    methodName: string;
+    target: string;
+};
+
+export type TACSimulationParams = {
+    tacCallParams: TACCallParams;
     evmValidExecutors?: string[];
     tvmValidExecutors?: string[];
     extraData?: string;
     shardsKey: string;
-    tonAssets: {
-        amount: string;
-        tokenAddress: string;
-        assetType: string;
-    }[];
+    tonAssets: TONAsset[];
     tonCaller: string;
     calculateRollbackFee?: boolean;
 };
@@ -309,7 +322,7 @@ export type TACSimulationResult = {
     };
 };
 
-export type SuggestedTONExecutorFee = {
+export type SuggestedTVMExecutorFee = {
     inTAC: string;
     inTON: string;
 };
@@ -331,6 +344,17 @@ export type CrossChainTransactionOptions = {
     tvmValidExecutors?: string[];
     tvmExecutorFee?: bigint;
     calculateRollbackFee?: boolean;
+    withoutSimulation?: boolean;
+    validateAssetsBalance?: boolean;
+    waitOperationId?: boolean;
+    waitOptions?: WaitOptions<string>;
+};
+
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
+
+export type CrossChainTransactionsOptions = {
+    waitOperationIds?: boolean;
+    waitOptions?: WaitOptions<OperationIdsByShardsKey>;
 };
 
 export type ExecutionFeeEstimationResult = {
@@ -344,21 +368,26 @@ export type CrosschainTx = {
     options?: CrossChainTransactionOptions;
 };
 
-export type NFTItemData = {
-    init: boolean;
-    index: number;
-    collectionAddress: Address;
-    ownerAddress: Address | null;
-    content: Cell | null;
+export type BatchCrossChainTx = {
+    evmProxyMsg: EvmProxyMsg;
+    assets?: Asset[];
+    options?: BatchCrossChainTransactionOptions;
 };
 
-export type NFTCollectionData = {
-    nextIndex: number;
-    content: Cell;
-    adminAddress: Address;
-};
+export type AssetLike =
+    | Asset
+    | FT
+    | NFT
+    | { rawAmount: bigint }
+    | { amount: number }
+    | { address: TVMAddress | EVMAddress }
+    | { address: TVMAddress | EVMAddress; rawAmount: bigint }
+    | { address: TVMAddress | EVMAddress; amount: number }
+    | { address: TVMAddress | EVMAddress; itemIndex: bigint };
 
-export interface WaitOptions<T = unknown> {
+export type BatchCrossChainTxWithAssetLike = Omit<BatchCrossChainTx, 'assets'> & { assets?: AssetLike[] };
+
+export interface WaitOptions<T = unknown, TContext = unknown> {
     /**
      * Timeout in milliseconds
      * @default 300000 (5 minutes)
@@ -379,10 +408,20 @@ export interface WaitOptions<T = unknown> {
      */
     logger?: ILogger;
     /**
+     * Optional context object to pass additional parameters to callbacks
+     * This allows passing custom data like OperationTracker instances, configurations, etc.
+     */
+    context?: TContext;
+    /**
      * Function to check if the result is successful
      * If not provided, any non-error result is considered successful
      */
-    successCheck?: (result: T) => boolean;
+    successCheck?: (result: T, context?: TContext) => boolean;
+    /**
+     * Custom callback function that executes when request is successful
+     * Receives both the result and optional context with additional parameters
+     */
+    onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
 }
 
 export const defaultWaitOptions: WaitOptions = {
@@ -436,4 +475,17 @@ export type ConvertedCurrencyResult = {
     currency: CurrencyType;
     tacPrice: USDPriceInfo;
     tonPrice: USDPriceInfo;
+};
+
+export type GetTVMExecutorFeeParams = {
+    feeSymbol: string;
+    tonAssets: TONAsset[];
+    tvmValidExecutors: string[];
+};
+
+export type FTOriginAndData = {
+    origin: Origin;
+    jettonMinter: OpenedContract<JettonMinter> | SandboxContract<JettonMinter>;
+    evmAddress?: string;
+    jettonData?: JettonMinterData;
 };

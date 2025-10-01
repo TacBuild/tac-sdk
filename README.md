@@ -11,6 +11,8 @@ The TAC SDK makes it possible to create hybrid dApps that let TON users interact
 
 For full documentation and examples, please visit [TAC SDK Documentation](https://docs.tac.build/build/sdk/introduction).
 
+For practical examples and usage patterns, see [Examples Documentation](./docs/examples/examples.md).
+
 ### Installation
 
 ```bash
@@ -40,16 +42,16 @@ The TAC SDK enables you to create frontends that:
 ### SDK Components
 
 - **[`TacSdk`](./docs/sdks/tac_sdk.md)**: The main class for interacting with the TAC protocol.
-  - [`create`](./docs/sdks/tac_sdk.md#create-static): Initializes the SDK instance.
+  - [`create`](./docs/sdks/tac_sdk.md#creating-an-instance-of-tacsdk): Initializes the SDK instance.
   - [`sendCrossChainTransaction`](./docs/sdks/tac_sdk.md#sendcrosschaintransaction): Sends a cross-chain transaction from TON to TAC.
   - [`getEVMTokenAddress`](./docs/sdks/tac_sdk.md#getevmtokenaddress): Gets the TAC address for a TON token.
   - [`getTVMTokenAddress`](./docs/sdks/tac_sdk.md#gettvmtokenaddress): Gets the TON address for a TAC token.
-  - [`getTransactionSimulationInfo`](./docs/sdks/tac_sdk.md#gettransactionsimulationinfo): Performs a complete simulation of a crosschain transaction to estimate fees and gather execution-related metadata.  
+  - [`getSimulationInfo`](./docs/sdks/tac_sdk.md#getsimulationinfo): Performs a complete simulation of a crosschain transaction to estimate fees and gather execution-related metadata.
   - [`getUserJettonBalance`](./docs/sdks/tac_sdk.md#getuserjettonbalance): Gets a user's Jetton balance (raw).
   - [`getUserJettonBalanceExtended`](./docs/sdks/tac_sdk.md#getuserjettonbalanceextended): Gets extended Jetton balance info (including decimals).
   - [`getUserJettonWalletAddress`](./docs/sdks/tac_sdk.md#getuserjettonwalletaddress): Calculates a user's Jetton wallet address.
-  - [`nativeTONAddress (getter)`](./docs/sdks/tac_sdk.md#nativetonaddress-getter): Placeholder address for native TON.
-  - [`nativeTACAddress (getter)`](./docs/sdks/tac_sdk.md#nativetacaddress-getter): Gets the native asset address on the TAC chain.
+  - [`nativeTONAddress (getter)`](./docs/sdks/tac_sdk.md#nativetonaddress): Placeholder address for native TON.
+  - [`nativeTACAddress (method)`](./docs/sdks/tac_sdk.md#nativetacaddress): Gets the native asset address on the TAC chain.
   - *(See file for more...)*
 
 - **[`OperationTracker`](./docs/sdks/operation_tracker.md)**: Tools for monitoring cross-chain operation status.
@@ -66,6 +68,14 @@ The TAC SDK enables you to create frontends that:
 - **[`Utilities`](./docs/sdks/utilities.md)**: Helper functions and interfaces.
   - [`startTracking`](./docs/sdks/utilities.md#starttracking): Utility function to poll and log operation status to the console.
 
+- **[`AgnosticSdk`](./docs/sdks/agnostic_proxy_sdk.md)**: Agnostic SDK for cross-chain interactions.
+
+- **[`Simulator`](./docs/sdks/simulator.md)**: Transaction simulation capabilities.
+
+- **[`TACTransactionManager`](./docs/sdks/tac_transaction_manager.md)**: Manages TAC-side transactions.
+
+- **[`TONTransactionManager`](./docs/sdks/ton_transaction_manager.md)**: Manages TON-side transactions.
+
 ### Data Models
 
 - **[`Enums`](./docs/models/enums.md)**: Key enumerations used by the SDK.
@@ -75,9 +85,9 @@ The TAC SDK enables you to create frontends that:
   - [`StageName`](./docs/models/enums.md#stagename): Identifiers for tracking stages (`COLLECTED_IN_TAC`, `EXECUTED_IN_TAC`, etc.).
 
 - **[`Structs`](./docs/models/structs.md)**: Core data structures.
-  - [`AssetBridgingData`](./docs/models/structs.md#assetbridgingdata): Specifies assets to bridge (TON or Jettons).
-  - [`EvmProxyMsg`](./docs/models/structs.md#evmproxymsg): Defines the target EVM call details.
-  - [`TransactionLinker`](./docs/models/structs.md#transactionlinker): Identifies a cross-chain operation.
+  - [`AssetLike`](./docs/models/structs.md#assetlike): Flexible asset specification for cross-chain operations.
+  - [`EvmProxyMsg`](./docs/models/structs.md#evmproxymsg-type): Defines the target EVM call details.
+  - [`TransactionLinker`](./docs/models/structs.md#transactionlinker-type): Identifies a cross-chain operation.
   - *(See file for more...)*
 
 Navigate through the linked files for full details on parameters, return types, examples, and more.
@@ -128,7 +138,7 @@ More details in [sendAddLiquidity.ts](tests/uniswap_v2/sendAddLiquidity.ts) and 
 ## Usage
 
 ```typescript
-import { TacSdk } from '@tonappchain/sdk';
+import { TacSdk, AssetLike, EvmProxyMsg, SDKParams, Network, SenderFactory } from '@tonappchain/sdk';
 import { TonConnectUI } from '@tonconnect/ui';
 import { ethers } from 'ethers';
 
@@ -152,17 +162,14 @@ const evmProxyMsg: EvmProxyMsg = {
 };
 
 // Create jetton transfer messages corresponding to EVM tokens, e.g., two tokens for adding liquidity to a pool
-const assets: AssetBridgingData[] = [
+const assets: AssetLike[] = [
     {
         address: TVMtokenAAddress,
         amount: tokenAAmount,
-        type: AssetType.FT,
-
     },
     {
         address: TVMtokenBAddress,
         amount: tokenBAmount,
-        type: AssetType.FT,
     }
 ];
 
@@ -183,7 +190,7 @@ await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
 
 tacSdk.closeConnections();
 ```
-For a detailed example, see `test/sendSwap.ts` or `test/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
+For a detailed example, see `tests/uniswap_v2/sendSwap.ts` or `tests/uniswap_v2/sendRemoveLiquidity.ts`, which demonstrates swapping tokens and removing liquidity on Uniswap and tracking the transaction status.
 
 ---
 

@@ -19,6 +19,8 @@ This file documents the primary data structures (types and interfaces often refe
 - [`EvmProxyMsg`](#evmproxymsg-type)
 - [`CrossChainTransactionOptions`](#crosschaintransactionoptions)
 - [`CrosschainTx`](#crosschaintx)
+- [`AssetLike`](#assetlike)
+- [`CrosschainTxWithAssetLike`](#crosschaintxwithassetlike)
 ### Transaction Tracking
 - [`TransactionLinker`](#transactionlinker-type)
 - [`TransactionLinkerWithOperationId`](#transactionlinkerwithoperationid-type)
@@ -26,10 +28,12 @@ This file documents the primary data structures (types and interfaces often refe
 - [`OperationIdsByShardsKey`](#operationidsbyshardskey-type)
 
 ### Simulation Structures
-- [`TACSimulationRequest`](#tacsimulationrequest)
+- [`TONAsset`](#tonasset)
+- [`TACCallParams`](#taccallparams)
+- [`TACSimulationParams`](#tacsimulationparams)
 - [`TACSimulationResult`](#tacsimulationresult)
 - [`ExecutionFeeEstimationResult`](#executionfeeestimationresult)
-- [`SuggestedTONExecutorFee`](#suggestedtonexecutorfee)
+- [`SuggestedTVMExecutorFee`](#suggestedtvmexecutorfee)
 
 ### Execution & Status
 - [`TransactionData`](#transactiondata)
@@ -56,6 +60,25 @@ This file documents the primary data structures (types and interfaces often refe
 ### NFT
 - [`NFTItemData`](#nftitemdata)
 - [`NFTCollectionData`](#nftcollectiondata)
+
+### Currency & Conversion
+- [`ConvertCurrencyParams`](#convertcurrencyparams)
+- [`USDPriceInfo`](#usdpriceinfo)
+- [`ConvertedCurrencyResult`](#convertedcurrencyresult)
+- [`GetTVMExecutorFeeParams`](#gettvmexecutorfeeparams)
+
+### FT Structures
+- [`JettonMinterData`](#jettonminterdata)
+- [`FTOriginAndData`](#ftoriginanddata)
+
+### Asset Factory
+- [`AssetFromFTArg`](#assetfromftarg)
+- [`AssetFromNFTCollectionArg`](#assetfromnftcollectionarg)
+- [`AssetFromNFTItemArg`](#assetfromnftitemarg)
+
+### Address Types
+- [`TVMAddress`](#tvmaddress)
+- [`EVMAddress`](#evmaddress)
 
 ---
 
@@ -84,27 +107,26 @@ Parameters for SDK:
 ### `TONParams (Type)`
 ```typescript
 export type TONParams = {
-    contractOpener?: IContractOpener;
+    contractOpener?: ContractOpener;
     settingsAddress?: string;
 }
 ```
 TON Parameters for SDK:
 - **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that combines TonClient (TAC endpoint), orbsOpener4, and orbsOpener as fallbacks. Provide your own opener primarily for tests or custom setups.
-- **`settingsAddress`** (optional): TON settings contract address. Needed to retrieve protocol data. Set for tests only
-
+- **`settingsAddress`** (optional): TON settings contract address. Needed to retrieve protocol data. Set for tests only.
 
 ### `TACParams (Type)`
 ```typescript
 export type TACParams = {
     provider?: AbstractProvider;
-    settingsAddress?: string | Addressable;  
+    settingsAddress?: string | Addressable;
 }
 ```
 
 TAC Parameters for SDK:
-- **`provider`** *(optional)*: Provider used for TAC smart contract interaction. Set for increasing rate limit or tests only
-- **`settingsAddress`** *(optional)*: TAC settings contract address. Needed to retrieve protocol data. Set for tests only
-
+- **`provider`** *(optional)*: RPC EVM provider used for TAC smart contract interaction. Set custom provider for increasing RPC rate limit or for tests.
+- **`settingsAddress`** *(optional)*: TAC settings contract address. Needed to retrieve protocol data. Set for tests only.
+- **`saFactoryAddress`** *(optional)*: Address of TAC smart account factory contract. Set for tests only.
 
 ### `ContractState (Type)`
 
@@ -156,7 +178,7 @@ export class RetryableContractOpener implements ContractOpener {
 }
 ```
 
-A resilient implementation of IContractOpener that provides retry capabilities and fallback mechanisms when interacting with TON contracts.
+A resilient implementation of ContractOpener that provides retry capabilities and fallback mechanisms when interacting with TON contracts.
 
 #### **Constructor Parameters**
 - **`openerConfigs`**: An array of `OpenerConfig` objects, each containing:
@@ -175,7 +197,7 @@ export async function createDefaultRetryableOpener(
     artifacts: typeof testnet | typeof mainnet,
     maxRetries = 3,
     retryDelay = 1000,
-): Promise<IContractOpener>
+): Promise<ContractOpener>
 ```
 
 Creates a default RetryableContractOpener with multiple fallback providers:
@@ -223,6 +245,10 @@ export type CrossChainTransactionOptions = {
     tvmValidExecutors?: string[];
     tvmExecutorFee?: bigint;
     calculateRollbackFee?: boolean;
+    withoutSimulation?: boolean;
+    validateAssetsBalance?: boolean;
+    waitOperationId?: boolean;
+    waitOptions?: WaitOptions<string>;
 };
 ```
 
@@ -249,7 +275,52 @@ export type CrossChainTransactionOptions = {
 - **tvmExecutorFee** *(optional)*:  
   Fee in bigint to be paid (in TON token) to the executor on the TON side.
 
+- **calculateRollbackFee** *(optional)*:  
+  Whether to calculate rollback fee during simulation.  
+  **Default**: false
 
+- **withoutSimulation** *(optional)*:  
+  If true, skips the simulation phase entirely.  
+  **Default**: false
+
+- **validateAssetsBalance** *(optional)*:  
+  If true, validates that the sender has sufficient balance for the specified assets before sending the transaction.  
+  **Default**: true
+
+- **waitOperationId** *(optional)*:  
+  If true, waits for operation ID after sending the transaction. When false, the transaction is sent without waiting for operation tracking information.  
+  **Default**: true
+
+- **waitOptions** *(optional)*:  
+  Custom waiting configuration for operation ID resolution. See [`WaitOptions`](#waitoptions-interface) for available options.  
+  **Default**: `{}`
+
+### `BatchCrossChainTransactionOptions`
+A restricted version of CrossChainTransactionOptions for use in batch operations.
+
+```ts
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
+```
+
+This type excludes `waitOperationId` and `waitOptions` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
+
+### `CrossChainTransactionsOptions`
+Configuration options for batch cross-chain transaction operations.
+
+```ts
+export type CrossChainTransactionsOptions = {
+    waitOperationIds?: boolean;
+    waitOptions?: WaitOptions<OperationIdsByShardsKey>;
+};
+```
+
+- **waitOperationIds** *(optional)*:  
+  If true, waits for operation IDs for all transactions in the batch. When false, transactions are sent without waiting for operation tracking information.  
+  **Default**: true
+
+- **waitOptions** *(optional)*:  
+  Custom waiting configuration for operation IDs resolution in batch operations. See [`WaitOptions`](#waitoptions-interface) for available options.  
+  **Default**: `{}`
 
 ### `CrosschainTx`
 
@@ -266,6 +337,103 @@ Represents a crosschain transaction.
 - **`assets`** *(optional)*: An array of assets involved in the transaction.
 - **`options`** *(optional)*: Additional options for the transaction.
 
+### `BatchCrossChainTx`
+
+```ts
+export type BatchCrossChainTx = {
+    evmProxyMsg: EvmProxyMsg;
+    assets?: Asset[];
+    options?: BatchCrossChainTransactionOptions;
+};
+```
+
+Represents a crosschain transaction for use in batch operations.
+- **`evmProxyMsg`**: The message to be sent to the TAC proxy.
+- **`assets`** *(optional)*: An array of assets involved in the transaction.
+- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId` and `waitOptions` which are controlled at batch level).
+
+### `AssetLike`
+
+```typescript
+export type AssetLike =
+    | Asset
+    | FT
+    | NFT
+    | { rawAmount: bigint }
+    | { amount: number }
+    | { address: TVMAddress | EVMAddress }
+    | { address: TVMAddress | EVMAddress; rawAmount: bigint }
+    | { address: TVMAddress | EVMAddress; amount: number }
+    | { address: TVMAddress | EVMAddress; itemIndex: bigint };
+```
+
+Represents various types of asset-like objects that can be used in cross-chain operations. This union type allows flexibility in specifying assets through different interfaces, supporting multiple formats for different asset types:
+
+#### **Native TON Assets**
+For native TON coin transfers, use one of these formats:
+- **`{ rawAmount: bigint }`**: Specify amount in raw base units (nanotons)
+- **`{ amount: number }`**: Specify amount in human-readable units (TON)
+
+**Examples:**
+```typescript
+// 1.5 TON in raw units (1.5 * 10^9 nanotons)
+{ rawAmount: 1500000000n }
+
+// 1.5 TON in human units
+{ amount: 1.5 }
+```
+
+#### **Fungible Token (FT) Assets**
+For FT tokens (Jettons), specify the token address and amount:
+- **`{ address: TVMAddress | EVMAddress; rawAmount: bigint }`**: Token address + raw amount
+- **`{ address: TVMAddress | EVMAddress; amount: number }`**: Token address + human-readable amount
+
+**Examples:**
+```typescript
+// USDT with raw amount (considering decimals)
+{ address: "EQC_1YoM8RBixN95lz7odcF3Vrkc_N8Ne7gQi7Abtlet_Efi", rawAmount: 1000000n }
+
+// USDT with human amount (1 USDT)
+{ address: "EQC_1YoM8RBixN95lz7odcF3Vrkc_N8Ne7gQi7Abtlet_Efi", amount: 1 }
+```
+
+#### **NFT Item Assets**
+For specific NFT items that have their own contract address:
+- **`{ address: TVMAddress | EVMAddress }`**: Just the NFT item address
+
+**Examples:**
+```typescript
+// Specific NFT item by its contract address
+{ address: "EQBx1tKgO2QXj7vGi7VwK4uEINxwUbWxBFmJoW6gBZtCWcfG" }
+```
+
+#### **NFT Collection Assets**
+For NFT items within a collection, specify collection address and item index:
+- **`{ address: TVMAddress | EVMAddress; itemIndex: bigint }`**: Collection address + specific item index
+
+**Examples:**
+```typescript
+// NFT item #42 from a collection
+{ address: "EQD-cvR0Nz6XAyRBpUzoMAC1b4-jXqZtUgSxhFfHWA7xAPgm", itemIndex: 42n }
+```
+
+This flexible typing system allows you to work with assets in the most convenient format for your use case while maintaining type safety.
+
+### `CrosschainTxWithAssetLike`
+
+```typescript
+export type CrosschainTxWithAssetLike = Omit<CrosschainTx, 'assets'> & { assets?: AssetLike[] };
+```
+
+Represents a crosschain transaction using AssetLike objects instead of strict Asset instances. This provides more flexibility when working with different asset representations.
+
+### `BatchCrossChainTxWithAssetLike`
+
+```typescript
+export type BatchCrossChainTxWithAssetLike = Omit<BatchCrossChainTx, 'assets'> & { assets?: AssetLike[] };
+```
+
+Represents a batch crosschain transaction using AssetLike objects instead of strict Asset instances. This provides more flexibility when working with different asset representations in batch operations, while ensuring that individual transactions cannot specify wait-related options (which are controlled at the batch level).
 
 ### `TransactionLinker (Type)`
 ```typescript
@@ -316,45 +484,62 @@ export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
 Maps shard keys to their corresponding operation IDs, allowing efficient lookup of operations by shard identifier.
 
-
-### `TACSimulationRequest`
+### `TONAsset`
 
 ```typescript
-export type TACSimulationRequest = {
-    tacCallParams: {
-        arguments: string;
-        methodName: string;
-        target: string;
-    };
+export type TONAsset = {
+    amount: string;
+    tokenAddress: string;
+    assetType: AssetType;
+};
+```
+
+Represents a TON asset used in cross-chain operations.
+
+- **`amount`**: The amount of the asset as a string.
+- **`tokenAddress`**: The address of the token on TON.
+- **`assetType`**: The type of the asset (FT or NFT) from the [`AssetType`](../models/enums.md#assettype) enum.
+
+### `TACCallParams`
+
+```typescript
+export type TACCallParams = {
+    arguments: string;
+    methodName: string;
+    target: string;
+};
+```
+
+Represents parameters for calling a method on the TAC network.
+
+- **`arguments`**: Encoded arguments for the method call.
+- **`methodName`**: Name of the method to be called.
+- **`target`**: The target contract address on TAC.
+
+### `TACSimulationParams`
+
+```typescript
+export type TACSimulationParams = {
+    tacCallParams: TACCallParams;
     evmValidExecutors?: string[];
     tvmValidExecutors?: string[];
     extraData?: string;
     shardsKey: string;
-    tonAssets: {
-        amount: string;
-        tokenAddress: string;
-        assetType: string;
-    }[];
+    tonAssets: TONAsset[];
     tonCaller: string;
     calculateRollbackFee?: boolean;
 };
 ```
 
-Represents a request to simulate a TAC message.
+Represents parameters for simulating a TAC message execution.
 
-- **`tacCallParams`**: An object containing parameters for the TAC call.
-  - **`arguments`**: Encoded arguments for the TAC method.
-  - **`methodName`**: Name of the method to be called on the target TAC contract.
-  - **`target`**: The target address on the TAC network.
+- **`tacCallParams`**: [`TACCallParams`](#taccallparams) object containing parameters for the TAC call.
 - **`evmValidExecutors`** *(optional)*: Valid executors for TAC. Default: `config.TACParams.trustedTACExecutors`.
 - **`tvmValidExecutors`** *(optional)*: Valid executors for TON. Default: `config.TACParams.trustedTONExecutors`.
 - **`extraData`** *(optional)*: Additional non-root data to be included in TAC call. Default: `"0x"`.
 - **`shardsKey`**: Key identifying shards for the operation.
-- **`tonAssets`**: An array of assets involved in the transaction.
-  - **`amount`**: Amount of the asset to be transferred.
-  - **`tokenAddress`**: Address of the token.
-  - **`assetType`**: Type of the asset. Either fungible or non-fungible.
-- **`tonCaller`**: Address of the caller in the TON.
+- **`tonAssets`**: Array of [`TONAsset`](#tonasset) objects involved in the transaction.
+- **`tonCaller`**: Address of the caller on the TON network.
 - **`calculateRollbackFee`** *(optional)*: Whether to include rollback path fee in estimation. Default: `true`.
 
 Note:
@@ -390,17 +575,17 @@ Enables safe transaction previews before actual submission.
 
 Here's your corrected structure documentation in the same format:
 
-### `SuggestedTONExecutorFee`
+### `SuggestedTVMExecutorFee`
 
 ```ts
-export type SuggestedTONExecutorFee = {
+export type SuggestedTVMExecutorFee = {
   inTAC: string;
   inTON: string;
 }
 ```
 
 #### **Description**  
-Contains estimated tvm executor fee for TON bridging operations in both TAC and TON denominations.
+Contains estimated TVM executor fee for TON bridging operations in both TAC and TON denominations.
 
 #### **Fields**  
 - **`inTAC`**: Fee amount in TAC tokens
@@ -408,7 +593,7 @@ Contains estimated tvm executor fee for TON bridging operations in both TAC and 
 
 #### **Purpose**  
 Allows users to:
-- Estimate costs before initiating transactions in both currencies 
+- Estimate costs before initiating transactions in both currencies
 
 ### `TransactionData`
 
@@ -725,19 +910,19 @@ Provides information about NFT item.
 
 ```typescript
 export type NFTItemData = {
-    init: boolean;
-    index: number;
+    init?: boolean;
+    index: bigint;
     collectionAddress: Address;
-    ownerAddress: Address | null;
-    content: Cell | null;
+    ownerAddress?: Address;
+    content?: Cell;
 };
 ```
 
-- **`init`**: Indicates whether item is active, i.e initialized by NFT collection and has not been burnt
-- **`index`**: Index of the item in collection
+- **`init`** *(optional)*: Indicates whether item is active, i.e initialized by NFT collection and has not been burnt
+- **`index`**: Index of the item in collection (as bigint)
 - **`collectionAddress`**: Address of collection
-- **`ownerAddress`**: Address of the item owner
-- **`content`**: Content(metadata) of the item
+- **`ownerAddress`** *(optional)*: Address of the item owner
+- **`content`** *(optional)*: Content(metadata) of the item
 
 ### `NFTCollectionData`
 
@@ -745,13 +930,13 @@ Provides information about NFT collection.
 
 ```typescript
 export type NFTCollectionData = {
-    nextIndex: number;
+    nextIndex: bigint;
     content: Cell;
     adminAddress: Address;
 };
 ```
 
-- **`nextIndex`**: Next item index to be minted in the collection
+- **`nextIndex`**: Next item index to be minted in the collection (as bigint)
 - **`content`**: Content(metadata) of the collection
 - **`adminAddress`**: Address of the collection admin
 
@@ -882,53 +1067,121 @@ Contains fee information for both TAC and TON blockchain networks, plus addition
 ### `WaitOptions (Interface)`
 
 ```typescript
-export interface WaitOptions<T = unknown> {
+export interface WaitOptions<T = unknown, TContext = unknown> {
     timeout?: number;
     maxAttempts?: number;
     delay?: number;
     logger?: ILogger;
-    successCheck?: (result: T) => boolean;
+    context?: TContext;
+    successCheck?: (result: T, context?: TContext) => boolean;
+    onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
 }
 ```
 
-Allows to specify custom options for waiting for operation resolution.
+Allows to specify custom options for waiting for operation resolution with enhanced callback capabilities and context parameter support.
 
 - **`timeout`** *(optional)*: Timeout in milliseconds. Default is 300000 (5 minutes).
 - **`maxAttempts`** *(optional)*: Maximum number of attempts. Default is 30.
 - **`delay`** *(optional)*: Delay between attempts in milliseconds. Default is 10000 (10 seconds).
 - **`logger`** *(optional)*: Logger used to output debug information during waiting.
-- **`successCheck`** *(optional)*: Function to check if the result is successful. If not provided, any non-error result is considered successful.
+- **`context`** *(optional)*: Optional context object to pass additional parameters to callbacks. This allows passing custom data like OperationTracker instances, configurations, user settings, and other dependencies without relying on closures.
+- **`successCheck`** *(optional)*: Function to check if the result is successful. Receives both the result and optional context parameter. If not provided, any non-error result is considered successful.
+- **`onSuccess`** *(optional)*: Custom callback function that executes when operation is successful. Receives both the result and optional context with additional parameters. Can be used for additional processing like profiling data retrieval. Supports both synchronous and asynchronous callbacks.
 
+#### Usage Examples
+
+For comprehensive examples and usage patterns, including detailed context parameter usage, see the [Enhanced WaitOptions Examples](../examples/enhanced-waitoptions.md) documentation.
 
 ---
-### Address Aliases
+### `TVMAddress`
 
 ```ts
 export type TVMAddress = string;
+```
+
+TON Virtual Machine address in friendly/raw string form.
+
+### `EVMAddress`
+
+```ts
 export type EVMAddress = string;
 ```
 
-Aliases for address strings used throughout the SDK:
-- TVMAddress: TON Virtual Machine address in friendly/raw string form.
-- EVMAddress: EVM-compatible checksum address string.
+EVM-compatible checksum address string.
 
+### `JettonMinterData`
 
-### Asset Creation Arguments
+```typescript
+export type JettonMinterData = {
+    totalSupply: bigint;
+    mintable: boolean;
+    adminAddress: Address;
+    content: Cell;
+    walletCode: Cell;
+};
+```
 
-These helper types are used by factory methods (e.g., AssetFactory.from) to construct specific asset instances.
+Represents the data structure returned by Jetton minter contracts, containing essential information about a Jetton (fungible token).
+
+- **`totalSupply`**: Total supply of the Jetton in raw units (considering decimals)
+- **`mintable`**: Whether the Jetton can still be minted (true) or if minting is disabled (false)
+- **`adminAddress`**: Address of the admin who controls the Jetton minter contract
+- **`content`**: Cell containing Jetton metadata (name, symbol, decimals, description, image, etc.) encoded according to TEP-64 standard
+- **`walletCode`**: Cell containing the code for Jetton wallet contracts that will be deployed for each holder
+
+### `FTOriginAndData`
+
+```typescript
+export type FTOriginAndData = {
+    origin: Origin;
+    jettonMinter: OpenedContract<JettonMinter> | SandboxContract<JettonMinter>;
+    evmAddress?: string;
+    jettonData?: JettonMinterData;
+};
+```
+
+Contains comprehensive information about a fungible token's origin and associated data.
+
+- **`origin`**: The origin of the token (`Origin.TON` or `Origin.TAC`) indicating whether it's native to TON or wrapped from TAC
+- **`jettonMinter`**: Opened contract instance of the jetton minter for direct interaction
+- **`evmAddress`** *(optional)*: EVM address of the token, present for TAC-origin tokens
+- **`jettonData`** *(optional)*: Jetton metadata and information, present for TON-origin tokens
+
+This structure is returned by the [`FT.getOriginAndData`](../sdks/assets.md#getoriginanddata) method and provides all necessary information to work with fungible tokens regardless of their origin.
+
+### `AssetFromFTArg`
 
 ```ts
 export type AssetFromFTArg = {
     address: TVMAddress | EVMAddress;
     tokenType: AssetType.FT;
 };
+```
 
+Use for fungible tokens (Jettons). Address may be TVM or EVM.
+
+- **`address`**: Token address (TVM or EVM format)
+- **`tokenType`**: Must be `AssetType.FT`
+
+### `AssetFromNFTItemArg`
+
+```ts
 export type AssetFromNFTItemArg = {
     address: TVMAddress;
     tokenType: AssetType.NFT;
     addressType: NFTAddressType.ITEM;
 };
+```
 
+Use for a specific NFT item. Address must be a TVM item address.
+
+- **`address`**: NFT item address (TVM format only)
+- **`tokenType`**: Must be `AssetType.NFT`
+- **`addressType`**: Must be `NFTAddressType.ITEM`
+
+### `AssetFromNFTCollectionArg`
+
+```ts
 export type AssetFromNFTCollectionArg = {
     address: TVMAddress | EVMAddress;
     tokenType: AssetType.NFT;
@@ -937,27 +1190,65 @@ export type AssetFromNFTCollectionArg = {
 };
 ```
 
-- AssetFromFTArg: Use for fungible tokens (Jettons). Address may be TVM or EVM.
-- AssetFromNFTItemArg: Use for a specific NFT item. Address must be a TVM item address.
-- AssetFromNFTCollectionArg: Use for an NFT item derived from a collection and an on-chain `index`. Address may be TVM or EVM collection address.
+Use for an NFT item derived from a collection and an on-chain `index`. Address may be TVM or EVM collection address.
+
+- **`address`**: NFT collection address (TVM or EVM format)
+- **`tokenType`**: Must be `AssetType.NFT`
+- **`addressType`**: Must be `NFTAddressType.COLLECTION`
+- **`index`**: Index of the specific NFT item within the collection
 
 
-### Currency Conversion Types
+### `GetTVMExecutorFeeParams`
 
-Utilities for converting amounts and reporting price information.
+```typescript
+export type GetTVMExecutorFeeParams = {
+    feeSymbol: string;
+    tonAssets: TONAsset[];
+    tvmValidExecutors: string[];
+};
+```
+
+Parameters for calculating TVM executor fees for cross-chain operations.
+
+- **`feeSymbol`**: Symbol of the token to express the fee in (e.g., 'TAC', 'TON').
+- **`tonAssets`**: Array of [`TONAsset`](#tonasset) objects representing assets involved in the operation.
+- **`tvmValidExecutors`**: Array of valid TVM executor addresses to use for fee calculation.
+
+### `ConvertCurrencyParams`
 
 ```ts
 export type ConvertCurrencyParams = {
     value: bigint;
     currency: CurrencyType;
 };
+```
 
+Input parameters to convert a raw bigint amount for the selected currency type.
+
+- **`value`**: The raw bigint amount to convert
+- **`currency`**: The currency type to convert from
+
+### `USDPriceInfo`
+
+```ts
 export type USDPriceInfo = {
     spot: bigint;
     ema: bigint;
     decimals: number;
 };
+```
 
+Contains USD price information for a token with proper decimal handling:
+
+- **`spot`**: Current spot price in USD, represented as a bigint value multiplied by 10^decimals
+- **`ema`**: Exponential Moving Average price in USD, represented as a bigint value multiplied by 10^decimals  
+- **`decimals`**: Number of decimal places used in the price representation. Typically 18 for most tokens.
+
+**Price Format Example**: A price value of `3090143663312000000` with `decimals: 18` represents `3.090143663312` USD (the value divided by 10^18).
+
+### `ConvertedCurrencyResult`
+
+```ts
 export type ConvertedCurrencyResult = {
     spotValue: bigint;
     emaValue: bigint;
@@ -968,19 +1259,12 @@ export type ConvertedCurrencyResult = {
 };
 ```
 
-- **ConvertCurrencyParams**: Input parameters to convert a raw bigint amount for the selected currency type.
-- **USDPriceInfo**: Contains USD price information for a token with proper decimal handling:
-  - **`spot`**: Current spot price in USD, represented as a bigint value multiplied by 10^decimals
-  - **`ema`**: Exponential Moving Average price in USD, represented as a bigint value multiplied by 10^decimals  
-  - **`decimals`**: Number of decimal places used in the price representation. Typically 18 for most tokens.
-  
-  **Price Format Example**: A price value of `3090143663312000000` with `decimals: 18` represents `3.090143663312` USD (the value divided by 10^18).
+Contains conversion results with detailed price information:
 
-- **ConvertedCurrencyResult**: Contains conversion results with detailed price information:
-  - **`spotValue`** & **`emaValue`**: Converted amounts using spot and EMA prices respectively
-  - **`decimals`**: Decimal places for the converted values
-  - **`currency`**: The currency type that was converted
-  - **`tacPrice`** & **`tonPrice`**: Reference USD price information for TAC and TON tokens used in the conversion calculation
+- **`spotValue`** & **`emaValue`**: Converted amounts using spot and EMA prices respectively
+- **`decimals`**: Decimal places for the converted values
+- **`currency`**: The currency type that was converted
+- **`tacPrice`** & **`tonPrice`**: Reference USD price information for TAC and TON tokens used in the conversion calculation
 
 
 ### WaitOptions Defaults

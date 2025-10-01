@@ -71,7 +71,7 @@ export class SenderFactory {
         if (params.version === 'V5R1') {
             // manual setup of wallet id required to support wallet w5 both on mainnet and testnet
             config.walletId = {
-                networkGlobalId: params.network === Network.TESTNET ? -3 : -239,
+                networkGlobalId: params.network === Network.MAINNET ? -239 : -3,
                 context: {
                     walletVersion: 'v5r1',
                     workchain: 0,

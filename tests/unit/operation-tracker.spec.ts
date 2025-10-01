@@ -21,6 +21,7 @@ import {
     TransactionLinker,
     WaitOptions,
 } from '../../src';
+import { convertCurrencyNegativeOrZeroValueError } from '../../src/errors/instances';
 
 // Mock implementations
 class MockLogger implements ILogger {
@@ -38,6 +39,8 @@ class MockLiteSequencerClient implements ILiteSequencerClient {
     getStageProfilings = jest.fn<ILiteSequencerClient['getStageProfilings']>();
     getOperationStatuses = jest.fn<ILiteSequencerClient['getOperationStatuses']>();
     convertCurrency = jest.fn<ILiteSequencerClient['convertCurrency']>();
+    simulateTACMessage = jest.fn<ILiteSequencerClient['simulateTACMessage']>();
+    getTVMExecutorFee = jest.fn<ILiteSequencerClient['getTVMExecutorFee']>();
 }
 
 class MockLiteSequencerClientFactory implements ILiteSequencerClientFactory {
@@ -439,6 +442,22 @@ describe('OperationTracker', () => {
     });
 
     describe('convertCurrency', () => {
+        it('should throw error if value negative or zero', async () => {
+            let params: ConvertCurrencyParams = {
+                value: 0n,
+                currency: CurrencyType.TON,
+            };
+
+            await expect(operationTracker.convertCurrency(params)).rejects.toThrow(convertCurrencyNegativeOrZeroValueError);
+
+            params = {
+                value: -2n,
+                currency: CurrencyType.TON,
+            };
+
+            await expect(operationTracker.convertCurrency(params)).rejects.toThrow(convertCurrencyNegativeOrZeroValueError);
+        });
+
         it('should successfully convert currency using first client', async () => {
             const params: ConvertCurrencyParams = {
                 value: 123n,
@@ -547,6 +566,358 @@ describe('OperationTracker', () => {
 
             expect(result).toEqual(expectedResult);
             expect(mockClients[0].getOperationStatuses).toHaveBeenCalledWith(operationIds, 100);
+        });
+    });
+
+    describe('getOperationIdByTransactionHash', () => {
+        it('should successfully get operation ID by transaction hash', async () => {
+            const transactionHash = '0x123abc';
+            const expectedId = 'op456';
+
+            mockClients[0].getOperationIdByTransactionHash.mockResolvedValue(expectedId);
+
+            const result = await operationTracker.getOperationIdByTransactionHash(transactionHash);
+
+            expect(result).toBe(expectedId);
+            expect(mockClients[0].getOperationIdByTransactionHash).toHaveBeenCalledWith(transactionHash);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `Getting operation ID for transactionHash: "${transactionHash}"`,
+            );
+            expect(mockLogger.debug).toHaveBeenCalledWith('Operation ID retrieved successfully');
+        });
+
+        it('should handle empty operation ID by transaction hash', async () => {
+            const transactionHash = '0x123abc';
+
+            mockClients[0].getOperationIdByTransactionHash.mockResolvedValue('');
+
+            const result = await operationTracker.getOperationIdByTransactionHash(transactionHash);
+
+            expect(result).toBe('');
+            expect(mockLogger.debug).toHaveBeenCalledWith('Operation ID does not exist');
+        });
+
+        it('should retry on second client if first fails', async () => {
+            const transactionHash = '0x123abc';
+            const expectedId = 'op456';
+
+            mockClients[0].getOperationIdByTransactionHash.mockRejectedValue(new Error('Network error'));
+            mockClients[1].getOperationIdByTransactionHash.mockResolvedValue(expectedId);
+
+            const result = await operationTracker.getOperationIdByTransactionHash(transactionHash);
+
+            expect(result).toBe(expectedId);
+            expect(mockClients[0].getOperationIdByTransactionHash).toHaveBeenCalledWith(transactionHash);
+            expect(mockClients[1].getOperationIdByTransactionHash).toHaveBeenCalledWith(transactionHash);
+            expect(mockLogger.warn).toHaveBeenCalledWith(
+                'Failed to get OperationId by transactionHash using one of the endpoints',
+            );
+        });
+
+        it('should throw error if all endpoints fail', async () => {
+            const transactionHash = '0x123abc';
+            const error = new Error('Network error');
+
+            mockClients[0].getOperationIdByTransactionHash.mockRejectedValue(error);
+            mockClients[1].getOperationIdByTransactionHash.mockRejectedValue(error);
+
+            await expect(operationTracker.getOperationIdByTransactionHash(transactionHash)).rejects.toThrow();
+            expect(mockLogger.error).toHaveBeenCalledWith(
+                'All endpoints failed to get operation id by transactionHash',
+            );
+        });
+
+        it('should use waitUntilSuccess when wait options provided', async () => {
+            const transactionHash = '0x123abc';
+            const expectedId = 'op456';
+            const waitOptions = { timeout: 5000, maxAttempts: 3, delay: 500 };
+
+            mockClients[0].getOperationIdByTransactionHash.mockResolvedValue(expectedId);
+
+            const result = await operationTracker.getOperationIdByTransactionHash(transactionHash, waitOptions);
+
+            expect(result).toBe(expectedId);
+        });
+    });
+
+    describe('simulateTACMessage', () => {
+        it('should successfully simulate TAC message', async () => {
+            const params = {
+                tacCallParams: {
+                    arguments: '0xabcdef',
+                    methodName: 'transfer',
+                    target: '0x1234567890123456789012345678901234567890',
+                },
+                shardsKey: '12345',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+            };
+            const expectedResult = {
+                estimatedGas: 21000n,
+                feeParams: {
+                    currentBaseFee: '20000000000',
+                    isEip1559: true,
+                    suggestedGasPrice: '25000000000',
+                    suggestedGasTip: '2000000000',
+                },
+                message: 'Simulation successful',
+                outMessages: null,
+                simulationError: '',
+                simulationStatus: true,
+                suggestedTonExecutionFee: '5000000',
+                suggestedTacExecutionFee: '3000000',
+                debugInfo: {
+                    from: '0x123',
+                    to: '0x456',
+                    callData: '0xabcdef',
+                    blockNumber: 12345,
+                },
+            };
+
+            mockClients[0].simulateTACMessage.mockResolvedValue(expectedResult);
+
+            const result = await operationTracker.simulateTACMessage(params);
+
+            expect(result).toBe(expectedResult);
+            expect(mockClients[0].simulateTACMessage).toHaveBeenCalledWith(params);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `Simulating TAC message: ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}`,
+            );
+            expect(mockLogger.debug).toHaveBeenCalledWith('Simulation result retrieved successfully');
+        });
+
+        it('should retry on second client if first fails', async () => {
+            const params = {
+                tacCallParams: {
+                    arguments: '0xabcdef',
+                    methodName: 'transfer',
+                    target: '0x1234567890123456789012345678901234567890',
+                },
+                shardsKey: '12345',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+            };
+            const expectedResult = {
+                estimatedGas: 21000n,
+                feeParams: {
+                    currentBaseFee: '20000000000',
+                    isEip1559: true,
+                    suggestedGasPrice: '25000000000',
+                    suggestedGasTip: '2000000000',
+                },
+                message: 'Simulation successful',
+                outMessages: null,
+                simulationError: '',
+                simulationStatus: true,
+                suggestedTonExecutionFee: '5000000',
+                suggestedTacExecutionFee: '3000000',
+                debugInfo: {
+                    from: '0x123',
+                    to: '0x456',
+                    callData: '0xabcdef',
+                    blockNumber: 12345,
+                },
+            };
+
+            mockClients[0].simulateTACMessage.mockRejectedValue(new Error('Simulation error'));
+            mockClients[1].simulateTACMessage.mockResolvedValue(expectedResult);
+
+            const result = await operationTracker.simulateTACMessage(params);
+
+            expect(result).toBe(expectedResult);
+            expect(mockClients[0].simulateTACMessage).toHaveBeenCalledWith(params);
+            expect(mockClients[1].simulateTACMessage).toHaveBeenCalledWith(params);
+            expect(mockLogger.warn).toHaveBeenCalledWith('Failed to simulate TAC message using one of the endpoints');
+        });
+
+        it('should throw error if all endpoints fail', async () => {
+            const params = {
+                tacCallParams: {
+                    arguments: '0xabcdef',
+                    methodName: 'transfer',
+                    target: '0x1234567890123456789012345678901234567890',
+                },
+                shardsKey: '12345',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+            };
+            const error = new Error('Simulation error');
+
+            mockClients[0].simulateTACMessage.mockRejectedValue(error);
+            mockClients[1].simulateTACMessage.mockRejectedValue(error);
+
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow();
+            expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to simulate TAC message');
+        });
+
+        it('should use waitUntilSuccess when wait options provided', async () => {
+            const params = {
+                tacCallParams: {
+                    arguments: '0xabcdef',
+                    methodName: 'transfer',
+                    target: '0x1234567890123456789012345678901234567890',
+                },
+                shardsKey: '12345',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+            };
+            const expectedResult = {
+                estimatedGas: 21000n,
+                feeParams: {
+                    currentBaseFee: '20000000000',
+                    isEip1559: true,
+                    suggestedGasPrice: '25000000000',
+                    suggestedGasTip: '2000000000',
+                },
+                message: 'Simulation successful',
+                outMessages: null,
+                simulationError: '',
+                simulationStatus: true,
+                suggestedTonExecutionFee: '5000000',
+                suggestedTacExecutionFee: '3000000',
+                debugInfo: {
+                    from: '0x123',
+                    to: '0x456',
+                    callData: '0xabcdef',
+                    blockNumber: 12345,
+                },
+            };
+            const waitOptions = { timeout: 5000, maxAttempts: 3, delay: 500 };
+
+            mockClients[0].simulateTACMessage.mockResolvedValue(expectedResult);
+
+            const result = await operationTracker.simulateTACMessage(params, waitOptions);
+
+            expect(result).toBe(expectedResult);
+        });
+    });
+
+    describe('getTVMExecutorFee', () => {
+        it('should successfully get TVM executor fee', async () => {
+            const params = {
+                feeSymbol: 'TON',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQB123',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tvmValidExecutors: ['EQB456', 'EQB789'],
+            };
+            const expectedResult = {
+                inTAC: '5000000',
+                inTON: '3000000',
+            };
+
+            mockClients[0].getTVMExecutorFee.mockResolvedValue(expectedResult);
+
+            const result = await operationTracker.getTVMExecutorFee(params);
+
+            expect(result).toBe(expectedResult);
+            expect(mockClients[0].getTVMExecutorFee).toHaveBeenCalledWith(params);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `get TVM executor fee: ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}`,
+            );
+            expect(mockLogger.debug).toHaveBeenCalledWith('Suggested TVM executor fee retrieved successfully');
+        });
+
+        it('should retry on second client if first fails', async () => {
+            const params = {
+                feeSymbol: 'TON',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQB123',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tvmValidExecutors: ['EQB456', 'EQB789'],
+            };
+            const expectedResult = {
+                inTAC: '5000000',
+                inTON: '3000000',
+            };
+
+            mockClients[0].getTVMExecutorFee.mockRejectedValue(new Error('Fee calculation error'));
+            mockClients[1].getTVMExecutorFee.mockResolvedValue(expectedResult);
+
+            const result = await operationTracker.getTVMExecutorFee(params);
+
+            expect(result).toBe(expectedResult);
+            expect(mockClients[0].getTVMExecutorFee).toHaveBeenCalledWith(params);
+            expect(mockClients[1].getTVMExecutorFee).toHaveBeenCalledWith(params);
+            expect(mockLogger.warn).toHaveBeenCalledWith('Failed to get TVM executor fee using one of the endpoints');
+        });
+
+        it('should throw error if all endpoints fail', async () => {
+            const params = {
+                feeSymbol: 'TON',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQB123',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tvmValidExecutors: ['EQB456', 'EQB789'],
+            };
+            const error = new Error('Fee calculation error');
+
+            mockClients[0].getTVMExecutorFee.mockRejectedValue(error);
+            mockClients[1].getTVMExecutorFee.mockRejectedValue(error);
+
+            await expect(operationTracker.getTVMExecutorFee(params)).rejects.toThrow();
+            expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to get TVM executor fee');
+        });
+
+        it('should use waitUntilSuccess when wait options provided', async () => {
+            const params = {
+                feeSymbol: 'TON',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQB123',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tvmValidExecutors: ['EQB456', 'EQB789'],
+            };
+            const expectedResult = {
+                inTAC: '5000000',
+                inTON: '3000000',
+            };
+            const waitOptions = { timeout: 5000, maxAttempts: 3, delay: 500 };
+
+            mockClients[0].getTVMExecutorFee.mockResolvedValue(expectedResult);
+
+            const result = await operationTracker.getTVMExecutorFee(params, waitOptions);
+
+            expect(result).toBe(expectedResult);
         });
     });
 });

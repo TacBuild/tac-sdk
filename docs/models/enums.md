@@ -8,6 +8,7 @@ Specifies the target blockchain network.
 
 - **`TESTNET = 'testnet'`**: TON Testnet and its corresponding TAC test network.
 - **`MAINNET = 'mainnet'`**: TON Mainnet and its corresponding TAC main network.
+- **`DEV = 'dev'`**: Development network for local testing and development purposes.
 
 ```ts
 import { Network } from '@tonappchain/sdk';

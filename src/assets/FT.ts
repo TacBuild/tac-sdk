@@ -1,10 +1,19 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, OpenedContract } from '@ton/ton';
-import { isAddress as isEthereumAddress } from 'ethers';
+import { ethers, isAddress as isEthereumAddress } from 'ethers';
 
-import { ContractError, emptyContractError, insufficientBalanceError, unknownTokenTypeError } from '../errors';
-import { Asset, ContractOpener,IConfiguration } from '../interfaces';
-import { JETTON_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
+import { IERC20WithDecimals } from '../../artifacts/tacTypes';
+import { JettonMinter, JettonMinterData, JettonWallet } from '../../artifacts/tonTypes';
+import {
+    ContractError,
+    emptyContractError,
+    insufficientBalanceError,
+    missingDecimals,
+    missingJettonDataError,
+    unknownTokenTypeError,
+} from '../errors';
+import { Asset, IConfiguration } from '../interfaces';
+import { JETTON_TRANSFER_FORWARD_TON_AMOUNT, TAC_DECIMALS, TON_DECIMALS } from '../sdk/Consts';
 import {
     calculateAmount,
     calculateContractAddress,
@@ -14,10 +23,16 @@ import {
 } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { AssetType, EVMAddress, FeeParams, TVMAddress, UserWalletBalanceExtended } from '../structs/Struct';
+import {
+    AssetType,
+    EVMAddress,
+    FeeParams,
+    FTOriginAndData,
+    TVMAddress,
+    UserWalletBalanceExtended,
+} from '../structs/Struct';
 import { Origin } from '../structs/Struct';
-import { JettonMaster, JettonMasterData } from '../wrappers/JettonMaster';
-import { JettonWallet } from '../wrappers/JettonWallet';
+import { readJettonMetadata } from '../wrappers/ContentUtils';
 
 export class FT implements Asset {
     private _tvmAddress: Address;
@@ -26,9 +41,9 @@ export class FT implements Asset {
     readonly origin: Origin;
 
     private _configuration: IConfiguration;
-    private _jettonMinter: OpenedContract<JettonMaster> | SandboxContract<JettonMaster>;
+    private _jettonMinter: OpenedContract<JettonMinter> | SandboxContract<JettonMinter>;
 
-    private _decimals?: number;
+    private _decimals: number;
     private _transferAmount: bigint;
     private _evmAddress?: string;
 
@@ -36,17 +51,24 @@ export class FT implements Asset {
         return this._tvmAddress.toString({ bounceable: true });
     }
 
-    static async getJettonData(contractOpener: ContractOpener, address: TVMAddress): Promise<JettonMasterData> {
+    static async getJettonData(configuration: IConfiguration, address: TVMAddress): Promise<JettonMinterData> {
         Validator.validateTVMAddress(address);
-        const jetton = contractOpener.open(JettonMaster.createFromAddress(Address.parse(address)));
+        const jetton = configuration.TONParams.contractOpener.open(
+            configuration.artifacts.ton.wrappers.JettonMinter.createFromAddress(Address.parse(address)),
+        );
         return jetton.getJettonData();
     }
 
-    async getJettonData(): Promise<JettonMasterData> {
-        return FT.getJettonData(this._configuration.TONParams.contractOpener, this._tvmAddress.toString());
+    async getJettonData(): Promise<JettonMinterData> {
+        return FT.getJettonData(this._configuration, this._tvmAddress.toString());
     }
 
     static async getOrigin(configuration: IConfiguration, address: TVMAddress): Promise<Origin> {
+        const result = await this.getOriginAndData(configuration, address);
+        return result.origin;
+    }
+
+    static async getOriginAndData(configuration: IConfiguration, address: TVMAddress): Promise<FTOriginAndData> {
         const { jettonMinterCode, crossChainLayerAddress, jettonWalletCode } = configuration.TONParams;
 
         const { code: thisCodeBOC } = await configuration.TONParams.contractOpener.getContractState(
@@ -57,14 +79,16 @@ export class FT implements Asset {
         }
         const thisCode = Cell.fromBoc(thisCodeBOC)[0];
 
+        const jettonMinter = configuration.TONParams.contractOpener.open(
+            configuration.artifacts.ton.wrappers.JettonMinter.createFromAddress(Address.parse(address)),
+        );
+
         if (!jettonMinterCode.equals(thisCode)) {
-            return Origin.TON;
+            const jettonData = await jettonMinter.getJettonData();
+            return { origin: Origin.TON, jettonMinter, jettonData };
         }
 
-        const jettonMinter = configuration.TONParams.contractOpener.open(
-            JettonMaster.createFromAddress(Address.parse(address)),
-        );
-        const evmAddress = await jettonMinter.getEVMAddress();
+        const evmAddress = await jettonMinter.getEVMTokenAddress();
 
         const expectedMinterAddress = await calculateContractAddress(
             jettonMinterCode,
@@ -79,35 +103,36 @@ export class FT implements Asset {
         );
 
         if (!expectedMinterAddress.equals(Address.parse(address))) {
-            return Origin.TON;
+            const jettonData = await jettonMinter.getJettonData();
+            return { origin: Origin.TON, jettonMinter, jettonData };
         }
 
-        return Origin.TAC;
+        return { origin: Origin.TAC, jettonMinter, evmAddress };
     }
 
     static async getTVMAddress(configuration: IConfiguration, address: EVMAddress): Promise<string> {
         Validator.validateEVMAddress(address);
 
-        // If token is TON native
         const fromTVM = await configuration.TACParams.tokenUtils['exists(address)'](address);
 
         if (fromTVM) {
-            const erc20Token = configuration.artifacts.tac.wrappers.CrossChainLayerERC20FactoryTAC.connect(
-                address,
-                configuration.TACParams.provider,
-            );
+            const cclErc20Abi = configuration.artifacts.tac.compilationArtifacts.ICrossChainLayerERC20.abi;
+            const erc20Token = new ethers.Contract(address, cclErc20Abi, configuration.TACParams.provider);
 
             const info = await erc20Token.getInfo();
             return info.tvmAddress;
         }
 
-        // If token is TAC native
-        const jettonMaster = JettonMaster.createFromConfig({
-            evmTokenAddress: address,
-            crossChainLayerAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
-            code: configuration.TONParams.jettonMinterCode,
-            walletCode: configuration.TONParams.jettonWalletCode,
-        });
+        const jettonMaster = configuration.artifacts.ton.wrappers.JettonMinter.createFromConfig(
+            {
+                totalSupply: 0n,
+                adminAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
+                jettonWalletCode: configuration.TONParams.jettonWalletCode,
+                evmTokenAddress: address,
+                content: beginCell().endCell(),
+            },
+            configuration.TONParams.jettonMinterCode,
+        );
 
         return jettonMaster.address.toString();
     }
@@ -120,33 +145,85 @@ export class FT implements Asset {
             return configuration.TACParams.tokenUtils.computeAddress(tokenAddressString);
         } else {
             const givenMinter = configuration.TONParams.contractOpener.open(
-                new JettonMaster(Address.parse(tokenAddressString)),
+                configuration.artifacts.ton.wrappers.JettonMinter.createFromAddress(Address.parse(tokenAddressString)),
             );
-            return givenMinter.getEVMAddress();
+            return givenMinter.getEVMTokenAddress();
         }
     }
 
-    private constructor(address: TVMAddress, origin: Origin, configuration: IConfiguration) {
+    private constructor(address: TVMAddress, origin: Origin, configuration: IConfiguration, decimals: number) {
         this._tvmAddress = Address.parse(address);
         this._configuration = configuration;
-        this._jettonMinter = this._configuration.TONParams.contractOpener.open(new JettonMaster(this._tvmAddress));
+        this._jettonMinter = this._configuration.TONParams.contractOpener.open(
+            configuration.artifacts.ton.wrappers.JettonMinter.createFromAddress(this._tvmAddress),
+        );
         this.origin = origin;
         this._transferAmount = 0n;
+        this._decimals = decimals;
+    }
+
+    private static async getTACDecimals(configuration: IConfiguration, evmAddress: string): Promise<number> {
+        const nativeTACAddress = await configuration.nativeTACAddress();
+
+        if (evmAddress === nativeTACAddress) {
+            return TAC_DECIMALS; // Native TAC always has 18 decimals
+        }
+
+        // For ERC20 contracts, get decimals from contract
+        const erc20TokenAbi = configuration.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi;
+        const erc20Token = new ethers.Contract(
+            evmAddress,
+            erc20TokenAbi,
+            configuration.TACParams.provider,
+        ) as unknown as IERC20WithDecimals;
+
+        return Number(await erc20Token.decimals());
     }
 
     static async fromAddress(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<FT> {
         const tvmAddress = isEthereumAddress(address) ? await this.getTVMAddress(configuration, address) : address;
 
-        const origin = await FT.getOrigin(configuration, tvmAddress).catch((e) => {
+        const {
+            origin,
+            jettonMinter,
+            evmAddress: cachedEvmAddress,
+            jettonData,
+        } = await this.getOriginAndData(configuration, tvmAddress).catch((e) => {
             if (e instanceof ContractError) {
-                return Origin.TAC;
+                const jettonMinter = configuration.TONParams.contractOpener.open(
+                    configuration.artifacts.ton.wrappers.JettonMinter.createFromAddress(Address.parse(tvmAddress)),
+                );
+                return { origin: Origin.TAC, jettonMinter, evmAddress: undefined, jettonData: undefined };
             }
             throw e;
         });
 
-        const token = new FT(tvmAddress, origin, configuration);
-        if (isEthereumAddress(address)) {
-            token._evmAddress = address;
+        let decimals: number;
+        let finalEvmAddress: string | undefined;
+
+        if (origin === Origin.TON) {
+            if (!jettonData) {
+                throw missingJettonDataError;
+            }
+            const metadata = await readJettonMetadata(jettonData.content);
+            const decimalsRaw = metadata.metadata.decimals ?? TON_DECIMALS;
+            if (decimalsRaw === undefined) {
+                throw missingDecimals;
+            }
+            decimals = Number(decimalsRaw);
+        } else {
+            if (isEthereumAddress(address)) {
+                finalEvmAddress = address;
+            } else {
+                finalEvmAddress = cachedEvmAddress || (await jettonMinter.getEVMTokenAddress());
+            }
+
+            decimals = await this.getTACDecimals(configuration, finalEvmAddress);
+        }
+
+        const token = new FT(tvmAddress, origin, configuration, decimals);
+        if (finalEvmAddress || isEthereumAddress(address)) {
+            token._evmAddress = finalEvmAddress || address;
         }
 
         return token;
@@ -157,47 +234,44 @@ export class FT implements Asset {
     }
 
     get clone(): FT {
-        const ft = new FT(this._tvmAddress.toString(), this.origin, this._configuration);
+        const ft = new FT(this._tvmAddress.toString(), this.origin, this._configuration, this._decimals);
         ft._transferAmount = this._transferAmount;
         ft._evmAddress = this._evmAddress;
-        ft._decimals = this._decimals;
         return ft;
     }
 
-    async withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<FT> {
+    withAmount(amount: number): FT {
         if (this._transferAmount > 0n) {
-            // clone token if withAmount set before to avoid changing the original token
             const newToken = this.clone;
-            newToken._transferAmount =
-                'rawAmount' in amount ? amount.rawAmount : calculateRawAmount(amount.amount, await this.getDecimals());
+            newToken._transferAmount = calculateRawAmount(amount, this._decimals);
             return newToken;
         }
 
-        if ('rawAmount' in amount) {
-            this._transferAmount = amount.rawAmount;
-        } else {
-            const decimals = await this.getDecimals();
-            this._transferAmount = calculateRawAmount(amount.amount, decimals);
-        }
-
+        this._transferAmount = calculateRawAmount(amount, this._decimals);
         return this;
     }
 
-    async addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<FT> {
-        if ('rawAmount' in amount) {
-            this._transferAmount = this._transferAmount + amount.rawAmount;
-        } else {
-            const decimals = await this.getDecimals();
-            this._transferAmount = this._transferAmount + calculateRawAmount(amount.amount, decimals);
+    withRawAmount(rawAmount: bigint): FT {
+        if (this._transferAmount > 0n) {
+            const newToken = this.clone;
+            newToken._transferAmount = rawAmount;
+            return newToken;
         }
+        this._transferAmount = rawAmount;
+        return this;
+    }
+
+    addAmount(amount: number): FT {
+        this._transferAmount = this._transferAmount + calculateRawAmount(amount, this._decimals);
+        return this;
+    }
+
+    addRawAmount(rawAmount: bigint): FT {
+        this._transferAmount = this._transferAmount + rawAmount;
         return this;
     }
 
     async getDecimals(): Promise<number> {
-        if (!this._decimals) {
-            const decimalsRaw = (await this._jettonMinter.getJettonData()).content.metadata.decimals;
-            this._decimals = decimalsRaw ? Number(decimalsRaw) : 9;
-        }
         return this._decimals;
     }
 
@@ -212,9 +286,11 @@ export class FT implements Asset {
             this._evmAddress = await this._configuration.TACParams.tokenUtils.computeAddress(tokenAddressString);
         } else if (this.origin === Origin.TAC) {
             const givenMinter = this._configuration.TONParams.contractOpener.open(
-                new JettonMaster(Address.parse(tokenAddressString)),
+                this._configuration.artifacts.ton.wrappers.JettonMinter.createFromAddress(
+                    Address.parse(tokenAddressString),
+                ),
             );
-            this._evmAddress = await givenMinter.getEVMAddress();
+            this._evmAddress = await givenMinter.getEVMTokenAddress();
         } else {
             throw unknownTokenTypeError(tokenAddressString, 'Token origin is neither TON nor TAC');
         }
@@ -271,12 +347,12 @@ export class FT implements Asset {
     async getWallet(userAddress: string): Promise<OpenedContract<JettonWallet> | SandboxContract<JettonWallet>> {
         const walletAddress = await this.getUserWalletAddress(userAddress);
         return this._configuration.TONParams.contractOpener.open(
-            JettonWallet.createFromAddress(Address.parse(walletAddress)),
+            this._configuration.artifacts.ton.wrappers.JettonWallet.createFromAddress(Address.parse(walletAddress)),
         );
     }
 
     async getUserWalletAddress(userAddress: string): Promise<string> {
-        return this._jettonMinter.getWalletAddress(userAddress);
+        return (await this._jettonMinter.getWalletAddress(Address.parse(userAddress))).toString({ bounceable: true });
     }
 
     async getUserBalance(userAddress: string): Promise<bigint> {
@@ -329,7 +405,7 @@ export class FT implements Asset {
     ): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
 
-        return JettonWallet.transferMessage(
+        return this._configuration.artifacts.ton.wrappers.JettonWallet.transferMessage(
             rawAmount,
             notificationReceiverAddress,
             responseAddress,
@@ -349,7 +425,7 @@ export class FT implements Asset {
         feeData?: Cell,
     ): Cell {
         const queryId = generateRandomNumberByTimestamp().randomNumber;
-        return JettonWallet.burnMessage(
+        return this._configuration.artifacts.ton.wrappers.JettonWallet.burnMessage(
             rawAmount,
             notificationReceiverAddress,
             crossChainTonAmount,

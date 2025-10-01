@@ -30,13 +30,13 @@ async function main() {
     const amountA = 1;
     const amountB = 2;
 
-    const tokenA = await (
+    const tokenA = (
         await AssetFactory.from(tacSdk.config, { address: TVM_TKA_ADDRESS, tokenType: AssetType.FT })
-    ).withAmount({ amount: amountA });
+    ).withAmount(amountA);
 
-    const tokenB = await (
+    const tokenB = (
         await AssetFactory.from(tacSdk.config, { address: TVM_TKB_ADDRESS, tokenType: AssetType.FT })
-    ).withAmount({ amount: amountB });
+    ).withAmount(amountB);
 
     const EVM_TKA_ADDRESS = await tokenA.getEVMAddress();
     const EVM_TKB_ADDRESS = await tokenB.getEVMAddress();
@@ -70,9 +70,9 @@ async function main() {
         assets: jettons,
     }));
 
-    const tonToken = await (
+    const tonToken = (
         await AssetFactory.from(tacSdk.config, { address: '', tokenType: AssetType.FT })
-    ).withAmount({ amount: 0.001 });
+    ).withAmount(0.001);
 
     // 50 TON transfers
     for (let i = 0; i < 300; i++) {

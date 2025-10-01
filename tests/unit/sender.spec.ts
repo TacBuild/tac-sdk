@@ -5,7 +5,7 @@ import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { address, beginCell, SendMode, toNano, WalletContractV4, WalletContractV5R1 } from '@ton/ton';
 
 import { BatchSender, ContractOpener, HighloadWalletV3,Network, SenderAbstraction, SenderFactory } from '../../src';
-import { sandboxOpener } from '../../src/adapters/contractOpener';
+import { sandboxOpener } from '../../src';
 import { RawSender } from '../../src/sender/RawSender';
 import { SendResult, ShardTransaction } from '../../src/structs/InternalStruct';
 

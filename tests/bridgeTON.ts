@@ -1,8 +1,6 @@
 import 'dotenv/config';
 
-import { AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
-import { defaultWaitOptions } from '../src';
-import { AssetFactory, ConsoleLogger } from '../src';
+import { ConsoleLogger, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
@@ -28,24 +26,12 @@ const bridgeTonSawSender = async (amount: number) => {
 
     // create JettonTransferData (transfer jetton in TVM to swap)
     const assets = [
-        await (
-            await AssetFactory.from(tacSdk.config, { address: tacSdk.config.nativeTONAddress, tokenType: AssetType.FT })
-        ).withAmount({ amount: amount }),
-        await (
-            await AssetFactory.from(tacSdk.config, { address: tacSdk.config.nativeTONAddress, tokenType: AssetType.FT })
-        ).withAmount({ amount: amount }),
-        await (
-            await AssetFactory.from(tacSdk.config, { address: tacSdk.config.nativeTONAddress, tokenType: AssetType.FT })
-        ).withAmount({ amount: amount }),
+        { address: tacSdk.config.nativeTONAddress, amount: amount },
+        { address: tacSdk.config.nativeTONAddress, amount: amount },
+        { address: tacSdk.config.nativeTONAddress, amount: amount },
     ];
 
-    const result = await tacSdk.sendCrossChainTransaction(
-        evmProxyMsg,
-        sender,
-        assets,
-        { allowSimulationError: true },
-        defaultWaitOptions,
-    );
+    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets, { allowSimulationError: true });
 
     tacSdk.closeConnections();
 

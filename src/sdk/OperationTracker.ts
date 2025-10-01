@@ -1,24 +1,29 @@
-import { mainnet, testnet } from '@tonappchain/artifacts';
-
+import { mainnet, testnet } from '../../artifacts';
 import { allEndpointsFailedError } from '../errors';
+import { convertCurrencyNegativeOrZeroValueError } from '../errors/instances';
 import { ILiteSequencerClient, ILiteSequencerClientFactory, ILogger, IOperationTracker } from '../interfaces';
 import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    GetTVMExecutorFeeParams,
     Network,
     OperationIdsByShardsKey,
     OperationType,
     SimplifiedStatuses,
     StatusInfo,
     StatusInfosByOperationId,
+    SuggestedTVMExecutorFee,
+    TACSimulationParams,
+    TACSimulationResult,
     TransactionLinker,
     WaitOptions,
 } from '../structs/Struct';
 import { LiteSequencerClient } from './LiteSequencerClient';
 import { NoopLogger } from './Logger';
 import { formatObjectForLogging, waitUntilSuccess } from './Utils';
+import { Validator } from './Validator';
 
 export class DefaultLiteSequencerClientFactory implements ILiteSequencerClientFactory {
     createClients(endpoints: string[]): ILiteSequencerClient[] {
@@ -36,12 +41,19 @@ export class OperationTracker implements IOperationTracker {
         logger: ILogger = new NoopLogger(),
         clientFactory: ILiteSequencerClientFactory = new DefaultLiteSequencerClientFactory(),
     ) {
-        const endpoints =
-            customLiteSequencerEndpoints ??
-            (network === Network.TESTNET
-                ? testnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS
-                : mainnet.PUBLIC_LITE_SEQUENCER_ENDPOINTS);
-
+        let endpoints: string[];
+        if (network === Network.DEV) {
+            if (!customLiteSequencerEndpoints || customLiteSequencerEndpoints.length === 0) {
+                throw new Error('For DEV network, custom lite sequencer endpoints must be provided');
+            }
+            endpoints = customLiteSequencerEndpoints;
+        } else {
+            const artifacts = network === Network.MAINNET ? mainnet : testnet;
+            endpoints =
+                customLiteSequencerEndpoints && customLiteSequencerEndpoints.length !== 0
+                    ? customLiteSequencerEndpoints
+                    : artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+        }
         this.clients = clientFactory.createClients(endpoints);
         this.logger = logger;
     }
@@ -65,7 +77,13 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(
+                  waitOptions,
+                  requestFn,
+                  'OperationTracker: Getting operation ID by transaction hash',
+              )
+            : await requestFn();
     }
 
     async getOperationType(operationId: string, waitOptions?: WaitOptions<OperationType>): Promise<OperationType> {
@@ -87,7 +105,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation type')
+            : await requestFn();
     }
 
     async getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string>): Promise<string> {
@@ -109,7 +129,13 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(
+                  waitOptions,
+                  requestFn,
+                  'OperationTracker: Getting operation ID by transaction linker',
+              )
+            : await requestFn();
     }
 
     async getOperationIdsByShardsKeys(
@@ -137,7 +163,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation IDs by shards keys')
+            : await requestFn();
     }
 
     async getStageProfiling(operationId: string, waitOptions?: WaitOptions<ExecutionStages>): Promise<ExecutionStages> {
@@ -164,7 +192,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting stage profiling')
+            : await requestFn();
     }
 
     async getStageProfilings(
@@ -190,7 +220,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting stage profilings')
+            : await requestFn();
     }
 
     async getOperationStatuses(
@@ -216,7 +248,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation statuses')
+            : await requestFn();
     }
 
     async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>): Promise<StatusInfo> {
@@ -243,7 +277,9 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation status')
+            : await requestFn();
     }
 
     async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
@@ -256,10 +292,7 @@ export class OperationTracker implements IOperationTracker {
             this.logger.warn('Operation ID not found');
             return SimplifiedStatuses.OPERATION_ID_NOT_FOUND;
         }
-        this.logger.debug(`Operation ID: ${operationId}`);
-
         const operationType = await this.getOperationType(operationId);
-        this.logger.debug(`Operation type: ${operationType}`);
 
         if (operationType == OperationType.PENDING || operationType == OperationType.UNKNOWN) {
             return SimplifiedStatuses.PENDING;
@@ -276,6 +309,9 @@ export class OperationTracker implements IOperationTracker {
         params: ConvertCurrencyParams,
         waitOptions?: WaitOptions<ConvertedCurrencyResult>,
     ): Promise<ConvertedCurrencyResult> {
+        if (params.value <= 0n) {
+            throw convertCurrencyNegativeOrZeroValueError;
+        }
         this.logger.debug(`Converting currency: ${formatObjectForLogging(params)}`);
 
         const requestFn = async (): Promise<ConvertedCurrencyResult> => {
@@ -294,6 +330,63 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions ? await waitUntilSuccess(waitOptions, requestFn) : await requestFn();
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Converting currency')
+            : await requestFn();
+    }
+
+    async simulateTACMessage(
+        params: TACSimulationParams,
+        waitOptions?: WaitOptions<TACSimulationResult>,
+    ): Promise<TACSimulationResult> {
+        Validator.validateTACSimulationParams(params);
+        this.logger.debug(`Simulating TAC message: ${formatObjectForLogging(params)}`);
+
+        const requestFn = async (): Promise<TACSimulationResult> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const result = await client.simulateTACMessage(params);
+                    this.logger.debug(`Simulation result retrieved successfully`);
+                    return result;
+                } catch (error) {
+                    this.logger.warn(`Failed to simulate TAC message using one of the endpoints`);
+                    lastError = error;
+                }
+            }
+            this.logger.error('All endpoints failed to simulate TAC message');
+            throw allEndpointsFailedError(lastError);
+        };
+
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Simulating TAC message')
+            : await requestFn();
+    }
+
+    async getTVMExecutorFee(
+        params: GetTVMExecutorFeeParams,
+        waitOptions?: WaitOptions<SuggestedTVMExecutorFee>,
+    ): Promise<SuggestedTVMExecutorFee> {
+        this.logger.debug(`get TVM executor fee: ${formatObjectForLogging(params)}`);
+
+        const requestFn = async (): Promise<SuggestedTVMExecutorFee> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const result = await client.getTVMExecutorFee(params);
+                    this.logger.debug(`Suggested TVM executor fee retrieved successfully`);
+                    return result;
+                } catch (error) {
+                    this.logger.warn(`Failed to get TVM executor fee using one of the endpoints`);
+                    lastError = error;
+                }
+            }
+            this.logger.error('All endpoints failed to get TVM executor fee');
+            throw allEndpointsFailedError(lastError);
+        };
+
+        return waitOptions
+            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting TVM executor fee')
+            : await requestFn();
     }
 }

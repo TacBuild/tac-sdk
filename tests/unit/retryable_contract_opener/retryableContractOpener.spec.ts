@@ -2,9 +2,9 @@ import '@ton/test-utils';
 
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { Cell, toNano } from '@ton/ton';
-import { testnet } from '@tonappchain/artifacts';
 
-import { RetryableContractOpener } from '../../../src/adapters/retryableContractOpener';
+import { testnet } from '../../../artifacts';
+import { RetryableContractOpener } from '../../../src';
 import { UnstableContractOpener } from './unstableContractOpener';
 
 describe('RetryableContractOpener with Sandbox', () => {
@@ -20,7 +20,7 @@ describe('RetryableContractOpener with Sandbox', () => {
 
         const jettonWalletCode = Cell.fromHex(testnet.ton.compilationArtifacts.JettonWalletCompiled.hex);
         const config = {
-            balance: 0,
+            balance: 0n,
             ownerAddress: deployer.address.toString(),
             jettonMasterAddress: jettonMaster.address.toString(),
             jettonWalletCode: jettonWalletCode,

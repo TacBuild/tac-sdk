@@ -8,9 +8,12 @@
   - [Creating an Instance of `TacSdk`](#creating-an-instance-of-tacsdk)
   - [Core Functions](#core-functions)
     - [`sendCrossChainTransaction`](#sendcrosschaintransaction)
-    - [`getTransactionSimulationInfo`](#gettransactionsimulationinfo)
+    - [`getSimulationInfo`](#getsimulationinfo)
     - [`sendCrossChainTransactions`](#sendcrosschaintransactions)
   - [Asset Helpers](#asset-helpers)
+    - [`getAsset`](#getasset)
+    - [`getFT`](#getft)
+    - [`getNFT`](#getnft)
     - [`getEVMTokenAddress`](#getevmtokenaddress)
     - [`getTVMTokenAddress`](#gettvmtokenaddress)
     - [`nativeTONAddress`](#nativetonaddress)
@@ -22,11 +25,11 @@
     - [`getTVMNFTAddress`](#gettvmnftaddress)
     - [`getEVMNFTAddress`](#getevmnftaddress)
   - [Jetton Helpers](#jetton-helpers)
+    - [`getJettonData`](#getjettondata)
     - [`getUserJettonWalletAddress`](#getuserjettonwalletaddress)
     - [`getUserJettonBalance`](#getuserjettonbalance)
     - [`getUserJettonBalanceExtended`](#getuserjettonbalanceextended)
   - [Advanced](#advanced)
-    - [`getAgnosticProxySDK`](#getagnosticproxysdk)
     - [`getSmartAccountAddressForTvmWallet`](#getsmartaccountaddressfortvmwallet)
     - [`simulateTACMessage`](#simulatetacmessage)
     - [`simulateTransactions`](#simulatetransactions)
@@ -34,6 +37,7 @@
     - [`bridgeTokensToTON`](#bridgetokenstoton)
     - [`isContractDeployedOnTVM`](#iscontractdeployedontvm)
     - [`getNFTItemData`](#getnftitemdata)
+    - [`getOperationTracker`](#getoperationtracker)
     - [`closeConnections`](#closeconnections)
 
 ---
@@ -62,9 +66,8 @@ Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](
 sendCrossChainTransaction(
   evmProxyMsg: EvmProxyMsg,
   sender: SenderAbstraction,
-  assets?: Asset[],
+  assets: AssetLike[] = [],
   options?: CrossChainTransactionOptions,
-  waitOptions?: WaitOptions<string>,
 ): Promise<TransactionLinkerWithOperationId>
 ```
 
@@ -85,11 +88,11 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - **`TonConnectSender`**: For TonConnect integration.
   - **`RawSender`**: For raw wallet transactions using a mnemonic.
   
-- **`assets`** *(optional)*: An array of `Asset` instances created via `AssetFactory.from`, each specifying the asset to bridge. Use `withAmount`/`addAmount` to set amounts.
+- **`assets`**: An array of `AssetLike` instances (defaults to empty array), each specifying the asset to bridge. Can be `Asset` instances created via `AssetFactory.from` or other asset-like objects. Use `withAmount`/`addAmount` to set amounts on `Asset` instances.
 
-- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) struct. 
-
-- **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct.
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) struct. This includes:
+  - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the transaction
+  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation ID waiting behavior
 
 > **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 
@@ -114,13 +117,14 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 5. Incorporates EVM logic into the payload for interaction with the TAC.
 ---
 
-### `getTransactionSimulationInfo`
+### `getSimulationInfo`
 
 ```ts
-getTransactionSimulationInfo(
+getSimulationInfo(
   evmProxyMsg: EvmProxyMsg,
   sender: SenderAbstraction,
-  assets?: Asset[]
+  assets?: AssetLike[],
+  options?: CrossChainTransactionOptions
 ): Promise<ExecutionFeeEstimationResult>
 ```
 
@@ -134,7 +138,11 @@ Simulates the full transaction lifecycle and estimates fees.
 ### `sendCrossChainTransactions`
 
 ```ts
-sendCrossChainTransactions(sender: SenderAbstraction, txs: CrosschainTx[], waitOptions?: WaitOptions<OperationIdsByShardsKey>): Promise<TransactionLinkerWithOperationId[]>
+sendCrossChainTransactions(
+  sender: SenderAbstraction, 
+  txs: BatchCrossChainTxWithAssetLike[], 
+  options?: CrossChainTransactionsOptions
+): Promise<TransactionLinkerWithOperationId[]>
 ```
 
 Sends multiple cross-chain transactions in a batch. This is useful for scenarios where multiple independent operations need to be initiated from TON to TAC.
@@ -142,8 +150,11 @@ Sends multiple cross-chain transactions in a batch. This is useful for scenarios
 #### **Parameters**
 
 - **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the user's wallet.
-- **`txs`**: An array of [`CrosschainTx`](./../models/structs.md#crosschaintx) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`.
-- **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct.
+- **`txs`**: An array of [`BatchCrossChainTxWithAssetLike`](./../models/structs.md#batchcrosschaintxwithassetlike) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`. 
+  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId` or `waitOptions` in their options as these are controlled at the batch level.
+- **`options`** *(optional)*: [`CrossChainTransactionsOptions`](./../models/structs.md#crosschaintransactionsoptions) struct controlling batch-level behavior:
+  - **`waitOperationIds`** *(optional, default: true)*: Whether to wait for operation IDs for all transactions in the batch
+  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation IDs waiting behavior
 
 #### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
   - An array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.
@@ -166,7 +177,7 @@ Creates an asset wrapper based on the provided arguments. If you pass FT params 
 ### `getFT`
 
 ```ts
-getFT(address: string): Promise<FT>
+getFT(address: TVMAddress | EVMAddress): Promise<FT>
 ```
 
 Returns a fungible token (Jetton) wrapper by its TVM or EVM address.
@@ -214,7 +225,7 @@ Returns the TVM wrapper address for a given EVM token.
 ### `nativeTONAddress`
 
 ```ts
-nativeTONAddress(): string
+get nativeTONAddress(): string
 ```
 
 Returns a symbolic identifier for native TON.
@@ -236,7 +247,7 @@ Returns the address of native TAC coin on the TAC chain.
 ### `getTrustedTACExecutors`
 
 ```ts
-getTrustedTACExecutors(): string[]
+get getTrustedTACExecutors(): string[]
 ```
 
 Returns trusted EVM executor addresses.
@@ -246,7 +257,7 @@ Returns trusted EVM executor addresses.
 ### `getTrustedTONExecutors`
 
 ```ts
-getTrustedTONExecutors(): string[]
+get getTrustedTONExecutors(): string[]
 ```
 
 Returns trusted TON executor addresses.
@@ -298,10 +309,10 @@ Returns the EVM NFT collection address as a string.
 ### `getJettonData`
 
 ```ts
-getJettonData(itemAddress: string): Promise<JettonMasterData>
+getJettonData(itemAddress: TVMAddress): Promise<JettonMinterData>
 ```
 
-Returns Jetton master contract data (metadata, total supply, mintable flag, etc.) by its TVM address.
+Returns Jetton minter contract data (metadata, total supply, mintable flag, etc.) by its TVM address.
 
 ### `getUserJettonWalletAddress`
 
@@ -336,14 +347,6 @@ getUserJettonBalanceExtended(userAddress: string, tokenAddress: string): Promise
 
 ## Advanced
 
-### `getAgnosticProxySDK`
-
-```ts
-getAgnosticProxySDK(agnosticProxyAddress?: string, smartAccountFactoryAddress?: string): AgnosticProxySDK
-```
-
-Get instance of Agnostic proxy SDK. See [Agnostic SDK docs](./agnostic_proxy_sdk.md) to get more information
-
 ### `getSmartAccountAddressForTvmWallet`
 
 ```ts
@@ -355,14 +358,14 @@ Get Smart Account address for specified TVM Wallet for specified application
 ### `simulateTACMessage`
 
 ```ts
-simulateTACMessage(req: TACSimulationRequest): Promise<TACSimulationResult>
+simulateTACMessage(req: TACSimulationParams): Promise<TACSimulationResult>
 ```
 
 Simulates EVM-side contract call with a TAC header and TON asset context.
 
 #### **Parameters**
 
-- **`req`**: A [`TACSimulationRequest`](./../models/structs.md#tacsimulationrequest) object containing all the necessary parameters for the simulation.
+- **`req`**: A [`TACSimulationParams`](./../models/structs.md#tacsimulationparams) object containing all the necessary parameters for the simulation.
 
 #### **Returns** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)
   - Simulation result on TAC.
@@ -372,30 +375,30 @@ Simulates EVM-side contract call with a TAC header and TON asset context.
 ### `simulateTransactions`
 
 ```ts
-simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<TACSimulationResult[]>
+simulateTransactions(sender: SenderAbstraction, txs: CrosschainTx[]): Promise<ExecutionFeeEstimationResult[]>
 ```
 
 Simulates multiple cross-chain transactions in batch, providing the same convenient interface as `sendCrossChainTransactions` but for simulation purposes only. This method is useful for testing and fee estimation of multiple transactions without actually sending them.
 
-#### **Returns** [`TACSimulationResult[]`](./../models/structs.md#tacsimulationresult)
-  - Array of simulation results, one for each input transaction.
+#### **Returns** [`ExecutionFeeEstimationResult[]`](./../models/structs.md#executionfeeestimationresult)
+  - Array of execution fee estimation results, one for each input transaction.
 
 ---
 
 ### `getTVMExecutorFeeInfo`
 ```ts
   getTVMExecutorFeeInfo(
-    assets: Asset[],
+    assets: AssetLike[],
     feeSymbol: string,
     tvmValidExecutors?: string[]
-  ): Promise<SuggestedTONExecutorFee>
+  ): Promise<SuggestedTVMExecutorFee>
 ```
 
 Calculates the TVM executor fee for bridging `assets` to TON. The `feeSymbol` determines the token used to pay the fee — TAC for direct TAC->TON operations, or TON for TON->TAC->TON messages. Optionally, you can pass `tvmValidExecutors` to restrict the set of trusted TON executors used for estimation.
 
 Note: The TON executor fee is determined as max(rollback_message, normal_execution) to account for the worst-case path.
 
-#### **Returns** [`SuggestedTONExecutorFee`](./../models/structs.md#suggestedtonexecutorfee)
+#### **Returns** [`SuggestedTVMExecutorFee`](./../models/structs.md#suggestedtvmexecutorfee)
   - Estimated tvmExecutorFee in both TAC and TON.
 
 ---
@@ -407,7 +410,7 @@ bridgeTokensToTON(
   signer: Wallet, 
   value: bigint, 
   tonTarget: string, 
-  assets?: Asset[],
+  assets?: AssetLike[],
   tvmExecutorFee?: bigint,
   tvmValidExecutors?: string[]
 ): Promise<string>
@@ -422,7 +425,7 @@ Initiates a bridge operation from TAC back to TON. This function handles the nec
 - **`signer`**: An `ethers.Wallet` instance for signing the transaction on the TAC chain.
 - **`value`**: The amount of native TAC coin (in wei) to bridge.
 - **`tonTarget`**: The target address on the TON network where the assets should be received.
-- **`assets`** *(optional)*: An array of [`Asset`](./assets.md#asset-interface) objects specifying the tokens or NFTs to bridge.
+- **`assets`** *(optional)*: An array of `AssetLike` objects specifying the tokens or NFTs to bridge. Can be [`Asset`](./assets.md#asset-interface) instances or other asset-like objects.
 - **`tvmExecutorFee`** *(optional)*: The fee (in TON) to pay the TVM executor for processing the message on the TON side. If not provided, a suggested fee is calculated.
 - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
 
@@ -465,6 +468,23 @@ Retrieves NFT data from the TVM chain for a given NFT item address.
 
 #### **Possible exceptions**
 - **`AddressError`**: If the provided address is invalid.
+
+---
+
+### `getOperationTracker`
+
+```ts
+getOperationTracker(): IOperationTracker
+```
+
+#### **Purpose**
+Returns the operation tracker instance used for querying operation statuses and utilities.
+
+#### **Returns**
+[`IOperationTracker`](./operation_tracker.md)
+- The operation tracker instance for monitoring cross-chain operation status and getting detailed execution information.
+
+---
 
 ### `closeConnections`
 

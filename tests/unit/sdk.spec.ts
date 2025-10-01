@@ -2,13 +2,21 @@ import '@ton/test-utils';
 
 import { address, beginCell, Cell, Dictionary, toNano } from '@ton/core';
 import { Blockchain, BlockchainSnapshot, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { testnet } from '@tonappchain/artifacts';
 import { ethers } from 'ethers';
 import { mnemonicNew } from 'ton-crypto';
 
-import { Asset, EvmProxyMsg, Network, SenderFactory, TacSdk, wallets, WalletVersion } from '../../src';
-import { TON } from '../../src';
-import { sandboxOpener } from '../../src/adapters/contractOpener';
+import { testnet } from '../../artifacts';
+import {
+    Asset,
+    EvmProxyMsg,
+    Network,
+    sandboxOpener,
+    SenderFactory,
+    TacSdk,
+    TON,
+    wallets,
+    WalletVersion,
+} from '../../src';
 
 describe('TacSDK', () => {
     const {
@@ -164,7 +172,7 @@ describe('TacSDK', () => {
                     content: beginCell().endCell(),
                     jettonWalletCode: JettonWalletCode,
                     evmTokenAddress: '0x1234',
-                    totalSupply: 0,
+                    totalSupply: 0n,
                 },
                 JettonMinterCode,
             ),
@@ -215,6 +223,12 @@ describe('TacSDK', () => {
         await blockchain.loadFrom(initialState);
     });
 
+    afterAll(async () => {
+        if (sdk) {
+            await sdk.closeConnections();
+        }
+    });
+
     it('everything should be deployed', async () => {
         expect((await blockchain.getContract(settings.address)).accountState!.type).toBe('active');
         expect((await blockchain.getContract(jettonMinter.address)).accountState!.type).toBe('active');
@@ -240,11 +254,11 @@ describe('TacSDK', () => {
             const token = TON.create(sdk.config);
 
             // sending TON
-            const assets: Asset[] = [await token.withAmount({ rawAmount: 1n })];
+            const assets: Asset[] = [token.withRawAmount(1n)];
 
             await user.send({ to: address(rawSender.getSenderAddress()), value: toNano(10), bounce: false });
 
-            const spy = jest.spyOn(sdk['simulator'], 'getSimulationInfoForTransaction').mockResolvedValue({
+            const spy = jest.spyOn(sdk['simulator'], 'getSimulationInfo').mockResolvedValue({
                 feeParams: {
                     isRoundTrip: true,
                     gasLimit: 1000000000000000000n,
@@ -254,7 +268,9 @@ describe('TacSDK', () => {
                 },
             });
 
-            const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets);
+            const { sendTransactionResult } = await sdk.sendCrossChainTransaction(evmProxyMsg, rawSender, assets, {
+                waitOperationId: false,
+            });
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             expect((sendTransactionResult as any).result.transactions).toHaveTransaction({

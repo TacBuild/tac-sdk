@@ -28,6 +28,9 @@
   - [Other Metadata](#other-metadata)
     - [`getOperationType`](#getoperationtype)
     - [`getOperationIdsByShardsKeys`](#getoperationidsbyshardskeys)
+    - [`convertCurrency`](#convertcurrency)
+    - [`simulateTACMessage`](#simulatetacmessage)
+    - [`getTVMExecutorFee`](#gettvmexecutorfee)
 
 ---
 
@@ -131,7 +134,7 @@ For more details about the underlying client, see [`LiteSequencerClient`](./lite
 All methods in `OperationTracker` support an optional `waitOptions` parameter that enables automatic retrying and waiting for successful results:
 
 ```ts
-interface WaitOptions<T = unknown> {
+interface WaitOptions<T = unknown, TContext = unknown> {
     /**
      * Timeout in milliseconds
      * @default 300000 (5 minutes)
@@ -152,23 +155,27 @@ interface WaitOptions<T = unknown> {
      */
     logger?: ILogger;
     /**
+     * Optional context object to pass additional parameters to callbacks
+     * This allows passing custom data like OperationTracker instances, configurations, etc.
+     */
+    context?: TContext;
+    /**
      * Function to check if the result is successful
      * If not provided, any non-error result is considered successful
      */
-    successCheck?: (result: T) => boolean;
+    successCheck?: (result: T, context?: TContext) => boolean;
+    /**
+     * Custom callback function that executes when operation is successful
+     * Receives both the result and optional context with additional parameters
+     * Can be used for additional processing like profiling data retrieval
+     */
+    onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
 }
 ```
 
-Example usage:
-```ts
-// Wait for operation ID with custom options
-const operationId = await tracker.getOperationId(transactionLinker, {
-    timeout: 60000,     // 1 minute timeout
-    maxAttempts: 10,    // 10 attempts
-    delay: 5000,        // 5 seconds between attempts
-    successCheck: (result) => result !== '' // Custom success check
-});
-```
+### Usage Examples
+
+For comprehensive examples and usage patterns, including detailed context parameter usage, see the [Enhanced WaitOptions Examples](../examples/enhanced-waitoptions.md) documentation.
 
 ---
 
@@ -371,3 +378,60 @@ Maps TON shard keys (with caller address) to operation IDs. Processes requests i
 - `chunkSize` *(optional)*: Number of items to process per request (default: 100)
 
 **Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey-type)
+
+---
+
+### `convertCurrency`
+
+```ts
+convertCurrency(
+    params: ConvertCurrencyParams,
+    waitOptions?: WaitOptions<ConvertedCurrencyResult>
+): Promise<ConvertedCurrencyResult>
+```
+
+Converts currency amount using the tracker service with automatic failover across multiple sequencer endpoints.
+
+**Parameters:**
+- `params`: [`ConvertCurrencyParams`](./../models/structs.md#convertcurrencyparams) - Parameters for currency conversion
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`ConvertedCurrencyResult`](./../models/structs.md#convertedcurrencyresult)
+
+---
+
+### `simulateTACMessage`
+
+```ts
+simulateTACMessage(
+    params: TACSimulationParams,
+    waitOptions?: WaitOptions<TACSimulationResult>
+): Promise<TACSimulationResult>
+```
+
+Simulates TAC message execution without broadcasting it on-chain. Useful for estimating fees and validating transaction inputs before sending real transactions.
+
+**Parameters:**
+- `params`: [`TACSimulationParams`](./../models/structs.md#tacsimulationparams) - Simulation request with encoded message and context
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)
+
+---
+
+### `getTVMExecutorFee`
+
+```ts
+getTVMExecutorFee(
+    params: GetTVMExecutorFeeParams,
+    waitOptions?: WaitOptions<SuggestedTVMExecutorFee>
+): Promise<SuggestedTVMExecutorFee>
+```
+
+Calculates suggested TVM executor fee for cross-chain operations with automatic failover across multiple sequencer endpoints.
+
+**Parameters:**
+- `params`: [`GetTVMExecutorFeeParams`](./../models/structs.md#gettvmexecutorfeeparams) - Parameters for fee calculation
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`SuggestedTVMExecutorFee`](./../models/structs.md#suggestedtvmexecutorfee)

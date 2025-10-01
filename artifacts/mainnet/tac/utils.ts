@@ -1,0 +1,1 @@
+export { encodeOutMessageV1 } from './internal/scripts/utils/encoding';

@@ -1,15 +1,66 @@
 {
   "name": "@tonappchain/sdk",
-  "version": "0.7.0-rc10",
+  "version": "0.7.0-rc34",
   "repository": "https://github.com/TacBuild/tac-sdk.git",
   "author": "TAC. <developers@tac>",
   "license": "MIT",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "node": {
+        "types": "./dist/src/index.d.ts",
+        "require": "./dist/src/index.js",
+        "import": "./dist/src/index.js"
+      },
+      "browser": {
+        "types": "./dist/src/index.d.ts",
+        "import": "./dist/src/index.js"
+      },
+      "types": "./dist/src/index.d.ts",
+      "require": "./dist/src/index.js",
+      "import": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
+    },
+    "./package.json": "./package.json",
+    "./dist": null,
+    "./dist/*": null,
+    "./src": null,
+    "./src/*": null,
+    "./artifacts": {
+      "types": "./dist/artifacts/index.d.ts",
+      "import": "./dist/artifacts/index.js",
+      "require": "./dist/artifacts/index.js"
+    },
+    "./artifacts/types/ton": {
+      "types": "./dist/artifacts/tonTypes.d.ts",
+      "import": "./dist/artifacts/tonTypes.js",
+      "require": "./dist/artifacts/tonTypes.js"
+    },
+    "./artifacts/types/tac": {
+      "types": "./dist/artifacts/tacTypes.d.ts",
+      "import": "./dist/artifacts/tacTypes.js",
+      "require": "./dist/artifacts/tacTypes.js"
+    },
+    "./artifacts/*": null,
+    "./*": null
+  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc --declaration",
+    "prebuild": "git submodule update --init --recursive",
+    "litebuild": "rm -rf dist && tsc --declaration",
+    "build": "rm -rf dist && npm run build:artifacts && tsc --declaration",
+    "build:artifacts:tac:dev": "cd artifacts/dev/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",
+    "build:artifacts:ton:dev": "cd artifacts/dev/l1_tvm_ton && npm i && npm run compile:ts && npm run build:all && rsync -avh --delete ./build ./wrappers ../ton/internal/",
+    "build:artifacts:tac:testnet": "cd artifacts/testnet/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",
+    "build:artifacts:ton:testnet": "cd artifacts/testnet/l1_tvm_ton && npm i && npm run compile:ts && npm run build:all && rsync -avh --delete ./build ./wrappers ../ton/internal/",
+    "build:artifacts:tac:mainnet": "cd artifacts/mainnet/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",
+    "build:artifacts:ton:mainnet": "cd artifacts/mainnet/l1_tvm_ton && npm i && npm run compile:ts && npm run build:all && rsync -avh --delete ./build ./wrappers ../ton/internal/",
+    "build:artifacts:ton:all": "npm run build:artifacts:ton:dev && npm run build:artifacts:ton:testnet && npm run build:artifacts:ton:mainnet",
+    "build:artifacts:tac:all": "npm run build:artifacts:tac:dev && npm run build:artifacts:tac:testnet && npm run build:artifacts:tac:mainnet",
+    "build:artifacts": "npm run prebuild && npm run build:artifacts:ton:all && npm run build:artifacts:tac:all",
     "test": "jest --verbose --runInBand",
     "release": "yarn build && yarn release-it --npm.yarn1",
     "lint": "eslint .",
@@ -20,8 +71,6 @@
     "@aws-crypto/sha256-js": "^5.2.0",
     "@orbs-network/ton-access": "^2.3.3",
     "@ton/ton": "15.1.0",
-    "@tonappchain/agnostic-sdk": "0.0.9",
-    "@tonappchain/artifacts": "0.0.19-smart-accounts-7",
     "@tonappchain/ton-lite-client": "3.0.6",
     "@tonconnect/ui": "^2.0.11",
     "bn.js": "^5.2.1",
@@ -48,7 +97,8 @@
     "ts-jest": "^29.2.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.17.0"
+    "typescript-eslint": "^8.17.0",
+    "yarn": "^1.22.22"
   },
   "publishConfig": {
     "access": "public",

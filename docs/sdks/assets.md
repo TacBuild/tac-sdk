@@ -48,7 +48,6 @@
       - [`getBalanceOf`](#getbalanceof)
       - [`checkBalance`](#checkbalance)
   - [Example Usage](#example-usage)
-    - [Integration with TransactionManager](#integration-with-transactionmanager)
 
 ---
 
@@ -68,8 +67,10 @@ interface Asset {
   type: AssetType;
   rawAmount: bigint;
   clone: Asset;
-  withAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
-  addAmount(amount: { rawAmount: bigint } | { amount: number }): Promise<Asset>;
+  withAmount(amount: number): Asset;
+  withRawAmount(rawAmount: bigint): Asset;
+  addAmount(amount: number): Asset;
+  addRawAmount(rawAmount: bigint): Asset;
   getEVMAddress(): Promise<string>;
   getTVMAddress(): Promise<string>;
   generatePayload(params: {
@@ -93,8 +94,10 @@ The `Asset` interface defines the contract for all token implementations in the 
 
 **Methods:**
 - `clone`: Creates a copy of the token
-- `withAmount`: Sets the token amount (replaces existing amount)
-- `addAmount`: Adds to the existing token amount
+- `withAmount`: Sets the token amount in human-readable units (replaces existing amount)
+- `withRawAmount`: Sets the token amount in raw base units (replaces existing amount)
+- `addAmount`: Adds to the existing token amount in human-readable units
+- `addRawAmount`: Adds to the existing token amount in raw base units
 - `getEVMAddress`: Gets the EVM address for the token
 - `getTVMAddress`: Gets the TVM address for the token
 - `generatePayload`: Generates cross-chain operation payload with unified object parameters
@@ -138,7 +141,11 @@ Creates an asset instance from the given parameters. This method handles address
 static fromAddress(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<FT>
 ```
 
-Creates a new FT instance by TVM or EVM address. Origin is detected automatically.
+Creates a new FT instance by TVM or EVM address. Origin is detected automatically and decimals are retrieved based on token type:
+- **TON origin tokens**: Decimals retrieved from jetton metadata
+- **TAC origin tokens**: 
+  - Native tokens: Uses 18 decimals
+  - ERC20 contracts: Decimals retrieved from ERC20 contract, with fallback to jetton metadata if unavailable
 
 **Properties:**
 - `addresses`: Object containing token and optional EVM addresses
@@ -153,16 +160,16 @@ Creates a new FT instance by TVM or EVM address. Origin is detected automaticall
 #### `getJettonData`
 
 ```ts
-static getJettonData(contractOpener: IContractOpener, address: string)
+static getJettonData(configuration: IConfiguration, address: TVMAddress): Promise<JettonMinterData>
 ```
 
 Retrieves fungible token data from the contract at the given address.
 
 **Parameters:**
-- `contractOpener`: Contract opener for reading contract state
-- `address`: Fungible token master contract address
+- `configuration`: SDK configuration instance
+- `address`: Fungible token master contract address (TVM format)
 
-**Returns:** Fungible token data including metadata, total supply, and mintable status
+**Returns:** Promise resolving to [`JettonMinterData`](./../models/structs.md#jettonminterdata) containing metadata, total supply, and mintable status
 
 #### `getOrigin`
 
@@ -173,6 +180,24 @@ static getOrigin(configuration: IConfiguration, address: TVMAddress): Promise<Or
 Determines the origin of a fungible token (whether it's native to TON or wrapped from TAC) by comparing contract code and constructor data.
 
 **Returns:** `Origin.TON` or `Origin.TAC`
+
+#### `getOriginAndData`
+
+```ts
+static getOriginAndData(configuration: IConfiguration, address: TVMAddress): Promise<FTOriginAndData>
+```
+
+Determines the origin of a fungible token and returns comprehensive data about the token, including origin information, jetton minter contract, and additional metadata based on the token type.
+
+**Parameters:**
+- `configuration`: SDK configuration
+- `address`: TVM address of the fungible token
+
+**Returns:** [`FTOriginAndData`](./../models/structs.md#ftoriginanddata) object containing:
+- `origin`: Token origin (TON or TAC)
+- `jettonMinter`: Opened jetton minter contract instance
+- `evmAddress` *(optional)*: EVM address for TAC-origin tokens
+- `jettonData` *(optional)*: Jetton metadata for TON-origin tokens
 
 #### `getTVMAddress`
 
@@ -251,9 +276,14 @@ Gets detailed balance information for the user's Jetton wallet.
 getDecimals(): Promise<number>
 ```
 
-Gets the number of decimal places for this Jetton.
+Gets the number of decimal places for this Jetton. The retrieval method depends on the token's origin:
 
-**Returns:** Number of decimal places (defaults to 9 if not specified)
+- **TON-origin tokens**: Reads decimals from Jetton metadata (defaults to 9 if not specified)
+- **TAC-origin tokens**: 
+  - Native TAC tokens: Returns 18 (standard for native blockchain tokens)
+  - ERC20 tokens: Fetches decimals from the ERC20 contract's `decimals()` method
+
+**Returns:** Number of decimal places based on token origin and type
 
 #### `checkBalance`
 
@@ -353,22 +383,30 @@ NFT.fromCollection(
 #### `getItemData`
 
 ```ts
-static getItemData(contractOpener: ContractOpener, address: string)
+static getItemData(configuration: IConfiguration, itemAddress: TVMAddress): Promise<NFTItemData>
 ```
 
 Retrieves NFT item data from the contract at the given address.
 
-**Returns:** NFT item data including index, collection address, and owner
+**Parameters:**
+- `configuration`: SDK configuration instance
+- `itemAddress`: NFT item contract address (TVM format)
+
+**Returns:** Promise resolving to NFT item data including index, collection address, and owner
 
 #### `getCollectionData`
 
 ```ts
-static getCollectionData(contractOpener: ContractOpener, address: string)
+static getCollectionData(configuration: IConfiguration, collectionAddress: TVMAddress): Promise<NFTCollectionData>
 ```
 
 Retrieves NFT collection data from the contract at the given address.
 
-**Returns:** NFT collection data including metadata and owner
+**Parameters:**
+- `configuration`: SDK configuration instance
+- `collectionAddress`: NFT collection contract address (TVM format)
+
+**Returns:** Promise resolving to NFT collection data including metadata and owner
 
 #### `getOrigin`
 
@@ -403,8 +441,8 @@ Computes the TVM address for an NFT given its EVM address and optional token ID.
 
 ```ts
 static getItemAddress(
-  contractOpener: ContractOpener,
-  collectionAddress: string,
+  configuration: IConfiguration,
+  collectionAddress: TVMAddress,
   index: bigint
 ): Promise<string>
 ```
@@ -412,11 +450,11 @@ static getItemAddress(
 Gets the item address for an NFT in a collection.
 
 **Parameters:**
-- `contractOpener`: Contract opener for reading contract state
-- `collectionAddress`: Collection contract address
+- `configuration`: SDK configuration instance
+- `collectionAddress`: Collection contract address (TVM format)
 - `index`: NFT item index
 
-**Returns:** NFT item address
+**Returns:** Promise resolving to NFT item address
 
 ### Instance Methods
 
@@ -633,7 +671,7 @@ Checks if the sender has sufficient TON balance for the given transactions.
 ## Example Usage
 
 ```ts
-import { AssetFactory, FT, NFT, TON, Configuration, Network } from "@tonappchain/sdk";
+import { AssetFactory, FT, NFT, TON, Configuration, Network, AssetType, NFTAddressType } from "@tonappchain/sdk";
 import { testnet } from "@tonappchain/artifacts";
 
 // Create configuration
@@ -642,17 +680,17 @@ const config = await Configuration.create(Network.TESTNET, testnet);
 // Create tokens using AssetFactory
 const jetton = await AssetFactory.from(
   config,
-  { address: "EQ..." }
+  { address: "EQ...", tokenType: AssetType.FT }
 );
 
 const nft = await AssetFactory.from(
   config,
-  { address: "EQ...", index: 1n }
+  { address: "EQ...", tokenType: AssetType.NFT, addressType: NFTAddressType.COLLECTION, index: 1n }
 );
 
 // Create native TON token
 const tonToken = TON.create(config);
-await tonToken.withAmount({ amount: 1.5 }); // Set amount to 1.5 TON
+tonToken.withAmount(1.5); // Set amount to 1.5 TON
 
 // Work with fungible tokens
 const jettonData = await FT.getJettonData(contractOpener, "EQ...");
@@ -683,7 +721,7 @@ await TON.checkBalance(sender, config, transactions);
 
 // Token operations
 const clonedToken = jetton.clone;
-const tokenWithAmount = await jetton.withAmount({ amount: 10.5 });
+const tokenWithAmount = jetton.withAmount(10.5);
 const evmAddress = await jetton.getEVMAddress();
 const tvmAddress = await jetton.getTVMAddress();
 
@@ -705,14 +743,41 @@ const nftPayload = await nft.generatePayload({
 });
 ```
 
-### Integration with TransactionManager
+### Integration with Transaction Managers
+
+Assets are designed to work seamlessly with the TAC SDK's transaction management system:
 
 ```ts
-// Use assets in cross-chain transactions
-const result = await transactionManager.sendCrossChainTransaction(
+// Using assets with TacSdk (recommended)
+import { TacSdk } from "@tonappchain/sdk";
+
+const sdk = await TacSdk.create({ network: Network.TESTNET });
+
+// Use assets in TON -> TAC cross-chain transactions
+const result = await sdk.sendCrossChainTransaction(
   evmProxyMsg,
   sender,
   [jetton, nft, tonToken],
   options
 );
-``` 
+
+// For advanced usage with TONTransactionManager directly
+import { TONTransactionManager } from "@tonappchain/sdk";
+
+const tonManager = new TONTransactionManager(config, simulator, operationTracker);
+const tx: CrosschainTx = {
+  assets: [jetton, nft, tonToken],
+  evmProxyMsg,
+  feeParams: {
+    tonExecutorFee: BigInt("50000000"),
+    evmExecutorFee: BigInt("1000000000000000")
+  }
+};
+
+const result = await tonManager.sendCrossChainTransaction(
+  evmProxyMsg,
+  sender,
+  tx,
+  waitOptions
+);
+```

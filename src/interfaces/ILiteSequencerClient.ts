@@ -2,9 +2,13 @@ import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,
     ExecutionStagesByOperationId,
+    GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
     OperationType,
     StatusInfosByOperationId,
+    SuggestedTVMExecutorFee,
+    TACSimulationParams,
+    TACSimulationResult,
     TransactionLinker,
 } from '../structs/Struct';
 
@@ -38,6 +42,22 @@ export interface ILiteSequencerClient {
      * @param chunkSize Optional batching size.
      */
     getOperationStatuses(operationIds: string[], chunkSize?: number): Promise<StatusInfosByOperationId>;
+
     /** Converts currency amount using the sequencer-provided rate source. */
     convertCurrency(params: ConvertCurrencyParams): Promise<ConvertedCurrencyResult>;
+
+    /**
+     * Gets TVM executor fee information for cross-chain operations.
+     * @param params Parameters for fee calculation including assets and fee symbol.
+     * @returns Promise resolving to suggested TVM executor fee information.
+     */
+    getTVMExecutorFee(params: GetTVMExecutorFeeParams): Promise<SuggestedTVMExecutorFee>;
+
+    /**
+     * Simulates TAC message execution without broadcasting it on-chain.
+     * Useful for estimating fees and validating transaction inputs.
+     * @param params Simulation request with encoded message and context.
+     * @returns Promise resolving to detailed simulation result.
+     */
+    simulateTACMessage(params: TACSimulationParams): Promise<TACSimulationResult>;
 }

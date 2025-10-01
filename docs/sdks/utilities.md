@@ -114,6 +114,76 @@ await startTrackingMultiple([transactionLinker1, transactionLinker2], Network.TE
 
 ---
 
+### `normalizeAsset`
+
+```ts
+normalizeAsset(config: IConfiguration, input: AssetLike): Promise<Asset>
+```
+
+Converts a single `AssetLike` object into a proper `Asset` instance that can be used by the SDK. This utility function handles various input formats and automatically determines the appropriate asset type and configuration.
+
+#### Parameters:
+- `config`: SDK configuration instance containing network settings and contract information
+- `input`: An `AssetLike` object that can be:
+  - An existing `Asset` instance (returned as-is)
+  - An object with `itemIndex` (treated as NFT from collection)
+  - An object with address and amount/rawAmount (treated as FT)
+  - An object with just address (treated as NFT item)
+
+#### Returns:
+`Promise<Asset>` - A properly configured Asset instance
+
+#### Logic:
+1. If input is already an Asset (has `generatePayload` function), returns it directly
+2. If input has `itemIndex`, creates an NFT asset from a collection
+3. First attempts to create an FT asset, applying amount/rawAmount if specified
+4. If FT creation fails, falls back to creating an NFT item asset
+
+#### Example:
+```ts
+import { normalizeAsset } from '@tonappchain/sdk/utils';
+
+// FT with amount
+const ftAsset = await normalizeAsset(config, {
+  address: "EQC_1YoM8RBixN95lz7odcF3Vrkc_N8Ne7gQi7Abtlet_Efi",
+  amount: 1.5
+});
+
+// NFT from collection
+const nftAsset = await normalizeAsset(config, {
+  address: "EQD-cvR0Nz6XAyRBpUzoMAC1b4-jXqZtUgSxhFfHWA7xAPgm",
+  itemIndex: 42n
+});
+```
+
+### `normalizeAssets`
+
+```ts
+normalizeAssets(config: IConfiguration, assets?: AssetLike[]): Promise<Asset[]>
+```
+
+Converts an array of `AssetLike` objects into proper `Asset` instances. This is a convenience function that applies `normalizeAsset` to each element in the array.
+
+#### Parameters:
+- `config`: SDK configuration instance containing network settings and contract information  
+- `assets`: Optional array of `AssetLike` objects to normalize
+
+#### Returns:
+`Promise<Asset[]>` - Array of properly configured Asset instances. Returns empty array if input is undefined or empty.
+
+#### Example:
+```ts
+import { normalizeAssets } from '@tonappchain/sdk/utils';
+
+const assets = await normalizeAssets(config, [
+  { address: "EQC_1YoM8RBixN95lz7odcF3Vrkc_N8Ne7gQi7Abtlet_Efi", amount: 1.5 },
+  { address: "EQD-cvR0Nz6XAyRBpUzoMAC1b4-jXqZtUgSxhFfHWA7xAPgm", itemIndex: 42n },
+  { rawAmount: 1000000000n } // Native TON
+]);
+```
+
+---
+
 ### `TonTxFinalizer`
 
 `TonTxFinalizer` is a utility for verifying the finality and success of TON transactions by traversing the transaction tree using the TON Center API (or a custom API).
@@ -125,12 +195,14 @@ new TonTxFinalizer(
     urlBuilder: (hash: string) => string;
     authorization: { header: string; value: string };
   },
-  logger?: ILogger
+  logger?: ILogger,
+  httpClient?: IHttpClient
 )
 ```
 - `apiConfig.urlBuilder`: Function to build the API URL for fetching adjacent transactions by hash
 - `apiConfig.authorization`: Object specifying the header and value for API authorization
 - `logger`: Optional logger implementing ILogger. Pass a ConsoleLogger to enable verbose output; defaults to NoopLogger
+- `httpClient`: Optional HTTP client for making API requests; defaults to AxiosHttpClient
 
 #### Methods
 - `trackTransactionTree(hash: string, maxDepth?: number): Promise<void>`

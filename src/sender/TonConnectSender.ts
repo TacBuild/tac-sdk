@@ -46,7 +46,7 @@ export class TonConnectSender implements SenderAbstraction {
             const transaction: SendTransactionRequest = {
                 validUntil,
                 messages: chunk,
-                network: chain == Network.TESTNET ? CHAIN.TESTNET : CHAIN.MAINNET,
+                network: chain == Network.MAINNET ? CHAIN.MAINNET : CHAIN.TESTNET,
             };
 
             try {
