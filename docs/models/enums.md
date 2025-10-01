@@ -8,11 +8,26 @@ Specifies the target blockchain network.
 
 - **`TESTNET = 'testnet'`**: TON Testnet and its corresponding TAC test network.
 - **`MAINNET = 'mainnet'`**: TON Mainnet and its corresponding TAC main network.
+- **`DEV = 'dev'`**: Development network for local testing and development purposes.
 
 ```ts
 import { Network } from '@tonappchain/sdk';
 
 const currentNetwork = Network.TESTNET;
+```
+
+## `BlockchainType`
+
+Identifies the blockchain network type used in cross-chain operations.
+
+- **`TAC = 'TAC'`**: The TAC (EVM-compatible) blockchain network.
+- **`TON = 'TON'`**: The TON blockchain network.
+
+```ts
+export enum BlockchainType {
+    TAC = 'TAC',
+    TON = 'TON',
+}
 ```
 
 ## `SimplifiedStatuses`
@@ -80,7 +95,7 @@ function checkTacExecution(stages: ExecutionStages) {
 }
 ``` 
 
-### `TokenSymbol`
+## `TokenSymbol`
 
 ```ts
 export enum TokenSymbol {
@@ -98,7 +113,7 @@ Enumeration of supported token symbols.
   Represents the native token on the TON network.
 
 
-## ``AssetType``
+## `AssetType`
 
 ```ts
 export enum AssetType {
@@ -114,7 +129,7 @@ Enumeration of supported asset types.
 - **`FT`**:
   Represents a fungible token (FT).
 
-## ``NFTAddressType``
+## `NFTAddressType`
 ```ts
 export enum NFTAddressType {
     ITEM = 'ITEM',
@@ -122,10 +137,39 @@ export enum NFTAddressType {
 }
 ```
 
-Identifies the type of a contract address belongs to.
+Identifies the type of contract address.
 
 - **`ITEM`**:
   Represents an NFT item contract.
 
 - **`COLLECTION`**:
   Represents an NFT collection contract.
+
+
+## `CurrencyType`
+
+Represents supported currency types for price conversion utilities.
+
+- `TAC = 'TAC'`
+- `TON = 'TON'`
+
+```ts
+export enum CurrencyType {
+    TAC = 'TAC',
+    TON = 'TON',
+}
+```
+
+## `Origin`
+
+Represents the origin chain of an asset.
+
+- `TON = 'TON'`
+- `TAC = 'TAC'`
+
+```ts
+export enum Origin {
+    TON = 'TON',
+    TAC = 'TAC',
+}
+```

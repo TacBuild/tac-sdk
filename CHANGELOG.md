@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2025-10-01
+
+### Added
+
+- New assets module: added classes/utilities for working with assets (`FT`, `NFT`, `TON`), `AssetFactory`, `AssetCache`, and export indexes.
+- New SDK components: `Configuration`, `Logger` (`ConsoleLogger`/`NoopLogger`), `Simulator`, `TxFinalizer`, `Validator`.
+- Transaction Manager Architecture Split: Replaced single `TransactionManager` with specialized components:
+  - `TACTransactionManager` (`ITACTransactionManager`): Handles TAC->TON bridging operations
+  - `TONTransactionManager` (`ITONTransactionManager`): Handles TON->TAC cross-chain transactions
+- Debug mode for `TacSDK` and `OperationTracker`: SDK and OperationTracker don't write to console by default.
+- Optional waiting for operation resolution in `TacSDK` and `OperationTracker` while using `waitOptions` argument.
+- RetryableContractOpener for stable work of SDK
+- Check balance before sending crosschain transaction.
+- `RawSender` can send transactions in batches(size is 254 for W5, 4 for others).
+- Check for transaction tree success on TON using `TonTxFinalizer`.
+- Enhanced WaitOptions Interface with Context Parameter Support.
+- Artifacts package was removed. Now artifacts built from submodules for mainnet, testnet and dev evns. Submudules are in ./artifacts folder.
+
+### Changed
+
+- Performance optimizations for SDK initialization: Significantly improved SDK creation speed by parallelizing blockchain queries and initialization steps.
+- Sender and adapter updates: refactored `BatchSender`/`RawSender`/`TonConnectSender`, `contractOpener` and `retryableContractOpener`.
+- Errors and structs: updated errors (errors/*), structs (structs/*), utilities (Utils.ts), operation tracker (OperationTracker), StartTracking.
+- Documentation: added/updated SDK pages (assets, logger, simulator, transaction_manager, utilities, etc.).
+- Tests: reorganization — removed/replaced some tests (e.g., tests/operation_tracker/tracker.spec.ts, tests/unit/getTokenAddress.spec.ts), added new unit tests (operation-tracker.spec.ts, validator.spec.ts) and updated integration scenarios.
+- Methods in `OperationTracker` and `sendCrossChainTransaction(s)` in `TacSDK` now accept optional `waitOptions` argument. Example:
+- Remove `multicallAddress` and `multicallABI` from SDK params.
+- Remove evm contract's bytecode from artifacts. Use interfaces and abis only.
+- Renamed `AssetBridgingData` to `AssetLike`.
+
+```typescript
+async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>)
+```
+
 ## [0.6.4] - 2025-06-06
 
 ### Changed
@@ -30,6 +64,8 @@ All notable changes to this project will be documented in this file.
 - Added `metaInfo` field to the `ExecutionStages`.
 - LiteSequencerClient to handle lite sequencer requests and its parameters.
 - Method to calculate tvmExecutorFee: `getTVMExecutorFeeInfo`.
+- The `IsRoundTrip` flag is set to `true` by default.
+- The `tonExecutorFee` is now determined as `max(rollback_message, normal_execution)`.
 
 ### Changed
 

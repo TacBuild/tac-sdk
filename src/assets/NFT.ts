@@ -1,0 +1,414 @@
+import { SandboxContract } from '@ton/sandbox';
+import { Address, address, beginCell, Cell, fromNano, OpenedContract } from '@ton/ton';
+import { ethers, isAddress as isEthereumAddress } from 'ethers';
+
+import { ICrossChainLayerERC721 } from '../../artifacts/tacTypes';
+import { NFTCollection, NFTCollectionData, NFTItemData } from '../../artifacts/tonTypes';
+import { ContractError, emptyContractError, insufficientBalanceError } from '../errors';
+import { Asset, IConfiguration } from '../interfaces';
+import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
+import { generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
+import { Validator } from '../sdk/Validator';
+import { AssetOpType } from '../structs/InternalStruct';
+import { AssetType, EVMAddress, FeeParams, Origin, TVMAddress } from '../structs/Struct';
+export class NFT implements Asset {
+    private readonly _addresses: {
+        item: TVMAddress;
+        collection: TVMAddress;
+        index: bigint;
+        evmAddress?: EVMAddress;
+    };
+
+    readonly origin: Origin;
+    readonly type: AssetType = AssetType.NFT;
+
+    private _nftCollection: OpenedContract<NFTCollection> | SandboxContract<NFTCollection>;
+
+    private _configuration: IConfiguration;
+
+    /**
+     * @description Create NFT from item address. Item MUST BE deployed on TON.
+     * @param configuration - Configuration
+     * @param item - Item address (TVM address)
+     * @returns NFT
+     */
+    static async fromItem(configuration: IConfiguration, item: TVMAddress): Promise<NFT> {
+        Validator.validateTVMAddress(item);
+
+        const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
+
+        const nftItem = configuration.TONParams.contractOpener.open(NFTItemC.createFromAddress(Address.parse(item)));
+        const { collectionAddress, index } = await nftItem.getNFTData();
+        const origin = await NFT.getOrigin(configuration, item);
+
+        return new NFT({ item, collection: collectionAddress.toString(), index: BigInt(index) }, origin, configuration);
+    }
+
+    /**
+     * @description Create NFT from collection address. TON-native assets MUST BE deployed on TON.
+     * @param configuration - Configuration
+     * @param item - Item address (TVM address)
+     * @returns NFT
+     */
+    static async fromCollection(
+        configuration: IConfiguration,
+        item: { collection: TVMAddress | EVMAddress; index: bigint },
+    ): Promise<NFT> {
+        const tvmCollectionAddress = isEthereumAddress(item.collection)
+            ? await this.getTVMAddress(configuration, item.collection)
+            : item.collection;
+
+        const origin = await NFT.getOrigin(configuration, tvmCollectionAddress).catch((e) => {
+            if (e instanceof ContractError) {
+                return Origin.TAC;
+            }
+            throw e;
+        });
+
+        const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+        const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
+
+        const nftCollection = configuration.TONParams.contractOpener.open(
+            NFTCollectionC.createFromAddress(Address.parse(tvmCollectionAddress)),
+        );
+
+        const itemAddress =
+            origin === Origin.TAC
+                ? NFTItemC.createFromConfig(
+                      {
+                          collectionAddress: nftCollection.address,
+                          cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
+                          index: item.index,
+                      },
+                      configuration.TONParams.nftItemCode,
+                  ).address
+                : await nftCollection.getNFTAddressByIndex(item.index);
+
+        return new NFT(
+            {
+                item: itemAddress.toString(),
+                collection: tvmCollectionAddress,
+                index: item.index,
+                evmAddress: isEthereumAddress(item.collection) ? item.collection : undefined,
+            },
+            origin,
+            configuration,
+        );
+    }
+
+    static async getItemData(configuration: IConfiguration, itemAddress: TVMAddress): Promise<NFTItemData> {
+        Validator.validateTVMAddress(itemAddress);
+
+        const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
+        const contractOpener = configuration.TONParams.contractOpener;
+
+        const nftItem = contractOpener.open(NFTItemC.createFromAddress(Address.parse(itemAddress)));
+        return nftItem.getNFTData();
+    }
+
+    async getItemData(): Promise<NFTItemData> {
+        return NFT.getItemData(this._configuration, this._addresses.item);
+    }
+
+    static async getCollectionData(
+        configuration: IConfiguration,
+        collectionAddress: TVMAddress,
+    ): Promise<NFTCollectionData> {
+        Validator.validateTVMAddress(collectionAddress);
+
+        const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
+        const nftCollection = configuration.TONParams.contractOpener.open(
+            NFTCollectionC.createFromAddress(Address.parse(collectionAddress)),
+        );
+        return nftCollection.getCollectionData();
+    }
+
+    async getCollectionData(): Promise<NFTCollectionData> {
+        return NFT.getCollectionData(this._configuration, this._addresses.collection);
+    }
+
+    static async getOrigin(configuration: IConfiguration, itemOrCollection: TVMAddress): Promise<Origin> {
+        const { nftItemCode, nftCollectionCode } = configuration.TONParams;
+
+        const { code: givenCodeBOC } = await configuration.TONParams.contractOpener.getContractState(
+            Address.parse(itemOrCollection),
+        );
+        if (!givenCodeBOC) {
+            throw emptyContractError;
+        }
+        const givenNFTCode = Cell.fromBoc(givenCodeBOC)[0];
+
+        if (nftItemCode.equals(givenNFTCode) || nftCollectionCode.equals(givenNFTCode)) {
+            return Origin.TAC;
+        }
+
+        return Origin.TON;
+    }
+
+    static async getItemAddress(
+        configuration: IConfiguration,
+        collectionAddress: TVMAddress,
+        index: bigint,
+    ): Promise<string> {
+        Validator.validateTVMAddress(collectionAddress);
+
+        const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
+        const nftCollection = configuration.TONParams.contractOpener.open(
+            NFTCollectionC.createFromAddress(Address.parse(collectionAddress)),
+        );
+        const address = await nftCollection.getNFTAddressByIndex(index);
+        return address.toString();
+    }
+
+    static async getTVMAddress(
+        configuration: IConfiguration,
+        collectionAddress: EVMAddress,
+        tokenId?: bigint,
+    ): Promise<string> {
+        Validator.validateEVMAddress(collectionAddress);
+
+        const exists = await configuration.TACParams.tokenUtils['exists(address)'](collectionAddress);
+
+        if (exists) {
+            const cclErc721TokenAbi = configuration.artifacts.tac.compilationArtifacts.ICrossChainLayerERC721.abi;
+            const cclErc721Token = new ethers.Contract(
+                collectionAddress,
+                cclErc721TokenAbi,
+                configuration.TACParams.provider,
+            ) as unknown as ICrossChainLayerERC721;
+
+            const info = await cclErc721Token.getInfo();
+
+            const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
+            const nftCollection = configuration.TONParams.contractOpener.open(
+                NFTCollectionC.createFromAddress(address(info.tvmAddress)),
+            );
+
+            return tokenId == undefined
+                ? nftCollection.address.toString()
+                : (await nftCollection.getNFTAddressByIndex(tokenId)).toString();
+        } else {
+            const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
+            const nftCollection = configuration.TONParams.contractOpener.open(
+                NFTCollectionC.createFromConfig(
+                    {
+                        adminAddress: address(configuration.TONParams.crossChainLayerAddress),
+                        newAdminAddress: null,
+                        collectionContent: beginCell().endCell(),
+                        commonContent: beginCell().endCell(),
+                        nftItemCode: configuration.TONParams.nftItemCode,
+                        originalAddress: collectionAddress,
+                    },
+                    configuration.TONParams.nftCollectionCode,
+                ),
+            );
+
+            const NFTItemC = configuration.artifacts.ton.wrappers.NFTItem;
+
+            return tokenId == undefined
+                ? nftCollection.address.toString()
+                : NFTItemC.createFromConfig(
+                      {
+                          collectionAddress: nftCollection.address,
+                          cclAddress: Address.parse(configuration.TONParams.crossChainLayerAddress),
+                          index: tokenId,
+                      },
+                      configuration.TONParams.nftItemCode,
+                  ).address.toString();
+        }
+    }
+
+    constructor(
+        nftAddress: {
+            item: TVMAddress;
+            collection: TVMAddress;
+            index: bigint;
+            evmAddress?: EVMAddress;
+        },
+        origin: Origin,
+        configuration: IConfiguration,
+    ) {
+        this._addresses = nftAddress;
+        this._configuration = configuration;
+        this.origin = origin;
+
+        const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
+
+        this._nftCollection = configuration.TONParams.contractOpener.open(
+            NFTCollectionC.createFromAddress(Address.parse(this._addresses.collection)),
+        );
+    }
+
+    get addresses(): {
+        item: string;
+        collection: string;
+        index: bigint;
+        evmAddress?: string;
+    } {
+        return this._addresses;
+    }
+
+    get address(): string {
+        return this._addresses.item;
+    }
+
+    get rawAmount(): bigint {
+        return 1n;
+    }
+
+    get clone(): NFT {
+        return new NFT(this._addresses, this.origin, this._configuration);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    withAmount(_amount?: number): NFT {
+        // NFTs are non-fungible; amount is always 1. Keep API consistent.
+        return this;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    withRawAmount(_rawAmount?: bigint): NFT {
+        // NFTs are non-fungible; raw amount concept is not applicable. Keep API consistent.
+        return this;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    addAmount(_amount?: number): NFT {
+        return this;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    addRawAmount(_rawAmount?: bigint): NFT {
+        return this;
+    }
+
+    async getEVMAddress(): Promise<string> {
+        if (this._addresses.evmAddress) {
+            return this._addresses.evmAddress;
+        }
+
+        const tvmNFTAddress = Address.parse(this._addresses.collection).toString({ bounceable: true });
+
+        const { code: givenNFTCollection } = await this._configuration.TONParams.contractOpener.getContractState(
+            Address.parse(tvmNFTAddress),
+        );
+
+        if (
+            givenNFTCollection &&
+            this._configuration.TONParams.nftCollectionCode.equals(Cell.fromBoc(givenNFTCollection)[0])
+        ) {
+            const NFTCollectionC = this._configuration.artifacts.ton.wrappers.NFTCollection;
+
+            const nftCollection = this._configuration.TONParams.contractOpener.open(
+                NFTCollectionC.createFromAddress(address(tvmNFTAddress)),
+            );
+            const evmAddress = await nftCollection.getOriginalAddress();
+            this._addresses.evmAddress = evmAddress.toString();
+        } else {
+            this._addresses.evmAddress =
+                await this._configuration.TACParams.tokenUtils.computeAddressERC721(tvmNFTAddress);
+        }
+
+        return this._addresses.evmAddress!;
+    }
+
+    async getTVMAddress(): Promise<string> {
+        return this.address.toString();
+    }
+
+    async generatePayload(params: {
+        excessReceiver: string;
+        evmData: Cell;
+        crossChainTonAmount?: bigint;
+        forwardFeeTonAmount?: bigint;
+        feeParams?: FeeParams;
+    }): Promise<Cell> {
+        const { excessReceiver, evmData, crossChainTonAmount = 0n, forwardFeeTonAmount = 0n, feeParams } = params;
+
+        const opType = this.origin === Origin.TAC ? AssetOpType.NFT_BURN : AssetOpType.NFT_TRANSFER;
+
+        const feeData = generateFeeData(feeParams);
+
+        let payload: Cell;
+        switch (opType) {
+            case AssetOpType.NFT_BURN:
+                payload = this.getBurnPayload(
+                    this._configuration.TONParams.crossChainLayerAddress,
+                    evmData,
+                    crossChainTonAmount,
+                    feeData,
+                );
+                break;
+            case AssetOpType.NFT_TRANSFER:
+                payload = this.getTransferPayload(
+                    this._configuration.TONParams.nftProxyAddress,
+                    excessReceiver,
+                    forwardFeeTonAmount,
+                    evmData,
+                    crossChainTonAmount,
+                    feeData,
+                );
+                break;
+        }
+
+        return payload;
+    }
+
+    async isOwnedBy(userAddress: string): Promise<boolean> {
+        const nftData = await NFT.getItemData(this._configuration, this.address.toString());
+        return !!nftData.ownerAddress?.equals(Address.parse(userAddress));
+    }
+
+    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
+        if (!(await this.isOwnedBy(userAddress))) {
+            throw insufficientBalanceError(this.address.toString());
+        }
+    }
+
+    async getBalanceOf(userAddress: string): Promise<bigint> {
+        return (await this.isOwnedBy(userAddress)) ? 1n : 0n;
+    }
+
+    private getBurnPayload(
+        crossChainLayerAddress: string,
+        evmData: Cell,
+        crossChainTonAmount: bigint,
+        feeData?: Cell,
+    ): Cell {
+        const queryId = generateRandomNumberByTimestamp().randomNumber;
+
+        const NFTItemC = this._configuration.artifacts.ton.wrappers.NFTItem;
+
+        return NFTItemC.burnMessage(queryId, address(crossChainLayerAddress), crossChainTonAmount, evmData, feeData);
+    }
+
+    private getTransferPayload(
+        to: string,
+        responseAddress: string,
+        forwardFeeAmount: bigint,
+        evmData: Cell,
+        crossChainTonAmount: bigint,
+        feeData?: Cell,
+    ): Cell {
+        const queryId = generateRandomNumberByTimestamp().randomNumber;
+        const forwardPayload = beginCell()
+            .storeCoins(crossChainTonAmount)
+            .storeMaybeRef(feeData)
+            .storeMaybeRef(evmData)
+            .endCell();
+
+        const NFTItemC = this._configuration.artifacts.ton.wrappers.NFTItem;
+
+        return NFTItemC.transferMessage(
+            queryId,
+            address(to),
+            address(responseAddress),
+            Number(fromNano(NFT_TRANSFER_FORWARD_TON_AMOUNT + forwardFeeAmount + crossChainTonAmount)),
+            forwardPayload,
+        );
+    }
+}

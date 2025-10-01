@@ -2,19 +2,23 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [SenderFactory Usage](#senderfactory-usage)
-  - [`TonConnectSender`](#tonconnectsender)
-  - [`RawSender`](#rawsender)
-- [Supported Wallet Versions](#supported-wallet-versions)
-- [Errors](#errors)
+- [SDK Senders](#sdk-senders)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [SenderFactory Usage](#senderfactory-usage)
+    - [`TonConnectSender`](#tonconnectsender)
+    - [`RawSender`](#rawsender)
+    - [`BatchSender`](#batchsender)
+  - [Supported Wallet Versions](#supported-wallet-versions)
+  - [SenderAbstraction Interface](#senderabstraction-interface)
+  - [Errors](#errors)
 
 ---
 
 ## Overview
 
 Senders are responsible for signing and broadcasting TON-side transactions.  
-The SDK abstracts this logic via the `SenderAbstraction` interface.  
+The SDK abstracts this logic via the `SenderAbstraction` interface.
 Senders are obtained through `SenderFactory.getSender(...)`.
 
 ---
@@ -40,7 +44,9 @@ SenderFactory.getSender(
 Returns a `SenderAbstraction` based on the provided configuration:
 
 - If `tonConnect` is provided → returns `TonConnectSender`
-- If `mnemonic`, `network`, and `version` are provided → returns `RawSender`
+- If `mnemonic`, `network`, and `version` are provided → returns `RawSender` or `BatchSender`
+  - Returns `BatchSender` for `HIGHLOAD_V3` wallet version
+  - Returns `RawSender` for all other wallet versions
 
 ---
 
@@ -61,6 +67,13 @@ const sender = await SenderFactory.getSender({
 ```
 
 **Returns:** `Promise<TonConnectSender extends SenderAbstraction>`
+
+**Methods:**
+- `sendShardTransaction`: Sends a single shard transaction
+- `sendShardTransactions`: Sends multiple shard transactions with chunking support
+- `getSenderAddress`: Returns the sender's address
+- `getBalance`: Gets the TON balance of the sender
+- `getBalanceOf`: Gets the balance of a specific asset for the sender
 
 ---
 
@@ -86,6 +99,53 @@ const sender = await SenderFactory.getSender({
 
 **Returns:** `Promise<RawSender extends SenderAbstraction>`
 
+**Methods:**
+- `sendShardTransaction`: Sends a single shard transaction
+- `sendShardTransactions`: Sends multiple shard transactions with batching support
+- `getSenderAddress`: Returns the sender's address
+- `getBalance`: Gets the TON balance of the sender
+- `getBalanceOf`: Gets the balance of a specific asset for the sender
+
+Note on batching:
+- RawSender groups outbound messages into batches when sending multiple shard transactions.
+- Max batch size depends on wallet version: 254 for `V5R1`, 4 for others.
+
+---
+
+### `BatchSender`
+
+Used for high-performance batch transactions with `HIGHLOAD_V3` wallet. Automatically handles message grouping and external message size limits.
+
+**Example**:
+
+```ts
+import { Network, SenderFactory } from "@tonappchain/sdk";
+
+const walletVersion = 'HIGHLOAD_V3';
+const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
+const network = Network.TESTNET;
+const sender = await SenderFactory.getSender({
+    version: walletVersion,
+    mnemonic,
+    network,
+    options: {
+        highloadV3: {
+            subwalletId: 0,
+            timeout: 60
+        }
+    }
+});
+```
+
+**Returns:** `Promise<BatchSender extends SenderAbstraction>`
+
+**Methods:**
+- `sendShardTransaction`: Sends a single shard transaction
+- `sendShardTransactions`: Sends multiple shard transactions with advanced grouping
+- `getSenderAddress`: Returns the sender's address
+- `getBalance`: Gets the TON balance of the sender
+- `getBalanceOf`: Gets the balance of a specific asset for the sender
+
 ---
 
 ## Supported Wallet Versions
@@ -101,9 +161,62 @@ type WalletVersion =
   | "HIGHLOAD_V3";
 ```
 
-These versions are supported in `RawSender` configuration.
+These versions are supported in `RawSender` and `BatchSender` configuration:
+- `V2R1`, `V2R2`, `V3R1`, `V3R2`, `V4`, `V5R1` → Uses `RawSender`
+- `HIGHLOAD_V3` → Uses `BatchSender` for high-performance batch transactions
 
 ---
+
+## SenderAbstraction Interface
+
+All senders implement the `SenderAbstraction` interface:
+
+```ts
+interface SenderAbstraction {
+    /**
+     * Sends a single shard transaction on the specified chain.
+     * @param shardTransaction Prepared transaction payload to send.
+     * @param chain Optional network selector; defaults to current SDK network.
+     * @param contractOpener Optional contract opener to use for sending.
+     * @returns Promise with low-level send result.
+     */
+    sendShardTransaction(
+        shardTransaction: ShardTransaction,
+        chain?: Network,
+        contractOpener?: ContractOpener,
+    ): Promise<SendResult>;
+
+    /**
+     * Sends multiple shard transactions as a batch.
+     * @param shardTransactions Array of prepared shard transactions to send.
+     * @param chain Optional network selector; defaults to current SDK network.
+     * @param contractOpener Optional contract opener to use for sending.
+     * @returns Promise with an array of low-level send results in the same order.
+     */
+    sendShardTransactions(
+        shardTransactions: ShardTransaction[],
+        chain?: Network,
+        contractOpener?: ContractOpener,
+    ): Promise<SendResult[]>;
+
+    /**
+     * Returns the TVM address of the underlying sender wallet.
+     */
+    getSenderAddress(): string;
+
+    /**
+     * Returns the TON balance of the sender wallet using the provided opener.
+     * @param contractOpener Contract opener used for on-chain queries.
+     */
+    getBalance(contractOpener: ContractOpener): Promise<bigint>;
+
+    /**
+     * Returns the balance of a given asset for the sender wallet.
+     * @param asset Asset wrapper instance to query balance for.
+     */
+    getBalanceOf(asset: Asset): Promise<bigint>;
+}
+```
 
 ## Errors
 

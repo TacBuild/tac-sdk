@@ -1,5 +1,6 @@
-import { Network, TacSdk } from '../../src';
 import { TonClient } from '@ton/ton';
+
+import { AssetFactory, AssetType, Network, TacSdk } from '../../src';
 
 async function main() {
     const sdk = await TacSdk.create({
@@ -13,7 +14,12 @@ async function main() {
         },
     });
 
-    console.log(await sdk.getEVMTokenAddress('EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK'));
+    const token = await AssetFactory.from(sdk.config, {
+        address: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+        tokenType: AssetType.FT,
+    });
+
+    console.log(await token.getEVMAddress());
 }
 
 main();

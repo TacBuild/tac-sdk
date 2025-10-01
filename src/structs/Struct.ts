@@ -1,18 +1,16 @@
 import { SandboxContract } from '@ton/sandbox';
-import type { Address, Cell, Contract, OpenedContract } from '@ton/ton';
-import { AbstractProvider, Addressable, Interface, InterfaceAbi } from 'ethers';
+import { OpenedContract } from '@ton/ton';
+import { AbstractProvider } from 'ethers';
 
-export interface ContractOpener {
-    open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
+import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
+import type { FT, NFT } from '../assets';
+import type { Asset, ContractOpener, ILogger } from '../interfaces';
 
-    getContractState(address: Address): Promise<{
-        balance: bigint;
-        state: 'active' | 'uninitialized' | 'frozen';
-        code: Buffer | null;
-    }>;
-
-    closeConnections?: () => unknown;
-}
+export type ContractState = {
+    balance: bigint;
+    state: 'active' | 'uninitialized' | 'frozen';
+    code: Buffer | null;
+};
 
 export enum SimplifiedStatuses {
     PENDING = 'PENDING',
@@ -24,9 +22,15 @@ export enum SimplifiedStatuses {
 export enum Network {
     TESTNET = 'testnet',
     MAINNET = 'mainnet',
+    DEV = 'dev',
 }
 
 export enum BlockchainType {
+    TAC = 'TAC',
+    TON = 'TON',
+}
+
+export enum CurrencyType {
     TAC = 'TAC',
     TON = 'TON',
 }
@@ -49,37 +53,12 @@ export type TACParams = {
     /**
      * Address of TAC settings contract. Use only for tests.
      */
-    settingsAddress?: string | Addressable;
+    settingsAddress?: string;
 
     /**
-     * ABI of TAC settings contract. Use only for tests.
+     * Address of TAC smart account factory contract. Use only for tests.
      */
-    settingsABI?: Interface | InterfaceAbi;
-
-    /**
-     * ABI of TAC CCL contract. Use only for tests.
-     */
-    crossChainLayerABI?: Interface | InterfaceAbi;
-
-    /**
-     * ABI of TAC CrossChainLayerToken contract. Use only for tests.
-     */
-    crossChainLayerTokenABI?: Interface | InterfaceAbi;
-
-    /**
-     * bytecode of TAC CrossChainLayerToken contract. Use only for tests.
-     */
-    crossChainLayerTokenBytecode?: string;
-
-    /**
-     * ABI of TAC CrossChainLayerNFT contract. Use only for tests.
-     */
-    crossChainLayerNFTABI?: Interface | InterfaceAbi;
-
-    /**
-     * bytecode of TAC CrossChainLayerNFT contract. Use only for tests.
-     */
-    crossChainLayerNFTBytecode?: string;
+    saFactoryAddress?: string;
 };
 
 export type TONParams = {
@@ -131,60 +110,6 @@ export enum NFTAddressType {
     COLLECTION = 'COLLECTION',
 }
 
-export type WithAddressFT = {
-    type: AssetType.FT;
-    /**
-     * Address of TAC or TON token.
-     * Empty if sending native TON coin.
-     */
-    address?: string;
-};
-
-export type WithAddressNFTItem = {
-    type: AssetType.NFT;
-    /**
-     * Address NFT item token.
-     */
-    address: string;
-};
-
-export type WithAddressNFTCollectionItem = {
-    type: AssetType.NFT;
-    /**
-     * Address NFT collection.
-     */
-    collectionAddress: string;
-    /**
-     * Index of NFT item in collection.
-     */
-    itemIndex: bigint;
-};
-
-export type WithAddressNFT = WithAddressNFTItem | WithAddressNFTCollectionItem;
-
-export type WithAddress = WithAddressFT | WithAddressNFT;
-
-export type RawAssetBridgingData<NFTFormatRequired extends WithAddressNFT = WithAddressNFTItem> = {
-    /** Raw format, e.g. 12340000000 (=12.34 tokens if decimals is 9) */
-    rawAmount: bigint;
-} & (WithAddressFT | NFTFormatRequired);
-
-export type UserFriendlyAssetBridgingData = {
-    /**
-     * User friendly format, e.g. 12.34 tokens
-     * Specified value will be converted automatically to raw format: 12.34 * (10^decimals).
-     * No decimals should be specified.
-     */
-    amount: number;
-    /**
-     * Decimals may be specified manually.
-     * Otherwise, SDK tries to extract them from chain.
-     */
-    decimals?: number;
-} & WithAddress;
-
-export type AssetBridgingData = RawAssetBridgingData | UserFriendlyAssetBridgingData;
-
 export type UserWalletBalanceExtended =
     | {
           exists: true;
@@ -201,6 +126,7 @@ export type EvmProxyMsg = {
     methodName?: string;
     encodedParameters?: string;
     gasLimit?: bigint;
+    [key: string]: unknown;
 };
 
 export type TransactionLinker = {
@@ -211,22 +137,31 @@ export type TransactionLinker = {
     sendTransactionResult?: unknown;
 };
 
-export type TACSimulationRequest = {
-    tacCallParams: {
-        arguments: string;
-        methodName: string;
-        target: string;
-    };
-    evmValidExecutors: string[];
-    extraData: string;
-    shardsKey: string;
+export type TransactionLinkerWithOperationId = TransactionLinker & {
+    operationId?: string;
+};
 
-    tonAssets: {
-        amount: string;
-        tokenAddress: string;
-        assetType: string;
-    }[];
+export type TONAsset = {
+    amount: string;
+    tokenAddress: string;
+    assetType: AssetType;
+};
+
+export type TACCallParams = {
+    arguments: string;
+    methodName: string;
+    target: string;
+};
+
+export type TACSimulationParams = {
+    tacCallParams: TACCallParams;
+    evmValidExecutors?: string[];
+    tvmValidExecutors?: string[];
+    extraData?: string;
+    shardsKey: string;
+    tonAssets: TONAsset[];
     tonCaller: string;
+    calculateRollbackFee?: boolean;
 };
 
 export enum StageName {
@@ -287,15 +222,43 @@ export type GeneralFeeInfo = {
     tokenFeeSymbol: TokenSymbol;
 };
 
+export type AdditionalFeeInfo = {
+    attachedProtocolFee: string;
+    tokenFeeSymbol: TokenSymbol;
+};
+
 export type FeeInfo = {
+    additionalFeeInfo: AdditionalFeeInfo;
     tac: GeneralFeeInfo;
     ton: GeneralFeeInfo;
+};
+
+export type AssetMovement = {
+    assetType: AssetType;
+    tvmAddress: string;
+    evmAddress: string;
+    amount: string;
+    tokenId: string | null;
+};
+
+export type TransactionHash = {
+    hash: string;
+    blockchainType: BlockchainType;
+};
+
+export type AssetMovementInfo = {
+    caller: InitialCallerInfo;
+    target: InitialCallerInfo;
+    transactionHash: TransactionHash;
+    assetMovements: AssetMovement[];
 };
 
 export type MetaInfo = {
     initialCaller: InitialCallerInfo;
     validExecutors: ValidExecutors;
     feeInfo: FeeInfo;
+    sentAssets: AssetMovementInfo | null;
+    receivedAssets: AssetMovementInfo | null;
 };
 
 export type ExecutionStages = {
@@ -359,7 +322,7 @@ export type TACSimulationResult = {
     };
 };
 
-export type SuggestedTONExecutorFee = {
+export type SuggestedTVMExecutorFee = {
     inTAC: string;
     inTON: string;
 };
@@ -373,30 +336,156 @@ export type FeeParams = {
 };
 
 export type CrossChainTransactionOptions = {
-    forceSend?: boolean;
+    allowSimulationError?: boolean;
     isRoundTrip?: boolean;
     protocolFee?: bigint;
     evmValidExecutors?: string[];
     evmExecutorFee?: bigint;
     tvmValidExecutors?: string[];
     tvmExecutorFee?: bigint;
+    calculateRollbackFee?: boolean;
+    withoutSimulation?: boolean;
+    validateAssetsBalance?: boolean;
+    waitOperationId?: boolean;
+    waitOptions?: WaitOptions<string>;
+};
+
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
+
+export type CrossChainTransactionsOptions = {
+    waitOperationIds?: boolean;
+    waitOptions?: WaitOptions<OperationIdsByShardsKey>;
 };
 
 export type ExecutionFeeEstimationResult = {
     feeParams: FeeParams;
-    simulation: TACSimulationResult;
+    simulation?: TACSimulationResult;
 };
 
 export type CrosschainTx = {
     evmProxyMsg: EvmProxyMsg;
-    assets?: AssetBridgingData[];
+    assets?: Asset[];
     options?: CrossChainTransactionOptions;
 };
 
-export type NFTItemData = {
-    init: boolean;
-    index: number;
-    collectionAddress: Address;
-    ownerAddress: Address | null;
-    content: Cell | null;
+export type BatchCrossChainTx = {
+    evmProxyMsg: EvmProxyMsg;
+    assets?: Asset[];
+    options?: BatchCrossChainTransactionOptions;
+};
+
+export type AssetLike =
+    | Asset
+    | FT
+    | NFT
+    | { rawAmount: bigint }
+    | { amount: number }
+    | { address: TVMAddress | EVMAddress }
+    | { address: TVMAddress | EVMAddress; rawAmount: bigint }
+    | { address: TVMAddress | EVMAddress; amount: number }
+    | { address: TVMAddress | EVMAddress; itemIndex: bigint };
+
+export type BatchCrossChainTxWithAssetLike = Omit<BatchCrossChainTx, 'assets'> & { assets?: AssetLike[] };
+
+export interface WaitOptions<T = unknown, TContext = unknown> {
+    /**
+     * Timeout in milliseconds
+     * @default 300000 (5 minutes)
+     */
+    timeout?: number;
+    /**
+     * Maximum number of attempts
+     * @default 30
+     */
+    maxAttempts?: number;
+    /**
+     * Delay between attempts in milliseconds
+     * @default 10000 (10 seconds)
+     */
+    delay?: number;
+    /**
+     * Logger
+     */
+    logger?: ILogger;
+    /**
+     * Optional context object to pass additional parameters to callbacks
+     * This allows passing custom data like OperationTracker instances, configurations, etc.
+     */
+    context?: TContext;
+    /**
+     * Function to check if the result is successful
+     * If not provided, any non-error result is considered successful
+     */
+    successCheck?: (result: T, context?: TContext) => boolean;
+    /**
+     * Custom callback function that executes when request is successful
+     * Receives both the result and optional context with additional parameters
+     */
+    onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
+}
+
+export const defaultWaitOptions: WaitOptions = {
+    timeout: 300000,
+    maxAttempts: 30,
+    delay: 10000,
+};
+
+export enum Origin {
+    TON = 'TON',
+    TAC = 'TAC',
+}
+
+export type TVMAddress = string;
+export type EVMAddress = string;
+
+// Arguments for creating Asset instances via AssetFactory
+export type AssetFromFTArg = {
+    address: TVMAddress | EVMAddress;
+    tokenType: AssetType.FT;
+};
+
+export type AssetFromNFTCollectionArg = {
+    address: TVMAddress | EVMAddress;
+    tokenType: AssetType.NFT;
+    addressType: NFTAddressType.COLLECTION;
+    index: bigint;
+};
+
+export type AssetFromNFTItemArg = {
+    address: TVMAddress;
+    tokenType: AssetType.NFT;
+    addressType: NFTAddressType.ITEM;
+};
+
+export type ConvertCurrencyParams = {
+    value: bigint;
+    currency: CurrencyType;
+};
+
+export type USDPriceInfo = {
+    spot: bigint;
+    ema: bigint;
+    decimals: number;
+};
+
+export type ConvertedCurrencyResult = {
+    spotValue: bigint;
+    emaValue: bigint;
+    decimals: number;
+    currency: CurrencyType;
+    tacPrice: USDPriceInfo;
+    tonPrice: USDPriceInfo;
+};
+
+export type GetTVMExecutorFeeParams = {
+    feeSymbol: string;
+    tonAssets: TONAsset[];
+    tvmValidExecutors: string[];
+};
+
+export type FTOriginAndData = {
+    origin: Origin;
+    jettonMinter: OpenedContract<JettonMinter> | SandboxContract<JettonMinter>;
+    evmAddress?: string;
+    jettonData?: JettonMinterData;
 };

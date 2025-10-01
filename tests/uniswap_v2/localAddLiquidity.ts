@@ -1,10 +1,19 @@
 import 'dotenv/config';
 
+import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
-
-import { toNano } from '@ton/ton';
+import {
+    Asset,
+    AssetFactory,
+    AssetType,
+    EvmProxyMsg,
+    Network,
+    SDKParams,
+    SenderFactory,
+    startTracking,
+    TacSdk,
+} from '../../src';
 
 const UNISWAPV2_PROXY_ADDRESS = ''; // uniswap proxy address
 
@@ -26,10 +35,25 @@ async function addLiquidity() {
         customLiteSequencerEndpoints: ['http://localhost:8080'],
     };
     const tacSdk = await TacSdk.create(sdkParams);
-    const EVM_TKA_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKA_ADDRESS);
-    const EVM_TKB_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKB_ADDRESS);
+
+    const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
+    const sender = await SenderFactory.getSender({
+        network: Network.TESTNET,
+        version: WALLET_VERSION,
+        mnemonic: mnemonic,
+    });
+
     const amountA = 1;
     const amountB = 2;
+
+    const tokenA = (
+        await AssetFactory.from(tacSdk.config, { address: TVM_TKA_ADDRESS, tokenType: AssetType.FT })
+    ).withAmount(amountA);
+    const tokenB = (
+        await AssetFactory.from(tacSdk.config, { address: TVM_TKB_ADDRESS, tokenType: AssetType.FT })
+    ).withAmount(amountB);
+    const EVM_TKA_ADDRESS = await tokenA.getEVMAddress();
+    const EVM_TKB_ADDRESS = await tokenB.getEVMAddress();
 
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(
@@ -54,25 +78,8 @@ async function addLiquidity() {
         encodedParameters,
     };
 
-    const mnemonic = process.env.TVM_MNEMONICS || ''; // 24 words mnemonic
-    const sender = await SenderFactory.getSender({
-        network: Network.TESTNET,
-        version: WALLET_VERSION,
-        mnemonic: mnemonic,
-    });
+    const jettons: Asset[] = [tokenA, tokenB];
 
-    const jettons: AssetBridgingData[] = [
-        {
-            address: TVM_TKA_ADDRESS,
-            amount: amountA,
-            type: AssetType.FT,
-        },
-        {
-            address: TVM_TKB_ADDRESS,
-            amount: amountB,
-            type: AssetType.FT,
-        },
-    ];
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons);
 }
 
@@ -82,9 +89,9 @@ async function main() {
         const result = await addLiquidity();
         console.log('Transaction successful:', result);
         // start tracking transaction status
-        await startTracking(result, Network.TESTNET, { 
-            customLiteSequencerEndpoints: ['http://localhost:8080']
-        });           
+        await startTracking(result, Network.TESTNET, {
+            customLiteSequencerEndpoints: ['http://localhost:8080'],
+        });
     } catch (error) {
         console.error('Error during transaction:', error);
     }

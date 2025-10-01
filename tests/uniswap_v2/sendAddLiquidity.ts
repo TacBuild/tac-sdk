@@ -1,7 +1,17 @@
+import { toNano } from '@ton/ton';
 import { ethers } from 'ethers';
 
-import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../../src';
-import { toNano } from '@ton/ton';
+import {
+    Asset,
+    AssetFactory,
+    AssetType,
+    EvmProxyMsg,
+    Network,
+    SDKParams,
+    SenderFactory,
+    startTracking,
+    TacSdk,
+} from '../../src';
 
 const UNISWAPV2_PROXY_ADDRESS = '0xc5bd40D45334AcDdaA324aE6eBDdf847148B8d93';
 
@@ -17,12 +27,24 @@ async function addLiquidity() {
     };
     const tacSdk = await TacSdk.create(sdkParams);
 
-    const EVM_TKA_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKA_ADDRESS);
-    console.log(EVM_TKA_ADDRESS);
-    const EVM_TKB_ADDRESS = await tacSdk.getEVMTokenAddress(TVM_TKB_ADDRESS);
-    console.log(EVM_TKB_ADDRESS);
+    const sender = await SenderFactory.getSender({
+        network: Network.TESTNET,
+        version: WALLET_VERSION,
+        mnemonic: TVM_MNEMONICS,
+    });
+
     const amountA = 1;
     const amountB = 2;
+
+    const tokenA = (
+        await AssetFactory.from(tacSdk.config, { address: TVM_TKA_ADDRESS, tokenType: AssetType.FT })
+    ).withAmount(amountA);
+    const tokenB = (
+        await AssetFactory.from(tacSdk.config, { address: TVM_TKB_ADDRESS, tokenType: AssetType.FT })
+    ).withAmount(amountB);
+
+    const EVM_TKA_ADDRESS = await tokenA.getEVMAddress();
+    const EVM_TKB_ADDRESS = await tokenB.getEVMAddress();
 
     const abi = new ethers.AbiCoder();
     const encodedParameters = abi.encode(
@@ -47,24 +69,7 @@ async function addLiquidity() {
         encodedParameters,
     };
 
-    const sender = await SenderFactory.getSender({
-        network: Network.TESTNET,
-        version: WALLET_VERSION,
-        mnemonic: TVM_MNEMONICS,
-    });
-
-    const jettons: AssetBridgingData[] = [
-        {
-            address: TVM_TKA_ADDRESS,
-            amount: amountA,
-            type: AssetType.FT,
-        },
-        {
-            address: TVM_TKB_ADDRESS,
-            amount: amountB,
-            type: AssetType.FT,
-        },
-    ];
+    const jettons: Asset[] = [tokenA, tokenB];
 
     return await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, jettons);
 }

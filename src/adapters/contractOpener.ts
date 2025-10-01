@@ -1,23 +1,66 @@
-import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
-import { ContractOpener, Network } from '../structs/Struct';
-import { Blockchain } from '@ton/sandbox';
 import { getHttpEndpoint, getHttpV4Endpoint } from '@orbs-network/ton-access';
+import { Network as TonNetwork } from '@orbs-network/ton-access';
+import { Blockchain } from '@ton/sandbox';
 import { TonClient, TonClient4 } from '@ton/ton';
-import { mainnet, testnet } from '@tonappchain/artifacts';
+import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
+
+import { mainnet, testnet } from '../../artifacts';
+import { ContractOpener } from '../interfaces';
+import { sleep } from '../sdk/Utils';
+import { Network } from '../structs/Struct';
+
+async function getHttpEndpointWithRetry(network: Network, maxRetries = 5, delay = 1000): Promise<string> {
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
+            return await getHttpEndpoint({ network: tonNetwork });
+        } catch (error) {
+            lastError = error as Error;
+            if (attempt <= maxRetries) {
+                await sleep(delay);
+            }
+        }
+    }
+
+    throw lastError || new Error('Failed to get HTTP endpoint after retries');
+}
+
+async function getHttpV4EndpointWithRetry(network: Network, maxRetries = 5, delay = 1000): Promise<string> {
+    let lastError: Error | undefined;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
+            return await getHttpV4Endpoint({ network: tonNetwork });
+        } catch (error) {
+            lastError = error as Error;
+            if (attempt <= maxRetries) {
+                await sleep(delay);
+            }
+        }
+    }
+
+    throw lastError || new Error('Failed to get HTTP V4 endpoint after retries');
+}
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
 
 function intToIP(int: number) {
-    var part1 = int & 255;
-    var part2 = (int >> 8) & 255;
-    var part3 = (int >> 16) & 255;
-    var part4 = (int >> 24) & 255;
+    const part1 = int & 255;
+    const part2 = (int >> 8) & 255;
+    const part3 = (int >> 16) & 255;
+    const part4 = (int >> 24) & 255;
 
     return part4 + '.' + part3 + '.' + part2 + '.' + part1;
 }
 
 async function getDefaultLiteServers(network: Network): Promise<LiteServer[]> {
-    const url = network === Network.TESTNET ? testnet.DEFAULT_LITESERVERS : mainnet.DEFAULT_LITESERVERS;
+    const url =
+        network === Network.TESTNET || network === Network.DEV
+            ? testnet.DEFAULT_LITESERVERS
+            : mainnet.DEFAULT_LITESERVERS;
     const resp = await fetch(url);
     const liteClients = await resp.json();
     return liteClients.liteservers;
@@ -75,15 +118,12 @@ export function sandboxOpener(blockchain: Blockchain): ContractOpener {
 }
 
 export async function orbsOpener(network: Network): Promise<ContractOpener> {
-    const endpoint = await getHttpEndpoint({
-        network,
-    });
-    const client = new TonClient({ endpoint });
-    return client;
+    const endpoint = await getHttpEndpointWithRetry(network);
+    return new TonClient({ endpoint });
 }
 
 export async function orbsOpener4(network: Network, timeout = 10000): Promise<ContractOpener> {
-    const endpoint = await getHttpV4Endpoint({ network });
+    const endpoint = await getHttpV4EndpointWithRetry(network);
     const client4 = new TonClient4({ endpoint, timeout });
     return {
         open: (contract) => client4.open(contract),

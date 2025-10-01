@@ -9,9 +9,13 @@
   - [API Reference](#api-reference)
     - [Operation Type](#operation-type)
     - [Operation ID](#operation-id)
+    - [Operation ID by Transaction Hash](#operation-id-by-transaction-hash)
     - [Operation IDs by Shards Keys](#operation-ids-by-shards-keys)
     - [Stage Profiling](#stage-profiling)
     - [Operation Statuses](#operation-statuses)
+    - [Currency Conversion](#currency-conversion)
+    - [TVM Executor Fee](#tvm-executor-fee)
+    - [TAC Message Simulation](#tac-message-simulation)
 
 ---
 
@@ -30,8 +34,8 @@ import { LiteSequencerClient } from "@tonappchain/sdk";
 
 const client = new LiteSequencerClient(
   endpoint: string,
-  // Optional:
-  maxChunkSize: number = 100
+  maxChunkSize?: number, // Optional, defaults to 100
+  httpClient?: IHttpClient // Optional, defaults to AxiosHttpClient
 );
 ```
 
@@ -63,6 +67,18 @@ Fetches the crosschain operation ID based on a transaction linker.
 
 ---
 
+### Operation ID by Transaction Hash
+
+```ts
+getOperationIdByTransactionHash(transactionHash: string): Promise<string>
+```
+
+Fetches the crosschain operation ID based on a transaction hash. The client automatically routes to the appropriate API depending on whether the hash is an ETH hash (`0x...` 32 bytes) or a TON hash.
+
+**Returns:** `string` - The operation ID, or empty string if not found (404)
+
+---
+
 ### Operation IDs by Shards Keys
 
 ```ts
@@ -75,7 +91,7 @@ getOperationIdsByShardsKeys(
 
 Maps TON shard keys (with caller address) to operation IDs. Handles request chunking automatically.
 
-**Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey)
+**Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey-type)
 
 ---
 
@@ -105,4 +121,49 @@ getOperationStatuses(
 
 Fetches status information for multiple operations. Handles request chunking automatically.
 
-**Returns:** [`StatusInfosByOperationId`](./../models/structs.md#statusinfosbyoperationid) 
+**Returns:** [`StatusInfosByOperationId`](./../models/structs.md#statusinfosbyoperationid)
+
+---
+
+### Currency Conversion
+
+```ts
+convertCurrency(params: ConvertCurrencyParams): Promise<ConvertedCurrencyResult>
+```
+
+Converts currency amount using the sequencer-provided rate source.
+
+**Parameters:**
+- **`params`**: [`ConvertCurrencyParams`](./../models/structs.md#convertcurrencyparams) - Parameters for currency conversion
+
+**Returns:** [`ConvertedCurrencyResult`](./../models/structs.md#convertedcurrencyresult)
+
+---
+
+### TVM Executor Fee
+
+```ts
+getTVMExecutorFee(params: GetTVMExecutorFeeParams): Promise<SuggestedTVMExecutorFee>
+```
+
+Gets TVM executor fee information for cross-chain operations.
+
+**Parameters:**
+- **`params`**: [`GetTVMExecutorFeeParams`](./../models/structs.md#gettvmexecutorfeeparams) - Parameters for fee calculation
+
+**Returns:** [`SuggestedTVMExecutorFee`](./../models/structs.md#suggestedtvmexecutorfee)
+
+---
+
+### TAC Message Simulation
+
+```ts
+simulateTACMessage(params: TACSimulationParams): Promise<TACSimulationResult>
+```
+
+Simulates TAC message execution without broadcasting it on-chain. Useful for estimating fees and validating transaction inputs.
+
+**Parameters:**
+- **`params`**: [`TACSimulationParams`](./../models/structs.md#tacsimulationparams) - Simulation request with encoded message and context
+
+**Returns:** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)

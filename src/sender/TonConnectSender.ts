@@ -1,10 +1,12 @@
+import { address } from '@ton/ton';
 import { Base64 } from '@tonconnect/protocol';
 import type { SendTransactionRequest } from '@tonconnect/ui';
 import { CHAIN, TonConnectUI } from '@tonconnect/ui';
 
+import { Asset, ContractOpener, SenderAbstraction } from '../interfaces';
+import { sleep } from '../sdk/Utils';
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
-import { ContractOpener, Network } from '../structs/Struct';
-import { SenderAbstraction, sleep } from './SenderAbstraction';
+import { Network } from '../structs/Struct';
 
 const CHUNK_SIZE = 4;
 
@@ -13,6 +15,16 @@ export class TonConnectSender implements SenderAbstraction {
 
     constructor(tonConnect: TonConnectUI) {
         this.tonConnect = tonConnect;
+    }
+
+    async getBalanceOf(asset: Asset): Promise<bigint> {
+        return asset.getBalanceOf(this.getSenderAddress());
+    }
+
+    async getBalance(contractOpener: ContractOpener): Promise<bigint> {
+        return this.tonConnect.account
+            ? (await contractOpener.getContractState(address(this.tonConnect.account?.address))).balance
+            : 0n;
     }
 
     private async sendChunkedMessages(
@@ -24,16 +36,17 @@ export class TonConnectSender implements SenderAbstraction {
         let currentMessageIndex = 0;
 
         const chunkSize =
-            //@ts-ignore // 'find' checks that maxMessages is a property of the feature
-            this.tonConnect.wallet?.device.features.find((feat) => feat.hasOwnProperty('maxMessages'))?.maxMessages ||
-            CHUNK_SIZE;
+            this.tonConnect.wallet?.device.features.find(
+                (feat) => Object.prototype.hasOwnProperty.call(feat, 'maxMessages'),
+                //@ts-expect-error // 'find' checks that maxMessages is a property of the feature
+            )?.maxMessages || CHUNK_SIZE;
 
         for (let i = 0; i < messages.length; i += chunkSize) {
             const chunk = messages.slice(i, i + chunkSize);
             const transaction: SendTransactionRequest = {
                 validUntil,
                 messages: chunk,
-                network: chain == Network.TESTNET ? CHAIN.TESTNET : CHAIN.MAINNET,
+                network: chain == Network.MAINNET ? CHAIN.MAINNET : CHAIN.TESTNET,
             };
 
             try {
@@ -61,12 +74,7 @@ export class TonConnectSender implements SenderAbstraction {
         return responses;
     }
 
-    async sendShardTransactions(
-        shardTransactions: ShardTransaction[],
-        delay: number,
-        chain: Network,
-        _contractOpener?: ContractOpener,
-    ): Promise<SendResult[]> {
+    async sendShardTransactions(shardTransactions: ShardTransaction[], chain: Network): Promise<SendResult[]> {
         const allMessages = [];
         let minValidUntil = Number.MAX_SAFE_INTEGER;
 
@@ -81,7 +89,6 @@ export class TonConnectSender implements SenderAbstraction {
             minValidUntil = Math.min(minValidUntil, transaction.validUntil);
         }
 
-        await sleep(delay * 1000);
         return this.sendChunkedMessages(allMessages, minValidUntil, chain);
     }
 
@@ -89,7 +96,7 @@ export class TonConnectSender implements SenderAbstraction {
         return this.tonConnect.account?.address?.toString() || '';
     }
 
-    async sendShardTransaction(shardTransaction: ShardTransaction, delay: number, chain: Network): Promise<SendResult> {
+    async sendShardTransaction(shardTransaction: ShardTransaction, chain: Network): Promise<SendResult> {
         const messages = [];
         for (const message of shardTransaction.messages) {
             messages.push({
@@ -99,7 +106,6 @@ export class TonConnectSender implements SenderAbstraction {
             });
         }
 
-        await sleep(delay * 1000);
         const responses = await this.sendChunkedMessages(messages, shardTransaction.validUntil, chain);
         return responses[0];
     }

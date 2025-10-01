@@ -1,12 +1,13 @@
 import 'dotenv/config';
-import { AssetBridgingData, AssetType, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
+
+import { ConsoleLogger, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
     const sdkParams: SDKParams = {
         network: Network.TESTNET,
     };
-    const tacSdk = await TacSdk.create(sdkParams);
+    const tacSdk = await TacSdk.create(sdkParams, new ConsoleLogger());
 
     // create evm proxy msg
     const evmProxyMsg: EvmProxyMsg = {
@@ -24,14 +25,13 @@ const bridgeTonSawSender = async (amount: number) => {
     console.log(sender.getSenderAddress());
 
     // create JettonTransferData (transfer jetton in TVM to swap)
-    const assets: AssetBridgingData[] = [
-        {
-            amount: amount,
-            type: AssetType.FT,
-        },
+    const assets = [
+        { address: tacSdk.config.nativeTONAddress, amount: amount },
+        { address: tacSdk.config.nativeTONAddress, amount: amount },
+        { address: tacSdk.config.nativeTONAddress, amount: amount },
     ];
 
-    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets);
+    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets, { allowSimulationError: true });
 
     tacSdk.closeConnections();
 
@@ -41,7 +41,7 @@ const bridgeTonSawSender = async (amount: number) => {
 async function main() {
     try {
         // send transaction
-        const result = await bridgeTonSawSender(1);
+        const result = await bridgeTonSawSender(0.0012);
         console.log('Transaction successful:', result);
 
         // start tracking transaction status

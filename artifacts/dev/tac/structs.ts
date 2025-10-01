@@ -1,0 +1,1 @@
+export type OutMessageV1Struct = import('./internal/typechain-types/contracts/core/Structs.sol/IStructsInterface').OutMessageV1Struct;

@@ -1,18 +1,18 @@
 import { Cell } from '@ton/ton';
+import { AbstractProvider, ethers } from 'ethers';
+
+import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
+import { ContractOpener } from '../interfaces';
 import {
-    ContractOpener,
-    TACSimulationResult,
+    CurrencyType,
     ExecutionStagesByOperationId,
     Network,
     OperationIdsByShardsKey,
-    RawAssetBridgingData,
-    StatusInfosByOperationId,
     OperationType,
-    AssetType,
-    SuggestedTONExecutorFee,
+    StatusInfosByOperationId,
+    SuggestedTVMExecutorFee,
+    TACSimulationResult,
 } from './Struct';
-import { AbstractProvider, ethers, Interface, InterfaceAbi } from 'ethers';
-import { mainnet, testnet } from '@tonappchain/artifacts';
 
 export type ShardMessage = {
     address: string;
@@ -38,37 +38,6 @@ export type RandomNumberByTimestamp = {
     randomNumber: number;
 };
 
-export type JettonBridgingData = RawAssetBridgingData & {
-    type: AssetType.FT;
-    address: string;
-};
-
-export type JettonTransferData = JettonBridgingData;
-
-export type JettonBurnData = JettonBridgingData & {
-    notificationReceiverAddress: string;
-};
-
-export type NFTBridgingData = RawAssetBridgingData & {
-    type: AssetType.NFT;
-    address: string;
-};
-
-export type NFTTransferData = NFTBridgingData & {
-    to: string;
-    responseAddress: string;
-    evmData: Cell;
-    crossChainTonAmount?: bigint;
-    feeData?: Cell;
-};
-
-export type NFTBurnData = NFTBridgingData & {
-    notificationReceiverAddress: string;
-    evmData: Cell;
-    crossChainTonAmount?: bigint;
-    feeData?: Cell;
-};
-
 export type InternalTONParams = {
     contractOpener: ContractOpener;
     jettonProxyAddress: string;
@@ -82,17 +51,13 @@ export type InternalTONParams = {
 
 export type InternalTACParams = {
     provider: AbstractProvider;
-    crossChainLayer: testnet.tac.wrappers.CrossChainLayerTAC | mainnet.tac.wrappers.CrossChainLayerTAC;
-    settings: testnet.tac.wrappers.SettingsTAC | testnet.tac.wrappers.SettingsTAC;
-    tokenUtils: testnet.tac.wrappers.TokenUtilsTAC | mainnet.tac.wrappers.TokenUtilsTAC;
+    crossChainLayer: ICrossChainLayer;
+    settings: ISettings;
+    tokenUtils: ITokenUtils;
+    smartAccountFactory: ISAFactory;
     trustedTACExecutors: string[];
     trustedTONExecutors: string[];
     abiCoder: ethers.AbiCoder;
-    crossChainLayerABI: Interface | InterfaceAbi;
-    crossChainLayerTokenABI: Interface | InterfaceAbi;
-    crossChainLayerTokenBytecode: string;
-    crossChainLayerNFTABI: Interface | InterfaceAbi;
-    crossChainLayerNFTBytecode: string;
 };
 
 export type ResponseBase<T> = { response: T };
@@ -109,7 +74,16 @@ export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
 
 export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
 
-export type SuggestedTONExecutorFeeResponse = ResponseBase<SuggestedTONExecutorFee>;
+export type SuggestedTVMExecutorFeeResponse = ResponseBase<SuggestedTVMExecutorFee>;
+
+export type ConvertCurrencyResponse = ResponseBase<ConvertedCurrencyRawResult>;
+
+export type OperationIdWithLogIndex = {
+    operationId: string;
+    logIndex: number;
+};
+
+export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogIndex>;
 
 export interface SendResult {
     success: boolean;
@@ -117,3 +91,54 @@ export interface SendResult {
     error?: Error;
     lastMessageIndex?: number;
 }
+
+export type ToncenterTransaction = {
+    description: {
+        aborted: boolean;
+        action: {
+            resultCode: number;
+            success: boolean;
+        };
+        computePh: {
+            exitCode: number;
+            success: boolean;
+        };
+        destroyed: boolean;
+    };
+    hash: string;
+    inMsg: {
+        hash: string;
+        opcode: string;
+    };
+    outMsgs: {
+        hash: string;
+    }[];
+};
+
+export type TransactionDepth = {
+    hash: string;
+    depth: number;
+};
+
+export type AdjacentTransactionsResponse = {
+    transactions: ToncenterTransaction[];
+};
+
+export type TxFinalizerConfig = {
+    urlBuilder: (hash: string) => string;
+    authorization: { header: string; value: string };
+};
+
+export type USDPriceInfoRaw = {
+    spot: string;
+    ema: string;
+    decimals: number;
+};
+export type ConvertedCurrencyRawResult = {
+    spotValue: string;
+    emaValue: string;
+    decimals: number;
+    currency: CurrencyType;
+    tacPrice: USDPriceInfoRaw;
+    tonPrice: USDPriceInfoRaw;
+};
