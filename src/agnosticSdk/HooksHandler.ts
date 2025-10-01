@@ -50,7 +50,7 @@ export class HooksHandler {
 
         const customHookData: CustomHookData = {
             isFromSAPerspective,
-            contractAddress,
+            contractAddress: ethers.getAddress(contractAddress.toLowerCase()), // Normalize address to checksum format
             value,
             data,
             improvedMissionInfo,

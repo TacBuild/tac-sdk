@@ -58,7 +58,7 @@ export class AbiHandler {
         // Build parameter list with proper tuple handling
         const params = func.inputs
             .map((input: any) => {
-                let paramType = this._buildParameterType(input);
+                const paramType = this._buildParameterType(input);
                 
                 // Add parameter name if available
                 if (input.name) {

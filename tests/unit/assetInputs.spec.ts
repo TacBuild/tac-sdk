@@ -13,7 +13,7 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
 
     beforeAll(async () => {
         sdk = await TacSdk.create({ network: Network.TESTNET });
-    });
+    }, 10000);
 
     afterAll(async () => {
         if (sdk) {

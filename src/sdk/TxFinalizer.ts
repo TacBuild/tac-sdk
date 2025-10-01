@@ -63,6 +63,9 @@ export class TonTxFinalizer {
 
                 // Rate limit error (429) - retry
                 if (errorMessage.includes('429')) {
+                    if (i > 0) {
+                        await sleep(delay);
+                    }
                     continue;
                 }
 
@@ -71,8 +74,11 @@ export class TonTxFinalizer {
                     const logMessage = error instanceof Error ? error.message : error;
                     console.warn(`Failed to fetch adjacent transactions for ${hash}:`, logMessage);
                 }
+                
+                if (i > 0) {
+                    await sleep(delay);
+                }
             }
-            await sleep(delay);
         }
         return [];
     }

@@ -9,7 +9,6 @@ import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct'
 import { Network, TACParams, TONParams } from '../structs/Struct';
 import { getAddressString, sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
-import { AddressLike } from 'ethers';
 
 export class Configuration implements IConfiguration {
     readonly network: Network;

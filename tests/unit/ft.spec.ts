@@ -9,7 +9,7 @@ describe('FT', () => {
 
     beforeAll(async () => {
         sdk = await TacSdk.create({ network: Network.TESTNET });
-    });
+    }, 30000);
 
     it('FT.getOriginAndData returns correct FTOriginAndData structure', async () => {
         const result = await FT.getOriginAndData(sdk.config, TON_FT_ADDRESS);

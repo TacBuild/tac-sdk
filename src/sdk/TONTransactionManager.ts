@@ -32,7 +32,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         private readonly logger: ILogger = new NoopLogger(),
     ) {}
 
-    private async buildFeeParams(
+    protected async buildFeeParams(
         options: CrossChainTransactionOptions,
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
