@@ -49,7 +49,7 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "git submodule update --init --recursive --remote",
+    "prebuild": "git submodule update --init --recursive",
     "litebuild": "rm -rf dist && tsc --declaration",
     "build": "rm -rf dist && npm run build:artifacts && tsc --declaration",
     "build:artifacts:tac:dev": "cd artifacts/dev/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",

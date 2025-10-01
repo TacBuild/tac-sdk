@@ -17,8 +17,6 @@
 [submodule "dev-l2-evm"]
 	path = artifacts/dev/l2-evm
 	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l2-evm
-	branch = develop
 [submodule "dev-l1-tvm-ton"]
 	path = artifacts/dev/l1_tvm_ton
 	url = git@gitlab.com:ton-app-chain/tac/smart-contracts/l1_tvm_ton
-	branch = develop

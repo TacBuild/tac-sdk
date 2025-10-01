@@ -5,9 +5,7 @@
 1. Initialize submodules
 
     ```bash
-        git submodule init
-
-        git submodule update --recursive --remote
+        git submodule update --init --recursive
     ```
 
 2. Build artifacts
