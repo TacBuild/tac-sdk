@@ -45,8 +45,9 @@ export class AssetFactory {
     }
 
     static async createFTAsset(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<Asset> {
-        if (address === configuration.nativeTONAddress || address === '') {
-            return TON.create(configuration);
+        const ton = TON.create(configuration);
+        if (address === configuration.nativeTONAddress || address === '' || address === (await ton.getEVMAddress())) {
+            return ton;
         }
 
         return FT.fromAddress(configuration, address);

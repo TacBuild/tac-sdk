@@ -12,6 +12,7 @@ export class TON implements Asset {
     readonly address: string;
     readonly type: AssetType = AssetType.FT;
 
+    private evmAddress: string;
     private _rawAmount: bigint;
     private _config: IConfiguration;
 
@@ -19,6 +20,7 @@ export class TON implements Asset {
         this.address = '';
         this._config = config;
         this._rawAmount = 0n;
+        this.evmAddress = '';
     }
 
     static create(config: IConfiguration): TON {
@@ -66,7 +68,10 @@ export class TON implements Asset {
     }
 
     async getEVMAddress(): Promise<string> {
-        return this._config.TACParams.tokenUtils.computeAddress(this._config.nativeTONAddress);
+        if (this.evmAddress === '') {
+            this.evmAddress = await this._config.TACParams.tokenUtils.computeAddress(this._config.nativeTONAddress);
+        }
+        return this.evmAddress;
     }
 
     async getTVMAddress(): Promise<string> {
