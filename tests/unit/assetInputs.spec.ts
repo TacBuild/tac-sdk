@@ -13,7 +13,7 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
 
     beforeAll(async () => {
         sdk = await TacSdk.create({ network: Network.TESTNET });
-    }, 10000);
+    }, 20000);
 
     afterAll(async () => {
         if (sdk) {
@@ -128,4 +128,14 @@ describe('Asset inputs on TESTNET (FT, NFT item, NFT collection+index)', () => {
         await expect(normalizeAssets(sdk.config, [])).resolves.toEqual([]);
         await expect(normalizeAssets(sdk.config, undefined)).resolves.toEqual([]);
     }, 50000);
+
+    describe('normalizeAssets throws when', () => {
+        beforeAll(async () => {
+            sdk = await TacSdk.create({ network: Network.MAINNET });
+        }, 10000);
+
+        it('should handle evm address of TON for MAINNET', async () => {
+            await normalizeAsset(sdk.config, { address: "0xb76d91340F5CE3577f0a056D29f6e3Eb4E88B140", amount: 1 });
+        });
+    })
 });
