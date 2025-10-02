@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] 
+## [0.7.1] - 2025-10-02 
 
 ### Changed
  - Fixed bug with evm address of `TON` in `normizeAssets`.
