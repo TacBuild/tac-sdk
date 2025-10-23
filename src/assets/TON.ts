@@ -6,7 +6,7 @@ import { TON_SYMBOL } from '../sdk/Consts';
 import { calculateRawAmount, generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import type { SenderAbstraction } from '../sender';
 import type { ShardTransaction } from '../structs/InternalStruct';
-import { AssetType, FeeParams } from '../structs/Struct';
+import { AssetType, FeeParams, Origin } from '../structs/Struct';
 
 export class TON implements Asset {
     readonly address: string;
@@ -15,6 +15,7 @@ export class TON implements Asset {
     private evmAddress: string;
     private _rawAmount: bigint;
     private _config: IConfiguration;
+    readonly origin: Origin = Origin.TON;
 
     constructor(config: IConfiguration) {
         this.address = '';

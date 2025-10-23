@@ -22,6 +22,8 @@ import {
     AssetType,
     BatchCrossChainTx,
     BatchCrossChainTxWithAssetLike,
+    CrossChainEstimationResult,
+    CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
     CrosschainTx,
@@ -303,5 +305,29 @@ export class TacSdk implements ITacSDK {
 
     getOperationTracker(): IOperationTracker {
         return this.operationTracker;
+    }
+
+    async estimateCrossChainTransaction(
+        evmProxyMsg: EvmProxyMsg,
+        assets: AssetLike[] = [],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainEstimationResult> {
+        const normalizedAssets = await normalizeAssets(this.config, assets);
+        return this.tonTransactionManager.estimateCrossChainTransaction(evmProxyMsg, normalizedAssets, options);
+    }
+
+    async prepareCrossChainTransactionPayload(
+        evmProxyMsg: EvmProxyMsg,
+        senderAddress: string,
+        assets: AssetLike[] = [],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainPayloadResult[]> {
+        const normalizedAssets = await normalizeAssets(this.config, assets);
+        return this.tonTransactionManager.prepareCrossChainTransactionPayload(
+            evmProxyMsg,
+            senderAddress,
+            normalizedAssets,
+            options,
+        );
     }
 }

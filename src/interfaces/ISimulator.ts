@@ -1,5 +1,6 @@
 import type { SenderAbstraction } from '../sender';
 import { CrosschainTx, ExecutionFeeEstimationResult } from '../structs/Struct';
+import { Asset } from './Asset';
 
 export interface ISimulator {
     /**
@@ -17,4 +18,6 @@ export interface ISimulator {
      * @returns Promise with fee estimation and execution info.
      */
     getSimulationInfo(sender: SenderAbstraction, tx: CrosschainTx): Promise<ExecutionFeeEstimationResult>;
+
+    estimateTONFees(assets: Asset[]): number;
 }

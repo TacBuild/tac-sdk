@@ -9,6 +9,8 @@ import {
     AssetFromNFTItemArg,
     AssetLike,
     BatchCrossChainTxWithAssetLike,
+    CrossChainEstimationResult,
+    CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
     CrosschainTx,
@@ -253,4 +255,17 @@ export interface ITacSDK {
      * Returns the operation tracker instance used for querying operation statuses and utilities.
      */
     getOperationTracker(): IOperationTracker;
+
+    estimateCrossChainTransaction(
+        evmProxyMsg: EvmProxyMsg,
+        assets?: AssetLike[],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainEstimationResult>;
+
+    prepareCrossChainTransactionPayload(
+        evmProxyMsg: EvmProxyMsg,
+        senderAddress: string,
+        assets?: AssetLike[],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainPayloadResult[]>;
 }

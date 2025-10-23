@@ -1,6 +1,6 @@
 import type { Cell } from '@ton/ton';
 
-import { AssetType, FeeParams } from '../structs/Struct';
+import { AssetType, FeeParams, Origin } from '../structs/Struct';
 
 export interface Asset {
     // Address of the token on the blockchain
@@ -11,6 +11,8 @@ export interface Asset {
     rawAmount: bigint;
     // Clone to create new token with the same parameters
     clone: Asset;
+    // Origin of the token
+    origin: Origin;
     /**
      * Returns a new asset instance with the specified transfer amount in human-readable units.
      * Does not mutate the current asset instance.

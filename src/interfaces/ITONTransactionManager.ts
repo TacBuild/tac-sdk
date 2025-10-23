@@ -1,11 +1,16 @@
 import type { SenderAbstraction } from '../sender';
 import {
     BatchCrossChainTx,
+    CrossChainEstimationResult,
+    CrossChainPayloadResult,
+    CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
     CrosschainTx,
     EvmProxyMsg,
+    FeeParams,
     TransactionLinkerWithOperationId,
 } from '../structs/Struct';
+import { Asset } from './Asset';
 
 export interface ITONTransactionManager {
     /**
@@ -33,4 +38,24 @@ export interface ITONTransactionManager {
         txs: BatchCrossChainTx[],
         options?: CrossChainTransactionsOptions,
     ): Promise<TransactionLinkerWithOperationId[]>;
+
+    buildFeeParams(
+        options: CrossChainTransactionOptions,
+        evmProxyMsg: EvmProxyMsg,
+        sender: SenderAbstraction,
+        tx: CrosschainTx,
+    ): Promise<FeeParams>;
+
+    estimateCrossChainTransaction(
+        evmProxyMsg: EvmProxyMsg,
+        assets: Asset[],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainEstimationResult>;
+
+    prepareCrossChainTransactionPayload(
+        evmProxyMsg: EvmProxyMsg,
+        senderAddress: string,
+        assets: Asset[],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainPayloadResult[]>;
 }

@@ -1,5 +1,5 @@
 import { SandboxContract } from '@ton/sandbox';
-import { OpenedContract } from '@ton/ton';
+import { Cell, OpenedContract } from '@ton/ton';
 import { AbstractProvider } from 'ethers';
 
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
@@ -488,4 +488,16 @@ export type FTOriginAndData = {
     jettonMinter: OpenedContract<JettonMinter> | SandboxContract<JettonMinter>;
     evmAddress?: string;
     jettonData?: JettonMinterData;
+};
+
+export type CrossChainEstimationResult = {
+    tonAmount: bigint;
+    networkFee: bigint;
+};
+
+export type CrossChainPayloadResult = {
+    body: Cell;
+    destinationAddress: string;
+    tonAmount: bigint;
+    networkFee: bigint;
 };
