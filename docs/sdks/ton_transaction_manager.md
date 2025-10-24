@@ -7,7 +7,25 @@
   - [Overview](#overview)
   - [Constructor](#constructor)
   - [`sendCrossChainTransaction`](#sendcrosschaintransaction)
+    - [**Purpose**](#purpose)
+    - [**Parameters**](#parameters)
+    - [**Returns** `TransactionLinkerWithOperationId`](#returns-transactionlinkerwithoperationid)
+    - [**Possible exceptions**](#possible-exceptions)
   - [`sendCrossChainTransactions`](#sendcrosschaintransactions)
+    - [**Purpose**](#purpose-1)
+    - [**Parameters**](#parameters-1)
+    - [**Returns** `Promise<TransactionLinkerWithOperationId[]>`](#returns-promisetransactionlinkerwithoperationid)
+  - [`estimateCrossChainTransaction`](#estimatecrosschaintransaction)
+    - [**Purpose**](#purpose-2)
+    - [**Parameters**](#parameters-2)
+    - [**Returns** `CrossChainEstimationResult`](#returns-crosschainestimationresult)
+    - [**Use Cases**](#use-cases)
+  - [`prepareCrossChainTransactionPayload`](#preparecrosschaintransactionpayload)
+    - [**Purpose**](#purpose-3)
+    - [**Parameters**](#parameters-3)
+    - [**Returns** `Promise<CrossChainPayloadResult[]>`](#returns-promisecrosschainpayloadresult)
+    - [**Use Cases**](#use-cases-1)
+    - [**Example**](#example)
   - [Integration with TacSdk](#integration-with-tacsdk)
   - [Example Usage](#example-usage)
     - [Using via TacSdk (Recommended)](#using-via-tacsdk-recommended)
@@ -117,6 +135,102 @@ Sends multiple cross-chain transactions in a batch from TON to TAC. This method 
 ### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
 
 Returns an array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.
+
+---
+
+## `estimateCrossChainTransaction`
+
+```typescript
+async estimateCrossChainTransaction(
+  evmProxyMsg: EvmProxyMsg,
+  assets: Asset[],
+  options?: CrossChainTransactionOptions
+): Promise<CrossChainEstimationResult>
+```
+
+### **Purpose**
+
+Estimates the total cost and fees required for a cross-chain transaction without actually sending it. This method provides a comprehensive breakdown of all fees involved, including TVM execution fees, protocol fees, executor fees, and gas costs. It's useful for displaying estimated costs to users before they commit to a transaction.
+
+### **Parameters**
+
+- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation to be executed on TAC
+- **`assets`**: Array of [`Asset`](./assets.md) instances representing the tokens/NFTs to bridge in the transaction
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) for controlling simulation and fee calculation behavior:
+  - **`evmValidExecutors`**: List of trusted TAC executors (defaults to config value)
+  - **`tvmValidExecutors`**: List of trusted TON executors (defaults to config value)
+  - **`calculateRollbackFee`**: Whether to include rollback fee in estimation (default: true)
+  - **`allowSimulationError`**: Whether to continue with partial fees if simulation fails (default: false)
+
+### **Returns** [`CrossChainEstimationResult`](./../models/structs.md#crosschainestimationresult)
+
+Returns a detailed estimation result containing:
+- **`tonAmount`**: Total amount of TON required for the transaction in nanotons, including all assets being bridged
+- **`networkFee`**: Total TON network fees required for the transaction in nanotons
+
+### **Use Cases**
+
+- Display estimated transaction costs to users before execution
+- Validate that a transaction is economically feasible
+- Pre-calculate required balances before initiating transactions
+
+---
+
+## `prepareCrossChainTransactionPayload`
+
+```typescript
+async prepareCrossChainTransactionPayload(
+  evmProxyMsg: EvmProxyMsg,
+  senderAddress: string,
+  assets: Asset[],
+  options?: CrossChainTransactionOptions
+): Promise<CrossChainPayloadResult[]>
+```
+
+### **Purpose**
+
+Prepares the transaction payloads required for a cross-chain operation without sending them to the network. This method generates all the necessary message payloads, addresses, and amounts that would be sent in a cross-chain transaction.
+
+### **Parameters**
+
+- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
+- **`senderAddress`**: TVM address string of the transaction sender (wallet address)
+- **`assets`**: Array of [`Asset`](./assets.md) instances to be bridged in the transaction
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) for controlling payload generation
+
+### **Returns** `Promise<CrossChainPayloadResult[]>`
+
+Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschainpayloadresult) objects, each containing:
+- **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
+- **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
+- **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
+- **`networkFee`**: Network fee for this specific message in nanotons
+
+### **Use Cases**
+
+- Build transaction batching systems
+- Create transaction templates for later execution
+- Debug and inspect transaction payloads before sending
+
+### **Example**
+
+```typescript
+const payloads = await tonManager.prepareCrossChainTransactionPayload(
+  evmProxyMsg,
+  "EQD...",
+  [tonAsset, jettonAsset],
+  { calculateRollbackFee: true }
+);
+
+// Inspect payloads before sending
+payloads.forEach((payload, index) => {
+  console.log(`Payload ${index}:`);
+  console.log(`  To: ${payload.to}`);
+  console.log(`  Amount: ${payload.amount} nanotons`);
+  console.log(`  Asset Type: ${payload.assetType}`);
+});
+
+```
 
 ---
 

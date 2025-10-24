@@ -21,6 +21,8 @@ This file documents the primary data structures (types and interfaces often refe
 - [`CrosschainTx`](#crosschaintx)
 - [`AssetLike`](#assetlike)
 - [`CrosschainTxWithAssetLike`](#crosschaintxwithassetlike)
+- [`CrossChainEstimationResult`](#crosschainestimationresult-type)
+- [`CrossChainPayloadResult`](#crosschainpayloadresult-type)
 ### Transaction Tracking
 - [`TransactionLinker`](#transactionlinker-type)
 - [`TransactionLinkerWithOperationId`](#transactionlinkerwithoperationid-type)
@@ -434,6 +436,38 @@ export type BatchCrossChainTxWithAssetLike = Omit<BatchCrossChainTx, 'assets'> &
 ```
 
 Represents a batch crosschain transaction using AssetLike objects instead of strict Asset instances. This provides more flexibility when working with different asset representations in batch operations, while ensuring that individual transactions cannot specify wait-related options (which are controlled at the batch level).
+
+### `CrossChainEstimationResult (Type)`
+
+```typescript
+export type CrossChainEstimationResult = {
+    tonAmount: bigint;
+    networkFee: bigint;
+};
+```
+
+Result of estimating a cross-chain transaction, providing detailed cost breakdown before execution.
+
+- **`tonAmount`**: Total amount of TON required for the transaction in nanotons, including all assets being bridged
+- **`networkFee`**: Total network fees required for the transaction in nanotons, including TVM execution fees, protocol fees, and executor fees
+
+### `CrossChainPayloadResult (Type)`
+
+```typescript
+export type CrossChainPayloadResult = {
+    body: Cell;
+    destinationAddress: string;
+    tonAmount: bigint;
+    networkFee: bigint;
+};
+```
+
+Represents a prepared transaction payload for a cross-chain operation, ready to be signed and sent.
+
+- **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
+- **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
+- **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
+- **`networkFee`**: Network fee for this specific message in nanotons
 
 ### `TransactionLinker (Type)`
 ```typescript

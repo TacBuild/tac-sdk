@@ -19,5 +19,10 @@ export interface ISimulator {
      */
     getSimulationInfo(sender: SenderAbstraction, tx: CrosschainTx): Promise<ExecutionFeeEstimationResult>;
 
+    /**
+     * Estimates the total TON network fees required for a cross-chain transaction.
+     * @param assets Assets to be included in the transaction.
+     * @returns The total estimated fee in nanotons (1 TON = 10^9 nanotons) for processing all provided assets.
+     */
     estimateTONFees(assets: Asset[]): number;
 }

@@ -8,13 +8,31 @@
   - [Creating an Instance of `TacSdk`](#creating-an-instance-of-tacsdk)
   - [Core Functions](#core-functions)
     - [`sendCrossChainTransaction`](#sendcrosschaintransaction)
+      - [**Purpose**](#purpose)
+      - [**Parameters**](#parameters)
+      - [**Returns** `TransactionLinkerWithOperationId`](#returns-transactionlinkerwithoperationid)
+      - [**Possible exceptions**](#possible-exceptions)
+      - [**Functionality**](#functionality)
     - [`getSimulationInfo`](#getsimulationinfo)
     - [`sendCrossChainTransactions`](#sendcrosschaintransactions)
+      - [**Parameters**](#parameters-1)
+      - [**Returns** `Promise<TransactionLinkerWithOperationId[]>`](#returns-promisetransactionlinkerwithoperationid)
+    - [`estimateCrossChainTransaction`](#estimatecrosschaintransaction)
+      - [**Parameters**](#parameters-2)
+      - [**Returns** `CrossChainEstimationResult`](#returns-crosschainestimationresult)
+      - [**Example**](#example)
+    - [`prepareCrossChainTransactionPayload`](#preparecrosschaintransactionpayload)
+      - [**Parameters**](#parameters-3)
+      - [**Returns** `Promise<CrossChainPayloadResult[]>`](#returns-promisecrosschainpayloadresult)
+      - [**Use Cases**](#use-cases)
+      - [**Example**](#example-1)
   - [Asset Helpers](#asset-helpers)
     - [`getAsset`](#getasset)
     - [`getFT`](#getft)
     - [`getNFT`](#getnft)
     - [`getEVMTokenAddress`](#getevmtokenaddress)
+      - [**Purpose**](#purpose-1)
+      - [**Returns**](#returns)
     - [`getTVMTokenAddress`](#gettvmtokenaddress)
     - [`nativeTONAddress`](#nativetonaddress)
     - [`nativeTACAddress`](#nativetacaddress)
@@ -23,21 +41,41 @@
     - [`getTrustedTONExecutors`](#gettrustedtonexecutors)
   - [NFT Helpers](#nft-helpers)
     - [`getTVMNFTAddress`](#gettvmnftaddress)
+      - [**Parameters**](#parameters-4)
+      - [**Returns**](#returns-1)
     - [`getEVMNFTAddress`](#getevmnftaddress)
+      - [**Parameters**](#parameters-5)
+      - [**Returns**](#returns-2)
   - [Jetton Helpers](#jetton-helpers)
     - [`getJettonData`](#getjettondata)
     - [`getUserJettonWalletAddress`](#getuserjettonwalletaddress)
     - [`getUserJettonBalance`](#getuserjettonbalance)
     - [`getUserJettonBalanceExtended`](#getuserjettonbalanceextended)
+      - [**Returns** `UserWalletBalanceExtended`](#returns-userwalletbalanceextended)
   - [Advanced](#advanced)
     - [`getSmartAccountAddressForTvmWallet`](#getsmartaccountaddressfortvmwallet)
     - [`simulateTACMessage`](#simulatetacmessage)
+      - [**Parameters**](#parameters-6)
+      - [**Returns** `TACSimulationResult`](#returns-tacsimulationresult)
     - [`simulateTransactions`](#simulatetransactions)
+      - [**Returns** `ExecutionFeeEstimationResult[]`](#returns-executionfeeestimationresult)
     - [`getTVMExecutorFeeInfo`](#gettvmexecutorfeeinfo)
+      - [**Returns** `SuggestedTVMExecutorFee`](#returns-suggestedtvmexecutorfee)
     - [`bridgeTokensToTON`](#bridgetokenstoton)
+      - [**Parameters**](#parameters-7)
+      - [**Returns** `Promise<string>`](#returns-promisestring)
     - [`isContractDeployedOnTVM`](#iscontractdeployedontvm)
+      - [**Purpose**](#purpose-2)
+      - [**Parameters**](#parameters-8)
+      - [**Returns**](#returns-3)
     - [`getNFTItemData`](#getnftitemdata)
+      - [**Purpose**](#purpose-3)
+      - [**Parameters**](#parameters-9)
+      - [**Returns**](#returns-4)
+      - [**Possible exceptions**](#possible-exceptions-1)
     - [`getOperationTracker`](#getoperationtracker)
+      - [**Purpose**](#purpose-4)
+      - [**Returns**](#returns-5)
     - [`closeConnections`](#closeconnections)
 
 ---
@@ -158,6 +196,115 @@ Sends multiple cross-chain transactions in a batch. This is useful for scenarios
 
 #### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
   - An array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.
+
+---
+
+### `estimateCrossChainTransaction`
+
+```ts
+estimateCrossChainTransaction(
+  evmProxyMsg: EvmProxyMsg,
+  assets?: AssetLike[],
+  options?: CrossChainTransactionOptions
+): Promise<CrossChainEstimationResult>
+```
+
+Estimates the total cost and fees required for a cross-chain transaction without sending it. This method provides a comprehensive breakdown of all fees including TVM execution fees, protocol fees, executor fees, and gas costs.
+
+#### **Parameters**
+
+- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation to be executed on TAC
+- **`assets`** *(optional)*: Array of `AssetLike` instances (Asset objects or asset-like objects) representing the tokens/NFTs to bridge
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) for controlling simulation and fee calculation:
+  - **`evmValidExecutors`**: List of trusted TAC executors (defaults to config value)
+  - **`tvmValidExecutors`**: List of trusted TON executors (defaults to config value)
+  - **`calculateRollbackFee`**: Whether to include rollback fee in estimation (default: true)
+  - **`allowSimulationError`**: Whether to continue with partial fees if simulation fails (default: false)
+
+#### **Returns** [`CrossChainEstimationResult`](./../models/structs.md#crosschainestimationresult)
+
+Returns a detailed estimation result containing:
+- **`tonAmount`**: Total amount of TON required for the transaction in nanotons, including all assets being bridged
+- **`networkFee`**: Total TON network fees required for the transaction in nanotons
+
+#### **Example**
+
+```ts
+const estimation = await sdk.estimateCrossChainTransaction(
+  {
+    evmTargetAddress: "0x...",
+    methodName: "swap",
+    encodedParameters: "0x..."
+  },
+  [tonAsset, jettonAsset],
+  {
+    calculateRollbackFee: true
+  }
+);
+
+console.log(`Total TVM fees: ${estimation.totalTVMFees} nanotons`);
+console.log(`Total TAC fees: ${estimation.totalTACFees} wei`);
+console.log(`Estimated gas: ${estimation.estimatedGas}`);
+```
+
+---
+
+### `prepareCrossChainTransactionPayload`
+
+```ts
+prepareCrossChainTransactionPayload(
+  evmProxyMsg: EvmProxyMsg,
+  senderAddress: string,
+  assets?: AssetLike[],
+  options?: CrossChainTransactionOptions
+): Promise<CrossChainPayloadResult[]>
+```
+
+Prepares the transaction payloads required for a cross-chain operation without sending them. This method generates all necessary message payloads, addresses, and amounts that would be sent in a cross-chain transaction.
+
+#### **Parameters**
+
+- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
+- **`senderAddress`**: TVM address string of the transaction sender (wallet address)
+- **`assets`** *(optional)*: Array of `AssetLike` instances to be bridged in the transaction
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) for controlling payload generation
+
+#### **Returns** `Promise<CrossChainPayloadResult[]>`
+
+Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschainpayloadresult) objects, each containing:
+- **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
+- **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
+- **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
+- **`networkFee`**: Network fee for this specific message in nanotons
+
+#### **Use Cases**
+
+- Build transaction batching systems
+- Debug and inspect transaction payloads before sending
+
+#### **Example**
+
+```ts
+const payloads = await sdk.prepareCrossChainTransactionPayload(
+  {
+    evmTargetAddress: "0x...",
+    methodName: "deposit",
+    encodedParameters: "0x..."
+  },
+  "EQD...sender_address",
+  [tonAsset, jettonAsset]
+);
+
+// Inspect payloads
+payloads.forEach((payload, i) => {
+  console.log(`Payload ${i}: to=${payload.to}, amount=${payload.amount}`);
+});
+
+// Use with custom wallet implementation
+for (const payload of payloads) {
+  await customWallet.sendMessage(payload.to, payload.amount, payload.payload);
+}
+```
 
 ---
 
