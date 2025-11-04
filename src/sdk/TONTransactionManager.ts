@@ -332,7 +332,7 @@ export class TONTransactionManager implements ITONTransactionManager {
             this.logger.debug(`Operation IDs: ${formatObjectForLogging(operationIds)}`);
             return transactionLinkers.map((linker) => ({
                 ...linker,
-                operationId: operationIds[linker.shardsKey].operationIds.at(0),
+                operationId: operationIds[linker.shardsKey].operationIds[0],
             }));
         } catch (error) {
             this.logger.error(`Error while waiting for operation IDs: ${error}`);
