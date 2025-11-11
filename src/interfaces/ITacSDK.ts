@@ -9,7 +9,6 @@ import {
     AssetFromNFTItemArg,
     AssetLike,
     BatchCrossChainTxWithAssetLike,
-    CrossChainEstimationResult,
     CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
@@ -255,19 +254,6 @@ export interface ITacSDK {
      * Returns the operation tracker instance used for querying operation statuses and utilities.
      */
     getOperationTracker(): IOperationTracker;
-
-    /**
-     * Estimates the total TON network fees required for a cross-chain transaction.
-     * @param evmProxyMsg Encoded EVM proxy message.
-     * @param assets Assets to be included in the transaction.
-     * @param options Optional transaction configuration including error handling and executor settings.
-     * @returns Promise with fee estimation and execution info.
-     */
-    estimateCrossChainTransaction(
-        evmProxyMsg: EvmProxyMsg,
-        assets?: AssetLike[],
-        options?: CrossChainTransactionOptions,
-    ): Promise<CrossChainEstimationResult>;
 
     /**
      * Prepares the transaction payloads required for a cross-chain operation without sending them.

@@ -8,7 +8,6 @@ import type { SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
 import {
     BatchCrossChainTx,
-    CrossChainEstimationResult,
     CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
@@ -170,6 +169,9 @@ export class TONTransactionManager implements ITONTransactionManager {
                     address: this.config.TONParams.crossChainLayerAddress,
                     value: crossChainTonAmount + feeTonAmount + TRANSACTION_TON_AMOUNT,
                     payload: await ton.generatePayload({ excessReceiver: caller, evmData, feeParams }),
+                    extra: {
+                        networkFeeIncluded: TRANSACTION_TON_AMOUNT,
+                    },
                 },
             ];
         }
@@ -192,6 +194,9 @@ export class TONTransactionManager implements ITONTransactionManager {
                 address,
                 value: crossChainTonAmount + feeTonAmount + TRANSACTION_TON_AMOUNT,
                 payload,
+                extra: {
+                    networkFeeIncluded: TRANSACTION_TON_AMOUNT,
+                },
             });
 
             crossChainTonAmount = 0n;
@@ -342,43 +347,13 @@ export class TONTransactionManager implements ITONTransactionManager {
         }
     }
 
-    async estimateCrossChainTransaction(
-        evmProxyMsg: EvmProxyMsg,
-        assets: Asset[] = [],
-        options?: CrossChainTransactionOptions,
-    ): Promise<CrossChainEstimationResult> {
-        const tx: CrosschainTx = { evmProxyMsg, assets, options };
-
-        const mockSender: SenderAbstraction = {
-            getSenderAddress: () => '0:0000000000000000000000000000000000000000000000000000000000000000',
-            sendShardTransaction: async () => ({ success: true }),
-            sendShardTransactions: async () => [],
-            getBalance: async () => 0n,
-            getBalanceOf: async () => 0n,
-        };
-
-        const feeParams = await this.buildFeeParams(options || {}, evmProxyMsg, mockSender, tx);
-
-        const aggregatedData = aggregateTokens(assets);
-        const tonAsset = aggregatedData.ton || TON.create(this.config);
-        const crossChainTonAmount = tonAsset.rawAmount;
-        const feeTonAmount = feeParams.protocolFee + feeParams.evmExecutorFee + feeParams.tvmExecutorFee;
-
-        const networkFee = this.simulator.estimateTONFees(assets);
-
-        return {
-            tonAmount: crossChainTonAmount + feeTonAmount + BigInt(networkFee),
-            networkFee: BigInt(networkFee),
-        };
-    }
-
     async prepareCrossChainTransactionPayload(
         evmProxyMsg: EvmProxyMsg,
         senderAddress: string,
         assets: Asset[] = [],
         options?: CrossChainTransactionOptions,
     ): Promise<CrossChainPayloadResult[]> {
-        const tx: CrosschainTx = { evmProxyMsg, assets, options };
+        this.logger.debug('Preparing cross-chain transaction payload');
 
         const mockSender: SenderAbstraction = {
             getSenderAddress: () => senderAddress,
@@ -388,74 +363,13 @@ export class TONTransactionManager implements ITONTransactionManager {
             getBalanceOf: async () => 0n,
         };
 
-        const feeParams = await this.buildFeeParams(options || {}, evmProxyMsg, mockSender, tx);
+        const result = await this.prepareCrossChainTransaction(evmProxyMsg, mockSender, assets, options, true);
 
-        const aggregatedData = aggregateTokens(assets);
-        const { jettons, nfts } = aggregatedData;
-        const ton = aggregatedData.ton || TON.create(this.config);
-
-        const totalAssets = [...jettons, ...nfts];
-        const transactionLinker = generateTransactionLinker(senderAddress, totalAssets.length || 1);
-
-        const tacExecutors = options?.evmValidExecutors?.length
-            ? options.evmValidExecutors
-            : this.config.getTrustedTACExecutors;
-        const tonExecutors = options?.tvmValidExecutors?.length
-            ? options.tvmValidExecutors
-            : this.config.getTrustedTONExecutors;
-
-        const validExecutors = {
-            tac: tacExecutors,
-            ton: tonExecutors,
-        };
-
-        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg, validExecutors);
-
-        let crossChainTonAmount = ton.rawAmount;
-        let feeTonAmount = feeParams.protocolFee + feeParams.evmExecutorFee + feeParams.tvmExecutorFee;
-        const networkFee = this.simulator.estimateTONFees(assets);
-        const tonAmount = crossChainTonAmount + feeTonAmount + BigInt(networkFee);
-
-        let destinationAddress: string;
-        let payload: Cell;
-
-        if (!totalAssets.length) {
-            destinationAddress = this.config.TONParams.crossChainLayerAddress;
-            payload = await ton.generatePayload({ excessReceiver: senderAddress, evmData, feeParams });
-            return [
-                {
-                    body: payload,
-                    destinationAddress,
-                    tonAmount,
-                    networkFee: BigInt(networkFee),
-                },
-            ];
-        }
-
-        const results = [];
-        let currentFeeParams: FeeParams | undefined = feeParams;
-
-        for (const asset of totalAssets) {
-            const payload = await asset.generatePayload({
-                excessReceiver: senderAddress,
-                evmData,
-                crossChainTonAmount,
-                forwardFeeTonAmount: feeTonAmount,
-                feeParams: currentFeeParams,
-            });
-
-            const destinationAddress =
-                asset instanceof FT ? await asset.getUserWalletAddress(senderAddress) : asset.address;
-            results.push({
-                body: payload,
-                destinationAddress,
-                tonAmount,
-                networkFee: BigInt(networkFee),
-            });
-            crossChainTonAmount = 0n;
-            feeTonAmount = 0n;
-            currentFeeParams = undefined;
-        }
-        return results;
+        return result.transaction.messages.map((r) => ({
+            body: r.payload,
+            destinationAddress: r.address,
+            tonAmount: r.value,
+            networkFee: r.extra.networkFeeIncluded,
+        }));
     }
 }

@@ -15,16 +15,11 @@
     - [**Purpose**](#purpose-1)
     - [**Parameters**](#parameters-1)
     - [**Returns** `Promise<TransactionLinkerWithOperationId[]>`](#returns-promisetransactionlinkerwithoperationid)
-  - [`estimateCrossChainTransaction`](#estimatecrosschaintransaction)
+  - [`prepareCrossChainTransactionPayload`](#preparecrosschaintransactionpayload)
     - [**Purpose**](#purpose-2)
     - [**Parameters**](#parameters-2)
-    - [**Returns** `CrossChainEstimationResult`](#returns-crosschainestimationresult)
-    - [**Use Cases**](#use-cases)
-  - [`prepareCrossChainTransactionPayload`](#preparecrosschaintransactionpayload)
-    - [**Purpose**](#purpose-3)
-    - [**Parameters**](#parameters-3)
     - [**Returns** `Promise<CrossChainPayloadResult[]>`](#returns-promisecrosschainpayloadresult)
-    - [**Use Cases**](#use-cases-1)
+    - [**Use Cases**](#use-cases)
     - [**Example**](#example)
   - [Integration with TacSdk](#integration-with-tacsdk)
   - [Example Usage](#example-usage)
@@ -135,44 +130,6 @@ Sends multiple cross-chain transactions in a batch from TON to TAC. This method 
 ### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
 
 Returns an array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.
-
----
-
-## `estimateCrossChainTransaction`
-
-```typescript
-async estimateCrossChainTransaction(
-  evmProxyMsg: EvmProxyMsg,
-  assets: Asset[],
-  options?: CrossChainTransactionOptions
-): Promise<CrossChainEstimationResult>
-```
-
-### **Purpose**
-
-Estimates the total cost and fees required for a cross-chain transaction without actually sending it. This method provides a comprehensive breakdown of all fees involved, including TVM execution fees, protocol fees, executor fees, and gas costs. It's useful for displaying estimated costs to users before they commit to a transaction.
-
-### **Parameters**
-
-- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation to be executed on TAC
-- **`assets`**: Array of [`Asset`](./assets.md) instances representing the tokens/NFTs to bridge in the transaction
-- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) for controlling simulation and fee calculation behavior:
-  - **`evmValidExecutors`**: List of trusted TAC executors (defaults to config value)
-  - **`tvmValidExecutors`**: List of trusted TON executors (defaults to config value)
-  - **`calculateRollbackFee`**: Whether to include rollback fee in estimation (default: true)
-  - **`allowSimulationError`**: Whether to continue with partial fees if simulation fails (default: false)
-
-### **Returns** [`CrossChainEstimationResult`](./../models/structs.md#crosschainestimationresult)
-
-Returns a detailed estimation result containing:
-- **`tonAmount`**: Total amount of TON required for the transaction in nanotons, including all assets being bridged
-- **`networkFee`**: Total TON network fees required for the transaction in nanotons
-
-### **Use Cases**
-
-- Display estimated transaction costs to users before execution
-- Validate that a transaction is economically feasible
-- Pre-calculate required balances before initiating transactions
 
 ---
 

@@ -1,7 +1,6 @@
 import type { SenderAbstraction } from '../sender';
 import {
     BatchCrossChainTx,
-    CrossChainEstimationResult,
     CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
@@ -54,18 +53,6 @@ export interface ITONTransactionManager {
         tx: CrosschainTx,
     ): Promise<FeeParams>;
 
-    /**
-     * Estimates the total cost and fees required for a cross-chain transaction without actually sending it.
-     * @param evmProxyMsg Encoded EVM proxy message.
-     * @param assets Assets to be included in the transaction.
-     * @param options Optional transaction configuration including error handling and executor settings.
-     * @returns Promise with fee estimation and execution info.
-     */
-    estimateCrossChainTransaction(
-        evmProxyMsg: EvmProxyMsg,
-        assets: Asset[],
-        options?: CrossChainTransactionOptions,
-    ): Promise<CrossChainEstimationResult>;
 
     /**
      * Prepares the transaction payloads required for a cross-chain operation without sending them.

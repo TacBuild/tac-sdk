@@ -490,11 +490,6 @@ export type FTOriginAndData = {
     jettonData?: JettonMinterData;
 };
 
-export type CrossChainEstimationResult = {
-    tonAmount: bigint;
-    networkFee: bigint;
-};
-
 export type CrossChainPayloadResult = {
     body: Cell;
     destinationAddress: string;

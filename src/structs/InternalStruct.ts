@@ -18,6 +18,9 @@ export type ShardMessage = {
     address: string;
     value: bigint;
     payload: Cell;
+    extra: {
+        networkFeeIncluded: bigint
+    }
 };
 
 export type ShardTransaction = {
