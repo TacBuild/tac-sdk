@@ -411,8 +411,8 @@ export class TONTransactionManager implements ITONTransactionManager {
 
         const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg, validExecutors);
 
-        const crossChainTonAmount = ton.rawAmount;
-        const feeTonAmount = feeParams.protocolFee + feeParams.evmExecutorFee + feeParams.tvmExecutorFee;
+        let crossChainTonAmount = ton.rawAmount;
+        let feeTonAmount = feeParams.protocolFee + feeParams.evmExecutorFee + feeParams.tvmExecutorFee;
         const networkFee = this.simulator.estimateTONFees(assets);
         const tonAmount = crossChainTonAmount + feeTonAmount + BigInt(networkFee);
 
@@ -433,6 +433,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         }
 
         const results = [];
+        let currentFeeParams: FeeParams | undefined = feeParams;
 
         for (const asset of totalAssets) {
             const payload = await asset.generatePayload({
@@ -440,7 +441,7 @@ export class TONTransactionManager implements ITONTransactionManager {
                 evmData,
                 crossChainTonAmount,
                 forwardFeeTonAmount: feeTonAmount,
-                feeParams,
+                feeParams: currentFeeParams,
             });
 
             const destinationAddress =
@@ -451,6 +452,9 @@ export class TONTransactionManager implements ITONTransactionManager {
                 tonAmount,
                 networkFee: BigInt(networkFee),
             });
+            crossChainTonAmount = 0n;
+            feeTonAmount = 0n;
+            currentFeeParams = undefined;
         }
         return results;
     }
