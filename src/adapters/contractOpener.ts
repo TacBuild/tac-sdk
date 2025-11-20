@@ -1,12 +1,13 @@
 import { getHttpEndpoint, getHttpV4Endpoint } from '@orbs-network/ton-access';
 import { Network as TonNetwork } from '@orbs-network/ton-access';
 import { Blockchain } from '@ton/sandbox';
-import { TonClient, TonClient4 } from '@ton/ton';
+import { Address, Cell, ExternalAddress, loadTransaction, TonClient, TonClient4, Transaction } from '@ton/ton';
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
 import { mainnet, testnet } from '../../artifacts';
 import { ContractOpener } from '../interfaces';
 import { sleep } from '../sdk/Utils';
+import { GetTransactionsOptions } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
 async function getHttpEndpointWithRetry(network: Network, maxRetries = 5, delay = 1000): Promise<string> {
@@ -43,6 +44,95 @@ async function getHttpV4EndpointWithRetry(network: Network, maxRetries = 5, dela
     }
 
     throw lastError || new Error('Failed to get HTTP V4 endpoint after retries');
+}
+
+// -------------------------------------------------------------------
+// 1. Paginate all transactions of an address (old → new order)
+// -------------------------------------------------------------------
+async function* paginateTransactions(
+    addr: Address,
+    getTransactions: ContractOpener['getTransactions'],
+    limit = 100,
+): AsyncIterable<Transaction[]> {
+    let currentLt: bigint | undefined;
+    let currentHash: string | undefined;
+
+    while (true) {
+        const batch = await getTransactions(addr, {
+            limit,
+            lt: currentLt?.toString(),
+            hash: currentHash,
+            archival: true,
+        });
+
+        yield batch;
+
+        if (batch.length < limit) {
+            return; // no more pages
+        }
+
+        const last = batch.at(-1)!;
+        currentLt = last.lt;
+        currentHash = last.hash().toString('base64');
+    }
+}
+
+// -------------------------------------------------------------------
+// 2. Find the first transaction whose hash (base64) matches the target
+// -------------------------------------------------------------------
+async function findTransactionByHash(
+    addr: Address,
+    targetHashB64: string,
+    getTransactions: ContractOpener['getTransactions'],
+): Promise<Transaction | null> {
+    for await (const batch of paginateTransactions(addr, getTransactions)) {
+        for (const tx of batch) {
+            if (tx.hash().toString('base64') === targetHashB64) {
+                return tx;
+            }
+        }
+    }
+    return null;
+}
+
+// -------------------------------------------------------------------
+// 3.Retrieve the transaction with `hashB64` and all transactions
+//    that are directly adjacent to it (outgoing messages + optional incoming)
+// -------------------------------------------------------------------
+export async function getAdjacentTransactionsHelper(
+    addr: Address,
+    hashB64: string,
+    getTransactions: ContractOpener['getTransactions'],
+): Promise<Transaction[]> {
+    // 1. Find the root transaction
+    const rootTx = await findTransactionByHash(addr, hashB64, getTransactions);
+    if (!rootTx) return [];
+
+    const adjacent: Transaction[] = [];
+
+    // 2. Follow every outgoing message
+    for (const msg of rootTx.outMessages.values()) {
+        const dst = msg.info.dest;
+        if (!dst || dst instanceof ExternalAddress) continue;
+
+        const msgHashB64 = msg.body.hash().toString('base64');
+        const tx = await findTransactionByHash(dst, msgHashB64, getTransactions);
+        if (tx) adjacent.push(tx);
+    }
+
+    // 3. Optional: follow the incoming message (if it exists and is internal)
+    if (rootTx.inMessage?.info.type === 'internal') {
+        const src = rootTx.inMessage.info.src;
+        if (src instanceof Address) {
+            // The incoming message belongs to the sender’s out-message list,
+            // so we look for the same message hash on the sender side.
+            const msgHashB64 = rootTx.inMessage.body.hash().toString('base64');
+            const tx = await findTransactionByHash(src, msgHashB64, getTransactions);
+            if (tx) adjacent.push(tx);
+        }
+    }
+
+    return adjacent;
 }
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };
@@ -86,6 +176,20 @@ export async function liteClientOpener(
         engine.close();
     };
 
+    const getTransactions = async (address: Address, opts: GetTransactionsOptions): Promise<Transaction[]> => {
+        const txsBuffered = await client
+            .getAccountTransactions(
+                address,
+                opts.lt ?? '',
+                opts.hash ? Buffer.from(opts.hash, 'base64') : Buffer.alloc(0),
+                opts.limit,
+            )
+            .then((r) => r.transactions);
+        const cell = Cell.fromBoc(txsBuffered);
+        const transactions = cell.map((c) => loadTransaction(c.beginParse()));
+        return transactions;
+    };
+
     return {
         getContractState: async (addr) => {
             const block = await client.getMasterchainInfo();
@@ -100,6 +204,8 @@ export async function liteClientOpener(
         },
         open: (contract) => client.open(contract),
         closeConnections,
+        getTransactions,
+        getAdjacentTransactions: async (addr, hash) => getAdjacentTransactionsHelper(addr, hash, getTransactions),
     };
 }
 
@@ -114,17 +220,39 @@ export function sandboxOpener(blockchain: Blockchain): ContractOpener {
                 state: state.state.type === 'uninit' ? 'uninitialized' : state.state.type,
             };
         },
+        getTransactions: () => {
+            throw 'Not implemented.';
+        },
+        getAdjacentTransactions() {
+            throw 'Not implemented.';
+        },
     };
 }
 
 export async function orbsOpener(network: Network): Promise<ContractOpener> {
     const endpoint = await getHttpEndpointWithRetry(network);
-    return new TonClient({ endpoint });
+    const client = new TonClient({ endpoint });
+    return {
+        open: client.open,
+        getContractState: client.getContractState,
+        getTransactions: client.getTransactions,
+        getAdjacentTransactions: async (addr, hash) =>
+            getAdjacentTransactionsHelper(addr, hash, client.getTransactions),
+    };
 }
 
 export async function orbsOpener4(network: Network, timeout = 10000): Promise<ContractOpener> {
     const endpoint = await getHttpV4EndpointWithRetry(network);
     const client4 = new TonClient4({ endpoint, timeout });
+    const getTransactions = async (address: Address, opts: GetTransactionsOptions): Promise<Transaction[]> => {
+        return client4
+            .getAccountTransactions(
+                address,
+                opts.lt ? BigInt(opts.lt) : 0n,
+                opts.hash ? Buffer.from(opts.hash, 'base64') : Buffer.alloc(0),
+            )
+            .then((res) => res.map((t) => t.tx));
+    };
     return {
         open: (contract) => client4.open(contract),
         getContractState: async (address) => {
@@ -140,5 +268,20 @@ export async function orbsOpener4(network: Network, timeout = 10000): Promise<Co
                 state: state.account.state.type === 'uninit' ? 'uninitialized' : state.account.state.type,
             };
         },
+        getTransactions,
+        getAdjacentTransactions: async (addr, hash) => getAdjacentTransactionsHelper(addr, hash, getTransactions),
+    };
+}
+
+export function tonClientOpener(endpoint: string): ContractOpener {
+    const client = new TonClient({
+        endpoint,
+    });
+    return {
+        open: client.open,
+        getContractState: client.getContractState,
+        getTransactions: client.getTransactions,
+        getAdjacentTransactions: async (addr, hash) =>
+            getAdjacentTransactionsHelper(addr, hash, client.getTransactions),
     };
 }

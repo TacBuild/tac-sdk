@@ -3,6 +3,7 @@ import { fromNano, internal, MessageRelaxed, SendMode } from '@ton/ton';
 import { noValidGroupFoundError, prepareMessageGroupError } from '../errors/instances';
 import type { Asset, ContractOpener, SenderAbstraction } from '../interfaces';
 import { MAX_EXT_MSG_SIZE, MAX_HIGHLOAD_GROUP_MSG_NUM, MAX_MSG_DEPTH } from '../sdk/Consts';
+import { getNormalizedExtMessageHash, relaxedToMessage } from '../sdk/Utils';
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 import { HighloadWalletV3 } from '../wrappers/HighloadWalletV3';
@@ -57,12 +58,14 @@ export class BatchSender implements SenderAbstraction {
             try {
                 const result = await this.sendGroup(group, contractOpener);
                 results.push({
+                    hash: group.map((g) => getNormalizedExtMessageHash(relaxedToMessage(this.wallet.address, g))),
                     success: true,
                     result,
                     lastMessageIndex: currentMessageIndex + group.length - 1,
                 });
             } catch (error) {
                 results.push({
+                    hash: [],
                     success: false,
                     error: error as Error,
                     lastMessageIndex: currentMessageIndex - 1,
@@ -159,6 +162,7 @@ export class BatchSender implements SenderAbstraction {
 
         const result = await this.sendGroup(messages, contractOpener);
         return {
+            hash: messages.map((m) => getNormalizedExtMessageHash(relaxedToMessage(this.wallet.address, m))),
             success: true,
             result,
             lastMessageIndex: shardTransaction.messages.length - 1,

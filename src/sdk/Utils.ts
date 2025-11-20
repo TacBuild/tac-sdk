@@ -1,4 +1,4 @@
-import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
+import { Address, beginCell, Cell, Message, MessageRelaxed, storeMessage, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers } from 'ethers';
 import { sha256_sync } from 'ton-crypto';
 
@@ -354,4 +354,56 @@ export function getNumber(len: number, cell?: Cell): number {
 
 export function getString(cell?: Cell): string {
     return cell?.beginParse().loadStringTail() ?? '';
+}
+
+export function relaxedToMessage(dest: Address, message: MessageRelaxed): Message {
+    return {
+        body: message.body,
+        init: message.init,
+        info: {
+            type: 'external-in',
+            src: undefined,
+            dest,
+            importFee: 0n,
+        },
+    };
+}
+
+export function getNormalizedExtMessageHash(message: Message): string {
+    if (message.info.type !== 'external-in') {
+        throw new Error(`Message must be "external-in", got ${message.info.type}`);
+    }
+
+    const info = {
+        ...message.info,
+        src: undefined,
+        importFee: 0n,
+    };
+
+    const normalizedMessage = {
+        ...message,
+        init: null,
+        info: info,
+    };
+
+    return beginCell()
+        .store(storeMessage(normalizedMessage, { forceRef: true }))
+        .endCell()
+        .hash()
+        .toString('base64');
+}
+
+export async function retry<T>(fn: () => Promise<T>, options: { retries: number; delay: number }): Promise<T> {
+    let lastError: Error | undefined;
+    for (let i = 0; i < options.retries; i++) {
+        try {
+            return await fn();
+        } catch (e) {
+            if (e instanceof Error) {
+                lastError = e;
+            }
+            await new Promise((resolve) => setTimeout(resolve, options.delay));
+        }
+    }
+    throw lastError;
 }

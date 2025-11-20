@@ -1,4 +1,4 @@
-import { Cell } from '@ton/ton';
+import { Address, Cell } from '@ton/ton';
 import { AbstractProvider, ethers } from 'ethers';
 
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
@@ -19,8 +19,8 @@ export type ShardMessage = {
     value: bigint;
     payload: Cell;
     extra: {
-        networkFeeIncluded: bigint
-    }
+        networkFeeIncluded: bigint;
+    };
 };
 
 export type ShardTransaction = {
@@ -90,6 +90,7 @@ export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogInd
 
 export interface SendResult {
     success: boolean;
+    hash: string[];
     result?: unknown;
     error?: Error;
     lastMessageIndex?: number;
@@ -119,6 +120,7 @@ export type ToncenterTransaction = {
 };
 
 export type TransactionDepth = {
+    address: Address;
     hash: string;
     depth: number;
 };
@@ -144,4 +146,13 @@ export type ConvertedCurrencyRawResult = {
     currency: CurrencyType;
     tacPrice: USDPriceInfoRaw;
     tonPrice: USDPriceInfoRaw;
+};
+
+export type GetTransactionsOptions = {
+    limit: number;
+    lt?: string;
+    hash?: string;
+    to_lt?: string;
+    inclusive?: boolean;
+    archival?: boolean;
 };

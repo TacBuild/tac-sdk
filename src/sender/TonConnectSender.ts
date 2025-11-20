@@ -54,12 +54,14 @@ export class TonConnectSender implements SenderAbstraction {
                 responses.push({
                     success: true,
                     result: response,
+                    hash: [response.boc],
                     lastMessageIndex: currentMessageIndex + chunk.length - 1,
                 });
                 currentMessageIndex += chunk.length;
             } catch (error) {
                 responses.push({
                     success: false,
+                    hash: [],
                     error: error as Error,
                     lastMessageIndex: currentMessageIndex - 1,
                 });

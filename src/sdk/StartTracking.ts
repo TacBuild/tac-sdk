@@ -1,7 +1,7 @@
+import { Address } from '@ton/ton';
 import Table from 'cli-table3';
 
-import { ILogger } from '../interfaces';
-import { TxFinalizerConfig } from '../structs/InternalStruct';
+import { ContractOpener, ILogger } from '../interfaces';
 import { ExecutionStages, Network, OperationType, TransactionLinker } from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
 import { NoopLogger } from './Logger';
@@ -18,8 +18,9 @@ export async function startTracking(
         maxIterationCount?: number;
         returnValue?: boolean;
         tableView?: boolean;
-        txFinalizerConfig?: TxFinalizerConfig;
         logger?: ILogger;
+        contractOpener?: ContractOpener;
+        cclAddress?: string;
     },
 ): Promise<void | ExecutionStages> {
     const {
@@ -28,8 +29,9 @@ export async function startTracking(
         maxIterationCount = MAX_ITERATION_COUNT,
         returnValue = false,
         tableView = true,
-        txFinalizerConfig,
         logger = new NoopLogger(),
+        contractOpener,
+        cclAddress,
     } = options || {};
 
     const tracker = new OperationTracker(network, customLiteSequencerEndpoints, logger);
@@ -95,14 +97,14 @@ export async function startTracking(
     if (profilingData.executedInTON.exists && profilingData.executedInTON.stageData?.transactions) {
         logger.debug('EXECUTED_IN_TON stage found, verifying transaction success in TON...');
 
-        if (txFinalizerConfig) {
-            const txFinalizer = new TonTxFinalizer(txFinalizerConfig, logger);
+        if (contractOpener && cclAddress) {
+            const txFinalizer = new TonTxFinalizer(contractOpener, logger);
 
             const transactions = profilingData.executedInTON.stageData.transactions;
             for (const tx of transactions) {
                 try {
                     logger.debug(`Verifying transaction: ${tx.hash}`);
-                    await txFinalizer.trackTransactionTree(tx.hash);
+                    await txFinalizer.trackTransactionTree(Address.parse(cclAddress), tx.hash);
                     logger.debug(`Transaction ${tx.hash} verified successfully in TON`);
                 } catch (error) {
                     logger.debug(`Transaction ${tx.hash} failed verification in TON: ${error}`);
@@ -138,8 +140,8 @@ export async function startTrackingMultiple(
         maxIterationCount?: number;
         returnValue?: boolean;
         tableView?: boolean;
-        txFinalizerConfig?: TxFinalizerConfig;
         logger?: ILogger;
+        contractOpener?: ContractOpener;
     },
 ): Promise<void | ExecutionStages[]> {
     const {
@@ -148,7 +150,7 @@ export async function startTrackingMultiple(
         maxIterationCount = MAX_ITERATION_COUNT,
         returnValue = false,
         tableView = true,
-        txFinalizerConfig,
+        contractOpener,
         logger = new NoopLogger(),
     } = options || {};
 
@@ -163,7 +165,7 @@ export async function startTrackingMultiple(
                 maxIterationCount,
                 returnValue: true,
                 tableView: false,
-                txFinalizerConfig,
+                contractOpener,
                 logger,
             });
         }),

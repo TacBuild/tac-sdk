@@ -3,6 +3,7 @@ import { MessageRelaxed, SendMode } from '@ton/ton';
 
 import type { Asset, ContractOpener } from '../interfaces';
 import { SenderAbstraction, WalletInstanse } from '../interfaces';
+import { getNormalizedExtMessageHash, relaxedToMessage } from '../sdk/Utils';
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
@@ -51,12 +52,14 @@ export class RawSender implements SenderAbstraction {
             try {
                 const result = await this.sendBatch(batch, contractOpener);
                 results.push({
+                    hash: batch.map(b => getNormalizedExtMessageHash(relaxedToMessage(this.wallet.address, b))),
                     success: true,
                     result,
                     lastMessageIndex: currentMessageIndex + batch.length - 1,
                 });
             } catch (error) {
                 results.push({
+                    hash: [],
                     success: false,
                     error: error as Error,
                     lastMessageIndex: currentMessageIndex - 1,
@@ -115,6 +118,7 @@ export class RawSender implements SenderAbstraction {
 
         const result = await this.sendBatch(messages, contractOpener);
         return {
+            hash: messages.map(m => getNormalizedExtMessageHash(relaxedToMessage(this.wallet.address, m))),
             success: true,
             result,
             lastMessageIndex: shardTransaction.messages.length - 1,

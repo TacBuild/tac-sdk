@@ -1,10 +1,10 @@
 import { SandboxContract } from '@ton/sandbox';
-import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
+import { Address, Contract, OpenedContract, Transaction } from '@ton/ton';
 
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener } from '../interfaces';
 import { ContractState, Network } from '../structs/Struct';
-import { orbsOpener, orbsOpener4 } from './contractOpener';
+import { orbsOpener, orbsOpener4, tonClientOpener } from './contractOpener';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -25,6 +25,27 @@ export class RetryableContractOpener implements ContractOpener {
             throw new Error('No ContractOpener instances available');
         }
         this.openerConfigs = openerConfigs;
+    }
+
+    async getTransactions(
+        address: Address,
+        opts: { limit: number; lt?: string; hash?: string; to_lt?: string; inclusive?: boolean; archival?: boolean },
+    ): Promise<Transaction[]> {
+        const result = await this.executeWithFallback((config) => config.opener.getTransactions(address, opts));
+
+        if (result.success && result.data) {
+            return result.data;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get account transactions');
+    }
+
+    async getAdjacentTransactions(address: Address, hash: string): Promise<Transaction[]> {
+        const result = await this.executeWithFallback((config) => config.opener.getAdjacentTransactions(address, hash));
+
+        if (result.success && result.data) {
+            return result.data;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get account transactions');
     }
 
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T> {
@@ -131,9 +152,7 @@ export async function createDefaultRetryableOpener(
 ): Promise<ContractOpener> {
     const openers: OpenerConfig[] = [];
 
-    const tonClient = new TonClient({
-        endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString(),
-    });
+    const tonClient = tonClientOpener(new URL('api/v2/jsonRPC', tonRpcEndpoint).toString());
 
     openers.push({ opener: tonClient, retries: maxRetries, retryDelay });
 

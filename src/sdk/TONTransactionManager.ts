@@ -1,9 +1,10 @@
-import { Cell } from '@ton/ton';
+import { Address, Cell } from '@ton/ton';
 
 import { FT, NFT, TON } from '../assets';
 import { missingFeeParamsError, missingGasLimitError, missingTvmExecutorFeeError } from '../errors';
 import { sendCrossChainTransactionFailedError } from '../errors/instances';
 import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator, ITONTransactionManager } from '../interfaces';
+import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import type { SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
 import {
@@ -31,6 +32,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         private readonly simulator: ISimulator,
         private readonly operationTracker: IOperationTracker,
         private readonly logger: ILogger = new NoopLogger(),
+        private readonly txFinalizer: ITxFinalizer,
     ) {}
 
     async buildFeeParams(
@@ -241,7 +243,22 @@ export class TONTransactionManager implements ITONTransactionManager {
             return { sendTransactionResult, ...transactionLinker };
         }
 
-        const waitOptions = tx.options?.waitOptions ?? {};
+        const waitOptions = tx.options?.waitOptions ?? {
+            ensureTxExecuted: true,
+        };
+
+        if (waitOptions.ensureTxExecuted) {
+            for (const hash of sendTransactionResult.hash) {
+                const tx = await this.txFinalizer.waitForTransaction(sender.getSenderAddress(), hash);
+                if (tx?.inMessage)
+                    this.txFinalizer.trackTransactionTree(
+                        tx.inMessage.info.dest as Address,
+                        tx.hash().toString('base64'),
+                        10,
+                    );
+            }
+        }
+
         waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);
         waitOptions.logger = waitOptions.logger ?? this.logger;
 
@@ -357,7 +374,7 @@ export class TONTransactionManager implements ITONTransactionManager {
 
         const mockSender: SenderAbstraction = {
             getSenderAddress: () => senderAddress,
-            sendShardTransaction: async () => ({ success: true }),
+            sendShardTransaction: async () => ({ success: true, hash: [] }),
             sendShardTransactions: async () => [],
             getBalance: async () => 0n,
             getBalanceOf: async () => 0n,

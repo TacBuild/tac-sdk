@@ -5,6 +5,7 @@ import { AbstractProvider } from 'ethers';
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
+import { SendResult } from './InternalStruct';
 
 export type ContractState = {
     balance: bigint;
@@ -134,7 +135,7 @@ export type TransactionLinker = {
     shardCount: number;
     shardsKey: string;
     timestamp: number;
-    sendTransactionResult?: unknown;
+    sendTransactionResult?: SendResult;
 };
 
 export type TransactionLinkerWithOperationId = TransactionLinker & {
@@ -422,6 +423,11 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
      * Receives both the result and optional context with additional parameters
      */
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
+    /**
+     * Ensure that TON transaction is succesful
+     * @default true
+     */
+    ensureTxExecuted?: boolean;
 }
 
 export const defaultWaitOptions: WaitOptions = {

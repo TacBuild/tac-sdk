@@ -46,6 +46,7 @@ import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
 import { TACTransactionManager } from './TACTransactionManager';
 import { TONTransactionManager } from './TONTransactionManager';
+import { TonTxFinalizer } from './TxFinalizer';
 import { getBouncedAddress, mapAssetsToTonAssets, normalizeAssets } from './Utils';
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
@@ -98,7 +99,14 @@ export class TacSdk implements ITacSDK {
 
         const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints);
         const simulator = new Simulator(config, operationTracker, logger);
-        const tonTransactionManager = new TONTransactionManager(config, simulator, operationTracker, logger);
+        const txFinalizer = new TonTxFinalizer(config.TONParams.contractOpener, logger);
+        const tonTransactionManager = new TONTransactionManager(
+            config,
+            simulator,
+            operationTracker,
+            logger,
+            txFinalizer,
+        );
         const tacTransactionManager = new TACTransactionManager(config, operationTracker, logger);
 
         return new TacSdk(config, simulator, tonTransactionManager, tacTransactionManager, operationTracker);
