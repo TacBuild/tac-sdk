@@ -138,13 +138,19 @@ export async function createDefaultRetryableOpener(
     openers.push({ opener: tonClient, retries: maxRetries, retryDelay });
 
     if (networkType !== Network.DEV) {
-        const opener4 = await orbsOpener4(networkType);
-        const opener = await orbsOpener(networkType);
+        try {
+            const opener4 = await orbsOpener4(networkType);
+            openers.push({ opener: opener4, retries: maxRetries, retryDelay });
+        } catch {
+            // skip opener in case of failure
+        }
 
-        openers.push(
-            { opener: opener4, retries: maxRetries, retryDelay },
-            { opener: opener, retries: maxRetries, retryDelay },
-        );
+        try {
+            const opener = await orbsOpener(networkType);
+            openers.push({ opener: opener, retries: maxRetries, retryDelay });
+        } catch {
+            // skip opener in case of failure
+        }
     }
 
     return new RetryableContractOpener(openers);
