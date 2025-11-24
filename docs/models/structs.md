@@ -1150,7 +1150,7 @@ EVM-compatible checksum address string.
 export type JettonMinterData = {
     totalSupply: bigint;
     mintable: boolean;
-    adminAddress: Address;
+    adminAddress?: Address;
     content: Cell;
     walletCode: Cell;
 };
@@ -1160,7 +1160,7 @@ Represents the data structure returned by Jetton minter contracts, containing es
 
 - **`totalSupply`**: Total supply of the Jetton in raw units (considering decimals)
 - **`mintable`**: Whether the Jetton can still be minted (true) or if minting is disabled (false)
-- **`adminAddress`**: Address of the admin who controls the Jetton minter contract
+- **`adminAddress`** *(optional)*: Address of the admin who controls the Jetton minter contract
 - **`content`**: Cell containing Jetton metadata (name, symbol, decimals, description, image, etc.) encoded according to TEP-64 standard
 - **`walletCode`**: Cell containing the code for Jetton wallet contracts that will be deployed for each holder
 
