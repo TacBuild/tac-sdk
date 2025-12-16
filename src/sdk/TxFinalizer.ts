@@ -1,10 +1,11 @@
 import { Address, Transaction } from '@ton/ton';
 
+import { findTransactionByExternalMessageHash } from '../adapters/contractOpener';
 import { ContractOpener, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import { TransactionDepth } from '../structs/InternalStruct';
 import { NoopLogger } from './Logger';
-import { getNormalizedExtMessageHash, retry, sleep } from './Utils';
+import { retry, sleep } from './Utils';
 
 const IGNORE_OPCODE = [
     0xd53276db, // Excess
@@ -74,9 +75,10 @@ export class TonTxFinalizer implements ITxFinalizer {
     }
 
     // Checks if all transactions in the tree are successful
-    public async trackTransactionTree(address: Address, hash: string, maxDepth: number = 10) {
+    public async trackTransactionTree(address: string, hash: string, maxDepth: number = 10) {
+        const parsedAddress = Address.parse(address);
         const visitedHashes = new Set<string>();
-        const queue: TransactionDepth[] = [{ address, hash, depth: 0 }];
+        const queue: TransactionDepth[] = [{ address: parsedAddress, hash, depth: 0 }];
 
         while (queue.length > 0) {
             const { hash: currentHash, depth: currentDepth, address: currentAddress } = queue.shift()!;
@@ -133,58 +135,14 @@ export class TonTxFinalizer implements ITxFinalizer {
         }
     }
 
-    // async getTransactionByInMessage(inMessageBoc: string, client: ContractOpener): Promise<Transaction | undefined> {
-    //     // Step 1. Convert Base64 BoC to Message if input is a string
-    //     const inMessage = loadMessage(Cell.fromBase64(inMessageBoc).beginParse());
-
-    //     // Step 2. Ensure the message is an external-in message
-    //     if (inMessage.info.type !== 'external-in') {
-    //         throw new Error(`Message must be "external-in", got ${inMessage.info.type}`);
-    //     }
-    //     const account = inMessage.info.dest;
-
-    //     // Step 3. Compute the normalized hash of the input message
-    //     const targetInMessageHash = getNormalizedExtMessageHash(inMessage);
-
-    //     let lt: string | undefined = undefined;
-    //     let hash: string | undefined = undefined;
-
-    //     // Step 4. Paginate through the transaction history of the account
-    //     while (true) {
-    //         const transactions = await retry(
-    //             () =>
-    //                 client.getTransactions(account, {
-    //                     hash,
-    //                     lt,
-    //                     limit: 10,
-    //                     archival: true,
-    //                 }),
-    //             { delay: 1000, retries: 3 },
-    //         );
-
-    //         if (transactions.length === 0) {
-    //             // No more transactions found - message may not be processed yet
-    //             return undefined;
-    //         }
-
-    //         // Step 5. Search for a transaction whose input message matches the normalized hash
-    //         for (const transaction of transactions) {
-    //             if (transaction.inMessage?.info.type !== 'external-in') {
-    //                 continue;
-    //             }
-
-    //             const inMessageHash = getNormalizedExtMessageHash(transaction.inMessage);
-    //             if (inMessageHash == targetInMessageHash) {
-    //                 return transaction;
-    //             }
-    //         }
-
-    //         const last = transactions.at(-1)!;
-    //         lt = last.lt.toString();
-    //         hash = last.hash().toString('base64');
-    //     }
-    // }
-
+    /**
+     * Wait for a transaction by external message hash
+     * @param target Target account address (string)
+     * @param targetInMessageHash Normalized external message hash (base64)
+     * @param retries Maximum number of retry attempts
+     * @param timeout Delay between retry attempts in milliseconds
+     * @returns The transaction if found, undefined otherwise
+     */
     async waitForTransaction(
         target: string,
         targetInMessageHash: string,
@@ -200,24 +158,13 @@ export class TonTxFinalizer implements ITxFinalizer {
             attempt++;
             this.logger.info(`Waiting for transaction to appear in network. Attempt: ${attempt}`);
 
-            const transactions = await retry(
-                () =>
-                    this.contractOpener.getTransactions(account, {
-                        limit: 10,
-                        archival: true,
-                    }),
+            const transaction = await retry(
+                () => findTransactionByExternalMessageHash(account, targetInMessageHash, this.contractOpener.getTransactions),
                 { delay: 1000, retries: 3 },
             );
 
-            for (const transaction of transactions) {
-                if (transaction.inMessage?.info.type !== 'external-in') {
-                    continue;
-                }
-
-                const inMessageHash = getNormalizedExtMessageHash(transaction.inMessage);
-                if (inMessageHash == targetInMessageHash) {
-                    return transaction;
-                }
+            if (transaction) {
+                return transaction;
             }
 
             await new Promise((resolve) => setTimeout(resolve, timeout));

@@ -1,4 +1,3 @@
-import { Address } from '@ton/ton';
 import Table from 'cli-table3';
 
 import { ContractOpener, ILogger } from '../interfaces';
@@ -104,7 +103,7 @@ export async function startTracking(
             for (const tx of transactions) {
                 try {
                     logger.debug(`Verifying transaction: ${tx.hash}`);
-                    await txFinalizer.trackTransactionTree(Address.parse(cclAddress), tx.hash);
+                    await txFinalizer.trackTransactionTree(cclAddress, tx.hash);
                     logger.debug(`Transaction ${tx.hash} verified successfully in TON`);
                 } catch (error) {
                     logger.debug(`Transaction ${tx.hash} failed verification in TON: ${error}`);

@@ -247,16 +247,14 @@ export class TONTransactionManager implements ITONTransactionManager {
             ensureTxExecuted: true,
         };
 
-        if (waitOptions.ensureTxExecuted) {
-            for (const hash of sendTransactionResult.hash) {
-                const tx = await this.txFinalizer.waitForTransaction(sender.getSenderAddress(), hash);
-                if (tx?.inMessage)
-                    this.txFinalizer.trackTransactionTree(
-                        tx.inMessage.info.dest as Address,
-                        tx.hash().toString('base64'),
-                        10,
-                    );
-            }
+        if (waitOptions.ensureTxExecuted && sendTransactionResult.hash) {
+            const tx = await this.txFinalizer.waitForTransaction(sender.getSenderAddress(), sendTransactionResult.hash);
+            if (tx?.inMessage)
+                await this.txFinalizer.trackTransactionTree(
+                    (tx.inMessage.info.dest as Address).toString(),
+                    tx.hash().toString('base64'),
+                    10,
+                );
         }
 
         waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);
@@ -374,7 +372,7 @@ export class TONTransactionManager implements ITONTransactionManager {
 
         const mockSender: SenderAbstraction = {
             getSenderAddress: () => senderAddress,
-            sendShardTransaction: async () => ({ success: true, hash: [] }),
+            sendShardTransaction: async () => ({ success: true, hash: '' }),
             sendShardTransactions: async () => [],
             getBalance: async () => 0n,
             getBalanceOf: async () => 0n,

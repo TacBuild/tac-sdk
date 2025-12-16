@@ -11,6 +11,7 @@ export interface WalletInstanse extends Contract {
      * Sends a transfer with specified messages and send mode.
      * @param provider Contract provider used to send the transfer.
      * @param args Transfer arguments including seqno, secretKey, messages and sendMode.
+     * @returns Promise with the external message BoC (base64) for transaction tracking, or void for standard wallets
      */
     sendTransfer(
         provider: ContractProvider,
@@ -21,5 +22,5 @@ export interface WalletInstanse extends Contract {
             sendMode: SendMode;
             timeout?: number;
         },
-    ): Promise<void>;
+    ): Promise<string | void>;
 }

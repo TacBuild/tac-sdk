@@ -205,8 +205,8 @@ new TonTxFinalizer(
 - `httpClient`: Optional HTTP client for making API requests; defaults to AxiosHttpClient
 
 #### Methods
-- `trackTransactionTree(hash: string, maxDepth?: number): Promise<void>`
-  - Traverses the transaction tree starting from the given hash, following outgoing transactions up to `maxDepth` (default: 10)
+- `trackTransactionTree(address: string, hash: string, maxDepth?: number): Promise<void>`
+  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` (default: 10)
   - Throws an error if any transaction in the tree is not successful
 
 #### Example
@@ -216,5 +216,5 @@ const finalizer = new TonTxFinalizer({
   authorization: { header: 'X-API-Key', value: 'your-api-key' }
 }, new ConsoleLogger());
 
-await finalizer.trackTransactionTree('TON_TX_HASH');
+await finalizer.trackTransactionTree('EQB3ncyBUTjZUA5EnFKR5_EnOMI9V1tTEAAPaiU71gc4TiUt', 'TON_TX_HASH');
 ```

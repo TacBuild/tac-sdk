@@ -16,7 +16,7 @@ import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '
 
 import { mainnet, testnet } from '../../artifacts';
 import { ContractOpener } from '../interfaces';
-import { sleep } from '../sdk/Utils';
+import { getNormalizedExtMessageHash, sleep } from '../sdk/Utils';
 import { GetTransactionsOptions } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
@@ -102,6 +102,29 @@ async function findTransactionByHash(
     for await (const batch of paginateTransactions(addr, getTransactions)) {
         for (const tx of batch) {
             if (tx.hash().toString('base64') === targetHashB64) {
+                return tx;
+            }
+        }
+    }
+    return null;
+}
+
+// -------------------------------------------------------------------
+// Helper to find transaction by external message hash
+// -------------------------------------------------------------------
+export async function findTransactionByExternalMessageHash(
+    addr: Address,
+    targetInMessageHash: string,
+    getTransactions: ContractOpener['getTransactions'],
+): Promise<Transaction | null> {
+    for await (const batch of paginateTransactions(addr, getTransactions)) {
+        for (const tx of batch) {
+            if (tx.inMessage?.info.type !== 'external-in') {
+                continue;
+            }
+
+            const inMessageHash = getNormalizedExtMessageHash(tx.inMessage);
+            if (inMessageHash === targetInMessageHash) {
                 return tx;
             }
         }

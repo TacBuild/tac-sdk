@@ -1,9 +1,9 @@
-import { fromNano, internal, MessageRelaxed, SendMode } from '@ton/ton';
+import { Cell, fromNano, internal, loadMessage, MessageRelaxed, SendMode } from '@ton/ton';
 
 import { noValidGroupFoundError, prepareMessageGroupError } from '../errors/instances';
 import type { Asset, ContractOpener, SenderAbstraction } from '../interfaces';
 import { MAX_EXT_MSG_SIZE, MAX_HIGHLOAD_GROUP_MSG_NUM, MAX_MSG_DEPTH } from '../sdk/Consts';
-import { getNormalizedExtMessageHash, relaxedToMessage } from '../sdk/Utils';
+import { getNormalizedExtMessageHash } from '../sdk/Utils';
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 import { HighloadWalletV3 } from '../wrappers/HighloadWalletV3';
@@ -57,15 +57,37 @@ export class BatchSender implements SenderAbstraction {
         for (const group of groups) {
             try {
                 const result = await this.sendGroup(group, contractOpener);
+                // Extract BoC if it's a string, or from sandbox result
+                let externalMsgBoc: string | undefined;
+                if (typeof result === 'string') {
+                    externalMsgBoc = result;
+                } else if (result && typeof result === 'object' && 'result' in result && typeof result.result === 'string') {
+                    externalMsgBoc = result.result;
+                }
+                
+                // Convert BoC to normalized hash
+                let normalizedHash = '';
+                if (externalMsgBoc) {
+                    try {
+                        const cell = Cell.fromBase64(externalMsgBoc);
+                        const message = loadMessage(cell.beginParse());
+                        if (message.info.type === 'external-in') {
+                            normalizedHash = getNormalizedExtMessageHash(message);
+                        }
+                    } catch {
+                        // If conversion fails, leave empty
+                    }
+                }
+                
                 results.push({
-                    hash: group.map((g) => getNormalizedExtMessageHash(relaxedToMessage(this.wallet.address, g))),
+                    hash: normalizedHash,
                     success: true,
                     result,
                     lastMessageIndex: currentMessageIndex + group.length - 1,
                 });
             } catch (error) {
                 results.push({
-                    hash: [],
+                    hash: '',
                     success: false,
                     error: error as Error,
                     lastMessageIndex: currentMessageIndex - 1,
@@ -161,8 +183,30 @@ export class BatchSender implements SenderAbstraction {
         }
 
         const result = await this.sendGroup(messages, contractOpener);
+        // Extract BoC if it's a string, or from sandbox result
+        let externalMsgBoc: string | undefined;
+        if (typeof result === 'string') {
+            externalMsgBoc = result;
+        } else if (result && typeof result === 'object' && 'result' in result && typeof result.result === 'string') {
+            externalMsgBoc = result.result;
+        }
+        
+        // Convert BoC to normalized hash
+        let normalizedHash = '';
+        if (externalMsgBoc) {
+            try {
+                const cell = Cell.fromBase64(externalMsgBoc);
+                const message = loadMessage(cell.beginParse());
+                if (message.info.type === 'external-in') {
+                    normalizedHash = getNormalizedExtMessageHash(message);
+                }
+            } catch {
+                // If conversion fails, leave empty
+            }
+        }
+        
         return {
-            hash: messages.map((m) => getNormalizedExtMessageHash(relaxedToMessage(this.wallet.address, m))),
+            hash: normalizedHash,
             success: true,
             result,
             lastMessageIndex: shardTransaction.messages.length - 1,

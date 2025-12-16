@@ -90,7 +90,7 @@ export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogInd
 
 export interface SendResult {
     success: boolean;
-    hash: string[];
+    hash: string;
     result?: unknown;
     error?: Error;
     lastMessageIndex?: number;
