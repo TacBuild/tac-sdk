@@ -1,7 +1,17 @@
 import { getHttpEndpoint, getHttpV4Endpoint } from '@orbs-network/ton-access';
 import { Network as TonNetwork } from '@orbs-network/ton-access';
 import { Blockchain } from '@ton/sandbox';
-import { Address, Cell, ExternalAddress, loadTransaction, TonClient, TonClient4, Transaction } from '@ton/ton';
+import {
+    Address,
+    beginCell,
+    Cell,
+    ExternalAddress,
+    loadTransaction,
+    storeMessage,
+    TonClient,
+    TonClient4,
+    Transaction,
+} from '@ton/ton';
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
 import { mainnet, testnet } from '../../artifacts';
@@ -71,7 +81,11 @@ async function* paginateTransactions(
             return; // no more pages
         }
 
-        const last = batch.at(-1)!;
+        if (batch.length === 0) {
+            return;
+        }
+
+        const last = batch[batch.length - 1];
         currentLt = last.lt;
         currentHash = last.hash().toString('base64');
     }
@@ -115,7 +129,7 @@ export async function getAdjacentTransactionsHelper(
         const dst = msg.info.dest;
         if (!dst || dst instanceof ExternalAddress) continue;
 
-        const msgHashB64 = msg.body.hash().toString('base64');
+        const msgHashB64 = beginCell().store(storeMessage(msg)).endCell().hash().toString('base64');
         const tx = await findTransactionByHash(dst, msgHashB64, getTransactions);
         if (tx) adjacent.push(tx);
     }
@@ -124,9 +138,9 @@ export async function getAdjacentTransactionsHelper(
     if (rootTx.inMessage?.info.type === 'internal') {
         const src = rootTx.inMessage.info.src;
         if (src instanceof Address) {
-            // The incoming message belongs to the sender’s out-message list,
+            // The incoming message belongs to the sender's out-message list,
             // so we look for the same message hash on the sender side.
-            const msgHashB64 = rootTx.inMessage.body.hash().toString('base64');
+            const msgHashB64 = beginCell().store(storeMessage(rootTx.inMessage)).endCell().hash().toString('base64');
             const tx = await findTransactionByHash(src, msgHashB64, getTransactions);
             if (tx) adjacent.push(tx);
         }
@@ -278,10 +292,10 @@ export function tonClientOpener(endpoint: string): ContractOpener {
         endpoint,
     });
     return {
-        open: client.open,
-        getContractState: client.getContractState,
-        getTransactions: client.getTransactions,
+        open: client.open.bind(client),
+        getContractState: client.getContractState.bind(client),
+        getTransactions: client.getTransactions.bind(client),
         getAdjacentTransactions: async (addr, hash) =>
-            getAdjacentTransactionsHelper(addr, hash, client.getTransactions),
+            getAdjacentTransactionsHelper(addr, hash, client.getTransactions.bind(client)),
     };
 }
