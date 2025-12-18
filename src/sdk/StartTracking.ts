@@ -1,5 +1,3 @@
-import Table from 'cli-table3';
-
 import { ContractOpener, ILogger } from '../interfaces';
 import { ExecutionStages, Network, OperationType, TransactionLinker } from '../structs/Struct';
 import { MAX_ITERATION_COUNT } from './Consts';
@@ -225,38 +223,72 @@ function formatExecutionStages(stages: ExecutionStages) {
     }));
 }
 
-function printExecutionStagesTable(stages: ExecutionStages, logger: ILogger): void {
-    const table = new Table({
-        head: [
-            'Stage',
-            'Exists',
-            'Success',
-            'Timestamp',
-            'Transactions',
-            'NoteContent',
-            'ErrorName',
-            'InternalMsg',
-            'BytesError',
-        ],
-        colWidths: [30, 8, 9, 13, 70, 13, 13, 13, 13],
-        wordWrap: true,
+/**
+ * Simple table formatter that works in both browser and Node.js without external dependencies
+ */
+function createSimpleTable(headers: string[], rows: string[][], colWidths: number[]): string {
+    const lines: string[] = [];
+
+    // Helper to truncate and pad text to fit column width
+    const fitToWidth = (text: string, width: number): string => {
+        // Handle multi-line text by taking only the first line for table cell
+        const firstLine = text.split('\n')[0];
+        if (firstLine.length > width - 2) {
+            return firstLine.substring(0, width - 5) + '...';
+        }
+        return firstLine.padEnd(width, ' ');
+    };
+
+    // Create separator line
+    const separator = '+' + colWidths.map((w) => '-'.repeat(w)).join('+') + '+';
+
+    // Create header row
+    const headerRow = '|' + headers.map((h, i) => fitToWidth(h, colWidths[i])).join('|') + '|';
+
+    lines.push(separator);
+    lines.push(headerRow);
+    lines.push(separator);
+
+    // Create data rows
+    rows.forEach((row) => {
+        const dataRow = '|' + row.map((cell, i) => fitToWidth(cell, colWidths[i])).join('|') + '|';
+        lines.push(dataRow);
     });
+
+    lines.push(separator);
+
+    return lines.join('\n');
+}
+
+export function printExecutionStagesTable(stages: ExecutionStages, logger: ILogger): void {
+    const headers = [
+        'Stage',
+        'Exists',
+        'Success',
+        'Timestamp',
+        'Transactions',
+        'NoteContent',
+        'ErrorName',
+        'InternalMsg',
+        'BytesError',
+    ];
+
+    const colWidths = [30, 8, 9, 13, 70, 13, 13, 13, 13];
 
     const tableData = formatExecutionStages(stages);
 
-    tableData.forEach((row) => {
-        table.push([
-            row.stage,
-            row.exists,
-            row.success,
-            row.timestamp,
-            row.transactions,
-            row.noteContent,
-            row.errorName,
-            row.internalMsg,
-            row.bytesError,
-        ]);
-    });
+    const rows = tableData.map((row) => [
+        row.stage,
+        row.exists,
+        row.success,
+        row.timestamp,
+        row.transactions,
+        row.noteContent,
+        row.errorName,
+        row.internalMsg,
+        row.bytesError,
+    ]);
 
-    logger.debug(table.toString());
+    const table = createSimpleTable(headers, rows, colWidths);
+    logger.debug(table);
 }
