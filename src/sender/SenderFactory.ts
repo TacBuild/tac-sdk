@@ -87,8 +87,8 @@ export class SenderFactory {
 
         const wallet = wallets[params.version].create(config);
 
-        if (params.version === 'HIGHLOAD_V3') {
-            return new BatchSender(wallet as HighloadWalletV3, keypair.secretKey);
+        if (wallet instanceof HighloadWalletV3) {
+            return new BatchSender(wallet, keypair.secretKey);
         }
 
         return new RawSender(wallet, keypair.secretKey, params.version === 'V5R1' ? 254 : 4);

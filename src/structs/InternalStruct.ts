@@ -90,7 +90,7 @@ export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogInd
 
 export interface SendResult {
     success: boolean;
-    hash: string;
+    boc: string;
     result?: unknown;
     error?: Error;
     lastMessageIndex?: number;
@@ -155,4 +155,13 @@ export type GetTransactionsOptions = {
     to_lt?: string;
     inclusive?: boolean;
     archival?: boolean;
+    timeoutMs?: number;
+    retryDelayMs?: number;
+};
+
+export type AddressInformation = {
+    lastTransaction: {
+        lt: string;
+        hash: string;
+    };
 };

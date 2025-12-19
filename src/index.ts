@@ -10,7 +10,6 @@ export { LiteSequencerClient } from './sdk/LiteSequencerClient';
 export { ConsoleLogger, NoopLogger } from './sdk/Logger';
 export { OperationTracker } from './sdk/OperationTracker';
 export { Simulator } from './sdk/Simulator';
-export { startTracking, startTrackingMultiple } from './sdk/StartTracking';
 export { TacSdk } from './sdk/TacSdk';
 export { TACTransactionManager } from './sdk/TACTransactionManager';
 export { TONTransactionManager } from './sdk/TONTransactionManager';

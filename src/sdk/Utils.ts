@@ -1,10 +1,4 @@
-import { Address, beginCell, Cell, Message, MessageRelaxed, SendMode, storeMessage, storeStateInit } from '@ton/ton';
-import {
-    createWalletTransferV3,
-    createWalletTransferV4,
-    createWalletTransferV5R1,
-} from '@ton/ton/dist/wallets/signing/createWalletTransfer';
-import type { WalletIdV5R1 } from '@ton/ton/dist/wallets/v5r1/WalletV5R1WalletId';
+import { Address, beginCell, Cell, Message, storeMessage, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers } from 'ethers';
 import { sha256_sync } from 'ton-crypto';
 
@@ -362,7 +356,6 @@ export function getString(cell?: Cell): string {
     return cell?.beginParse().loadStringTail() ?? '';
 }
 
-
 export function getNormalizedExtMessageHash(message: Message): string {
     if (message.info.type !== 'external-in') {
         throw new Error(`Message must be "external-in", got ${message.info.type}`);
@@ -395,7 +388,7 @@ export function getNormalizedExtMessageHash(message: Message): string {
  */
 export function getHashFromExternalMessageBody(bodyBoc: string, walletAddress: Address): string {
     const body = Cell.fromBase64(bodyBoc);
-    
+
     // Construct the full external message structure
     const externalMessage: Message = {
         info: {
@@ -407,117 +400,8 @@ export function getHashFromExternalMessageBody(bodyBoc: string, walletAddress: A
         init: null,
         body,
     };
-    
+
     return getNormalizedExtMessageHash(externalMessage);
-}
-
-/**
- * Wallet transfer creation parameters for V3 wallets
- */
-export interface WalletV3TransferParams {
-    seqno: number;
-    secretKey: Buffer;
-    messages: MessageRelaxed[];
-    sendMode: SendMode;
-    walletId: number;
-    timeout?: number;
-}
-
-/**
- * Wallet transfer creation parameters for V4 wallets
- */
-export interface WalletV4TransferParams {
-    seqno: number;
-    secretKey: Buffer;
-    messages: MessageRelaxed[];
-    sendMode: SendMode;
-    walletId: number;
-    timeout?: number;
-}
-
-/**
- * Wallet transfer creation parameters for V5R1 wallets
- */
-export interface WalletV5R1TransferParams {
-    seqno: number;
-    secretKey: Buffer;
-    messages: MessageRelaxed[];
-    sendMode: SendMode;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    walletId: WalletIdV5R1<any>;
-    timeout?: number;
-}
-
-/**
- * Create external message BoC for WalletV3 (V3R1, V3R2)
- * Uses @ton/ton internal implementation of createWalletTransferV3
- */
-export function createWalletV3Transfer(args: WalletV3TransferParams): string {
-    const cell = createWalletTransferV3({
-        seqno: args.seqno,
-        secretKey: args.secretKey,
-        messages: args.messages,
-        sendMode: args.sendMode,
-        walletId: args.walletId,
-        timeout: args.timeout,
-    });
-    return cell.toBoc().toString('base64');
-}
-
-/**
- * Create external message BoC for WalletV4
- * Uses @ton/ton internal implementation of createWalletTransferV4
- */
-export function createWalletV4Transfer(args: WalletV4TransferParams): string {
-    const cell = createWalletTransferV4({
-        seqno: args.seqno,
-        secretKey: args.secretKey,
-        messages: args.messages,
-        sendMode: args.sendMode,
-        walletId: args.walletId,
-        timeout: args.timeout,
-    });
-    return cell.toBoc().toString('base64');
-}
-
-/**
- * Create external message BoC for WalletV5R1
- * Uses @ton/ton internal implementation of createWalletTransferV5R1
- */
-export function createWalletV5R1Transfer(args: WalletV5R1TransferParams): string {
-    // Convert messages to actions
-    const actions = args.messages.map((msg) => ({
-        type: 'sendMsg' as const,
-        mode: args.sendMode,
-        outMsg: msg,
-    }));
-
-    const cell = createWalletTransferV5R1({
-        seqno: args.seqno,
-        secretKey: args.secretKey,
-        authType: 'external',
-        actions,
-        walletId: (builder) => builder.store((b) => {
-            b.storeInt(
-                BigInt(
-                    beginCell()
-                        .storeUint(1, 1) // wallet version
-                        .storeInt(args.walletId.context.workchain, 8)
-                        .storeUint(0, 8) // reserved
-                        .storeUint(
-                            'subwalletNumber' in args.walletId.context ? args.walletId.context.subwalletNumber : 0,
-                            15,
-                        )
-                        .endCell()
-                        .beginParse()
-                        .loadInt(32),
-                ) ^ BigInt(args.walletId.networkGlobalId),
-                32,
-            );
-        }),
-        timeout: args.timeout,
-    });
-    return cell.toBoc().toString('base64');
 }
 
 export async function retry<T>(fn: () => Promise<T>, options: { retries: number; delay: number }): Promise<T> {

@@ -1,12 +1,19 @@
 import { Transaction } from '@ton/ton';
 
 export interface ITxFinalizer {
-    trackTransactionTree(address: string, hash: string, maxDepth: number): Promise<void>;
-    // getTransactionByInMessage(inMessageBoc: string, client: ContractOpener): Promise<Transaction | undefined>;
+    trackTransactionTree(
+        address: string,
+        hash: string,
+        params: { startLt: string; startHash: string; maxDepth?: number },
+    ): Promise<void>;
     waitForTransaction(
         target: string,
-        targetInMessageHash: string,
-        retries?: number,
-        timeout?: number,
+        targetMessageBoc: string,
+        params: {
+            startLt?: string;
+            startHash?: string;
+            retries?: number;
+            timeout?: number;
+        },
     ): Promise<Transaction | undefined>;
 }

@@ -16,7 +16,7 @@ import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '
 
 import { mainnet, testnet } from '../../artifacts';
 import { ContractOpener } from '../interfaces';
-import { getNormalizedExtMessageHash, sleep } from '../sdk/Utils';
+import { sleep } from '../sdk/Utils';
 import { GetTransactionsOptions } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
@@ -57,78 +57,55 @@ async function getHttpV4EndpointWithRetry(network: Network, maxRetries = 5, dela
 }
 
 // -------------------------------------------------------------------
-// 1. Paginate all transactions of an address (old → new order)
-// -------------------------------------------------------------------
-async function* paginateTransactions(
-    addr: Address,
-    getTransactions: ContractOpener['getTransactions'],
-    limit = 100,
-): AsyncIterable<Transaction[]> {
-    let currentLt: bigint | undefined;
-    let currentHash: string | undefined;
-
-    while (true) {
-        const batch = await getTransactions(addr, {
-            limit,
-            lt: currentLt?.toString(),
-            hash: currentHash,
-            archival: true,
-        });
-
-        yield batch;
-
-        if (batch.length < limit) {
-            return; // no more pages
-        }
-
-        if (batch.length === 0) {
-            return;
-        }
-
-        const last = batch[batch.length - 1];
-        currentLt = last.lt;
-        currentHash = last.hash().toString('base64');
-    }
-}
-
-// -------------------------------------------------------------------
-// 2. Find the first transaction whose hash (base64) matches the target
+//    Find the first transaction whose hash (base64) matches the target
+//    Retries fetching latest transactions until found or deadline is reached
 // -------------------------------------------------------------------
 async function findTransactionByHash(
     addr: Address,
     targetHashB64: string,
-    getTransactions: ContractOpener['getTransactions'],
+    getTransactions: (addr: Address, opts: GetTransactionsOptions) => Promise<Transaction[]>,
+    opts?: GetTransactionsOptions,
 ): Promise<Transaction | null> {
-    for await (const batch of paginateTransactions(addr, getTransactions)) {
-        for (const tx of batch) {
-            if (tx.hash().toString('base64') === targetHashB64) {
-                return tx;
+    const timeoutMs = opts?.timeoutMs ?? 60000; // 60 seconds default
+    const retryDelayMs = opts?.retryDelayMs ?? 2000; // 2 seconds between retries
+    const deadline = Date.now() + timeoutMs;
+    const limit = opts?.limit ?? 100;
+
+    while (Date.now() < deadline) {
+        // Initialize from startLt and startHash if provided, otherwise start from latest
+        let currentLt: bigint | undefined = opts?.lt ? BigInt(opts.lt) : undefined;
+        let currentHash: string | undefined = opts?.hash;
+
+        while (Date.now() < deadline) {
+            const batch = await getTransactions(addr, {
+                limit,
+                lt: currentLt?.toString(),
+                hash: currentHash,
+                archival: opts?.archival ?? true,
+            });
+
+            // Check each transaction in the current batch
+            for (const tx of batch) {
+                if (tx.hash().toString('base64') === targetHashB64) {
+                    return tx;
+                }
+            }
+
+            if (batch.length === 0) {
+                // repeat the same request with the same parameters
+            } else {
+                const last = batch[batch.length - 1];
+                currentLt = last.lt;
+                currentHash = last.hash().toString('base64');
             }
         }
-    }
-    return null;
-}
 
-// -------------------------------------------------------------------
-// Helper to find transaction by external message hash
-// -------------------------------------------------------------------
-export async function findTransactionByExternalMessageHash(
-    addr: Address,
-    targetInMessageHash: string,
-    getTransactions: ContractOpener['getTransactions'],
-): Promise<Transaction | null> {
-    for await (const batch of paginateTransactions(addr, getTransactions)) {
-        for (const tx of batch) {
-            if (tx.inMessage?.info.type !== 'external-in') {
-                continue;
-            }
-
-            const inMessageHash = getNormalizedExtMessageHash(tx.inMessage);
-            if (inMessageHash === targetInMessageHash) {
-                return tx;
-            }
+        // Transaction not found in current pagination, wait before retrying
+        if (Date.now() < deadline) {
+            await sleep(retryDelayMs);
         }
     }
+
     return null;
 }
 
@@ -139,10 +116,11 @@ export async function findTransactionByExternalMessageHash(
 export async function getAdjacentTransactionsHelper(
     addr: Address,
     hashB64: string,
-    getTransactions: ContractOpener['getTransactions'],
+    getTransactions: (addr: Address, opts: GetTransactionsOptions) => Promise<Transaction[]>,
+    opts?: GetTransactionsOptions,
 ): Promise<Transaction[]> {
     // 1. Find the root transaction
-    const rootTx = await findTransactionByHash(addr, hashB64, getTransactions);
+    const rootTx = await findTransactionByHash(addr, hashB64, getTransactions, opts);
     if (!rootTx) return [];
 
     const adjacent: Transaction[] = [];
@@ -153,7 +131,7 @@ export async function getAdjacentTransactionsHelper(
         if (!dst || dst instanceof ExternalAddress) continue;
 
         const msgHashB64 = beginCell().store(storeMessage(msg)).endCell().hash().toString('base64');
-        const tx = await findTransactionByHash(dst, msgHashB64, getTransactions);
+        const tx = await findTransactionByHash(dst, msgHashB64, getTransactions, opts);
         if (tx) adjacent.push(tx);
     }
 
@@ -164,7 +142,7 @@ export async function getAdjacentTransactionsHelper(
             // The incoming message belongs to the sender's out-message list,
             // so we look for the same message hash on the sender side.
             const msgHashB64 = beginCell().store(storeMessage(rootTx.inMessage)).endCell().hash().toString('base64');
-            const tx = await findTransactionByHash(src, msgHashB64, getTransactions);
+            const tx = await findTransactionByHash(src, msgHashB64, getTransactions, opts);
             if (tx) adjacent.push(tx);
         }
     }
@@ -241,8 +219,22 @@ export async function liteClientOpener(
         },
         open: (contract) => client.open(contract),
         closeConnections,
-        getTransactions,
-        getAdjacentTransactions: async (addr, hash) => getAdjacentTransactionsHelper(addr, hash, getTransactions),
+        getTransactionByHash: async (addr, hash, opts) => {
+            const tx = await findTransactionByHash(addr, hash, getTransactions, opts);
+            return tx;
+        },
+        getAdjacentTransactions: async (addr, hash, opts) =>
+            getAdjacentTransactionsHelper(addr, hash, getTransactions, opts),
+        getAddressInformation: async (addr) => {
+            const block = await client.getMasterchainInfo();
+            const state = await client.getAccountState(addr, block.last);
+            return {
+                lastTransaction: {
+                    lt: state.lastTx?.lt.toString() ?? '',
+                    hash: Buffer.from(state.lastTx?.hash.toString(16) ?? '', 'hex').toString('base64'),
+                },
+            };
+        },
     };
 }
 
@@ -257,11 +249,14 @@ export function sandboxOpener(blockchain: Blockchain): ContractOpener {
                 state: state.state.type === 'uninit' ? 'uninitialized' : state.state.type,
             };
         },
-        getTransactions: () => {
-            throw 'Not implemented.';
+        getTransactionByHash: () => {
+            throw new Error('Not implemented.');
         },
         getAdjacentTransactions() {
-            throw 'Not implemented.';
+            throw new Error('Not implemented.');
+        },
+        getAddressInformation: async () => {
+            throw new Error('Not implemented.');
         },
     };
 }
@@ -272,9 +267,21 @@ export async function orbsOpener(network: Network): Promise<ContractOpener> {
     return {
         open: client.open,
         getContractState: client.getContractState,
-        getTransactions: client.getTransactions,
-        getAdjacentTransactions: async (addr, hash) =>
-            getAdjacentTransactionsHelper(addr, hash, client.getTransactions),
+        getTransactionByHash: async (addr, hash, opts) => {
+            const tx = await findTransactionByHash(addr, hash, client.getTransactions, opts);
+            return tx;
+        },
+        getAdjacentTransactions: async (addr, hash, opts) =>
+            getAdjacentTransactionsHelper(addr, hash, client.getTransactions, opts),
+        getAddressInformation: async (addr) => {
+            const state = await client.getContractState(addr);
+            return {
+                lastTransaction: {
+                    lt: state.lastTransaction?.lt ?? '',
+                    hash: state.lastTransaction?.hash ?? '',
+                },
+            };
+        },
     };
 }
 
@@ -305,8 +312,23 @@ export async function orbsOpener4(network: Network, timeout = 10000): Promise<Co
                 state: state.account.state.type === 'uninit' ? 'uninitialized' : state.account.state.type,
             };
         },
-        getTransactions,
-        getAdjacentTransactions: async (addr, hash) => getAdjacentTransactionsHelper(addr, hash, getTransactions),
+        getTransactionByHash: async (addr, hash, opts) => {
+            const tx = await findTransactionByHash(addr, hash, getTransactions, opts);
+            return tx;
+        },
+        getAdjacentTransactions: async (addr, hash, opts) =>
+            getAdjacentTransactionsHelper(addr, hash, getTransactions, opts),
+        getAddressInformation: async (addr) => {
+            const latestBlock = await client4.getLastBlock();
+            const latestBlockNumber = latestBlock.last.seqno;
+            const state = await client4.getAccount(latestBlockNumber, addr);
+            return {
+                lastTransaction: {
+                    lt: state.account.last?.lt ?? '',
+                    hash: state.account.last?.hash ?? '',
+                },
+            };
+        },
     };
 }
 
@@ -317,8 +339,20 @@ export function tonClientOpener(endpoint: string): ContractOpener {
     return {
         open: client.open.bind(client),
         getContractState: client.getContractState.bind(client),
-        getTransactions: client.getTransactions.bind(client),
-        getAdjacentTransactions: async (addr, hash) =>
-            getAdjacentTransactionsHelper(addr, hash, client.getTransactions.bind(client)),
+        getTransactionByHash: async (addr, hash, opts) => {
+            const tx = await findTransactionByHash(addr, hash, client.getTransactions.bind(client), opts);
+            return tx;
+        },
+        getAdjacentTransactions: async (addr, hash, opts) =>
+            getAdjacentTransactionsHelper(addr, hash, client.getTransactions.bind(client), opts),
+        getAddressInformation: async (addr) => {
+            const state = await client.getContractState(addr);
+            return {
+                lastTransaction: {
+                    lt: state.lastTransaction?.lt ?? '',
+                    hash: state.lastTransaction?.hash ?? '',
+                },
+            };
+        },
     };
 }

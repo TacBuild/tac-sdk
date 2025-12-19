@@ -1,11 +1,10 @@
 import { Address, Transaction } from '@ton/ton';
 
-import { findTransactionByExternalMessageHash } from '../adapters/contractOpener';
 import { ContractOpener, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
-import { TransactionDepth } from '../structs/InternalStruct';
+import { GetTransactionsOptions, TransactionDepth } from '../structs/InternalStruct';
 import { NoopLogger } from './Logger';
-import { retry, sleep } from './Utils';
+import { getHashFromExternalMessageBody, retry, sleep } from './Utils';
 
 const IGNORE_OPCODE = [
     0xd53276db, // Excess
@@ -44,10 +43,11 @@ export class TonTxFinalizer implements ITxFinalizer {
         hash: string,
         retries = 5,
         delay = 1000,
+        opts?: GetTransactionsOptions,
     ): Promise<Transaction[]> {
         for (let i = retries; i >= 0; i--) {
             try {
-                const txs = await this.contractOpener.getAdjacentTransactions(address, hash);
+                const txs = await this.contractOpener.getAdjacentTransactions(address, hash, opts);
                 return txs;
             } catch (error) {
                 const errorMessage = (error as Error).message;
@@ -75,7 +75,12 @@ export class TonTxFinalizer implements ITxFinalizer {
     }
 
     // Checks if all transactions in the tree are successful
-    public async trackTransactionTree(address: string, hash: string, maxDepth: number = 10) {
+    public async trackTransactionTree(
+        address: string,
+        hash: string,
+        params: { startLt: string; startHash: string; maxDepth?: number },
+    ) {
+        const { startLt, startHash, maxDepth = 10 } = params;
         const parsedAddress = Address.parse(address);
         const visitedHashes = new Set<string>();
         const queue: TransactionDepth[] = [{ address: parsedAddress, hash, depth: 0 }];
@@ -92,7 +97,12 @@ export class TonTxFinalizer implements ITxFinalizer {
                 `Checking hash (depth ${currentDepth}):\nhex: ${this.logHashFormats(currentHash).hex}\nbase64: ${this.logHashFormats(currentHash).base64}`,
             );
 
-            const transactions = await this.fetchAdjacentTransactions(currentAddress, currentHash);
+            const transactions = await this.fetchAdjacentTransactions(currentAddress, currentHash, 5, 1000, {
+                lt: startLt,
+                hash: startHash,
+                limit: 100,
+                archival: false,
+            });
             if (transactions.length === 0) continue;
 
             for (const tx of transactions) {
@@ -145,13 +155,18 @@ export class TonTxFinalizer implements ITxFinalizer {
      */
     async waitForTransaction(
         target: string,
-        targetInMessageHash: string,
-        retries: number = 10,
-        timeout: number = 1000,
+        targetMessageBoc: string,
+        params: {
+            startLt?: string;
+            startHash?: string;
+            retries?: number;
+            timeout?: number;
+        },
     ): Promise<Transaction | undefined> {
         const account = Address.parse(target);
+        const { startLt = '', startHash = '', retries = 10, timeout = 1000 } = params;
 
-        this.logger.info(`Waiting for transaction ${targetInMessageHash} on account ${target}`);
+        this.logger.info(`Waiting for transaction on account ${target}`);
 
         let attempt = 0;
         while (attempt < retries) {
@@ -159,7 +174,15 @@ export class TonTxFinalizer implements ITxFinalizer {
             this.logger.info(`Waiting for transaction to appear in network. Attempt: ${attempt}`);
 
             const transaction = await retry(
-                () => findTransactionByExternalMessageHash(account, targetInMessageHash, this.contractOpener.getTransactions),
+                async () => {
+                    const hash = getHashFromExternalMessageBody(targetMessageBoc, account);
+                    const transaction = await this.contractOpener.getTransactionByHash(account, hash, {
+                        limit: 100,
+                        lt: startLt,
+                        hash: startHash,
+                    });
+                    return transaction;
+                },
                 { delay: 1000, retries: 3 },
             );
 

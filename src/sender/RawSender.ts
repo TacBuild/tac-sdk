@@ -1,9 +1,8 @@
-import { Cell, fromNano, internal, loadMessage, WalletContractV3R1, WalletContractV3R2, WalletContractV4, WalletContractV5R1 } from '@ton/ton';
+import { beginCell, external, fromNano, internal, StateInit, storeMessage } from '@ton/ton';
 import { MessageRelaxed, SendMode } from '@ton/ton';
 
 import type { Asset, ContractOpener } from '../interfaces';
 import { SenderAbstraction, WalletInstanse } from '../interfaces';
-import { createWalletV3Transfer, createWalletV4Transfer, createWalletV5R1Transfer, getNormalizedExtMessageHash } from '../sdk/Utils';
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
@@ -52,36 +51,22 @@ export class RawSender implements SenderAbstraction {
             try {
                 const result = await this.sendBatch(batch, contractOpener);
                 // Extract BoC if it's a string, or from sandbox result
-                let externalMsgBoc: string | undefined;
+                let externalMsgBoc: string = '';
                 if (typeof result === 'string') {
                     externalMsgBoc = result;
-                } else if (result && typeof result === 'object' && 'result' in result && typeof result.result === 'string') {
+                } else if (result?.result) {
                     externalMsgBoc = result.result;
                 }
-                
-                // Convert BoC to normalized hash
-                let normalizedHash = '';
-                if (externalMsgBoc) {
-                    try {
-                        const cell = Cell.fromBase64(externalMsgBoc);
-                        const message = loadMessage(cell.beginParse());
-                        if (message.info.type === 'external-in') {
-                            normalizedHash = getNormalizedExtMessageHash(message);
-                        }
-                    } catch {
-                        // If conversion fails, leave empty
-                    }
-                }
-                
+
                 results.push({
-                    hash: normalizedHash,
+                    boc: externalMsgBoc,
                     success: true,
                     result,
                     lastMessageIndex: currentMessageIndex + batch.length - 1,
                 });
             } catch (error) {
                 results.push({
-                    hash: '',
+                    boc: '',
                     success: false,
                     error: error as Error,
                     lastMessageIndex: currentMessageIndex - 1,
@@ -105,49 +90,38 @@ export class RawSender implements SenderAbstraction {
         return batches;
     }
 
-    private async sendBatch(messages: MessageRelaxed[], contractOpener: ContractOpener): Promise<unknown> {
+    private async sendBatch(
+        messages: MessageRelaxed[],
+        contractOpener: ContractOpener,
+    ): Promise<string | void | { result: string | void }> {
         const walletContract = contractOpener.open(this.wallet);
         const seqno = await walletContract.getSeqno();
 
         // Try to create BoC locally for standard wallets
-        let externalMsgBoc: string | undefined;
-        
-        if (this.wallet instanceof WalletContractV3R1 || this.wallet instanceof WalletContractV3R2) {
-            externalMsgBoc = createWalletV3Transfer({
-                seqno,
-                secretKey: this.secretKey,
-                messages,
-                sendMode: SendMode.PAY_GAS_SEPARATELY,
-                walletId: this.wallet.walletId,
-            });
-        } else if (this.wallet instanceof WalletContractV4) {
-            externalMsgBoc = createWalletV4Transfer({
-                seqno,
-                secretKey: this.secretKey,
-                messages,
-                sendMode: SendMode.PAY_GAS_SEPARATELY,
-                walletId: this.wallet.walletId,
-            });
-        } else if (this.wallet instanceof WalletContractV5R1) {
-            externalMsgBoc = createWalletV5R1Transfer({
-                seqno,
-                secretKey: this.secretKey,
-                messages,
-                sendMode: SendMode.PAY_GAS_SEPARATELY,
-                walletId: this.wallet.walletId,
-            });
-        }
 
-        // Send the transaction
-        const result = await walletContract.sendTransfer({
+        const msg = this.wallet.createTransfer({
             seqno,
             secretKey: this.secretKey,
             messages,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
         });
 
-        // Return BoC if we created it locally, otherwise return the wallet's result
-        return externalMsgBoc || result;
+        let neededInit: StateInit | null = null;
+        if (this.wallet.init && (await contractOpener.getContractState(this.wallet.address)).state !== 'active') {
+            neededInit = this.wallet.init;
+        }
+
+        const ext = external({
+            to: this.wallet.address,
+            init: neededInit,
+            body: msg,
+        });
+        const boc = beginCell().store(storeMessage(ext)).endCell().toBoc().toString('base64');
+
+        // Send the transaction
+        const result = await walletContract.send(msg);
+
+        return boc || result;
     }
 
     getSenderAddress(): string {
@@ -173,29 +147,15 @@ export class RawSender implements SenderAbstraction {
 
         const result = await this.sendBatch(messages, contractOpener);
         // Extract BoC if it's a string, or from sandbox result
-        let externalMsgBoc: string | undefined;
+        let externalMsgBoc: string = '';
         if (typeof result === 'string') {
             externalMsgBoc = result;
-        } else if (result && typeof result === 'object' && 'result' in result && typeof result.result === 'string') {
+        } else if (result?.result) {
             externalMsgBoc = result.result;
         }
-        
-        // Convert BoC to normalized hash
-        let normalizedHash = '';
-        if (externalMsgBoc) {
-            try {
-                const cell = Cell.fromBase64(externalMsgBoc);
-                const message = loadMessage(cell.beginParse());
-                if (message.info.type === 'external-in') {
-                    normalizedHash = getNormalizedExtMessageHash(message);
-                }
-            } catch {
-                // If conversion fails, leave empty
-            }
-        }
-        
+
         return {
-            hash: normalizedHash,
+            boc: externalMsgBoc,
             success: true,
             result,
             lastMessageIndex: shardTransaction.messages.length - 1,

@@ -3,6 +3,7 @@ import { Address, Contract, OpenedContract, Transaction } from '@ton/ton';
 
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener } from '../interfaces';
+import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
 import { ContractState, Network } from '../structs/Struct';
 import { orbsOpener, orbsOpener4, tonClientOpener } from './contractOpener';
 
@@ -27,16 +28,19 @@ export class RetryableContractOpener implements ContractOpener {
         this.openerConfigs = openerConfigs;
     }
 
-    async getTransactions(
+    async getTransactionByHash(
         address: Address,
-        opts: { limit: number; lt?: string; hash?: string; to_lt?: string; inclusive?: boolean; archival?: boolean },
-    ): Promise<Transaction[]> {
-        const result = await this.executeWithFallback((config) => config.opener.getTransactions(address, opts));
+        hash: string,
+        opts: GetTransactionsOptions,
+    ): Promise<Transaction | null> {
+        const result = await this.executeWithFallback((config) =>
+            config.opener.getTransactionByHash(address, hash, opts),
+        );
 
         if (result.success && result.data) {
-            return result.data;
+            return result.data as Transaction | null;
         }
-        throw result.lastError || allContractOpenerFailedError('Failed to get account transactions');
+        throw result.lastError || allContractOpenerFailedError('Failed to get transaction by hash');
     }
 
     async getAdjacentTransactions(address: Address, hash: string): Promise<Transaction[]> {
@@ -61,6 +65,15 @@ export class RetryableContractOpener implements ContractOpener {
             return result.data;
         }
         throw result.lastError || allContractOpenerFailedError('Failed to get contract state');
+    }
+
+    async getAddressInformation(address: Address): Promise<AddressInformation> {
+        const result = await this.executeWithFallback((config) => config.opener.getAddressInformation(address));
+
+        if (result.success && result.data) {
+            return result.data;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get address information');
     }
 
     closeConnections(): void {

@@ -60,6 +60,14 @@ export class HighloadWalletV3 implements WalletInstanse {
         return 0; // will not be used
     }
 
+    async send(provider: ContractProvider, msg: Cell): Promise<void> {
+        await provider.external(msg);
+    }
+
+    createTransfer(): Cell {
+        throw new Error('Not implemented. Use sendTransfer instead - it returns the BOC as a string');
+    }
+
     async sendTransfer(
         provider: ContractProvider,
         args: {
@@ -141,7 +149,6 @@ export class HighloadWalletV3 implements WalletInstanse {
 
         await provider.external(externalMessage);
 
-        // Return the BoC of the external message for tracking
         return externalMessage.toBoc().toString('base64');
     }
 

@@ -1,4 +1,4 @@
-import type { Contract, ContractProvider, MessageRelaxed, SendMode } from '@ton/ton';
+import type { Cell, Contract, ContractProvider, MessageRelaxed, SendMode } from '@ton/ton';
 
 export interface WalletInstanse extends Contract {
     /**
@@ -7,20 +7,12 @@ export interface WalletInstanse extends Contract {
      */
     getSeqno(provider: ContractProvider): Promise<number>;
 
-    /**
-     * Sends a transfer with specified messages and send mode.
-     * @param provider Contract provider used to send the transfer.
-     * @param args Transfer arguments including seqno, secretKey, messages and sendMode.
-     * @returns Promise with the external message BoC (base64) for transaction tracking, or void for standard wallets
-     */
-    sendTransfer(
-        provider: ContractProvider,
-        args: {
-            seqno: number;
-            secretKey: Buffer;
-            messages: MessageRelaxed[];
-            sendMode: SendMode;
-            timeout?: number;
-        },
-    ): Promise<string | void>;
+    send(provider: ContractProvider, msg: Cell): Promise<string | void>;
+    createTransfer(args: {
+        seqno: number;
+        secretKey: Buffer;
+        messages: MessageRelaxed[];
+        sendMode: SendMode;
+        timeout?: number;
+    }): Cell;
 }

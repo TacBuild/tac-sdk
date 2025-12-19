@@ -14,3 +14,4 @@
 !.yarn/sdks
 !.yarn/versions
 /coverage/
+.vscode/

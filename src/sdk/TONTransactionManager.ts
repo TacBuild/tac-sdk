@@ -225,6 +225,10 @@ export class TONTransactionManager implements ITONTransactionManager {
         await TON.checkBalance(sender, this.config, [transaction]);
         this.logger.debug(`Sending transaction: ${formatObjectForLogging(transactionLinker)}`);
 
+        const {
+            lastTransaction: { lt, hash },
+        } = await this.config.TONParams.contractOpener.getAddressInformation(Address.parse(sender.getSenderAddress()));
+
         const sendTransactionResult = await sender.sendShardTransaction(
             transaction,
             this.config.network,
@@ -247,14 +251,22 @@ export class TONTransactionManager implements ITONTransactionManager {
             ensureTxExecuted: true,
         };
 
-        if (waitOptions.ensureTxExecuted && sendTransactionResult.hash) {
-            const tx = await this.txFinalizer.waitForTransaction(sender.getSenderAddress(), sendTransactionResult.hash);
-            if (tx?.inMessage)
-                await this.txFinalizer.trackTransactionTree(
-                    (tx.inMessage.info.dest as Address).toString(),
-                    tx.hash().toString('base64'),
-                    10,
-                );
+        if (waitOptions.ensureTxExecuted && sendTransactionResult.boc) {
+            this.logger.info(`Waiting for transaction execution`);
+            const tx = await this.txFinalizer.waitForTransaction(sender.getSenderAddress(), sendTransactionResult.boc, {
+                startLt: lt,
+                startHash: hash,
+            });
+            if (tx) {
+                this.logger.info(`Transaction on wallet found: ${tx.hash().toString('base64')}`);
+                this.logger.info(`Tracking transaction tree`);
+                await this.txFinalizer.trackTransactionTree(tx.address.toString(), tx.hash().toString('base64'), {
+                    startLt: tx.lt.toString(),
+                    startHash: tx.hash().toString('base64'),
+                    maxDepth: 10,
+                });
+                this.logger.info(`Transaction tree successful`);
+            }
         }
 
         waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);
@@ -372,7 +384,7 @@ export class TONTransactionManager implements ITONTransactionManager {
 
         const mockSender: SenderAbstraction = {
             getSenderAddress: () => senderAddress,
-            sendShardTransaction: async () => ({ success: true, hash: '' }),
+            sendShardTransaction: async () => ({ success: true, boc: '' }),
             sendShardTransactions: async () => [],
             getBalance: async () => 0n,
             getBalanceOf: async () => 0n,
