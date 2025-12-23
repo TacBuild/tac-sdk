@@ -380,30 +380,6 @@ export function getNormalizedExtMessageHash(message: Message): string {
         .toString('base64');
 }
 
-/**
- * Convert external message body BoC to normalized hash for transaction tracking
- * @param bodyBoc The external message body as base64 BoC (what you send to the wallet)
- * @param walletAddress The wallet address that will receive this external message
- * @returns Normalized hash that can be used with waitForTransaction
- */
-export function getHashFromExternalMessageBody(bodyBoc: string, walletAddress: Address): string {
-    const body = Cell.fromBase64(bodyBoc);
-
-    // Construct the full external message structure
-    const externalMessage: Message = {
-        info: {
-            type: 'external-in',
-            src: undefined,
-            dest: walletAddress,
-            importFee: 0n,
-        },
-        init: null,
-        body,
-    };
-
-    return getNormalizedExtMessageHash(externalMessage);
-}
-
 export async function retry<T>(fn: () => Promise<T>, options: { retries: number; delay: number }): Promise<T> {
     let lastError: Error | undefined;
     for (let i = 0; i < options.retries; i++) {

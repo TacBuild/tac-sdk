@@ -1,10 +1,10 @@
-import { Address, Transaction } from '@ton/ton';
+import { Address, Cell, loadMessage, Transaction } from '@ton/ton';
 
 import { ContractOpener, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import { GetTransactionsOptions, TransactionDepth } from '../structs/InternalStruct';
 import { NoopLogger } from './Logger';
-import { getHashFromExternalMessageBody, retry, sleep } from './Utils';
+import { getNormalizedExtMessageHash, retry, sleep } from './Utils';
 
 const IGNORE_OPCODE = [
     0xd53276db, // Excess
@@ -101,7 +101,7 @@ export class TonTxFinalizer implements ITxFinalizer {
                 lt: startLt,
                 hash: startHash,
                 limit: 100,
-                archival: false,
+                archival: true,
             });
             if (transactions.length === 0) continue;
 
@@ -175,7 +175,9 @@ export class TonTxFinalizer implements ITxFinalizer {
 
             const transaction = await retry(
                 async () => {
-                    const hash = getHashFromExternalMessageBody(targetMessageBoc, account);
+                    const hash = getNormalizedExtMessageHash(
+                        loadMessage(Cell.fromBase64(targetMessageBoc).beginParse()),
+                    );
                     const transaction = await this.contractOpener.getTransactionByHash(account, hash, {
                         limit: 100,
                         lt: startLt,
