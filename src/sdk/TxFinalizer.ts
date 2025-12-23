@@ -1,10 +1,17 @@
-import { Address, Cell, loadMessage, Transaction } from '@ton/ton';
+import { Address, Transaction } from '@ton/ton';
 
-import { ContractOpener, ILogger } from '../interfaces';
+import { ContractOpener, IHttpClient, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
-import { GetTransactionsOptions, TransactionDepth } from '../structs/InternalStruct';
+import {
+    AdjacentTransactionsResponse,
+    GetTransactionsOptions,
+    ToncenterTransaction,
+    TransactionDepth,
+    TxFinalizerConfig,
+} from '../structs/InternalStruct';
+import { AxiosHttpClient } from './AxiosHttpClient';
 import { NoopLogger } from './Logger';
-import { getNormalizedExtMessageHash, retry, sleep } from './Utils';
+import { sleep, toCamelCaseTransformer } from './Utils';
 
 const IGNORE_OPCODE = [
     0xd53276db, // Excess
@@ -74,7 +81,7 @@ export class TonTxFinalizer implements ITxFinalizer {
 
             this.logger.debug(`Checking hash (depth ${currentDepth}): ${currentHash}`);
 
-            const transactions = await this.fetchAdjacentTransactions(currentAddress, currentHash, 5, 1000, {
+            const transactions = await this.fetchAdjacentTransactions(currentAddress!, currentHash, 5, 1000, {
                 limit: 10,
                 archival: true,
             });
@@ -121,54 +128,108 @@ export class TonTxFinalizer implements ITxFinalizer {
             this.logger.debug(`Finished checking hash (depth ${currentDepth}): ${currentHash}`);
         }
     }
+}
 
-    /**
-     * Wait for a transaction by external message hash
-     * @param target Target account address (string)
-     * @param targetInMessageHash Normalized external message hash (base64)
-     * @param retries Maximum number of retry attempts
-     * @param timeout Delay between retry attempts in milliseconds
-     * @returns The transaction if found, undefined otherwise
-     */
-    async waitForTransaction(
-        target: string,
-        targetMessageBoc: string,
-        params: {
-            retries?: number;
-            timeout?: number;
-        },
-    ): Promise<Transaction | undefined> {
-        const account = Address.parse(target);
-        const { retries = 10, timeout = 1000 } = params;
+export class TonTxFinalizerV3 implements ITxFinalizer {
+    private logger: ILogger;
+    private apiConfig: TxFinalizerConfig;
+    private readonly httpClient: IHttpClient;
 
-        this.logger.info(`Waiting for transaction on account ${target}`);
+    constructor(
+        apiConfig: TxFinalizerConfig,
+        logger: ILogger = new NoopLogger(),
+        httpClient: IHttpClient = new AxiosHttpClient(),
+    ) {
+        this.apiConfig = apiConfig;
+        this.logger = logger;
+        this.httpClient = httpClient;
+    }
 
-        let attempt = 0;
-        while (attempt < retries) {
-            attempt++;
-            this.logger.info(`Waiting for transaction to appear in network. Attempt: ${attempt}`);
+    // Fetches adjacent transactions from toncenter
+    private async fetchAdjacentTransactions(hash: string, retries = 5, delay = 1000): Promise<ToncenterTransaction[]> {
+        for (let i = retries; i >= 0; i--) {
+            try {
+                const url = this.apiConfig.urlBuilder(hash);
+                const response = await this.httpClient.get<AdjacentTransactionsResponse>(url, {
+                    headers: {
+                        [this.apiConfig.authorization.header]: this.apiConfig.authorization.value,
+                    },
+                    transformResponse: [toCamelCaseTransformer],
+                });
+                return response.data.transactions || [];
+            } catch (error) {
+                const errorMessage = (error as Error).message;
 
-            const transaction = await retry(
-                async () => {
-                    const hash = getNormalizedExtMessageHash(
-                        loadMessage(Cell.fromBase64(targetMessageBoc).beginParse()),
-                    );
-                    const transaction = await this.contractOpener.getTransactionByHash(account, hash, {
-                        limit: 100,
-                    });
-                    return transaction;
-                },
-                { delay: 1000, retries: 3 },
-            );
+                // Rate limit error (429) - retry
+                if (errorMessage.includes('429')) {
+                    if (i > 0) {
+                        await sleep(delay);
+                    }
+                    continue;
+                }
 
-            if (transaction) {
-                return transaction;
+                // Log all errors except 404 Not Found
+                if (!errorMessage.includes('404')) {
+                    const logMessage = error instanceof Error ? error.message : error;
+                    console.warn(`Failed to fetch adjacent transactions for ${hash}:`, logMessage);
+                }
+
+                if (i > 0) {
+                    await sleep(delay);
+                }
             }
-
-            await new Promise((resolve) => setTimeout(resolve, timeout));
         }
+        return [];
+    }
 
-        // Transaction was not found - message may not be processed
-        return undefined;
+    // Checks if all transactions in the tree are successful
+    public async trackTransactionTree(_: string, hash: string, params: { maxDepth?: number } = { maxDepth: 10 }) {
+        const { maxDepth = 10 } = params;
+        const visitedHashes = new Set<string>();
+        const queue: TransactionDepth[] = [{ hash, depth: 0 }];
+
+        while (queue.length > 0) {
+            const { hash: currentHash, depth: currentDepth } = queue.shift()!;
+
+            if (visitedHashes.has(currentHash)) {
+                continue;
+            }
+            visitedHashes.add(currentHash);
+
+            this.logger.debug(`Checking hash (depth ${currentDepth}): ${currentHash}`);
+
+            const transactions = await this.fetchAdjacentTransactions(currentHash);
+            if (transactions.length === 0) continue;
+
+            for (const tx of transactions) {
+                if (!IGNORE_OPCODE.includes(Number(tx.inMsg.opcode)) && tx.inMsg.opcode !== null) {
+                    const { aborted, computePh: compute_ph, action } = tx.description;
+                    if (
+                        aborted ||
+                        !compute_ph.success ||
+                        !action.success ||
+                        compute_ph.exitCode !== 0 ||
+                        action.resultCode !== 0
+                    ) {
+                        throw new Error(
+                            `Transaction failed:\n` +
+                                `hash = ${currentHash}, ` +
+                                `aborted = ${aborted}, ` +
+                                `compute_ph.success = ${compute_ph.success}, ` +
+                                `compute_ph.exit_code = ${compute_ph.exitCode}, ` +
+                                `action.success = ${action.success}, ` +
+                                `action.result_code = ${action.resultCode}`,
+                        );
+                    }
+                    if (currentDepth + 1 < maxDepth) {
+                        if (tx.outMsgs.length > 0) {
+                            queue.push({ hash: tx.hash, depth: currentDepth + 1 });
+                        }
+                    }
+                } else {
+                    this.logger.debug(`Skipping hash (depth ${currentDepth}): ${tx.hash}`);
+                }
+            }
+        }
     }
 }

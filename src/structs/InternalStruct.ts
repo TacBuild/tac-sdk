@@ -120,7 +120,7 @@ export type ToncenterTransaction = {
 };
 
 export type TransactionDepth = {
-    address: Address;
+    address?: Address;
     hash: string;
     depth: number;
 };

@@ -5,6 +5,7 @@ import { AbstractProvider } from 'ethers';
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
+import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import { SendResult } from './InternalStruct';
 
 export type ContractState = {
@@ -72,6 +73,11 @@ export type TONParams = {
      * Address of TON settings contract. Use only for tests.
      */
     settingsAddress?: string;
+
+    /**
+     * TxFinalizer for tracking transaction tree
+     */
+    txFinalizer?: ITxFinalizer;
 };
 
 export type SDKParams = {

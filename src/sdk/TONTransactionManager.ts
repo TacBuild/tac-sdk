@@ -1,4 +1,4 @@
-import { Cell } from '@ton/ton';
+import { Cell, loadMessage } from '@ton/ton';
 
 import { FT, NFT, TON } from '../assets';
 import { missingFeeParamsError, missingGasLimitError, missingTvmExecutorFeeError } from '../errors';
@@ -23,7 +23,13 @@ import {
 } from '../structs/Struct';
 import { FIFTEEN_MINUTES, TRANSACTION_TON_AMOUNT } from './Consts';
 import { NoopLogger } from './Logger';
-import { aggregateTokens, buildEvmDataCell, formatObjectForLogging, generateTransactionLinker } from './Utils';
+import {
+    aggregateTokens,
+    buildEvmDataCell,
+    formatObjectForLogging,
+    generateTransactionLinker,
+    getNormalizedExtMessageHash,
+} from './Utils';
 import { Validator } from './Validator';
 
 export class TONTransactionManager implements ITONTransactionManager {
@@ -248,20 +254,14 @@ export class TONTransactionManager implements ITONTransactionManager {
         };
 
         if (waitOptions.ensureTxExecuted && sendTransactionResult.boc) {
-            this.logger.info(`Waiting for transaction execution`);
-            const tx = await this.txFinalizer.waitForTransaction(
-                sender.getSenderAddress(),
-                sendTransactionResult.boc,
-                {},
+            const hash = getNormalizedExtMessageHash(
+                loadMessage(Cell.fromBase64(sendTransactionResult.boc).beginParse()),
             );
-            if (tx) {
-                this.logger.info(`Transaction on wallet found: ${tx.hash().toString('base64')}`);
-                this.logger.info(`Tracking transaction tree`);
-                await this.txFinalizer.trackTransactionTree(sender.getSenderAddress(), tx.hash().toString('base64'), {
-                    maxDepth: 10,
-                });
-                this.logger.info(`Transaction tree successful`);
-            }
+            this.logger.info(`Tracking transaction tree for hash: ${hash}`);
+            await this.txFinalizer.trackTransactionTree(sender.getSenderAddress(), hash, {
+                maxDepth: 10,
+            });
+            this.logger.info(`Transaction tree successful`);
         }
 
         waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);

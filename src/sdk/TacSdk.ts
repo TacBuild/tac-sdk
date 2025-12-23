@@ -99,7 +99,8 @@ export class TacSdk implements ITacSDK {
 
         const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints);
         const simulator = new Simulator(config, operationTracker, logger);
-        const txFinalizer = new TonTxFinalizer(config.TONParams.contractOpener, logger);
+        const txFinalizer =
+            sdkParams.TONParams?.txFinalizer ?? new TonTxFinalizer(config.TONParams.contractOpener, logger);
         const tonTransactionManager = new TONTransactionManager(
             config,
             simulator,
