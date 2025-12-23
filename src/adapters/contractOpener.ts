@@ -16,7 +16,7 @@ import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '
 
 import { mainnet, testnet } from '../../artifacts';
 import { ContractOpener } from '../interfaces';
-import { sleep } from '../sdk/Utils';
+import { getNormalizedExtMessageHash, sleep } from '../sdk/Utils';
 import { GetTransactionsOptions } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
@@ -56,10 +56,6 @@ async function getHttpV4EndpointWithRetry(network: Network, maxRetries = 5, dela
     throw lastError || new Error('Failed to get HTTP V4 endpoint after retries');
 }
 
-// -------------------------------------------------------------------
-//    Find the first transaction whose hash (base64) matches the target
-//    Retries fetching latest transactions until found or deadline is reached
-// -------------------------------------------------------------------
 async function findTransactionByHash(
     addr: Address,
     targetHashB64: string,
@@ -69,38 +65,39 @@ async function findTransactionByHash(
     const timeoutMs = opts?.timeoutMs ?? 60000; // 60 seconds default
     const retryDelayMs = opts?.retryDelayMs ?? 2000; // 2 seconds between retries
     const deadline = Date.now() + timeoutMs;
-    const limit = opts?.limit ?? 100;
+    const limit = opts?.limit ?? 10;
 
     while (Date.now() < deadline) {
-        // Initialize from startLt and startHash if provided, otherwise start from latest
-        let currentLt: bigint | undefined = opts?.lt ? BigInt(opts.lt) : undefined;
-        let currentHash: string | undefined = opts?.hash;
+        const batch = await getTransactions(addr, {
+            limit,
+            archival: opts?.archival ?? true,
+        });
 
-        while (Date.now() < deadline) {
-            const batch = await getTransactions(addr, {
-                limit,
-                lt: currentLt?.toString(),
-                hash: currentHash,
-                archival: opts?.archival ?? true,
-            });
+        // Check each transaction in the current batch
+        for (const tx of batch) {
+            // 1. check tx itself
+            if (tx.hash().toString('base64') === targetHashB64) {
+                return tx;
+            }
 
-            // Check each transaction in the current batch
-            for (const tx of batch) {
-                if (tx.hash().toString('base64') === targetHashB64) {
+            // 2. check incoming message(external-in)
+            if (tx.inMessage && tx.inMessage.info.type === 'external-in') {
+                const hash = getNormalizedExtMessageHash(tx.inMessage);
+                if (hash === targetHashB64) {
                     return tx;
                 }
             }
 
-            if (batch.length === 0) {
-                // repeat the same request with the same parameters
-            } else {
-                const last = batch[batch.length - 1];
-                currentLt = last.lt;
-                currentHash = last.hash().toString('base64');
+            // 3. check incoming message(internal)
+            if (tx.inMessage && tx.inMessage.info.type === 'internal') {
+                const messageCell = beginCell().store(storeMessage(tx.inMessage)).endCell();
+                const hash = messageCell.hash();
+                if (hash.toString('base64') === targetHashB64) {
+                    return tx;
+                }
             }
         }
 
-        // Transaction not found in current pagination, wait before retrying
         if (Date.now() < deadline) {
             await sleep(retryDelayMs);
         }
@@ -109,10 +106,6 @@ async function findTransactionByHash(
     return null;
 }
 
-// -------------------------------------------------------------------
-// 3.Retrieve the transaction with `hashB64` and all transactions
-//    that are directly adjacent to it (outgoing messages + optional incoming)
-// -------------------------------------------------------------------
 export async function getAdjacentTransactionsHelper(
     addr: Address,
     hashB64: string,

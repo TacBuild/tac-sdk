@@ -20,23 +20,6 @@ export class TonTxFinalizer implements ITxFinalizer {
         this.logger = logger;
     }
 
-    private logHashFormats(hash: string) {
-        let hex, base64;
-
-        if (hash.startsWith('0x')) {
-            hex = hash;
-            const cleanHex = hex.slice(2);
-            const buffer = Buffer.from(cleanHex, 'hex');
-            base64 = buffer.toString('base64');
-        } else {
-            base64 = hash;
-            const buffer = Buffer.from(base64, 'base64');
-            hex = '0x' + buffer.toString('hex');
-        }
-
-        return { hex: hex, base64: base64 };
-    }
-
     // Fetches adjacent transactions from toncenter
     private async fetchAdjacentTransactions(
         address: Address,
@@ -75,12 +58,8 @@ export class TonTxFinalizer implements ITxFinalizer {
     }
 
     // Checks if all transactions in the tree are successful
-    public async trackTransactionTree(
-        address: string,
-        hash: string,
-        params: { startLt: string; startHash: string; maxDepth?: number },
-    ) {
-        const { startLt, startHash, maxDepth = 10 } = params;
+    public async trackTransactionTree(address: string, hash: string, params: { maxDepth?: number }) {
+        const { maxDepth = 10 } = params;
         const parsedAddress = Address.parse(address);
         const visitedHashes = new Set<string>();
         const queue: TransactionDepth[] = [{ address: parsedAddress, hash, depth: 0 }];
@@ -93,16 +72,14 @@ export class TonTxFinalizer implements ITxFinalizer {
             }
             visitedHashes.add(currentHash);
 
-            this.logger.debug(
-                `Checking hash (depth ${currentDepth}):\nhex: ${this.logHashFormats(currentHash).hex}\nbase64: ${this.logHashFormats(currentHash).base64}`,
-            );
+            this.logger.debug(`Checking hash (depth ${currentDepth}): ${currentHash}`);
 
             const transactions = await this.fetchAdjacentTransactions(currentAddress, currentHash, 5, 1000, {
-                lt: startLt,
-                hash: startHash,
-                limit: 100,
+                limit: 10,
                 archival: true,
             });
+            console.log(`Found ${transactions.length} adjacent transactions for ${currentHash}`);
+
             if (transactions.length === 0) continue;
 
             for (const tx of transactions) {
@@ -137,11 +114,11 @@ export class TonTxFinalizer implements ITxFinalizer {
                         }
                     }
                 } else {
-                    this.logger.debug(
-                        `Skipping hash (depth ${currentDepth}):\nhex: ${this.logHashFormats(tx.hash().toString('hex'))}\nbase64: ${this.logHashFormats(tx.hash().toString('base64'))}`,
-                    );
+                    this.logger.debug(`Skipping hash (depth ${currentDepth}): ${tx.hash().toString('base64')}`);
                 }
             }
+
+            this.logger.debug(`Finished checking hash (depth ${currentDepth}): ${currentHash}`);
         }
     }
 
@@ -157,14 +134,12 @@ export class TonTxFinalizer implements ITxFinalizer {
         target: string,
         targetMessageBoc: string,
         params: {
-            startLt?: string;
-            startHash?: string;
             retries?: number;
             timeout?: number;
         },
     ): Promise<Transaction | undefined> {
         const account = Address.parse(target);
-        const { startLt = '', startHash = '', retries = 10, timeout = 1000 } = params;
+        const { retries = 10, timeout = 1000 } = params;
 
         this.logger.info(`Waiting for transaction on account ${target}`);
 
@@ -180,8 +155,6 @@ export class TonTxFinalizer implements ITxFinalizer {
                     );
                     const transaction = await this.contractOpener.getTransactionByHash(account, hash, {
                         limit: 100,
-                        lt: startLt,
-                        hash: startHash,
                     });
                     return transaction;
                 },
