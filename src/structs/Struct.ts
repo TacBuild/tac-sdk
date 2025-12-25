@@ -507,4 +507,5 @@ export type CrossChainPayloadResult = {
     destinationAddress: string;
     tonAmount: bigint;
     networkFee: bigint;
+    transactionLinker: TransactionLinker;
 };

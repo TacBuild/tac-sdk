@@ -392,6 +392,7 @@ export class TONTransactionManager implements ITONTransactionManager {
             destinationAddress: r.address,
             tonAmount: r.value,
             networkFee: r.extra.networkFeeIncluded,
+            transactionLinker: result.transactionLinker,
         }));
     }
 }
