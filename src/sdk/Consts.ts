@@ -24,3 +24,54 @@ export const TON_DECIMALS = 9;
 export const TAC_DECIMALS = 18;
 
 export const TON_BURN_ADDRESS = 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c';
+
+// FEES
+export const FIXED_POINT_SHIFT = 2 ** 16;
+
+export const CONTRACT_FEE_USAGE_PARAMS = {
+    crossChainLayer: {
+        accountBits: 43514,
+        accountCells: 100,
+        gas: {
+            tvmMsgToEvm: 14619,
+        },
+    },
+    jettonWallet: {
+        accountBits: 949,
+        accountCells: 3,
+        gas: {
+            internalTransfer: 10669,
+            receive: 11427,
+            burn: 8653,
+        },
+    },
+    jettonProxy: {
+        accountbits: 7760,
+        accountCells: 16,
+        gas: {
+            ownershipAssigned: 8515,
+        },
+    },
+    jettonMinter: {
+        accountBits: 10208,
+        accountCells: 28,
+        gas: {
+            burnNotification: 10357,
+        },
+    },
+    nftItem: {
+        accountBits: 1422,
+        accountCells: 5,
+        gas: {
+            send: 11722,
+            burn: 11552,
+        },
+    },
+    nftProxy: {
+        accountBits: 7512,
+        accountCells: 15,
+        gas: {
+            ownershipAssigned: 7688,
+        },
+    },
+};

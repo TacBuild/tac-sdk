@@ -79,13 +79,13 @@ export class TON implements Asset {
         return '';
     }
 
-    async generatePayload(params: {
+    generatePayload(params: {
         excessReceiver: string;
         evmData: Cell;
         crossChainTonAmount?: bigint;
         forwardFeeTonAmount?: bigint;
         feeParams?: FeeParams;
-    }): Promise<Cell> {
+    }): Cell {
         const { excessReceiver, evmData, feeParams } = params;
 
         const queryId = generateRandomNumberByTimestamp().randomNumber;

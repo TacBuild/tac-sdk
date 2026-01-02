@@ -1,3 +1,4 @@
+import { Origin } from '../structs/Struct';
 import {
     AddressError,
     BitError,
@@ -113,3 +114,5 @@ export const convertCurrencyNegativeOrZeroValueError = new FormatError(
     'Value cannot be negative or zero for currency conversion',
     132,
 );
+
+export const unknownAssetOriginError = (origin: Origin) => new TokenError(`Unknown asset origin: ${origin}`, 133);

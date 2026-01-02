@@ -1,5 +1,5 @@
 import type { SenderAbstraction } from '../sender';
-import { CrosschainTx, ExecutionFeeEstimationResult } from '../structs/Struct';
+import { CrosschainTx, ExecutionFeeEstimationResult, GeneratePayloadParams } from '../structs/Struct';
 import { Asset } from './Asset';
 
 export interface ISimulator {
@@ -24,5 +24,5 @@ export interface ISimulator {
      * @param assets Assets to be included in the transaction.
      * @returns The total estimated fee in nanotons (1 TON = 10^9 nanotons) for processing all provided assets.
      */
-    estimateTONFees(assets: Asset[]): number;
+    estimateTONFees(assets: Asset[], params: GeneratePayloadParams): number;
 }

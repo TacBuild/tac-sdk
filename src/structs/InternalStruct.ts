@@ -19,7 +19,8 @@ export type ShardMessage = {
     value: bigint;
     payload: Cell;
     extra: {
-        networkFeeIncluded: bigint;
+        tonNetworkFee: bigint;
+        tacEstimatedGas?: bigint;
     };
 };
 
@@ -164,4 +165,28 @@ export type AddressInformation = {
         lt: string;
         hash: string;
     };
+};
+
+export type TONFeeCalculationParams = {
+    accountBits: number;
+    accountCells: number;
+    timeDelta: number;
+    msgBits: number;
+    msgCells: number;
+    gasUsed: number;
+    bitPricePs?: number;
+    cellPricePs?: number;
+    lumpPrice?: number;
+    gasPrice?: number;
+    firstFrac?: number;
+    ihrPriceFactor?: number;
+};
+
+export type TransactionFeeCalculationStep = {
+    accountBits: number;
+    accountCells: number;
+    gasUsed: number;
+    msgBits: number;
+    msgCells: number;
+    timeDelta: number;
 };

@@ -394,3 +394,14 @@ export async function retry<T>(fn: () => Promise<T>, options: { retries: number;
     }
     throw lastError;
 }
+
+export function recurisivelyCollectCellStats(cell: Cell): { bits: number; cells: number } {
+    let bits = 0;
+    let cells = 0;
+    for (const ref of cell.refs) {
+        const stats = recurisivelyCollectCellStats(ref);
+        bits += stats.bits;
+        cells += stats.cells;
+    }
+    return { bits: cell.bits.length + bits, cells: 1 + cells };
+}

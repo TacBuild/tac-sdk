@@ -340,6 +340,7 @@ export type FeeParams = {
     protocolFee: bigint;
     evmExecutorFee: bigint;
     tvmExecutorFee: bigint;
+    evmEstimatedGas?: bigint;
 };
 
 export type CrossChainTransactionOptions = {
@@ -506,6 +507,15 @@ export type CrossChainPayloadResult = {
     body: Cell;
     destinationAddress: string;
     tonAmount: bigint;
-    networkFee: bigint;
+    tonNetworkFee: bigint;
+    tacEstimatedGas?: bigint;
     transactionLinker: TransactionLinker;
+};
+
+export type GeneratePayloadParams = {
+    excessReceiver: string;
+    evmData: Cell;
+    crossChainTonAmount?: bigint;
+    forwardFeeTonAmount?: bigint;
+    feeParams?: FeeParams;
 };

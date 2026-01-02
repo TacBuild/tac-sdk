@@ -5,7 +5,7 @@ import { missingFeeParamsError, missingGasLimitError, missingTvmExecutorFeeError
 import { sendCrossChainTransactionFailedError } from '../errors/instances';
 import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator, ITONTransactionManager } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
-import type { SenderAbstraction } from '../sender';
+import { getMockSender, type SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
 import {
     BatchCrossChainTx,
@@ -81,6 +81,7 @@ export class TONTransactionManager implements ITONTransactionManager {
                     : simulationResult.feeParams.tvmExecutorFee,
             gasLimit: evmProxyMsg.gasLimit ?? simulationResult.feeParams.gasLimit,
             isRoundTrip: isRoundTrip ?? simulationResult.feeParams.isRoundTrip,
+            evmEstimatedGas: simulationResult.simulation?.estimatedGas,
         };
     }
 
@@ -178,7 +179,8 @@ export class TONTransactionManager implements ITONTransactionManager {
                     value: crossChainTonAmount + feeTonAmount + TRANSACTION_TON_AMOUNT,
                     payload: await ton.generatePayload({ excessReceiver: caller, evmData, feeParams }),
                     extra: {
-                        networkFeeIncluded: TRANSACTION_TON_AMOUNT,
+                        tonNetworkFee: TRANSACTION_TON_AMOUNT,
+                        tacEstimatedGas: feeParams.evmEstimatedGas,
                     },
                 },
             ];
@@ -203,7 +205,8 @@ export class TONTransactionManager implements ITONTransactionManager {
                 value: crossChainTonAmount + feeTonAmount + TRANSACTION_TON_AMOUNT,
                 payload,
                 extra: {
-                    networkFeeIncluded: TRANSACTION_TON_AMOUNT,
+                    tonNetworkFee: TRANSACTION_TON_AMOUNT,
+                    tacEstimatedGas: currentFeeParams?.evmEstimatedGas,
                 },
             });
 
@@ -377,13 +380,7 @@ export class TONTransactionManager implements ITONTransactionManager {
     ): Promise<CrossChainPayloadResult[]> {
         this.logger.debug('Preparing cross-chain transaction payload');
 
-        const mockSender: SenderAbstraction = {
-            getSenderAddress: () => senderAddress,
-            sendShardTransaction: async () => ({ success: true, boc: '' }),
-            sendShardTransactions: async () => [],
-            getBalance: async () => 0n,
-            getBalanceOf: async () => 0n,
-        };
+        const mockSender = getMockSender(senderAddress);
 
         const result = await this.prepareCrossChainTransaction(evmProxyMsg, mockSender, assets, options, true);
 
@@ -391,7 +388,8 @@ export class TONTransactionManager implements ITONTransactionManager {
             body: r.payload,
             destinationAddress: r.address,
             tonAmount: r.value,
-            networkFee: r.extra.networkFeeIncluded,
+            tonNetworkFee: r.extra.tonNetworkFee,
+            tacEstimatedGas: r.extra.tacEstimatedGas,
             transactionLinker: result.transactionLinker,
         }));
     }
