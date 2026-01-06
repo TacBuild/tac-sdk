@@ -4,7 +4,7 @@ import '@ton/test-utils';
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
 import { address, beginCell, SendMode, toNano, WalletContractV4, WalletContractV5R1 } from '@ton/ton';
 
-import { BatchSender, ContractOpener, HighloadWalletV3,Network, SenderAbstraction, SenderFactory } from '../../src';
+import { BatchSender, ContractOpener, HighloadWalletV3, Network, SenderAbstraction, SenderFactory } from '../../src';
 import { sandboxOpener } from '../../src';
 import { RawSender } from '../../src/sender/RawSender';
 import { SendResult, ShardTransaction } from '../../src/structs/InternalStruct';
@@ -18,6 +18,10 @@ describe('RawSender', () => {
     let rawSenderV4: SenderAbstraction;
     let rawSenderV5: SenderAbstraction;
     let rawSenderHighloadV3: SenderAbstraction;
+
+    const mockExtra = {
+        tonNetworkFee: toNano(0.1),
+    };
 
     beforeEach(async () => {
         blockchain = await Blockchain.create();
@@ -89,6 +93,7 @@ describe('RawSender', () => {
                     address: recipient.address.toString(),
                     value: toNano(1),
                     payload: beginCell().storeUint(0, 32).storeStringTail('test payload').endCell(),
+                    extra: mockExtra,
                 },
             ],
         };
@@ -116,6 +121,7 @@ describe('RawSender', () => {
                         address: recipient1.address.toString(),
                         value: toNano(1),
                         payload: beginCell().storeUint(1, 32).endCell(),
+                        extra: mockExtra,
                     },
                 ],
             },
@@ -127,6 +133,7 @@ describe('RawSender', () => {
                         address: recipient2.address.toString(),
                         value: toNano(0.3),
                         payload: beginCell().storeUint(2, 32).endCell(),
+                        extra: mockExtra,
                     },
                 ],
             },
@@ -166,6 +173,7 @@ describe('RawSender', () => {
                     payload: beginCell()
                         .storeUint(i + 1, 32)
                         .endCell(),
+                    extra: mockExtra,
                 },
                 {
                     address: recipient.address.toString(),
@@ -174,6 +182,7 @@ describe('RawSender', () => {
                         .storeUint(i + 1, 32)
                         .storeUint(2, 32)
                         .endCell(),
+                    extra: mockExtra,
                 },
             ],
         }));
@@ -204,6 +213,7 @@ describe('RawSender', () => {
                     payload: beginCell()
                         .storeUint(i + 1, 32)
                         .endCell(),
+                    extra: mockExtra,
                 },
                 {
                     address: recipient.address.toString(),
@@ -212,6 +222,7 @@ describe('RawSender', () => {
                         .storeUint(i + 1, 32)
                         .storeUint(2, 32)
                         .endCell(),
+                    extra: mockExtra,
                 },
             ],
         }));
@@ -243,6 +254,7 @@ describe('RawSender', () => {
                     payload: beginCell()
                         .storeUint(i + 1, 32)
                         .endCell(),
+                    extra: mockExtra,
                 },
                 {
                     address: recipient.address.toString(),
@@ -251,6 +263,7 @@ describe('RawSender', () => {
                         .storeUint(i + 1, 32)
                         .storeUint(2, 32)
                         .endCell(),
+                    extra: mockExtra,
                 },
             ],
         }));

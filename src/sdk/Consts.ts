@@ -18,6 +18,7 @@ export const TON_SYMBOL = 'TON';
 export const TAC_SYMBOL = 'TAC';
 
 export const FIFTEEN_MINUTES = 15 * 60 * 1000;
+export const ONE_YEAR_SECONDS = 365 * 24 * 3600;
 
 export const TON_DECIMALS = 9;
 export const TAC_DECIMALS = 18;

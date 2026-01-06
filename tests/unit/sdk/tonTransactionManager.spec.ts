@@ -25,11 +25,16 @@ describe('TONTransactionManager.buildFeeParams', () => {
         error: jest.fn(),
     };
 
+    const txFinalizer = {
+        trackTransactionTree: jest.fn(),
+    };
+
     const manager = new TONTransactionManager(
         config as never,
         simulator as never,
         operationTracker as never,
         logger as never,
+        txFinalizer as never,
     );
 
     afterEach(() => {
@@ -38,7 +43,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
 
     it('throws when required fee params are missing in withoutSimulation mode', async () => {
         await expect(
-            (manager as any).buildFeeParams(
+            manager.buildFeeParams(
                 { withoutSimulation: true },
                 { evmTargetAddress: '0xTarget' },
                 {} as never,
@@ -49,7 +54,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
 
     it('throws when tvmExecutorFee not provided for round trip', async () => {
         await expect(
-            (manager as any).buildFeeParams(
+            manager.buildFeeParams(
                 { withoutSimulation: true, protocolFee: 1n, evmExecutorFee: 2n, isRoundTrip: true },
                 { evmTargetAddress: '0xTarget' },
                 {} as never,
@@ -60,7 +65,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
 
     it('throws when gas limit is missing for manual mode', async () => {
         await expect(
-            (manager as any).buildFeeParams(
+            manager.buildFeeParams(
                 { withoutSimulation: true, protocolFee: 1n, evmExecutorFee: 2n, tvmExecutorFee: 3n },
                 { evmTargetAddress: '0xTarget' },
                 {} as never,
@@ -70,7 +75,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
     });
 
     it('returns provided values when withoutSimulation data is complete', async () => {
-        const result = await (manager as any).buildFeeParams(
+        const result = await manager.buildFeeParams(
             {
                 withoutSimulation: true,
                 protocolFee: 1n,
@@ -104,7 +109,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
         });
 
         const evmProxyMsg = { evmTargetAddress: '0xTarget' } as { evmTargetAddress: string; gasLimit?: bigint };
-        const result = await (manager as any).buildFeeParams(
+        const result = await manager.buildFeeParams(
             {},
             evmProxyMsg,
             {} as never,

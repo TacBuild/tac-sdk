@@ -14,7 +14,7 @@ import {
     GeneratePayloadParams,
     Origin,
 } from '../structs/Struct';
-import { CONTRACT_FEE_USAGE_PARAMS, FIXED_POINT_SHIFT } from './Consts';
+import { CONTRACT_FEE_USAGE_PARAMS, FIXED_POINT_SHIFT, ONE_YEAR_SECONDS } from './Consts';
 import { NoopLogger } from './Logger';
 import {
     aggregateTokens,
@@ -170,7 +170,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
         ]);
     }
@@ -183,7 +183,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.gas.internalTransfer,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.accountBits,
@@ -191,7 +191,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.gas.receive,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonProxy.accountbits,
@@ -199,7 +199,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonProxy.gas.ownershipAssigned,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
@@ -207,7 +207,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
         ]);
     }
@@ -220,7 +220,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.gas.burn,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonMinter.accountBits,
@@ -228,7 +228,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonMinter.gas.burnNotification,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
@@ -236,7 +236,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
         ]);
     }
@@ -249,7 +249,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.nftItem.gas.send,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.nftProxy.accountBits,
@@ -257,7 +257,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.nftProxy.gas.ownershipAssigned,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
@@ -265,7 +265,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
         ]);
     }
@@ -278,7 +278,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.nftItem.gas.burn,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
@@ -286,7 +286,7 @@ export class Simulator implements ISimulator {
                 gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
                 msgBits,
                 msgCells,
-                timeDelta: 1,
+                timeDelta: ONE_YEAR_SECONDS,
             },
         ]);
     }

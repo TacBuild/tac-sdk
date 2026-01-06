@@ -130,7 +130,7 @@ export class TonTxFinalizer implements ITxFinalizer {
     }
 }
 
-export class TonTxFinalizerV3 implements ITxFinalizer {
+export class TonIndexerTxFinalizer implements ITxFinalizer {
     private logger: ILogger;
     private apiConfig: TxFinalizerConfig;
     private readonly httpClient: IHttpClient;

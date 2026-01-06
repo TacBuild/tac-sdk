@@ -1,7 +1,8 @@
 import { Blockchain, SandboxContract } from '@ton/sandbox';
-import { Address, Cell, Contract } from '@ton/ton';
+import { Address, Cell, Contract, Transaction } from '@ton/ton';
 
 import { ContractOpener, ContractState } from '../../../src';
+import { AddressInformation } from '../../../src/structs/InternalStruct';
 
 export class UnstableContractOpener implements ContractOpener {
     public callCounts = new Map<string, number>();
@@ -11,6 +12,15 @@ export class UnstableContractOpener implements ContractOpener {
         private blockchain: Blockchain,
         private failsBeforeSuccess: number = 0,
     ) {}
+    getTransactionByHash(): Promise<Transaction | null> {
+        throw new Error('Method not implemented.');
+    }
+    getAdjacentTransactions(): Promise<Transaction[]> {
+        throw new Error('Method not implemented.');
+    }
+    getAddressInformation(): Promise<AddressInformation> {
+        throw new Error('Method not implemented.');
+    }
 
     open<T extends Contract>(contract: T): SandboxContract<T> {
         return new Proxy(this.blockchain.openContract(contract), {

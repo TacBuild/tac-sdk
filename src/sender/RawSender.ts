@@ -121,7 +121,7 @@ export class RawSender implements SenderAbstraction {
         // Send the transaction
         const result = await walletContract.send(msg);
 
-        return boc || result;
+        return result || boc;
     }
 
     getSenderAddress(): string {
