@@ -325,10 +325,7 @@ export async function orbsOpener4(network: Network, timeout = 10000): Promise<Co
     };
 }
 
-export function tonClientOpener(endpoint: string): ContractOpener {
-    const client = new TonClient({
-        endpoint,
-    });
+export function tonClientOpener(client: TonClient): ContractOpener {
     return {
         open: client.open.bind(client),
         getContractState: client.getContractState.bind(client),
