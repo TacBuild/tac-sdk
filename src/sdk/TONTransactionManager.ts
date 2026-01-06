@@ -15,13 +15,14 @@ import {
     CrosschainTx,
     EvmProxyMsg,
     FeeParams,
+    GeneratePayloadParams,
     OperationIdsByShardsKey,
     TransactionLinker,
     TransactionLinkerWithOperationId,
     ValidExecutors,
     WaitOptions,
 } from '../structs/Struct';
-import { FIFTEEN_MINUTES, TRANSACTION_TON_AMOUNT } from './Consts';
+import { FIFTEEN_MINUTES, JETTON_TRANSFER_FORWARD_TON_AMOUNT, NFT_TRANSFER_FORWARD_TON_AMOUNT } from './Consts';
 import { NoopLogger } from './Logger';
 import {
     aggregateTokens,
@@ -173,13 +174,19 @@ export class TONTransactionManager implements ITONTransactionManager {
         this.logger.debug(`Crosschain ton amount: ${crossChainTonAmount}, Fee ton amount: ${feeTonAmount}`);
 
         if (!totalAssets.length) {
+            const tonNetworkFee = this.simulator.estimateTONFee(ton, {
+                excessReceiver: caller,
+                evmData,
+                feeParams,
+            });
+
             return [
                 {
                     address: this.config.TONParams.crossChainLayerAddress,
-                    value: crossChainTonAmount + feeTonAmount + TRANSACTION_TON_AMOUNT,
+                    value: crossChainTonAmount + feeTonAmount + tonNetworkFee,
                     payload: await ton.generatePayload({ excessReceiver: caller, evmData, feeParams }),
                     extra: {
-                        tonNetworkFee: TRANSACTION_TON_AMOUNT,
+                        tonNetworkFee,
                         tacEstimatedGas: feeParams.evmEstimatedGas,
                     },
                 },
@@ -190,22 +197,28 @@ export class TONTransactionManager implements ITONTransactionManager {
         let currentFeeParams: FeeParams | undefined = feeParams;
 
         for (const asset of totalAssets) {
-            const payload = await asset.generatePayload({
+            const params: GeneratePayloadParams = {
                 excessReceiver: caller,
                 evmData,
                 crossChainTonAmount,
                 forwardFeeTonAmount: feeTonAmount,
                 feeParams: currentFeeParams,
-            });
+            };
+
+            const payload = await asset.generatePayload(params);
 
             const address = asset instanceof FT ? await asset.getUserWalletAddress(caller) : asset.address;
+            const forwardAmount =
+                asset instanceof FT ? JETTON_TRANSFER_FORWARD_TON_AMOUNT : NFT_TRANSFER_FORWARD_TON_AMOUNT;
+
+            const tonNetworkFee = this.simulator.estimateTONFee(asset, params);
 
             messages.push({
                 address,
-                value: crossChainTonAmount + feeTonAmount + TRANSACTION_TON_AMOUNT,
+                value: crossChainTonAmount + feeTonAmount + tonNetworkFee + forwardAmount,
                 payload,
                 extra: {
-                    tonNetworkFee: TRANSACTION_TON_AMOUNT,
+                    tonNetworkFee,
                     tacEstimatedGas: currentFeeParams?.evmEstimatedGas,
                 },
             });

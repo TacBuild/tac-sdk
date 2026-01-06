@@ -135,7 +135,7 @@ export class Simulator implements ISimulator {
         gasPrice = 400,
         firstFrac = 21845,
         ihrPriceFactor = 0,
-    }: TONFeeCalculationParams): number {
+    }: TONFeeCalculationParams): bigint {
         // Storage Fee (nanotons)
         const storageFee = Math.ceil(
             ((accountBits * bitPricePs + accountCells * cellPricePs) * timeDelta) / FIXED_POINT_SHIFT,
@@ -153,16 +153,16 @@ export class Simulator implements ISimulator {
         const actionFee = Math.floor((msgFwdFees * firstFrac) / FIXED_POINT_SHIFT);
 
         // Combine all fees
-        const totalFees = storageFee + computeFee + actionFee + totalFwdFees;
+        const totalFees = BigInt(storageFee) + BigInt(computeFee) + BigInt(actionFee) + BigInt(totalFwdFees);
 
         return totalFees;
     }
 
-    private calculateTransactionPipeline(steps: Array<TransactionFeeCalculationStep>): number {
-        return steps.reduce((total, step) => total + this.calculateTONFees(step), 0);
+    private calculateTransactionPipeline(steps: Array<TransactionFeeCalculationStep>): bigint {
+        return steps.reduce((total, step) => total + this.calculateTONFees(step), 0n);
     }
 
-    private calculateTONCrosschainFee(msgBits: number, msgCells: number) {
+    private calculateTONCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
@@ -175,7 +175,7 @@ export class Simulator implements ISimulator {
         ]);
     }
 
-    private calculateJettonTransferCrosschainFee(msgBits: number, msgCells: number) {
+    private calculateJettonTransferCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.accountBits,
@@ -212,7 +212,7 @@ export class Simulator implements ISimulator {
         ]);
     }
 
-    private calculateJettonBurnCrosschainFee(msgBits: number, msgCells: number) {
+    private calculateJettonBurnCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.accountBits,
@@ -241,7 +241,7 @@ export class Simulator implements ISimulator {
         ]);
     }
 
-    private calculateNftTransferCrosschainFee(msgBits: number, msgCells: number) {
+    private calculateNftTransferCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.nftItem.accountBits,
@@ -270,7 +270,7 @@ export class Simulator implements ISimulator {
         ]);
     }
 
-    private calculateNftBurnCrosschainFee(msgBits: number, msgCells: number) {
+    private calculateNftBurnCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
             {
                 accountBits: CONTRACT_FEE_USAGE_PARAMS.nftItem.accountBits,
@@ -291,44 +291,42 @@ export class Simulator implements ISimulator {
         ]);
     }
 
-    estimateTONFees(assets: Asset[], params: GeneratePayloadParams): number {
-        return assets.reduce((totalFees, asset) => {
-            const assetFee = (() => {
-                const payload = asset.generatePayload(params);
-                const { bits: msgBits, cells: msgCells } = recurisivelyCollectCellStats(payload);
-                switch (asset.type) {
-                    case AssetType.FT:
-                        if (asset instanceof TON) {
-                            // Pipeline: wallet -> ccl -> log
-                            return this.calculateTONCrosschainFee(msgBits, msgCells);
-                        }
-                        if (asset.origin === Origin.TON) {
-                            // Pipeline: wallet -> jetton wallet -> jetton wallet -> jetton proxy -> ccl -> log
-                            return this.calculateJettonTransferCrosschainFee(msgBits, msgCells);
-                        }
-                        if (asset.origin === Origin.TAC) {
-                            // Pipeline: wallet -> jetton wallet -> jetton minter -> ccl -> log
-                            return this.calculateJettonBurnCrosschainFee(msgBits, msgCells);
-                        }
-                        throw unknownAssetOriginError(asset.origin);
+    estimateTONFees(assets: Asset[], params: GeneratePayloadParams): bigint {
+        return assets.reduce((totalFees, asset) => totalFees + this.estimateTONFee(asset, params), 0n);
+    }
 
-                    case AssetType.NFT:
-                        if (asset.origin === Origin.TON) {
-                            // Pipeline: wallet -> nft item -> nft proxy -> ccl -> log
-                            return this.calculateNftTransferCrosschainFee(msgBits, msgCells);
-                        }
-                        if (asset.origin === Origin.TAC) {
-                            // Pipeline: wallet -> nft item -> ccl -> log
-                            return this.calculateNftBurnCrosschainFee(msgBits, msgCells);
-                        }
-                        throw unknownAssetOriginError(asset.origin);
-
-                    default:
-                        throw unknownTokenTypeError(asset.type);
+    estimateTONFee(asset: Asset, params: GeneratePayloadParams): bigint {
+        const payload = asset.generatePayload(params);
+        const { bits: msgBits, cells: msgCells } = recurisivelyCollectCellStats(payload);
+        switch (asset.type) {
+            case AssetType.FT:
+                if (asset instanceof TON) {
+                    // Pipeline: wallet -> ccl -> log
+                    return this.calculateTONCrosschainFee(msgBits, msgCells);
                 }
-            })();
+                if (asset.origin === Origin.TON) {
+                    // Pipeline: wallet -> jetton wallet -> jetton wallet -> jetton proxy -> ccl -> log
+                    return this.calculateJettonTransferCrosschainFee(msgBits, msgCells);
+                }
+                if (asset.origin === Origin.TAC) {
+                    // Pipeline: wallet -> jetton wallet -> jetton minter -> ccl -> log
+                    return this.calculateJettonBurnCrosschainFee(msgBits, msgCells);
+                }
+                throw unknownAssetOriginError(asset.origin);
 
-            return totalFees + assetFee;
-        }, 0);
+            case AssetType.NFT:
+                if (asset.origin === Origin.TON) {
+                    // Pipeline: wallet -> nft item -> nft proxy -> ccl -> log
+                    return this.calculateNftTransferCrosschainFee(msgBits, msgCells);
+                }
+                if (asset.origin === Origin.TAC) {
+                    // Pipeline: wallet -> nft item -> ccl -> log
+                    return this.calculateNftBurnCrosschainFee(msgBits, msgCells);
+                }
+                throw unknownAssetOriginError(asset.origin);
+
+            default:
+                throw unknownTokenTypeError(asset.type);
+        }
     }
 }

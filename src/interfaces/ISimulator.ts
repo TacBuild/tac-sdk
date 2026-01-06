@@ -24,5 +24,13 @@ export interface ISimulator {
      * @param assets Assets to be included in the transaction.
      * @returns The total estimated fee in nanotons (1 TON = 10^9 nanotons) for processing all provided assets.
      */
-    estimateTONFees(assets: Asset[], params: GeneratePayloadParams): number;
+    estimateTONFees(assets: Asset[], params: GeneratePayloadParams): bigint;
+
+    /**
+     * Estimates the TON network fee required for a single asset.
+     * @param asset Asset to be included in the transaction.
+     * @param params Payload parameters.
+     * @returns The total estimated fee in nanotons (1 TON = 10^9 nanotons) for processing the provided asset.
+     */
+    estimateTONFee(asset: Asset, params: GeneratePayloadParams): bigint;
 }
