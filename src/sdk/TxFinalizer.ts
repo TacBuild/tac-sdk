@@ -15,7 +15,6 @@ import { sleep, toCamelCaseTransformer } from './Utils';
 
 const IGNORE_OPCODE = [
     0xd53276db, // Excess
-    0x7362d09c, // Jetton Notify
 ];
 
 export class TonTxFinalizer implements ITxFinalizer {
