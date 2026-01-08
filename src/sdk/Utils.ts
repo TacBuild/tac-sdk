@@ -52,6 +52,10 @@ export function buildEvmDataCell(
         ? Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64')
         : null;
 
+    if (!evmProxyMsg.methodName && evmArguments) {
+        throw invalidMethodNameError(evmProxyMsg.methodName ?? '');
+    }
+
     const json = JSON.stringify({
         evmCall: {
             target: evmProxyMsg.evmTargetAddress,
