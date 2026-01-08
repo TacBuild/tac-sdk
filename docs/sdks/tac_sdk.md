@@ -221,7 +221,9 @@ Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschai
 - **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
 - **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
 - **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
-- **`networkFee`**: Network fee for this specific message in nanotons
+- **`tonNetworkFee`**: Network fee for this specific message in nanotons
+- **`tacEstimatedGas`** *(optional)*: Estimated gas required for TAC-side execution
+- **`transactionLinker`**: Transaction linker for tracking the operation across chains
 
 #### **Use Cases**
 
@@ -243,12 +245,20 @@ const payloads = await sdk.prepareCrossChainTransactionPayload(
 
 // Inspect payloads
 payloads.forEach((payload, i) => {
-  console.log(`Payload ${i}: to=${payload.to}, amount=${payload.amount}`);
+  console.log(`Payload ${i}:`);
+  console.log(`  Destination: ${payload.destinationAddress}`);
+  console.log(`  TON Amount: ${payload.tonAmount} nanotons`);
+  console.log(`  Network Fee: ${payload.tonNetworkFee} nanotons`);
+  console.log(`  TAC Estimated Gas: ${payload.tacEstimatedGas || 'N/A'}`);
 });
 
 // Use with custom wallet implementation
 for (const payload of payloads) {
-  await customWallet.sendMessage(payload.to, payload.amount, payload.payload);
+  await customWallet.sendMessage(
+    payload.destinationAddress, 
+    payload.tonAmount, 
+    payload.body
+  );
 }
 ```
 

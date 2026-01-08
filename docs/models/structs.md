@@ -20,8 +20,6 @@ This file documents the primary data structures (types and interfaces often refe
 - [`CrossChainTransactionOptions`](#crosschaintransactionoptions)
 - [`CrosschainTx`](#crosschaintx)
 - [`AssetLike`](#assetlike)
-- [`CrosschainTxWithAssetLike`](#crosschaintxwithassetlike)
-- [`CrossChainEstimationResult`](#crosschainestimationresult-type)
 - [`CrossChainPayloadResult`](#crosschainpayloadresult-type)
 ### Transaction Tracking
 - [`TransactionLinker`](#transactionlinker-type)
@@ -77,6 +75,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`AssetFromFTArg`](#assetfromftarg)
 - [`AssetFromNFTCollectionArg`](#assetfromnftcollectionarg)
 - [`AssetFromNFTItemArg`](#assetfromnftitemarg)
+- [`GeneratePayloadParams`](#generatepayloadparams)
 
 ### Address Types
 - [`TVMAddress`](#tvmaddress)
@@ -111,17 +110,20 @@ Parameters for SDK:
 export type TONParams = {
     contractOpener?: ContractOpener;
     settingsAddress?: string;
+    txFinalizer?: ITxFinalizer;
 }
 ```
 TON Parameters for SDK:
 - **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that combines TonClient (TAC endpoint), orbsOpener4, and orbsOpener as fallbacks. Provide your own opener primarily for tests or custom setups.
 - **`settingsAddress`** (optional): TON settings contract address. Needed to retrieve protocol data. Set for tests only.
+- **`txFinalizer`** (optional): TxFinalizer for tracking transaction tree. Used for advanced transaction tracking and verification.
 
 ### `TACParams (Type)`
 ```typescript
 export type TACParams = {
     provider?: AbstractProvider;
-    settingsAddress?: string | Addressable;
+    settingsAddress?: string;
+    saFactoryAddress?: string;
 }
 ```
 
@@ -155,6 +157,9 @@ export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
     getContractState(address: Address): Promise<ContractState>;
     closeConnections?: () => unknown;
+    getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+    getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]>;
+    getAddressInformation(address: Address): Promise<AddressInformation>;
 }
 ```
 
@@ -162,6 +167,9 @@ Interface for opening and interacting with TON smart contracts:
 - **`open<T extends Contract>(src: T)`**: Opens a contract for interaction, returning an OpenedContract or SandboxContract instance.
 - **`getContractState(address: Address)`**: Retrieves the state of a contract at the specified address.
 - **`closeConnections?`** *(optional)*: Closes any open connections to the TON network.
+- **`getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its hash for a given address. Returns `null` if not found.
+- **`getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves transactions adjacent to the specified transaction hash.
+- **`getAddressInformation(address: Address)`**: Retrieves address information including last transaction details.
 
 ### `RetryableContractOpener (Class)`
 
@@ -421,13 +429,6 @@ For NFT items within a collection, specify collection address and item index:
 
 This flexible typing system allows you to work with assets in the most convenient format for your use case while maintaining type safety.
 
-### `CrosschainTxWithAssetLike`
-
-```typescript
-export type CrosschainTxWithAssetLike = Omit<CrosschainTx, 'assets'> & { assets?: AssetLike[] };
-```
-
-Represents a crosschain transaction using AssetLike objects instead of strict Asset instances. This provides more flexibility when working with different asset representations.
 
 ### `BatchCrossChainTxWithAssetLike`
 
@@ -437,20 +438,6 @@ export type BatchCrossChainTxWithAssetLike = Omit<BatchCrossChainTx, 'assets'> &
 
 Represents a batch crosschain transaction using AssetLike objects instead of strict Asset instances. This provides more flexibility when working with different asset representations in batch operations, while ensuring that individual transactions cannot specify wait-related options (which are controlled at the batch level).
 
-### `CrossChainEstimationResult (Type)`
-
-```typescript
-export type CrossChainEstimationResult = {
-    tonAmount: bigint;
-    networkFee: bigint;
-};
-```
-
-Result of estimating a cross-chain transaction, providing detailed cost breakdown before execution.
-
-- **`tonAmount`**: Total amount of TON required for the transaction in nanotons, including all assets being bridged
-- **`networkFee`**: Total network fees required for the transaction in nanotons, including TVM execution fees, protocol fees, and executor fees
-
 ### `CrossChainPayloadResult (Type)`
 
 ```typescript
@@ -458,7 +445,9 @@ export type CrossChainPayloadResult = {
     body: Cell;
     destinationAddress: string;
     tonAmount: bigint;
-    networkFee: bigint;
+    tonNetworkFee: bigint;
+    tacEstimatedGas?: bigint;
+    transactionLinker: TransactionLinker;
 };
 ```
 
@@ -467,7 +456,9 @@ Represents a prepared transaction payload for a cross-chain operation, ready to 
 - **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
 - **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
 - **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
-- **`networkFee`**: Network fee for this specific message in nanotons
+- **`tonNetworkFee`**: Network fee for this specific message in nanotons
+- **`tacEstimatedGas`** *(optional)*: Estimated gas required for TAC-side execution
+- **`transactionLinker`**: Transaction linker for tracking the operation across chains
 
 ### `TransactionLinker (Type)`
 ```typescript
@@ -476,7 +467,7 @@ export type TransactionLinker = {
     shardCount: number,
     shardsKey: string,
     timestamp: number,
-    sendTransactionResult?: unknown,
+    sendTransactionResult?: SendResult,
 }
 ```
 Linker to track TON transaction for crosschain operation.
@@ -484,7 +475,7 @@ Linker to track TON transaction for crosschain operation.
 - **`shardCount`**: Number of shards involved.
 - **`shardsKey`**: Identifier for the shard.
 - **`timestamp`**: Timestamp of the transaction.
-- **`sendTransactionResult`** *(optional)*: Result of sending transaction. May be used to check result of sending transaction. Default TonClient does NOT fill this field. However, in unit tests @ton/sandbox set transaction result object to this field.
+- **`sendTransactionResult`** *(optional)*: Result of sending transaction. May be used to check result of sending transaction. Default TonClient does NOT fill this field. However, in unit tests @ton/sandbox set transaction result object to this field. Type is `SendResult` which includes `success`, `boc`, `result`, `error`, and `lastMessageIndex` fields.
 
 This structure is designed to help track the entire execution path of a operation across all levels. By using it, you can identify the `operationId` and subsequently monitor the operation status through a public API. This is particularly useful for ensuring visibility and transparency in the operation lifecycle, allowing you to verify its progress and outcome.
 
@@ -669,6 +660,7 @@ export type FeeParams = {
     protocolFee: bigint,
     evmExecutorFee: bigint,
     tvmExecutorFee: bigint,
+    evmEstimatedGas?: bigint,
 };
 ```
 
@@ -688,6 +680,9 @@ Represents the calculated fee parameters used for crosschain transaction executi
 
 - **`tvmExecutorFee`**:  
   Fee (in TON) to be paid to the executor responsible for handling execution on the TON side.
+
+- **`evmEstimatedGas`** *(optional)*:  
+  Estimated gas amount for EVM-side execution, if available from simulation.
 
 ### `StageData`
 
@@ -1109,6 +1104,7 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
     context?: TContext;
     successCheck?: (result: T, context?: TContext) => boolean;
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
+    ensureTxExecuted?: boolean;
 }
 ```
 
@@ -1121,6 +1117,7 @@ Allows to specify custom options for waiting for operation resolution with enhan
 - **`context`** *(optional)*: Optional context object to pass additional parameters to callbacks. This allows passing custom data like OperationTracker instances, configurations, user settings, and other dependencies without relying on closures.
 - **`successCheck`** *(optional)*: Function to check if the result is successful. Receives both the result and optional context parameter. If not provided, any non-error result is considered successful.
 - **`onSuccess`** *(optional)*: Custom callback function that executes when operation is successful. Receives both the result and optional context with additional parameters. Can be used for additional processing like profiling data retrieval. Supports both synchronous and asynchronous callbacks.
+- **`ensureTxExecuted`** *(optional)*: Ensure that TON transaction is successful. Default is `true`.
 
 #### Usage Examples
 
@@ -1231,6 +1228,26 @@ Use for an NFT item derived from a collection and an on-chain `index`. Address m
 - **`addressType`**: Must be `NFTAddressType.COLLECTION`
 - **`index`**: Index of the specific NFT item within the collection
 
+
+### `GeneratePayloadParams`
+
+```typescript
+export type GeneratePayloadParams = {
+    excessReceiver: string;
+    evmData: Cell;
+    crossChainTonAmount?: bigint;
+    forwardFeeTonAmount?: bigint;
+    feeParams?: FeeParams;
+};
+```
+
+Parameters for generating transaction payloads for cross-chain operations.
+
+- **`excessReceiver`**: Address that will receive excess TON after execution.
+- **`evmData`**: Serialized EVM-side call data to be forwarded via the bridge.
+- **`crossChainTonAmount`** *(optional)*: TON amount to transfer cross-chain with the message.
+- **`forwardFeeTonAmount`** *(optional)*: TON amount used to cover forwarding fees on TON.
+- **`feeParams`** *(optional)*: Fee parameters to fine-tune execution costs.
 
 ### `GetTVMExecutorFeeParams`
 

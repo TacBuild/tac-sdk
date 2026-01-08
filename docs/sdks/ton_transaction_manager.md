@@ -52,7 +52,8 @@ new TONTransactionManager(
   config: IConfiguration,
   simulator: ISimulator,
   operationTracker: IOperationTracker,
-  logger?: ILogger
+  logger?: ILogger,
+  txFinalizer?: ITxFinalizer
 )
 ```
 
@@ -63,6 +64,7 @@ Creates a TONTransactionManager instance with the required dependencies.
 - **`simulator`**: Simulator instance implementing `ISimulator` for transaction simulation
 - **`operationTracker`**: OperationTracker instance implementing `IOperationTracker` for tracking operations
 - **`logger`** *(optional)*: Logger implementing `ILogger` (defaults to `NoopLogger`)
+- **`txFinalizer`** *(optional)*: TxFinalizer instance implementing `ITxFinalizer` for tracking transaction tree (defaults to `TonTxFinalizer`)
 
 ---
 
@@ -161,7 +163,9 @@ Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschai
 - **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
 - **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
 - **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
-- **`networkFee`**: Network fee for this specific message in nanotons
+- **`tonNetworkFee`**: Network fee for this specific message in nanotons
+- **`tacEstimatedGas`** *(optional)*: Estimated gas required for TAC-side execution
+- **`transactionLinker`**: Transaction linker for tracking the operation across chains
 
 ### **Use Cases**
 
@@ -182,9 +186,11 @@ const payloads = await tonManager.prepareCrossChainTransactionPayload(
 // Inspect payloads before sending
 payloads.forEach((payload, index) => {
   console.log(`Payload ${index}:`);
-  console.log(`  To: ${payload.to}`);
-  console.log(`  Amount: ${payload.amount} nanotons`);
-  console.log(`  Asset Type: ${payload.assetType}`);
+  console.log(`  Destination: ${payload.destinationAddress}`);
+  console.log(`  TON Amount: ${payload.tonAmount} nanotons`);
+  console.log(`  Network Fee: ${payload.tonNetworkFee} nanotons`);
+  console.log(`  TAC Estimated Gas: ${payload.tacEstimatedGas || 'N/A'}`);
+  console.log(`  Transaction Linker: ${JSON.stringify(payload.transactionLinker)}`);
 });
 
 ```
@@ -259,7 +265,8 @@ const tonManager = new TONTransactionManager(
   config,
   simulator,
   operationTracker,
-  logger
+  logger,
+  txFinalizer // optional, defaults to TonTxFinalizer
 );
 
 // Send TON -> TAC transaction

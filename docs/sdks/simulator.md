@@ -20,7 +20,11 @@
     - [`estimateTONFees`](#estimatetonfees)
       - [**Purpose**](#purpose-2)
       - [**Parameters**](#parameters-2)
-      - [**Returns** `number`](#returns-number)
+      - [**Returns** `bigint`](#returns-bigint)
+    - [`estimateTONFee`](#estimatetonfee)
+      - [**Purpose**](#purpose-3)
+      - [**Parameters**](#parameters-3)
+      - [**Returns** `bigint`](#returns-bigint-1)
   - [Example Usage](#example-usage)
 
 ---
@@ -146,7 +150,7 @@ Returns an array of [`ExecutionFeeEstimationResult`](./../models/structs.md#exec
 ### `estimateTONFees`
 
 ```ts
-estimateTONFees(assets: Asset[]): number
+estimateTONFees(assets: Asset[], params: GeneratePayloadParams): bigint
 ```
 
 #### **Purpose**
@@ -162,10 +166,32 @@ The estimation accounts for:
 #### **Parameters**
 
 - **`assets`**: An array of [`Asset`](./assets.md) instances representing the tokens/NFTs to process.
+- **`params`**: [`GeneratePayloadParams`](./../models/structs.md#generatepayloadparams) object containing payload generation parameters including excess receiver, EVM data, and fee parameters.
 
-#### **Returns** `number`
+#### **Returns** `bigint`
 
 Returns the total estimated fee in nanotons (1 TON = 10^9 nanotons) for processing all provided assets.
+
+---
+
+### `estimateTONFee`
+
+```ts
+estimateTONFee(asset: Asset, params: GeneratePayloadParams): bigint
+```
+
+#### **Purpose**
+
+Estimates the TVM transaction fee required for processing a single asset in cross-chain operations. This method calculates fees for the complete transaction pipeline for one asset, including wallet interactions, token transfers/burns, proxy contracts, and cross-chain layer.
+
+#### **Parameters**
+
+- **`asset`**: An [`Asset`](./assets.md) instance representing the token/NFT to process.
+- **`params`**: [`GeneratePayloadParams`](./../models/structs.md#generatepayloadparams) object containing payload generation parameters including excess receiver, EVM data, and fee parameters.
+
+#### **Returns** `bigint`
+
+Returns the estimated fee in nanotons (1 TON = 10^9 nanotons) for processing the provided asset.
 
 ---
 
