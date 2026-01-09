@@ -14,6 +14,7 @@ export * from './sdk/StartTracking';
 export { TacSdk } from './sdk/TacSdk';
 export { TACTransactionManager } from './sdk/TACTransactionManager';
 export { TONTransactionManager } from './sdk/TONTransactionManager';
+export * from './sdk/TxFinalizer';
 export * from './sender';
 export * from './structs/Struct';
 export * from './wrappers/ContentUtils';
