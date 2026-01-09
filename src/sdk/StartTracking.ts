@@ -109,7 +109,7 @@ export async function startTracking(
                 }
             }
         } else {
-            logger.debug('TxFinalizer config not provided, skipping TON transaction verification');
+            logger.debug('TxFinalizer or CCL address is not provided, skipping TON transaction verification');
         }
     }
 
