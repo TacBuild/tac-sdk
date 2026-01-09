@@ -84,7 +84,7 @@ export class TonTxFinalizer implements ITxFinalizer {
                 limit: 10,
                 archival: true,
             });
-            console.log(`Found ${transactions.length} adjacent transactions for ${currentHash}`);
+            this.logger.debug(`Found ${transactions.length} adjacent transactions for ${currentHash}`);
 
             if (transactions.length === 0) continue;
 
@@ -170,7 +170,7 @@ export class TonIndexerTxFinalizer implements ITxFinalizer {
                 // Log all errors except 404 Not Found
                 if (!errorMessage.includes('404')) {
                     const logMessage = error instanceof Error ? error.message : error;
-                    console.warn(`Failed to fetch adjacent transactions for ${hash}:`, logMessage);
+                    this.logger.warn(`Failed to fetch adjacent transactions for ${hash}:`, logMessage);
                 }
 
                 if (i > 0) {

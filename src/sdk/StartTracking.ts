@@ -33,11 +33,13 @@ export async function startTracking(
 
     const tracker = new OperationTracker(network, customLiteSequencerEndpoints, logger);
 
-    logger.debug('Start tracking operation');
-    logger.debug('caller: ' + transactionLinker.caller);
-    logger.debug('shardsKey: ' + transactionLinker.shardsKey);
-    logger.debug('shardCount: ' + transactionLinker.shardCount);
-    logger.debug('timestamp: ' + transactionLinker.timestamp);
+    logger.debug(
+        `Start tracking operation\n` +
+            `caller: ${transactionLinker.caller}\n` +
+            `shardsKey: ${transactionLinker.shardsKey}\n` +
+            `shardCount: ${transactionLinker.shardCount}\n` +
+            `timestamp: ${transactionLinker.timestamp}`,
+    );
 
     let operationId = '';
     let iteration = 0; // number of iterations
@@ -255,7 +257,7 @@ function createSimpleTable(headers: string[], rows: string[][], colWidths: numbe
 
     lines.push(separator);
 
-    return lines.join('\n');
+    return '\n' + lines.join('\n');
 }
 
 export function printExecutionStagesTable(stages: ExecutionStages, logger: ILogger): void {
