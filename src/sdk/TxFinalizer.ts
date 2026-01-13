@@ -90,6 +90,7 @@ export class TonTxFinalizer implements ITxFinalizer {
 
             for (const tx of transactions) {
                 if (tx.description.type !== 'generic' || !tx.inMessage) continue;
+                if (tx.inMessage.info.type === 'internal' && tx.inMessage.info.value.coins === 1n) continue; // we ignore messages with 1 nanoton value as they are for notification purpose only
                 const bodySlice = tx.inMessage.body.beginParse();
                 if (bodySlice.remainingBits < 32) continue;
                 const opcode = bodySlice.loadUint(32);
@@ -201,6 +202,7 @@ export class TonIndexerTxFinalizer implements ITxFinalizer {
             if (transactions.length === 0) continue;
 
             for (const tx of transactions) {
+                if (tx.inMsg.value === '1') continue; // we ignore messages with 1 nanoton value as they are for notification purpose only
                 if (!IGNORE_OPCODE.includes(Number(tx.inMsg.opcode)) && tx.inMsg.opcode !== null) {
                     const { aborted, computePh: compute_ph, action } = tx.description;
                     if (

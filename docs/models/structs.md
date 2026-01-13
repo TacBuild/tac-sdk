@@ -238,7 +238,6 @@ Represents a proxy message to a TAC.
 - **`methodName`** *(optional)*: Method name to be called on the target contract. Either method name `MethodName` or signature `MethodName(bytes,bytes)` must be specified (strictly (bytes,bytes)).
 - **`encodedParameters`** *(optional)*: Parameters for the method, encoded as a string.
 - **`gasLimit`** *(optional)*: `gasLimit` is a parameter that will be passed on the TAC side. The executor must allocate at least gasLimit gas for executing the transaction on the TAC side. If this parameter is not specified, it will be calculated using the `simulateTACMessage` method(prefered).
-- **`[key: string]`** *(optional)*: Additional parameters that can be used for customizing the EVM data cell builder. Attention, this may lead to unexpected behavior if not used correctly.
 
 This structure defines the logic you want to execute on the TAC side. This message is sent along with all the sharded messages related to the jetton bridging, enabling the TAC to process the intended logic on the TAC side during the crosschain transaction.
 
@@ -259,6 +258,7 @@ export type CrossChainTransactionOptions = {
     validateAssetsBalance?: boolean;
     waitOperationId?: boolean;
     waitOptions?: WaitOptions<string>;
+    evmDataBuilder?: evmDataBuilder;
 };
 ```
 
@@ -304,6 +304,10 @@ export type CrossChainTransactionOptions = {
 - **waitOptions** *(optional)*:  
   Custom waiting configuration for operation ID resolution. See [`WaitOptions`](#waitoptions-interface) for available options.  
   **Default**: `{}`
+
+- **evmDataBuilder** *(optional)*:  
+  Custom function to build the EVM data cell.
+  **Default**: `buildEvmDataCell`
 
 ### `BatchCrossChainTransactionOptions`
 A restricted version of CrossChainTransactionOptions for use in batch operations.

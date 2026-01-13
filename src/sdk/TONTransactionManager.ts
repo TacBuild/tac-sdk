@@ -100,6 +100,7 @@ export class TONTransactionManager implements ITONTransactionManager {
             isRoundTrip = undefined,
             calculateRollbackFee = true,
             validateAssetsBalance = true,
+            evmDataBuilder = buildEvmDataCell,
         } = options || {};
         const { evmValidExecutors = [], tvmValidExecutors = [] } = options || {};
 
@@ -146,7 +147,7 @@ export class TONTransactionManager implements ITONTransactionManager {
             tac: tacExecutors,
             ton: tonExecutors,
         };
-        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg, validExecutors);
+        const evmData = evmDataBuilder(transactionLinker, evmProxyMsg, validExecutors);
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData, feeParams);
 
         return {

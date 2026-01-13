@@ -114,6 +114,7 @@ export type ToncenterTransaction = {
     inMsg: {
         hash: string;
         opcode: string;
+        value: string;
     };
     outMsgs: {
         hash: string;

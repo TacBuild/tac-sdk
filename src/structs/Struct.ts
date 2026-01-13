@@ -133,7 +133,6 @@ export type EvmProxyMsg = {
     methodName?: string;
     encodedParameters?: string;
     gasLimit?: bigint;
-    [key: string]: unknown;
 };
 
 export type TransactionLinker = {
@@ -343,6 +342,12 @@ export type FeeParams = {
     evmEstimatedGas?: bigint;
 };
 
+export type evmDataBuilder = (
+    transactionLinker: TransactionLinker,
+    evmProxyMsg: EvmProxyMsg,
+    validExecutors: ValidExecutors,
+) => Cell;
+
 export type CrossChainTransactionOptions = {
     allowSimulationError?: boolean;
     isRoundTrip?: boolean;
@@ -356,6 +361,7 @@ export type CrossChainTransactionOptions = {
     validateAssetsBalance?: boolean;
     waitOperationId?: boolean;
     waitOptions?: WaitOptions<string>;
+    evmDataBuilder?: evmDataBuilder;
 };
 
 export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
