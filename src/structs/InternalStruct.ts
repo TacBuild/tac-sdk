@@ -51,6 +51,7 @@ export type InternalTONParams = {
     jettonWalletCode: Cell;
     nftItemCode: Cell;
     nftCollectionCode: Cell;
+    feesParams: TONFeesParams;
 };
 
 export type InternalTACParams = {
@@ -168,19 +169,13 @@ export type AddressInformation = {
     };
 };
 
-export type TONFeeCalculationParams = {
-    accountBits: number;
-    accountCells: number;
-    timeDelta: number;
-    msgBits: number;
-    msgCells: number;
-    gasUsed: number;
-    bitPricePs?: number;
-    cellPricePs?: number;
-    lumpPrice?: number;
-    gasPrice?: number;
-    firstFrac?: number;
-    ihrPriceFactor?: number;
+export type TONFeesParams = {
+    bitPricePs: number;
+    cellPricePs: number;
+    lumpPrice: number;
+    gasPrice: number;
+    firstFrac: number;
+    ihrPriceFactor: number;
 };
 
 export type TransactionFeeCalculationStep = {
@@ -191,3 +186,5 @@ export type TransactionFeeCalculationStep = {
     msgCells: number;
     timeDelta: number;
 };
+
+export type TONFeeCalculationParams = TransactionFeeCalculationStep & TONFeesParams;

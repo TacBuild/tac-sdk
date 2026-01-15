@@ -116,3 +116,6 @@ export const convertCurrencyNegativeOrZeroValueError = new FormatError(
 );
 
 export const unknownAssetOriginError = (origin: Origin) => new TokenError(`Unknown asset origin: ${origin}`, 133);
+
+export const gasPriceFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`failed to fetch gas price: ${msg}`, 134, inner);

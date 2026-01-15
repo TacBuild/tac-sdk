@@ -1,5 +1,10 @@
 import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
-import { convertCurrencyFetchError, getTONFeeInfoFetchError, simulationFetchError } from '../errors/instances';
+import {
+    convertCurrencyFetchError,
+    gasPriceFetchError,
+    getTONFeeInfoFetchError,
+    simulationFetchError,
+} from '../errors/instances';
 import { IHttpClient, ILiteSequencerClient } from '../interfaces';
 import {
     ConvertCurrencyResponse,
@@ -21,6 +26,7 @@ import {
     OperationType,
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
+    TacGasPriceResponse,
     TACSimulationParams,
     TACSimulationResult,
     TransactionLinker,
@@ -59,6 +65,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                 return response.data.response || '';
             }
         } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((error as any)?.response?.status === 404) {
                 return '';
             }
@@ -97,6 +104,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
             );
             return response.data.response || '';
         } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((error as any)?.response?.status === 404) {
                 return '';
             }
@@ -250,6 +258,18 @@ export class LiteSequencerClient implements ILiteSequencerClient {
             return response.data.response;
         } catch (error) {
             throw simulationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+        }
+    }
+
+    async getTACGasPrice(): Promise<TacGasPriceResponse> {
+        try {
+            const response = await this.httpClient.get<TacGasPriceResponse>(
+                new URL('stats', 'https://explorer.tac.build/api/v2/').toString(),
+                { transformResponse: [toCamelCaseTransformer] },
+            );
+            return response.data;
+        } catch (error) {
+            throw gasPriceFetchError(`endpoint https://explorer.tac.build/api/v2/ failed to complete request`, error);
         }
     }
 

@@ -7,6 +7,7 @@ import {
     OperationType,
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
+    TacGasPriceResponse,
     TACSimulationParams,
     TACSimulationResult,
     TransactionLinker,
@@ -60,4 +61,10 @@ export interface ILiteSequencerClient {
      * @returns Promise resolving to detailed simulation result.
      */
     simulateTACMessage(params: TACSimulationParams): Promise<TACSimulationResult>;
+
+    /**
+     * Gets TAC gas price.
+     * @returns Promise resolving to TAC gas price.
+     */
+    getTACGasPrice(): Promise<TacGasPriceResponse>;
 }

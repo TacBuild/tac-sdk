@@ -525,3 +525,11 @@ export type GeneratePayloadParams = {
     forwardFeeTonAmount?: bigint;
     feeParams?: FeeParams;
 };
+
+export type TacGasPriceResponse = {
+    gasPrices: {
+        average: number;
+        fast: number;
+        slow: number;
+    };
+};

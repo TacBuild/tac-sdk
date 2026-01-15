@@ -159,7 +159,10 @@ export class Simulator implements ISimulator {
     }
 
     private calculateTransactionPipeline(steps: Array<TransactionFeeCalculationStep>): bigint {
-        return steps.reduce((total, step) => total + this.calculateTONFees(step), 0n);
+        return steps.reduce(
+            (total, step) => total + this.calculateTONFees({ ...step, ...this.config.TONParams.feesParams }),
+            0n,
+        );
     }
 
     private calculateTONCrosschainFee(msgBits: number, msgCells: number): bigint {

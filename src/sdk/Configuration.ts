@@ -5,7 +5,7 @@ import { dev, mainnet, testnet } from '../../artifacts';
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
 import { createDefaultRetryableOpener } from '../adapters';
 import { IConfiguration } from '../interfaces';
-import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
+import { InternalTACParams, InternalTONParams, TONFeesParams } from '../structs/InternalStruct';
 import { Network, TACParams, TONParams } from '../structs/Struct';
 import { getAddressString, sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
@@ -94,6 +94,8 @@ export class Configuration implements IConfiguration {
         const nftItemCode = allSettings.get(sha256toBigInt('NFTItemCode'))!;
         const nftCollectionCode = allSettings.get(sha256toBigInt('NFTCollectionCode'))!;
 
+        const feesParams = await this.retrieveTONFeesParams();
+
         return {
             contractOpener,
             jettonProxyAddress,
@@ -103,6 +105,7 @@ export class Configuration implements IConfiguration {
             nftProxyAddress,
             nftItemCode,
             nftCollectionCode,
+            feesParams,
         };
     }
 
@@ -258,5 +261,16 @@ export class Configuration implements IConfiguration {
 
     async isContractDeployedOnTVM(address: string): Promise<boolean> {
         return (await this.TONParams.contractOpener.getContractState(Address.parse(address))).state === 'active';
+    }
+
+    private static async retrieveTONFeesParams(): Promise<TONFeesParams> {
+        return {
+            bitPricePs: 1,
+            cellPricePs: 500,
+            lumpPrice: 400000,
+            gasPrice: 400,
+            firstFrac: 21845,
+            ihrPriceFactor: 0,
+        };
     }
 }

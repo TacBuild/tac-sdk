@@ -329,4 +329,13 @@ export class TacSdk implements ITacSDK {
             options,
         );
     }
+
+    async getTACGasPrice(): Promise<{ average: number; fast: number; slow: number }> {
+        const response = await this.operationTracker.getTACGasPrice();
+        return {
+            average: response.gasPrices.average,
+            fast: response.gasPrices.fast,
+            slow: response.gasPrices.slow,
+        };
+    }
 }
