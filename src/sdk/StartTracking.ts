@@ -1,7 +1,7 @@
 import { ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import { ExecutionStages, Network, OperationType, TransactionLinker } from '../structs/Struct';
-import { MAX_ITERATION_COUNT } from './Consts';
+import { DEFAULT_FIND_TX_MAX_DEPTH, MAX_ITERATION_COUNT } from './Consts';
 import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
@@ -101,7 +101,7 @@ export async function startTracking(
             for (const tx of transactions) {
                 try {
                     logger.debug(`Verifying transaction: ${tx.hash}`);
-                    await txFinalizer.trackTransactionTree(cclAddress, tx.hash, { maxDepth: 10 });
+                    await txFinalizer.trackTransactionTree(cclAddress, tx.hash, { maxDepth: DEFAULT_FIND_TX_MAX_DEPTH });
                     logger.debug(`Transaction ${tx.hash} verified successfully in TON`);
                 } catch (error) {
                     logger.debug(`Transaction ${tx.hash} failed verification in TON: ${error}`);

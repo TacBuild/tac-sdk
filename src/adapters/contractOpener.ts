@@ -16,6 +16,12 @@ import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '
 
 import { mainnet, testnet } from '../../artifacts';
 import { ContractOpener } from '../interfaces';
+import {
+    DEFAULT_FIND_TX_ARCHIVAL,
+    DEFAULT_FIND_TX_LIMIT,
+    DEFAULT_FIND_TX_RETRY_DELAY_MS,
+    DEFAULT_FIND_TX_TIMEOUT_MS,
+} from '../sdk/Consts';
 import { getNormalizedExtMessageHash, sleep } from '../sdk/Utils';
 import { GetTransactionsOptions } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
@@ -62,15 +68,15 @@ async function findTransactionByHash(
     getTransactions: (addr: Address, opts: GetTransactionsOptions) => Promise<Transaction[]>,
     opts?: GetTransactionsOptions,
 ): Promise<Transaction | null> {
-    const timeoutMs = opts?.timeoutMs ?? 60000; // 60 seconds default
-    const retryDelayMs = opts?.retryDelayMs ?? 2000; // 2 seconds between retries
+    const timeoutMs = opts?.timeoutMs ?? DEFAULT_FIND_TX_TIMEOUT_MS; // 60 seconds default
+    const retryDelayMs = opts?.retryDelayMs ?? DEFAULT_FIND_TX_RETRY_DELAY_MS; // 2 seconds between retries
     const deadline = Date.now() + timeoutMs;
-    const limit = opts?.limit ?? 10;
+    const limit = opts?.limit ?? DEFAULT_FIND_TX_LIMIT;
 
     while (Date.now() < deadline) {
         const batch = await getTransactions(addr, {
             limit,
-            archival: opts?.archival ?? true,
+            archival: opts?.archival ?? DEFAULT_FIND_TX_ARCHIVAL,
         });
 
         // Check each transaction in the current batch

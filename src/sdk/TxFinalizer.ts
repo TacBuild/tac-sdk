@@ -10,6 +10,7 @@ import {
     TxFinalizerConfig,
 } from '../structs/InternalStruct';
 import { AxiosHttpClient } from './AxiosHttpClient';
+import { DEFAULT_FIND_TX_MAX_DEPTH, IGNORE_MSG_VALUE_1_NANO } from './Consts';
 import { NoopLogger } from './Logger';
 import { sleep, toCamelCaseTransformer } from './Utils';
 
@@ -64,8 +65,12 @@ export class TonTxFinalizer implements ITxFinalizer {
     }
 
     // Checks if all transactions in the tree are successful
-    public async trackTransactionTree(address: string, hash: string, params: { maxDepth?: number }) {
-        const { maxDepth = 10 } = params;
+    public async trackTransactionTree(
+        address: string,
+        hash: string,
+        params: { maxDepth?: number } = { maxDepth: DEFAULT_FIND_TX_MAX_DEPTH },
+    ) {
+        const { maxDepth = DEFAULT_FIND_TX_MAX_DEPTH } = params;
         const parsedAddress = Address.parse(address);
         const visitedHashes = new Set<string>();
         const queue: TransactionDepth[] = [{ address: parsedAddress, hash, depth: 0 }];
@@ -90,7 +95,8 @@ export class TonTxFinalizer implements ITxFinalizer {
 
             for (const tx of transactions) {
                 if (tx.description.type !== 'generic' || !tx.inMessage) continue;
-                if (tx.inMessage.info.type === 'internal' && tx.inMessage.info.value.coins === 1n) continue; // we ignore messages with 1 nanoton value as they are for notification purpose only
+                if (tx.inMessage.info.type === 'internal' && tx.inMessage.info.value.coins === IGNORE_MSG_VALUE_1_NANO)
+                    continue; // we ignore messages with 1 nanoton value as they are for notification purpose only
                 const bodySlice = tx.inMessage.body.beginParse();
                 if (bodySlice.remainingBits < 32) continue;
                 const opcode = bodySlice.loadUint(32);
@@ -183,8 +189,12 @@ export class TonIndexerTxFinalizer implements ITxFinalizer {
     }
 
     // Checks if all transactions in the tree are successful
-    public async trackTransactionTree(_: string, hash: string, params: { maxDepth?: number } = { maxDepth: 10 }) {
-        const { maxDepth = 10 } = params;
+    public async trackTransactionTree(
+        _: string,
+        hash: string,
+        params: { maxDepth?: number } = { maxDepth: DEFAULT_FIND_TX_MAX_DEPTH },
+    ) {
+        const { maxDepth = DEFAULT_FIND_TX_MAX_DEPTH } = params;
         const visitedHashes = new Set<string>();
         const queue: TransactionDepth[] = [{ hash, depth: 0 }];
 
@@ -202,7 +212,7 @@ export class TonIndexerTxFinalizer implements ITxFinalizer {
             if (transactions.length === 0) continue;
 
             for (const tx of transactions) {
-                if (tx.inMsg.value === '1') continue; // we ignore messages with 1 nanoton value as they are for notification purpose only
+                if (tx.inMsg.value === IGNORE_MSG_VALUE_1_NANO.toString()) continue; // we ignore messages with 1 nanoton value as they are for notification purpose only
                 if (!IGNORE_OPCODE.includes(Number(tx.inMsg.opcode)) && tx.inMsg.opcode !== null) {
                     const { aborted, computePh: compute_ph, action } = tx.description;
                     if (

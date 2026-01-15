@@ -17,14 +17,10 @@
       - [**Purpose**](#purpose-1)
       - [**Parameters**](#parameters-1)
       - [**Returns** `Promise<ExecutionFeeEstimationResult[]>`](#returns-promiseexecutionfeeestimationresult)
-    - [`estimateTONFees`](#estimatetonfees)
+    - [`estimateTONFee`](#estimatetonfee)
       - [**Purpose**](#purpose-2)
       - [**Parameters**](#parameters-2)
       - [**Returns** `bigint`](#returns-bigint)
-    - [`estimateTONFee`](#estimatetonfee)
-      - [**Purpose**](#purpose-3)
-      - [**Parameters**](#parameters-3)
-      - [**Returns** `bigint`](#returns-bigint-1)
   - [Example Usage](#example-usage)
 
 ---
@@ -144,33 +140,6 @@ Simulates a list of cross-chain transactions for a given sender and provides fee
 #### **Returns** `Promise<ExecutionFeeEstimationResult[]>`
 
 Returns an array of [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult) objects, one for each input transaction in the same order.
-
----
-
-### `estimateTONFees`
-
-```ts
-estimateTONFees(assets: Asset[], params: GeneratePayloadParams): bigint
-```
-
-#### **Purpose**
-
-Estimates the total TVM transaction fees required for processing a set of assets in cross-chain operations. This method calculates fees for the complete transaction pipeline, including wallet interactions, token transfers/burns, proxy contracts, and cross-chain layer.
-
-The estimation accounts for:
-- **Storage fees**: Based on account state size (bits and cells) and time delta
-- **Computation fees**: Based on gas usage for contract execution
-- **Forwarding fees**: Based on message size (bits and cells)
-- **Action fees**: Based on outbound message generation
-
-#### **Parameters**
-
-- **`assets`**: An array of [`Asset`](./assets.md) instances representing the tokens/NFTs to process.
-- **`params`**: [`GeneratePayloadParams`](./../models/structs.md#generatepayloadparams) object containing payload generation parameters including excess receiver, EVM data, and fee parameters.
-
-#### **Returns** `bigint`
-
-Returns the total estimated fee in nanotons (1 TON = 10^9 nanotons) for processing all provided assets.
 
 ---
 

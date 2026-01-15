@@ -294,10 +294,6 @@ export class Simulator implements ISimulator {
         ]);
     }
 
-    estimateTONFees(assets: Asset[], params: GeneratePayloadParams): bigint {
-        return assets.reduce((totalFees, asset) => totalFees + this.estimateTONFee(asset, params), 0n);
-    }
-
     estimateTONFee(asset: Asset, params: GeneratePayloadParams): bigint {
         const payload = asset.generatePayload(params);
         const { bits: msgBits, cells: msgCells } = recurisivelyCollectCellStats(payload);

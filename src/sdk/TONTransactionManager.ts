@@ -22,7 +22,12 @@ import {
     ValidExecutors,
     WaitOptions,
 } from '../structs/Struct';
-import { FIFTEEN_MINUTES, JETTON_TRANSFER_FORWARD_TON_AMOUNT, NFT_TRANSFER_FORWARD_TON_AMOUNT } from './Consts';
+import {
+    DEFAULT_FIND_TX_MAX_DEPTH,
+    FIFTEEN_MINUTES,
+    JETTON_TRANSFER_FORWARD_TON_AMOUNT,
+    NFT_TRANSFER_FORWARD_TON_AMOUNT,
+} from './Consts';
 import { NoopLogger } from './Logger';
 import {
     aggregateTokens,
@@ -276,7 +281,7 @@ export class TONTransactionManager implements ITONTransactionManager {
             );
             this.logger.info(`Tracking transaction tree for hash: ${hash}`);
             await this.txFinalizer.trackTransactionTree(sender.getSenderAddress(), hash, {
-                maxDepth: 10,
+                maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
             });
             this.logger.info(`Transaction tree successful`);
         }

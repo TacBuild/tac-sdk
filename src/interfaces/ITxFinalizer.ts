@@ -1,3 +1,3 @@
 export interface ITxFinalizer {
-    trackTransactionTree(address: string, hash: string, params: { maxDepth?: number }): Promise<void>;
+    trackTransactionTree(address: string, hash: string, params?: { maxDepth?: number }): Promise<void>;
 }
