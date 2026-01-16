@@ -128,24 +128,25 @@ export class Simulator implements ISimulator {
         // Gas and computation
         gasUsed,
 
-        // Config values (defaults for BaseChain)
-        bitPricePs = 1,
-        cellPricePs = 500,
-        lumpPrice = 400000,
-        gasPrice = 400,
-        firstFrac = 21845,
-        ihrPriceFactor = 0,
+        accountBitPrice,
+        accountCellPrice,
+        lumpPrice,
+        gasPrice,
+        firstFrac,
+        ihrPriceFactor,
+        msgBitPrice,
+        msgCellPrice,
     }: TONFeeCalculationParams): bigint {
         // Storage Fee (nanotons)
         const storageFee = Math.ceil(
-            ((accountBits * bitPricePs + accountCells * cellPricePs) * timeDelta) / FIXED_POINT_SHIFT,
+            ((accountBits * accountBitPrice + accountCells * accountCellPrice) * timeDelta) / FIXED_POINT_SHIFT,
         );
 
         // Computation Fee (nanotons)
         const computeFee = gasUsed * gasPrice;
 
         // Forwarding Fee (nanotons)
-        const msgFwdFees = lumpPrice + Math.ceil((bitPricePs * msgBits + cellPricePs * msgCells) / FIXED_POINT_SHIFT);
+        const msgFwdFees = lumpPrice + Math.ceil((msgBitPrice * msgBits + msgCellPrice * msgCells) / FIXED_POINT_SHIFT);
         const ihrFwdFees = Math.ceil((msgFwdFees * ihrPriceFactor) / FIXED_POINT_SHIFT);
         const totalFwdFees = msgFwdFees + ihrFwdFees;
 

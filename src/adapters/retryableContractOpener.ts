@@ -1,5 +1,5 @@
 import { SandboxContract } from '@ton/sandbox';
-import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/ton';
+import { Address, Cell, Contract, Dictionary, OpenedContract, TonClient, Transaction } from '@ton/ton';
 
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener } from '../interfaces';
@@ -74,6 +74,15 @@ export class RetryableContractOpener implements ContractOpener {
             return result.data;
         }
         throw result.lastError || allContractOpenerFailedError('Failed to get address information');
+    }
+
+    async getConfig(): Promise<Dictionary<number, Cell>> {
+        const result = await this.executeWithFallback((config) => config.opener.getConfig());
+
+        if (result.success && result.data) {
+            return result.data;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get blockchain config');
     }
 
     closeConnections(): void {

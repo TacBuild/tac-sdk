@@ -170,12 +170,14 @@ export type AddressInformation = {
 };
 
 export type TONFeesParams = {
-    bitPricePs: number;
-    cellPricePs: number;
+    accountBitPrice: number;
+    accountCellPrice: number;
     lumpPrice: number;
     gasPrice: number;
     firstFrac: number;
     ihrPriceFactor: number;
+    msgBitPrice: number;
+    msgCellPrice: number;
 };
 
 export type TransactionFeeCalculationStep = {

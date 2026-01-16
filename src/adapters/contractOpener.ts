@@ -5,6 +5,7 @@ import {
     Address,
     beginCell,
     Cell,
+    Dictionary,
     ExternalAddress,
     loadTransaction,
     storeMessage,
@@ -234,6 +235,11 @@ export async function liteClientOpener(
                 },
             };
         },
+        getConfig: async () => {
+            const block = await client.getMasterchainInfo();
+            const { config } = await client.getConfig(block.last);
+            return config;
+        },
     };
 }
 
@@ -256,6 +262,9 @@ export function sandboxOpener(blockchain: Blockchain): ContractOpener {
         },
         getAddressInformation: async () => {
             throw new Error('Not implemented.');
+        },
+        getConfig: async () => {
+            return blockchain.config.beginParse().loadDictDirect(Dictionary.Keys.Int(32), Dictionary.Values.Cell());
         },
     };
 }
@@ -280,6 +289,17 @@ export async function orbsOpener(network: Network): Promise<ContractOpener> {
                     hash: state.lastTransaction?.hash ?? '',
                 },
             };
+        },
+        getConfig: async () => {
+            const info = await client.getMasterchainInfo();
+            // TonClient class does not have methods to get config
+            const url = new URL('getConfigAll', endpoint);
+            url.searchParams.append('seqno', info.latestSeqno.toString());
+            const result = await fetch(url);
+            const body = await result.json();
+            return Cell.fromBase64(body.result.config.bytes)
+                .beginParse()
+                .loadDictDirect(Dictionary.Keys.Int(32), Dictionary.Values.Cell());
         },
     };
 }
@@ -328,6 +348,13 @@ export async function orbsOpener4(network: Network, timeout = 10000): Promise<Co
                 },
             };
         },
+        getConfig: async () => {
+            const block = await client4.getLastBlock();
+            const { config } = await client4.getConfig(block.last.seqno);
+            return Cell.fromBase64(config.cell)
+                .beginParse()
+                .loadDictDirect(Dictionary.Keys.Int(32), Dictionary.Values.Cell());
+        },
     };
 }
 
@@ -349,6 +376,17 @@ export function tonClientOpener(client: TonClient): ContractOpener {
                     hash: state.lastTransaction?.hash ?? '',
                 },
             };
+        },
+        getConfig: async () => {
+            const info = await client.getMasterchainInfo();
+            // TonClient class does not have methods to get config
+            const url = new URL('getConfigAll', client.parameters.endpoint);
+            url.searchParams.append('seqno', info.latestSeqno.toString());
+            const result = await fetch(url);
+            const body = await result.json();
+            return Cell.fromBase64(body.result.config.bytes)
+                .beginParse()
+                .loadDictDirect(Dictionary.Keys.Int(32), Dictionary.Values.Cell());
         },
     };
 }
