@@ -1,5 +1,5 @@
 import { SandboxContract } from '@ton/sandbox';
-import type { Address, Cell, Contract, Dictionary, OpenedContract, Transaction } from '@ton/ton';
+import type { Address, Contract, OpenedContract, Transaction } from '@ton/ton';
 
 import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
 import { ContractState } from '../structs/Struct';
@@ -26,5 +26,5 @@ export interface ContractOpener {
     getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
     getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]>;
     getAddressInformation(address: Address): Promise<AddressInformation>;
-    getConfig(): Promise<Dictionary<number, Cell>>;
+    getConfig(): Promise<string>;
 }

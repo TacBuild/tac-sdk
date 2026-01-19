@@ -160,7 +160,7 @@ export class Simulator implements ISimulator {
         );
 
         // Computation Fee (nanotons)
-        const computeFee = gasUsed * gasPrice;
+        const computeFee = (gasUsed * gasPrice) / FIXED_POINT_SHIFT;
 
         // Forwarding Fee (nanotons)
         const msgFwdFees = lumpPrice + Math.ceil((msgBitPrice * msgBits + msgCellPrice * msgCells) / FIXED_POINT_SHIFT);

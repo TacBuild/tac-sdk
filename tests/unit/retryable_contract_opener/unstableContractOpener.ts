@@ -1,5 +1,5 @@
 import { Blockchain, SandboxContract } from '@ton/sandbox';
-import { Address, Cell, Contract, Dictionary, Transaction } from '@ton/ton';
+import { Address, Cell, Contract, Transaction } from '@ton/ton';
 
 import { ContractOpener, ContractState } from '../../../src';
 import { AddressInformation } from '../../../src/structs/InternalStruct';
@@ -22,8 +22,8 @@ export class UnstableContractOpener implements ContractOpener {
         throw new Error('Method not implemented.');
     }
 
-    async getConfig(): Promise<Dictionary<number, Cell>> {
-        return this.blockchain.config.beginParse().loadDictDirect(Dictionary.Keys.Int(32), Dictionary.Values.Cell());
+    async getConfig(): Promise<string> {
+        return this.blockchain.config.toBoc().toString('base64');
     }
 
     open<T extends Contract>(contract: T): SandboxContract<T> {

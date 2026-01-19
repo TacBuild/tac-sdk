@@ -1,4 +1,4 @@
-import { Address, Dictionary } from '@ton/ton';
+import { Address, Dictionary, loadConfigParamsAsSlice, parseFullConfig } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
 import { dev, mainnet, testnet } from '../../artifacts';
@@ -266,59 +266,17 @@ export class Configuration implements IConfiguration {
     private static async retrieveTONFeesParams(contractOpener: ContractOpener): Promise<TONFeesParams> {
         try {
             const config = await contractOpener.getConfig();
-
-            const prices = {
-                gasPrice: 0,
-                lumpPrice: 0,
-                msgBitPrice: 0,
-                msgCellPrice: 0,
-                ihrPriceFactor: 0,
-                firstFrac: 0,
-                accountBitPrice: 0,
-                accountCellPrice: 0,
+            const fullConfig = parseFullConfig(loadConfigParamsAsSlice(config));
+            return {
+                gasPrice: Number(fullConfig.gasPrices.workchain.other.gasPrice),
+                lumpPrice: Number(fullConfig.msgPrices.workchain.lumpPrice),
+                msgBitPrice: Number(fullConfig.msgPrices.workchain.bitPrice),
+                msgCellPrice: Number(fullConfig.msgPrices.workchain.cellPrice),
+                ihrPriceFactor: Number(fullConfig.msgPrices.workchain.ihrPriceFactor),
+                firstFrac: Number(fullConfig.msgPrices.workchain.firstFrac),
+                accountBitPrice: Number(fullConfig.storagePrices[0].bit_price_ps),
+                accountCellPrice: Number(fullConfig.storagePrices[0].cell_price_ps),
             };
-
-            // ───────────────────────────────────────────────
-            // Param 21 – Gas prices
-            // ───────────────────────────────────────────────
-            const param21 = config.get(21);
-            if (!param21) throw new Error('Param 21 (gas prices) not found in config');
-
-            let slice = param21.beginParse();
-            slice.skip(8 + 64 + 64 + 8); // = 144 bits
-            const gasPriceRaw = slice.loadUint(64);
-            prices.gasPrice = gasPriceRaw / 65536;
-
-            // ───────────────────────────────────────────────
-            // Param 25 – Message forwarding prices
-            // ───────────────────────────────────────────────
-            const param25 = config.get(25);
-            if (!param25) throw new Error('Param 25 (msg prices) not found in config');
-            slice = param25.beginParse();
-            slice.skip(8); // usually just flags / version
-
-            prices.lumpPrice = slice.loadUint(64);
-            prices.msgBitPrice = slice.loadUint(64);
-            prices.msgCellPrice = slice.loadUint(64);
-            prices.ihrPriceFactor = slice.loadUint(32);
-            prices.firstFrac = slice.loadUint(16);
-
-            // ───────────────────────────────────────────────
-            // Param 18 – Storage prices
-            // ───────────────────────────────────────────────
-            const param18 = config.get(18);
-            if (!param18) throw new Error('Param 18 (storage prices) not found in config');
-
-            const dict = param18.beginParse().loadDictDirect(Dictionary.Keys.Uint(32), Dictionary.Values.Cell());
-
-            const entry = await dict.get(0);
-            if (!entry) throw new Error('Storage price entry for key 0 not found');
-            slice = entry.beginParse();
-            slice.skip(8 + 32);
-
-            prices.accountBitPrice = slice.loadUint(64);
-            prices.accountCellPrice = slice.loadUint(64);
-            return prices;
         } catch {
             // return standard values from https://tonviewer.com/config#25 in case of failure
             return {

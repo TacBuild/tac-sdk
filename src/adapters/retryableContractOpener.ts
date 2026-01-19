@@ -1,5 +1,5 @@
 import { SandboxContract } from '@ton/sandbox';
-import { Address, Cell, Contract, Dictionary, OpenedContract, TonClient, Transaction } from '@ton/ton';
+import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/ton';
 
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener } from '../interfaces';
@@ -76,7 +76,7 @@ export class RetryableContractOpener implements ContractOpener {
         throw result.lastError || allContractOpenerFailedError('Failed to get address information');
     }
 
-    async getConfig(): Promise<Dictionary<number, Cell>> {
+    async getConfig(): Promise<string> {
         const result = await this.executeWithFallback((config) => config.opener.getConfig());
 
         if (result.success && result.data) {

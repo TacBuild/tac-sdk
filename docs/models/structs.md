@@ -160,6 +160,7 @@ export interface ContractOpener {
     getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
     getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]>;
     getAddressInformation(address: Address): Promise<AddressInformation>;
+    getConfig(): Promise<string>;
 }
 ```
 
@@ -170,7 +171,7 @@ Interface for opening and interacting with TON smart contracts:
 - **`getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its hash for a given address. Returns `null` if not found.
 - **`getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves transactions adjacent to the specified transaction hash.
 - **`getAddressInformation(address: Address)`**: Retrieves address information including last transaction details.
-
+- **`getConfig()`**: Retrieves the blockchain configuration as a base64 encoded string.
 ### `RetryableContractOpener (Class)`
 
 ```typescript
