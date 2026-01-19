@@ -16,13 +16,19 @@ import {
 } from '../structs/Struct';
 import {
     createCrossChainLayerTvmMsgToEvmStep,
+    createErrorNotificationGasStep,
+    createEstimatedReceiveTransferGasStep,
+    createEstimatedSendTransferGasStep,
     createJettonMinterBurnNotificationStep,
     createJettonProxyOwnershipAssignedStep,
     createJettonWalletBurnStep,
     createJettonWalletInternalTransferStep,
     createJettonWalletReceiveStep,
+    createMintAfterErrorGasStep,
     createNftItemBurnStep,
+    createNftItemErrorNotificationStep,
     createNftItemSendStep,
+    createNftProxyErrorNotificationStep,
     createNftProxyOwnershipAssignedStep,
     FIXED_POINT_SHIFT,
 } from './Fees';
@@ -187,6 +193,9 @@ export class Simulator implements ISimulator {
             createJettonWalletReceiveStep(msgBits, msgCells),
             createJettonProxyOwnershipAssignedStep(msgBits, msgCells),
             createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
+            createErrorNotificationGasStep(msgBits, msgCells),
+            createEstimatedSendTransferGasStep(msgBits, msgCells),
+            createEstimatedReceiveTransferGasStep(msgBits, msgCells),
         ]);
     }
 
@@ -195,6 +204,8 @@ export class Simulator implements ISimulator {
             createJettonWalletBurnStep(msgBits, msgCells),
             createJettonMinterBurnNotificationStep(msgBits, msgCells),
             createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
+            createMintAfterErrorGasStep(msgBits, msgCells),
+            createJettonWalletReceiveStep(msgBits, msgCells),
         ]);
     }
 
@@ -203,6 +214,8 @@ export class Simulator implements ISimulator {
             createNftItemSendStep(msgBits, msgCells),
             createNftProxyOwnershipAssignedStep(msgBits, msgCells),
             createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
+            createNftProxyErrorNotificationStep(msgBits, msgCells),
+            createNftItemSendStep(msgBits, msgCells),
         ]);
     }
 
@@ -210,6 +223,7 @@ export class Simulator implements ISimulator {
         return this.calculateTransactionPipeline([
             createNftItemBurnStep(msgBits, msgCells),
             createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
+            createNftItemErrorNotificationStep(),
         ]);
     }
 

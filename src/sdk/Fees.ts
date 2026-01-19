@@ -14,10 +14,16 @@ export const CONTRACT_FEE_USAGE_PARAMS = {
     jettonWallet: {
         accountBits: 949,
         accountCells: 3,
+        estimatedAccountBits: 11000,
+        estimatedAccountCells: 25,
+        initStateBits: 847,
+        initStateCells: 3,
         gas: {
             internalTransfer: 10669,
             receive: 11427,
             burn: 8653,
+            estimatedSendTransfer: 11000,
+            estimatedReceiveTransfer: 12000,
         },
     },
     jettonProxy: {
@@ -25,6 +31,8 @@ export const CONTRACT_FEE_USAGE_PARAMS = {
         accountCells: 16,
         gas: {
             ownershipAssigned: 8515,
+            transferNotification: 8515,
+            errorNotification: 5556,
         },
     },
     jettonMinter: {
@@ -32,6 +40,7 @@ export const CONTRACT_FEE_USAGE_PARAMS = {
         accountCells: 28,
         gas: {
             burnNotification: 10357,
+            mintAfterError: 9654,
         },
     },
     nftItem: {
@@ -40,6 +49,7 @@ export const CONTRACT_FEE_USAGE_PARAMS = {
         gas: {
             send: 11722,
             burn: 11552,
+            errorNotification: 4638,
         },
     },
     nftProxy: {
@@ -47,6 +57,7 @@ export const CONTRACT_FEE_USAGE_PARAMS = {
         accountCells: 15,
         gas: {
             ownershipAssigned: 7688,
+            errorNotification: 4737,
         },
     },
 };
@@ -145,4 +156,66 @@ export const createNftProxyOwnershipAssignedStep = (
     msgBits,
     msgCells,
     timeDelta: ONE_YEAR_SECONDS,
+});
+
+export const createErrorNotificationGasStep = (msgBits: number, msgCells: number): TransactionFeeCalculationStep => ({
+    accountBits: 0,
+    accountCells: 0,
+    gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonProxy.gas.errorNotification,
+    msgBits,
+    msgCells,
+    timeDelta: 0,
+});
+
+export const createEstimatedSendTransferGasStep = (
+    msgBits: number,
+    msgCells: number,
+): TransactionFeeCalculationStep => ({
+    accountBits: 0,
+    accountCells: 0,
+    gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.gas.estimatedSendTransfer,
+    msgBits,
+    msgCells,
+    timeDelta: 0,
+});
+
+export const createEstimatedReceiveTransferGasStep = (
+    msgBits: number,
+    msgCells: number,
+): TransactionFeeCalculationStep => ({
+    accountBits: 0,
+    accountCells: 0,
+    gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.gas.estimatedReceiveTransfer,
+    msgBits,
+    msgCells,
+    timeDelta: 0,
+});
+
+export const createMintAfterErrorGasStep = (msgBits: number, msgCells: number): TransactionFeeCalculationStep => ({
+    accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonMinter.accountBits,
+    accountCells: CONTRACT_FEE_USAGE_PARAMS.jettonMinter.accountCells,
+    gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonMinter.gas.mintAfterError,
+    msgBits,
+    msgCells,
+    timeDelta: ONE_YEAR_SECONDS,
+});
+
+export const createNftProxyErrorNotificationStep = (
+    msgBits: number,
+    msgCells: number,
+): TransactionFeeCalculationStep => ({
+    accountBits: 0,
+    accountCells: 0,
+    gasUsed: CONTRACT_FEE_USAGE_PARAMS.nftProxy.gas.errorNotification,
+    msgBits,
+    msgCells,
+    timeDelta: 0,
+});
+export const createNftItemErrorNotificationStep = (): TransactionFeeCalculationStep => ({
+    accountBits: 0,
+    accountCells: 0,
+    gasUsed: CONTRACT_FEE_USAGE_PARAMS.nftItem.gas.errorNotification,
+    msgBits: 0,
+    msgCells: 0,
+    timeDelta: 0,
 });
