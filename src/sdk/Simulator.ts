@@ -14,7 +14,18 @@ import {
     GeneratePayloadParams,
     Origin,
 } from '../structs/Struct';
-import { CONTRACT_FEE_USAGE_PARAMS, FIXED_POINT_SHIFT, ONE_YEAR_SECONDS } from './Consts';
+import {
+    createCrossChainLayerTvmMsgToEvmStep,
+    createJettonMinterBurnNotificationStep,
+    createJettonProxyOwnershipAssignedStep,
+    createJettonWalletBurnStep,
+    createJettonWalletInternalTransferStep,
+    createJettonWalletReceiveStep,
+    createNftItemBurnStep,
+    createNftItemSendStep,
+    createNftProxyOwnershipAssignedStep,
+    FIXED_POINT_SHIFT,
+} from './Fees';
 import { NoopLogger } from './Logger';
 import {
     aggregateTokens,
@@ -167,131 +178,38 @@ export class Simulator implements ISimulator {
     }
 
     private calculateTONCrosschainFee(msgBits: number, msgCells: number): bigint {
-        return this.calculateTransactionPipeline([
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
-        ]);
+        return this.calculateTransactionPipeline([createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells)]);
     }
 
     private calculateJettonTransferCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.gas.internalTransfer,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.gas.receive,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonProxy.accountbits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.jettonProxy.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonProxy.gas.ownershipAssigned,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
+            createJettonWalletInternalTransferStep(msgBits, msgCells),
+            createJettonWalletReceiveStep(msgBits, msgCells),
+            createJettonProxyOwnershipAssignedStep(msgBits, msgCells),
+            createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
         ]);
     }
 
     private calculateJettonBurnCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonWallet.gas.burn,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.jettonMinter.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.jettonMinter.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.jettonMinter.gas.burnNotification,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
+            createJettonWalletBurnStep(msgBits, msgCells),
+            createJettonMinterBurnNotificationStep(msgBits, msgCells),
+            createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
         ]);
     }
 
     private calculateNftTransferCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.nftItem.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.nftItem.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.nftItem.gas.send,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.nftProxy.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.nftProxy.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.nftProxy.gas.ownershipAssigned,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
+            createNftItemSendStep(msgBits, msgCells),
+            createNftProxyOwnershipAssignedStep(msgBits, msgCells),
+            createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
         ]);
     }
 
     private calculateNftBurnCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.nftItem.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.nftItem.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.nftItem.gas.burn,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
-            {
-                accountBits: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountBits,
-                accountCells: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.accountCells,
-                gasUsed: CONTRACT_FEE_USAGE_PARAMS.crossChainLayer.gas.tvmMsgToEvm,
-                msgBits,
-                msgCells,
-                timeDelta: ONE_YEAR_SECONDS,
-            },
+            createNftItemBurnStep(msgBits, msgCells),
+            createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
         ]);
     }
 
