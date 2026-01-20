@@ -355,3 +355,14 @@ export function getNumber(len: number, cell?: Cell): number {
 export function getString(cell?: Cell): string {
     return cell?.beginParse().loadStringTail() ?? '';
 }
+
+/**
+ * Multiply-divide with rounding (muldivr)
+ * Calculates (a * b + c / 2) / c with proper rounding
+ */
+export function muldivr(a: bigint, b: bigint, c: bigint): bigint {
+    if (c === 0n) {
+        throw new Error('Division by zero in muldivr');
+    }
+    return (a * b + c / 2n) / c;
+}

@@ -13,13 +13,14 @@ import {
     unknownTokenTypeError,
 } from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
-import { JETTON_TRANSFER_FORWARD_TON_AMOUNT, TAC_DECIMALS, TON_DECIMALS } from '../sdk/Consts';
+import { FIVE_MINUTES, JETTON_TRANSFER_FORWARD_TON_AMOUNT, TAC_DECIMALS, TON_DECIMALS } from '../sdk/Consts';
 import {
     calculateAmount,
     calculateContractAddress,
     calculateRawAmount,
     generateFeeData,
     generateRandomNumberByTimestamp,
+    muldivr,
 } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
@@ -46,6 +47,10 @@ export class FT implements Asset {
     private _decimals: number;
     private _transferAmount: bigint;
     private _evmAddress?: string;
+    private _displayMultiplierNumerator: bigint = 1n;
+    private _displayMultiplierDenominator: bigint = 1n;
+    private _displayMultiplierFetchedAt: number = 0;
+    private _displayMultiplierCacheDuration: number = FIVE_MINUTES;
 
     get address(): string {
         return this._tvmAddress.toString({ bounceable: true });
@@ -226,6 +231,9 @@ export class FT implements Asset {
             token._evmAddress = finalEvmAddress || address;
         }
 
+        // Fetch and cache display multiplier for TEP-526 support
+        await token.refreshDisplayMultiplierInternal();
+
         return token;
     }
 
@@ -237,17 +245,24 @@ export class FT implements Asset {
         const ft = new FT(this._tvmAddress.toString(), this.origin, this._configuration, this._decimals);
         ft._transferAmount = this._transferAmount;
         ft._evmAddress = this._evmAddress;
+        ft._displayMultiplierNumerator = this._displayMultiplierNumerator;
+        ft._displayMultiplierDenominator = this._displayMultiplierDenominator;
+        ft._displayMultiplierFetchedAt = this._displayMultiplierFetchedAt;
+        ft._displayMultiplierCacheDuration = this._displayMultiplierCacheDuration;
         return ft;
     }
 
     withAmount(amount: number): FT {
+        const rawAmount = calculateRawAmount(amount, this._decimals);
+        const onchainAmount = this.fromDisplayAmount(rawAmount);
+
         if (this._transferAmount > 0n) {
             const newToken = this.clone;
-            newToken._transferAmount = calculateRawAmount(amount, this._decimals);
+            newToken._transferAmount = onchainAmount;
             return newToken;
         }
 
-        this._transferAmount = calculateRawAmount(amount, this._decimals);
+        this._transferAmount = onchainAmount;
         return this;
     }
 
@@ -262,7 +277,9 @@ export class FT implements Asset {
     }
 
     addAmount(amount: number): FT {
-        this._transferAmount = this._transferAmount + calculateRawAmount(amount, this._decimals);
+        const rawAmount = calculateRawAmount(amount, this._decimals);
+        const onchainAmount = this.fromDisplayAmount(rawAmount);
+        this._transferAmount = this._transferAmount + onchainAmount;
         return this;
     }
 
@@ -273,6 +290,42 @@ export class FT implements Asset {
 
     async getDecimals(): Promise<number> {
         return this._decimals;
+    }
+
+    private async refreshDisplayMultiplierInternal(): Promise<void> {
+        try {
+            const multiplier = await this._jettonMinter.getDisplayMultiplier();
+            this._displayMultiplierNumerator = multiplier.numerator;
+            this._displayMultiplierDenominator = multiplier.denominator;
+            this._displayMultiplierFetchedAt = Date.now();
+        } catch {
+            this._displayMultiplierNumerator = 1n;
+            this._displayMultiplierDenominator = 1n;
+            this._displayMultiplierFetchedAt = Date.now();
+        }
+    }
+
+    private async ensureFreshDisplayMultiplier(): Promise<void> {
+        const age = Date.now() - this._displayMultiplierFetchedAt;
+        if (age > this._displayMultiplierCacheDuration) {
+            await this.refreshDisplayMultiplierInternal();
+        }
+    }
+
+    async refreshDisplayMultiplier(): Promise<void> {
+        await this.refreshDisplayMultiplierInternal();
+    }
+
+    setDisplayMultiplierCacheDuration(durationMs: number): void {
+        this._displayMultiplierCacheDuration = durationMs;
+    }
+
+    toDisplayAmount(onchainAmount: bigint): bigint {
+        return muldivr(onchainAmount, this._displayMultiplierNumerator, this._displayMultiplierDenominator);
+    }
+
+    fromDisplayAmount(displayAmount: bigint): bigint {
+        return muldivr(displayAmount, this._displayMultiplierDenominator, this._displayMultiplierNumerator);
     }
 
     async getEVMAddress(): Promise<string> {
@@ -356,11 +409,15 @@ export class FT implements Asset {
     }
 
     async getUserBalance(userAddress: string): Promise<bigint> {
+        await this.ensureFreshDisplayMultiplier();
+
         const wallet = await this.getWallet(userAddress);
         return BigInt(await wallet.getJettonBalance());
     }
 
     async getUserBalanceExtended(userAddress: string): Promise<UserWalletBalanceExtended> {
+        await this.ensureFreshDisplayMultiplier();
+
         const masterState = await this._configuration.TONParams.contractOpener.getContractState(this._tvmAddress);
 
         if (masterState.state !== 'active') {
@@ -374,7 +431,7 @@ export class FT implements Asset {
         return {
             rawAmount,
             decimals,
-            amount: calculateAmount(rawAmount, decimals),
+            amount: calculateAmount(this.toDisplayAmount(rawAmount), decimals),
             exists: true,
         };
     }

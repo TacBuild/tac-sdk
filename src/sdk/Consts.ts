@@ -22,3 +22,5 @@ export const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
 export const TON_DECIMALS = 9;
 export const TAC_DECIMALS = 18;
+
+export const FIVE_MINUTES = 5 * 60 * 1000;

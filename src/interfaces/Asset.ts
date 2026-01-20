@@ -14,6 +14,7 @@ export interface Asset {
     /**
      * Returns a new asset instance with the specified transfer amount in human-readable units.
      * Does not mutate the current asset instance.
+     * For FT assets, this applies TEP-526 scaling automatically if supported by the token.
      * @param amount Amount in human units (e.g., 1.5 TON). Decimals are resolved during asset creation.
      * @returns A new Asset reflecting the requested amount.
      */
@@ -21,6 +22,7 @@ export interface Asset {
     /**
      * Returns a new asset instance with the specified transfer amount in raw base units.
      * Does not mutate the current asset instance.
+     * No TEP-526 scaling is applied - sets the raw onchain amount directly.
      * @param rawAmount Amount in raw base units (bigint).
      * @returns A new Asset reflecting the requested raw amount.
      */
@@ -28,6 +30,7 @@ export interface Asset {
     /**
      * Increases the transfer amount by the specified value (human-readable units) and returns a new asset instance.
      * Does not mutate the current asset instance.
+     * For FT assets, this applies TEP-526 scaling automatically if supported by the token.
      * @param amount Amount in human units (e.g., 1.5 TON). Decimals are resolved during asset creation.
      * @returns A new Asset with the increased amount.
      */
@@ -35,6 +38,7 @@ export interface Asset {
     /**
      * Increases the transfer amount by the specified raw base units and returns a new asset instance.
      * Does not mutate the current asset instance.
+     * No TEP-526 scaling is applied - adds to the raw onchain amount directly.
      * @param rawAmount Amount in raw base units (bigint).
      * @returns A new Asset with the increased amount in raw units.
      */
