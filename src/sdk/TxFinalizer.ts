@@ -214,22 +214,39 @@ export class TonIndexerTxFinalizer implements ITxFinalizer {
             for (const tx of transactions) {
                 if (tx.inMsg.value === IGNORE_MSG_VALUE_1_NANO.toString()) continue; // we ignore messages with 1 nanoton value as they are for notification purpose only
                 if (!IGNORE_OPCODE.includes(Number(tx.inMsg.opcode)) && tx.inMsg.opcode !== null) {
-                    const { aborted, computePh: compute_ph, action } = tx.description;
-                    if (
-                        aborted ||
-                        !compute_ph.success ||
-                        !action.success ||
-                        compute_ph.exitCode !== 0 ||
-                        action.resultCode !== 0
-                    ) {
+                    const { aborted, computePh, action } = tx.description;
+                    const failureCase = (() => {
+                        switch (true) {
+                            case aborted:
+                                return 'Transaction was aborted';
+                            case !computePh:
+                                return 'computePh not present';
+                            case !computePh!.success:
+                                return 'computePh not successful';
+                            case !action:
+                                return 'action not present';
+                            case !action!.success:
+                                return 'action not successful';
+                            case computePh!.exitCode !== 0:
+                                return `computePh.exitCode was not zero (exitCode=${computePh.exitCode})`;
+                            case action!.resultCode !== 0:
+                                return `action.resultCode was not zero (resultCode=${action.resultCode})`;
+                            default:
+                                return null;
+                        }
+                    })();
+
+                    if (failureCase) {
                         throw new Error(
-                            `Transaction failed:\n` +
+                            `Transaction failed [${failureCase}]:\n` +
                                 `hash = ${currentHash}, ` +
                                 `aborted = ${aborted}, ` +
-                                `compute_ph.success = ${compute_ph.success}, ` +
-                                `compute_ph.exit_code = ${compute_ph.exitCode}, ` +
-                                `action.success = ${action.success}, ` +
-                                `action.result_code = ${action.resultCode}`,
+                                `computePh = ${computePh}, ` +
+                                `action = ${action}, ` +
+                                `computePh.success = ${computePh?.success}, ` +
+                                `computePh.exitCode = ${computePh?.exitCode}, ` +
+                                `action.success = ${action?.success}, ` +
+                                `action.resultCode = ${action?.resultCode}`,
                         );
                     }
                     if (currentDepth + 1 < maxDepth) {

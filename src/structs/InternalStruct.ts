@@ -101,11 +101,11 @@ export interface SendResult {
 export type ToncenterTransaction = {
     description: {
         aborted: boolean;
-        action: {
+        action?: {
             resultCode: number;
             success: boolean;
         };
-        computePh: {
+        computePh?: {
             exitCode: number;
             success: boolean;
         };

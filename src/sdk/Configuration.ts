@@ -283,7 +283,7 @@ export class Configuration implements IConfiguration {
                 accountBitPrice: 1,
                 accountCellPrice: 500,
                 lumpPrice: 400000,
-                gasPrice: 400,
+                gasPrice: 26214400,
                 firstFrac: 21845,
                 ihrPriceFactor: 98304,
                 msgBitPrice: 26214400,

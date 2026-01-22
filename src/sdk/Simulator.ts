@@ -171,9 +171,9 @@ export class Simulator implements ISimulator {
         const actionFee = Math.floor((msgFwdFees * firstFrac) / FIXED_POINT_SHIFT);
 
         // Combine all fees
-        const totalFees = BigInt(storageFee) + BigInt(computeFee) + BigInt(actionFee) + BigInt(totalFwdFees);
+        const totalFees = storageFee + computeFee + actionFee + totalFwdFees;
 
-        return totalFees;
+        return BigInt(Math.ceil(totalFees));
     }
 
     private calculateTransactionPipeline(steps: Array<TransactionFeeCalculationStep>): bigint {
