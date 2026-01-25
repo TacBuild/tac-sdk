@@ -533,3 +533,8 @@ export type TacGasPriceResponse = {
         slow: number;
     };
 };
+
+export type TrackTransactionTreeParams = {
+    maxDepth?: number;
+    ignoreOpcodeList?: number[];
+};

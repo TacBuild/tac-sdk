@@ -13,6 +13,7 @@ import {
     PrepareMessageGroupError,
     SettingError,
     TokenError,
+    TransactionError,
     WalletError,
 } from './errors';
 
@@ -119,3 +120,5 @@ export const unknownAssetOriginError = (origin: Origin) => new TokenError(`Unkno
 
 export const gasPriceFetchError = (msg: string, inner?: unknown) =>
     new FetchError(`failed to fetch gas price: ${msg}`, 134, inner);
+
+export const txFinalizationError = (msg: string) => new TransactionError(`transaction failed: ${msg}`, 135);

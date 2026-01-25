@@ -107,3 +107,10 @@ export class TokenError extends ErrorWithStatusCode {
         this.name = 'TokenError';
     }
 }
+
+export class TransactionError extends ErrorWithStatusCode {
+    constructor(message: string, errorCode: number) {
+        super(message, errorCode);
+        this.name = 'TransactionError';
+    }
+}

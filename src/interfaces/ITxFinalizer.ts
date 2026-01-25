@@ -1,3 +1,5 @@
+import { TrackTransactionTreeParams } from "../structs/Struct";
+
 export interface ITxFinalizer {
-    trackTransactionTree(address: string, hash: string, params?: { maxDepth?: number }): Promise<void>;
+    trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<void>;
 }

@@ -1,5 +1,6 @@
 import { Address, Transaction } from '@ton/ton';
 
+import { txFinalizationError } from '../errors';
 import { ContractOpener, IHttpClient, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import {
@@ -9,6 +10,7 @@ import {
     TransactionDepth,
     TxFinalizerConfig,
 } from '../structs/InternalStruct';
+import { TrackTransactionTreeParams } from '../structs/Struct';
 import { AxiosHttpClient } from './AxiosHttpClient';
 import { DEFAULT_FIND_TX_MAX_DEPTH, IGNORE_MSG_VALUE_1_NANO } from './Consts';
 import { NoopLogger } from './Logger';
@@ -68,9 +70,9 @@ export class TonTxFinalizer implements ITxFinalizer {
     public async trackTransactionTree(
         address: string,
         hash: string,
-        params: { maxDepth?: number } = { maxDepth: DEFAULT_FIND_TX_MAX_DEPTH },
+        params: TrackTransactionTreeParams = { maxDepth: DEFAULT_FIND_TX_MAX_DEPTH, ignoreOpcodeList: IGNORE_OPCODE },
     ) {
-        const { maxDepth = DEFAULT_FIND_TX_MAX_DEPTH } = params;
+        const { maxDepth = DEFAULT_FIND_TX_MAX_DEPTH, ignoreOpcodeList = IGNORE_OPCODE } = params;
         const parsedAddress = Address.parse(address);
         const visitedHashes = new Set<string>();
         const queue: TransactionDepth[] = [{ address: parsedAddress, hash, depth: 0 }];
@@ -100,22 +102,35 @@ export class TonTxFinalizer implements ITxFinalizer {
                 const bodySlice = tx.inMessage.body.beginParse();
                 if (bodySlice.remainingBits < 32) continue;
                 const opcode = bodySlice.loadUint(32);
-                if (!IGNORE_OPCODE.includes(opcode)) {
+                if (!ignoreOpcodeList.includes(opcode)) {
                     const { aborted, computePhase, actionPhase } = tx.description;
-                    if (
-                        aborted ||
-                        computePhase.type == 'skipped' ||
-                        !computePhase.success ||
-                        computePhase.exitCode !== 0 ||
-                        (actionPhase && (!actionPhase.success || actionPhase.resultCode !== 0))
-                    ) {
-                        throw new Error(
-                            `Transaction failed:\n` +
-                                `hash = ${currentHash}, ` +
-                                `aborted = ${aborted}, ` +
-                                `compute phase: ${computePhase.type === 'skipped' ? 'skipped' : `success = ${computePhase.success}, exit code = ${computePhase.exitCode}`}, ` +
-                                `action phase: ${!actionPhase ? 'skipped' : `success = ${actionPhase.success}, result code = ${actionPhase.resultCode}`} `,
-                        );
+                    const failureCase = (() => {
+                        if (aborted) {
+                            return 'Transaction was aborted';
+                        }
+                        if (!computePhase) {
+                            return 'computePhase not present';
+                        }
+                        if (computePhase.type === 'skipped') {
+                            return 'computePhase was skipped';
+                        }
+                        if (!computePhase.success) {
+                            return 'computePhase not successful';
+                        }
+                        if (computePhase.exitCode !== 0) {
+                            return `computePhase.exitCode was not zero (exitCode=${computePhase.exitCode})`;
+                        }
+                        if (actionPhase && !actionPhase.success) {
+                            return 'actionPhase not successful';
+                        }
+                        if (actionPhase && actionPhase.resultCode !== 0) {
+                            return `actionPhase.resultCode was not zero (resultCode=${actionPhase.resultCode})`;
+                        }
+                        return null;
+                    })();
+
+                    if (failureCase) {
+                        throw txFinalizationError(`${tx.hash().toString('base64')}: ${failureCase}`);
                     }
                     if (currentDepth + 1 < maxDepth) {
                         if (tx.outMessages.size > 0) {
@@ -192,9 +207,9 @@ export class TonIndexerTxFinalizer implements ITxFinalizer {
     public async trackTransactionTree(
         _: string,
         hash: string,
-        params: { maxDepth?: number } = { maxDepth: DEFAULT_FIND_TX_MAX_DEPTH },
+        params: TrackTransactionTreeParams = { maxDepth: DEFAULT_FIND_TX_MAX_DEPTH, ignoreOpcodeList: IGNORE_OPCODE },
     ) {
-        const { maxDepth = DEFAULT_FIND_TX_MAX_DEPTH } = params;
+        const { maxDepth = DEFAULT_FIND_TX_MAX_DEPTH, ignoreOpcodeList = IGNORE_OPCODE } = params;
         const visitedHashes = new Set<string>();
         const queue: TransactionDepth[] = [{ hash, depth: 0 }];
 
@@ -213,42 +228,34 @@ export class TonIndexerTxFinalizer implements ITxFinalizer {
 
             for (const tx of transactions) {
                 if (tx.inMsg.value === IGNORE_MSG_VALUE_1_NANO.toString()) continue; // we ignore messages with 1 nanoton value as they are for notification purpose only
-                if (!IGNORE_OPCODE.includes(Number(tx.inMsg.opcode)) && tx.inMsg.opcode !== null) {
+                if (!ignoreOpcodeList.includes(Number(tx.inMsg.opcode)) && tx.inMsg.opcode !== null) {
                     const { aborted, computePh, action } = tx.description;
                     const failureCase = (() => {
-                        switch (true) {
-                            case aborted:
-                                return 'Transaction was aborted';
-                            case !computePh:
-                                return 'computePh not present';
-                            case !computePh!.success:
-                                return 'computePh not successful';
-                            case !action:
-                                return 'action not present';
-                            case !action!.success:
-                                return 'action not successful';
-                            case computePh!.exitCode !== 0:
-                                return `computePh.exitCode was not zero (exitCode=${computePh.exitCode})`;
-                            case action!.resultCode !== 0:
-                                return `action.resultCode was not zero (resultCode=${action.resultCode})`;
-                            default:
-                                return null;
+                        if (aborted) {
+                            return 'Transaction was aborted';
                         }
+                        if (!computePh) {
+                            return 'computePh not present';
+                        }
+                        if (!computePh.success) {
+                            return 'computePh not successful';
+                        }
+                        if (computePh.exitCode !== 0) {
+                            return `computePh.exitCode was not zero (exitCode=${computePh.exitCode})`;
+                        }
+                        if (action && !action.success) {
+                            return 'action not successful';
+                        }
+                        if (action && action.resultCode !== 0) {
+                            return `action.resultCode was not zero (resultCode=${action.resultCode})`;
+                        }
+                        return null;
                     })();
 
                     if (failureCase) {
-                        throw new Error(
-                            `Transaction failed [${failureCase}]:\n` +
-                                `hash = ${currentHash}, ` +
-                                `aborted = ${aborted}, ` +
-                                `computePh = ${computePh}, ` +
-                                `action = ${action}, ` +
-                                `computePh.success = ${computePh?.success}, ` +
-                                `computePh.exitCode = ${computePh?.exitCode}, ` +
-                                `action.success = ${action?.success}, ` +
-                                `action.resultCode = ${action?.resultCode}`,
-                        );
+                        throw txFinalizationError(`${tx.hash}: ${failureCase}`);
                     }
+                
                     if (currentDepth + 1 < maxDepth) {
                         if (tx.outMsgs.length > 0) {
                             queue.push({ hash: tx.hash, depth: currentDepth + 1 });
