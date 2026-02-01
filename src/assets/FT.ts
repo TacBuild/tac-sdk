@@ -232,7 +232,7 @@ export class FT implements Asset {
         }
 
         // Fetch and cache display multiplier for TEP-526 support
-        await token.refreshDisplayMultiplierInternal();
+        await token.refreshDisplayMultiplier();
 
         return token;
     }
@@ -292,7 +292,7 @@ export class FT implements Asset {
         return this._decimals;
     }
 
-    private async refreshDisplayMultiplierInternal(): Promise<void> {
+    async refreshDisplayMultiplier(): Promise<void> {
         try {
             const multiplier = await this._jettonMinter.getDisplayMultiplier();
             this._displayMultiplierNumerator = multiplier.numerator;
@@ -308,12 +308,8 @@ export class FT implements Asset {
     private async ensureFreshDisplayMultiplier(): Promise<void> {
         const age = Date.now() - this._displayMultiplierFetchedAt;
         if (age > this._displayMultiplierCacheDuration) {
-            await this.refreshDisplayMultiplierInternal();
+            await this.refreshDisplayMultiplier();
         }
-    }
-
-    async refreshDisplayMultiplier(): Promise<void> {
-        await this.refreshDisplayMultiplierInternal();
     }
 
     setDisplayMultiplierCacheDuration(durationMs: number): void {
