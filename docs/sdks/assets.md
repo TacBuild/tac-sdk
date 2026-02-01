@@ -14,7 +14,9 @@
     - [Core Methods](#core-methods)
       - [`getJettonData`](#getjettondata)
       - [`getOrigin`](#getorigin)
+      - [`getOriginAndData`](#getoriginanddata)
       - [`getTVMAddress`](#gettvmaddress)
+      - [`getEVMAddress`](#getevmaddress)
       - [`getUserWalletAddress`](#getuserwalletaddress)
       - [`getUserBalance`](#getuserbalance)
       - [`getUserBalanceExtended`](#getuserbalanceextended)
@@ -23,31 +25,37 @@
       - [`checkCanBeTransferredBy`](#checkcanbetransferredby)
       - [`getBalanceOf`](#getbalanceof)
       - [`generatePayload`](#generatepayload)
+    - [TEP-526 Scaled UI Token Support](#tep-526-scaled-ui-token-support)
+      - [`refreshDisplayMultiplier`](#refreshdisplaymultiplier)
+      - [`setDisplayMultiplierCacheDuration`](#setdisplaymultipliercacheduration)
+      - [`toDisplayAmount`](#todisplayamount)
+      - [`fromDisplayAmount`](#fromdisplayamount)
   - [NFT Class](#nft-class)
-    - [Creating Instances](#creating-instances)
-    - [Static Methods](#static-methods)
+    - [Creating Instances](#creating-instances-1)
+    - [Static Methods](#static-methods-1)
       - [`getItemData`](#getitemdata)
       - [`getCollectionData`](#getcollectiondata)
-      - [`getOrigin`](#getorigin)
-      - [`getTVMAddress`](#gettvmaddress)
+      - [`getOrigin`](#getorigin-1)
+      - [`getTVMAddress`](#gettvmaddress-1)
       - [`getItemAddress`](#getitemaddress)
     - [Instance Methods](#instance-methods)
-      - [`getItemData`](#getitemdata)
-      - [`getCollectionData`](#getcollectiondata)
-      - [`getUserBalance`](#getuserbalance)
+      - [`getItemData`](#getitemdata-1)
+      - [`getCollectionData`](#getcollectiondata-1)
+      - [`getUserBalance`](#getuserbalance-1)
       - [`isOwnedBy`](#isownedby)
-      - [`checkCanBeTransferredBy`](#checkcanbetransferredby)
-      - [`getBalanceOf`](#getbalanceof)
-      - [`generatePayload`](#generatepayload)
+      - [`checkCanBeTransferredBy`](#checkcanbetransferredby-1)
+      - [`getBalanceOf`](#getbalanceof-1)
+      - [`generatePayload`](#generatepayload-1)
   - [TON Class](#ton-class)
-    - [Creating Instances](#creating-instances)
-    - [Core Methods](#core-methods)
-      - [`generatePayload`](#generatepayload)
-      - [`getUserBalance`](#getuserbalance)
-      - [`checkCanBeTransferredBy`](#checkcanbetransferredby)
-      - [`getBalanceOf`](#getbalanceof)
-      - [`checkBalance`](#checkbalance)
+    - [Creating Instances](#creating-instances-2)
+    - [Core Methods](#core-methods-1)
+      - [`generatePayload`](#generatepayload-2)
+      - [`getUserBalance`](#getuserbalance-2)
+      - [`checkCanBeTransferredBy`](#checkcanbetransferredby-2)
+      - [`getBalanceOf`](#getbalanceof-2)
+      - [`checkBalance`](#checkbalance-1)
   - [Example Usage](#example-usage)
+    - [Integration with Transaction Managers](#integration-with-transaction-managers)
 
 ---
 
@@ -94,10 +102,10 @@ The `Asset` interface defines the contract for all token implementations in the 
 
 **Methods:**
 - `clone`: Creates a copy of the token
-- `withAmount`: Sets the token amount in human-readable units (replaces existing amount)
-- `withRawAmount`: Sets the token amount in raw base units (replaces existing amount)
-- `addAmount`: Adds to the existing token amount in human-readable units
-- `addRawAmount`: Adds to the existing token amount in raw base units
+- `withAmount`: Sets the token amount in human-readable units (replaces existing amount). For FT assets, automatically applies TEP-526 scaling if supported.
+- `withRawAmount`: Sets the raw onchain token amount in base units (replaces existing amount). No TEP-526 scaling is applied.
+- `addAmount`: Adds to the existing token amount in human-readable units. For FT assets, automatically applies TEP-526 scaling if supported.
+- `addRawAmount`: Adds to the existing raw onchain token amount in base units. No TEP-526 scaling is applied.
 - `getEVMAddress`: Gets the EVM address for the token
 - `getTVMAddress`: Gets the TVM address for the token
 - `generatePayload`: Generates cross-chain operation payload with unified object parameters
@@ -152,8 +160,12 @@ Creates a new FT instance by TVM or EVM address. Origin is detected automaticall
 - `address`: Main token address (TVM)
 - `origin`: Asset origin (TON or TAC)
 - `type`: Always `AssetType.FT` for fungible tokens
-- `rawAmount`: Current token amount in raw format
+- `rawAmount`: Current token amount in raw onchain format (after TEP-526 scaling if applicable)
 - `clone`: Creates a copy of the token instance
+
+**Amount Handling:**
+- `withAmount()` and `addAmount()`: Accept user-friendly amounts and automatically apply TEP-526 scaling if the token supports it
+- `withRawAmount()` and `addRawAmount()`: Work directly with raw onchain amounts without any TEP-526 adjustments
 
 ### Core Methods
 
@@ -350,6 +362,144 @@ Generates the payload for cross-chain operations involving this Jetton using the
 **Operation Logic:**
 - For TAC-origin Jettons: Creates burn payload
 - For TON-origin Jettons: Creates transfer payload to cross-chain layer
+
+### TEP-526 Scaled UI Token Support
+
+The FT class supports [TEP-526 Scaled UI Jettons](https://github.com/ton-blockchain/TEPs/blob/master/text/0526-scaled-ui-jettons.md), which allows tokens to implement rebasing-like behavior through UI scaling. This enables displaying different amounts to users than what's stored on-chain.
+
+**Key Concepts:**
+- **Onchain Amount**: The actual balance stored in the blockchain
+- **Display Amount**: The amount shown to users in the UI
+- **Display Multiplier**: A ratio (numerator/denominator) used to convert between display and onchain amounts
+
+**Automatic Scaling:**
+- Display multiplier is fetched and cached during FT creation (`fromAddress`)
+- `withAmount()` and `addAmount()` automatically handle TEP-526 scaling, converting user-friendly amounts to onchain amounts
+- `withRawAmount()` and `addRawAmount()` work directly with raw onchain amounts without any TEP-526 scaling adjustments
+
+#### `refreshDisplayMultiplier`
+
+```ts
+refreshDisplayMultiplier(): Promise<void>
+```
+
+Manually refreshes the display multiplier from the blockchain. Use this when you know the on-chain multiplier has changed (e.g., after detecting a `display_multiplier_changed` external message per TEP-526).
+
+**Behavior:**
+- Fetches the latest multiplier from the jetton master contract
+- Updates the cached value and timestamp
+- Typically not needed as the cache auto-refreshes in key methods if stale
+
+**When to use:**
+- After detecting a `display_multiplier_changed` external message
+- Before calling `withAmount()` if you suspect a rebase occurred
+- When you need immediate, guaranteed fresh data
+
+**Example:**
+```ts
+// Manual refresh after detecting rebase event
+await ft.refreshDisplayMultiplier();
+
+// Now set amount with fresh multiplier
+ft.withAmount(100);
+```
+
+#### `setDisplayMultiplierCacheDuration`
+
+```ts
+setDisplayMultiplierCacheDuration(durationMs: number): void
+```
+
+Configures how long the display multiplier cache remains valid before auto-refresh.
+
+**Parameters:**
+- `durationMs`: Cache duration in milliseconds (default: 5 minutes / 300000ms)
+
+**Example:**
+```ts
+// Set cache to 1 minute for frequently-rebasing tokens
+ft.setDisplayMultiplierCacheDuration(60 * 1000);
+
+// Set cache to 30 minutes for stable tokens
+ft.setDisplayMultiplierCacheDuration(30 * 60 * 1000);
+```
+
+#### `toDisplayAmount`
+
+```ts
+toDisplayAmount(onchainAmount: bigint): bigint
+```
+
+Converts an onchain/raw amount to a display amount for showing in the UI.
+
+**Formula:** `displayAmount = muldivr(onchainAmount, numerator, denominator)`
+
+**Parameters:**
+- `onchainAmount`: Raw amount stored on the blockchain
+
+**Returns:** The scaled display amount
+
+**Example:**
+```ts
+const rawBalance = await ft.getUserBalance(userAddress);
+const displayBalance = ft.toDisplayAmount(rawBalance);
+// If multiplier is 2:1 and rawBalance is 100, displayBalance will be 200
+```
+
+#### `fromDisplayAmount`
+
+```ts
+fromDisplayAmount(displayAmount: bigint): bigint
+```
+
+Converts a display amount (user input) to an onchain amount for transactions.
+
+**Formula:** `onchainAmount = muldivr(displayAmount, denominator, numerator)`
+
+**Parameters:**
+- `displayAmount`: Amount shown to/entered by the user
+
+**Returns:** The onchain amount
+
+**Note:** You typically don't need to call this directly - `withAmount()` and `addAmount()` handle this automatically.
+
+**Example:**
+```ts
+const userInput = 100n; // User wants to send 100 tokens
+const onchainAmount = ft.fromDisplayAmount(userInput);
+// If multiplier is 2:1, onchainAmount will be 50
+```
+
+**Complete Example:**
+```ts
+import { FT } from "@tonappchain/sdk";
+
+// Create FT instance (multiplier is fetched and cached here)
+const ft = await FT.fromAddress(config, jettonAddress);
+
+// Check if token supports TEP-526 (synchronous - already cached)
+const multiplier = ft.getDisplayMultiplier();
+console.log(`Token scaling: ${multiplier.numerator}:${multiplier.denominator}`);
+
+// Get user balance - multiplier auto-refreshes if cache is stale
+const rawBalance = await ft.getUserBalance(userAddress);
+const displayBalance = ft.toDisplayAmount(rawBalance);
+console.log(`Balance: ${displayBalance} (display units)`);
+
+// User wants to send 100 tokens (as shown in UI)
+// withAmount automatically handles TEP-526 scaling (synchronous)
+ft.withAmount(100); // Takes number, applies decimals + TEP-526 scaling
+
+// Or work with raw amounts directly (no TEP-526 scaling)
+ft.withRawAmount(100000000000n); // Sets raw onchain amount directly
+
+// generatePayload auto-refreshes multiplier if stale before creating transaction
+const payload = await ft.generatePayload({
+  excessReceiver: userAddress,
+  evmData: evmDataCell,
+  feeParams
+});
+```
 
 ---
 
@@ -699,6 +849,17 @@ const balance = await jetton.getUserBalance("EQ...");
 const canTransfer = await jetton.checkCanBeTransferredBy("EQ...");
 const balanceOf = await jetton.getBalanceOf("EQ...");
 
+// Work with TEP-526 Scaled UI tokens
+// Multiplier is already cached during fromAddress, all methods are synchronous
+const multiplier = jetton.getDisplayMultiplier();
+const rawBalance = await jetton.getUserBalance("EQ...");
+const displayBalance = jetton.toDisplayAmount(rawBalance);
+jetton.withAmount(100);  // Automatically applies TEP-526 scaling
+jetton.addAmount(50);    // Automatically applies TEP-526 scaling
+// Or work directly with raw onchain amounts (no TEP-526 scaling)
+jetton.withRawAmount(100000000n);  // No TEP-526 scaling applied
+jetton.addRawAmount(50000000n);    // No TEP-526 scaling applied
+
 // Work with NFTs
 const nftData = await NFT.getItemData(contractOpener, "EQ...");
 const collectionData = await NFT.getCollectionData(contractOpener, "EQ...");
@@ -721,7 +882,8 @@ await TON.checkBalance(sender, config, transactions);
 
 // Token operations
 const clonedToken = jetton.clone;
-const tokenWithAmount = jetton.withAmount(10.5);
+const tokenWithAmount = jetton.withAmount(10.5); // Applies TEP-526 scaling if supported
+const tokenWithRawAmount = jetton.withRawAmount(10500000000n); // No TEP-526 scaling
 const evmAddress = await jetton.getEVMAddress();
 const tvmAddress = await jetton.getTVMAddress();
 

@@ -2,7 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.7.1] - 2025-10-02 
+## [Unreleased]
+
+### Added
+- TEP-526 support for scaled UI in FT tokens with display multiplier functionality.
+- Display multiplier caching with 5-minute TTL for FT assets.
+
+### Changed
+- FT `withAmount` and `addAmount` methods now automatically apply TEP-526 scaling when supported by token.
+- Updated FT class to fetch and cache display multiplier on token initialization.
+- Enhanced Asset interface documentation with TEP-526 scaling behavior notes.
+
+## [0.7.1] - 2025-10-02
 
 ### Changed
  - Fixed bug with evm address of `TON` in `normizeAssets`.
