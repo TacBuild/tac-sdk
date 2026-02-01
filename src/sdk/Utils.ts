@@ -360,6 +360,17 @@ export function getString(cell?: Cell): string {
     return cell?.beginParse().loadStringTail() ?? '';
 }
 
+/**
+ * Multiply-divide with rounding (muldivr)
+ * Calculates (a * b + c / 2) / c with proper rounding
+ */
+export function muldivr(a: bigint, b: bigint, c: bigint): bigint {
+    if (c === 0n) {
+        throw new Error('Division by zero in muldivr');
+    }
+    return (a * b + c / 2n) / c;
+}
+
 export function getNormalizedExtMessageHash(message: Message): string {
     if (message.info.type !== 'external-in') {
         throw new Error(`Message must be "external-in", got ${message.info.type}`);
