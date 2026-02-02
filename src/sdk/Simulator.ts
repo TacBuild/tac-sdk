@@ -184,46 +184,48 @@ export class Simulator implements ISimulator {
     }
 
     private calculateTONCrosschainFee(msgBits: number, msgCells: number): bigint {
-        return this.calculateTransactionPipeline([createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells)]);
+        return this.calculateTransactionPipeline([
+            createCrossChainLayerTvmMsgToEvmStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+        ]);
     }
 
     private calculateJettonTransferCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
-            createJettonWalletInternalTransferStep(msgBits, msgCells),
-            createJettonWalletReceiveStep(msgBits, msgCells),
-            createJettonProxyOwnershipAssignedStep(msgBits, msgCells),
-            createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
-            createErrorNotificationGasStep(msgBits, msgCells),
-            createEstimatedSendTransferGasStep(msgBits, msgCells),
-            createEstimatedReceiveTransferGasStep(msgBits, msgCells),
+            createJettonWalletInternalTransferStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createJettonWalletReceiveStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createJettonProxyOwnershipAssignedStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createCrossChainLayerTvmMsgToEvmStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createErrorNotificationGasStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createEstimatedSendTransferGasStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createEstimatedReceiveTransferGasStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
         ]);
     }
 
     private calculateJettonBurnCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
-            createJettonWalletBurnStep(msgBits, msgCells),
-            createJettonMinterBurnNotificationStep(msgBits, msgCells),
-            createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
-            createMintAfterErrorGasStep(msgBits, msgCells),
-            createJettonWalletReceiveStep(msgBits, msgCells),
+            createJettonWalletBurnStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createJettonMinterBurnNotificationStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createCrossChainLayerTvmMsgToEvmStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createMintAfterErrorGasStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createJettonWalletReceiveStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
         ]);
     }
 
     private calculateNftTransferCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
-            createNftItemSendStep(msgBits, msgCells),
-            createNftProxyOwnershipAssignedStep(msgBits, msgCells),
-            createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
-            createNftProxyErrorNotificationStep(msgBits, msgCells),
-            createNftItemSendStep(msgBits, msgCells),
+            createNftItemSendStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createNftProxyOwnershipAssignedStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createCrossChainLayerTvmMsgToEvmStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createNftProxyErrorNotificationStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createNftItemSendStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
         ]);
     }
 
     private calculateNftBurnCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
-            createNftItemBurnStep(msgBits, msgCells),
-            createCrossChainLayerTvmMsgToEvmStep(msgBits, msgCells),
-            createNftItemErrorNotificationStep(),
+            createNftItemBurnStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createCrossChainLayerTvmMsgToEvmStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createNftItemErrorNotificationStep(this.config.TONParams.contractFeeUsageParams),
         ]);
     }
 

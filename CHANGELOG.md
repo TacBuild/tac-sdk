@@ -7,11 +7,38 @@ All notable changes to this project will be documented in this file.
 ### Added
 - TEP-526 support for scaled UI in FT tokens with display multiplier functionality.
 - Display multiplier caching with 5-minute TTL for FT assets.
+- New fee module with comprehensive fee calculation utilities and contract usage parameters for all contracts.
+- Fee parameter constants and factory functions for transaction fee calculation steps.
+- Automatic TON blockchain fee parameters retrieval from network config with fallback to standard values.
+- `TONFeesParams` structure in configuration for storing blockchain fee parameters.
+- New methods in `ITONTransactionManager`:
+  - `buildFeeParams()`: Builds fee parameters for cross-chain transactions.
+  - `prepareCrossChainTransactionPayload()`: Prepares transaction payloads without sending them.
+- Enhanced transaction tracking with failure case handling and track params.
+- Transaction linker support for preparing cross-chain payloads.
+- `startTracking` function now exported from SDK for external use.
+- Transaction finalizer v3 with simplified architecture.
+- Gas price calculation for error chain scenarios.
 
 ### Changed
 - FT `withAmount` and `addAmount` methods now automatically apply TEP-526 scaling when supported by token.
 - Updated FT class to fetch and cache display multiplier on token initialization.
 - Enhanced Asset interface documentation with TEP-526 scaling behavior notes.
+- `Configuration` class now retrieves and stores TON fee parameters during initialization.
+- Refactored transaction finalization logic for improved speed and reliability.
+- Transaction hash calculation fixes and improvements.
+- Improved transaction tracking to work with updated hash calculation.
+- TonClient opener fixes for improved stability.
+
+### Fixed
+- Transaction tracking for complex multi-step operations.
+- Hash calculation accuracy in transaction processing.
+- Error handling for empty methodName with non-empty payload scenarios.
+
+### Documentation
+- Updated documentation for new fee calculation system.
+- Enhanced API documentation for TONTransactionManager methods.
+- Added detailed comments for fee parameters and calculation steps.
 
 ## [0.7.1] - 2025-10-02
 

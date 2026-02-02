@@ -95,6 +95,7 @@ export class TacSdk implements ITacSDK {
             sdkParams.TACParams,
             sdkParams.customLiteSequencerEndpoints,
             delay,
+            logger,
         );
 
         const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints);

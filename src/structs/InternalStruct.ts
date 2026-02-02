@@ -52,6 +52,7 @@ export type InternalTONParams = {
     nftItemCode: Cell;
     nftCollectionCode: Cell;
     feesParams: TONFeesParams;
+    contractFeeUsageParams: ContractFeeUsageParams;
 };
 
 export type InternalTACParams = {
@@ -178,6 +179,65 @@ export type TONFeesParams = {
     ihrPriceFactor: number;
     msgBitPrice: number;
     msgCellPrice: number;
+};
+
+export type ContractFeeUsageParams = {
+    crossChainLayer: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            tvmMsgToEvm: number;
+        };
+    };
+    jettonWallet: {
+        accountBits: number;
+        accountCells: number;
+        estimatedAccountBits: number;
+        estimatedAccountCells: number;
+        initStateBits: number;
+        initStateCells: number;
+        gas: {
+            internalTransfer: number;
+            receive: number;
+            burn: number;
+            estimatedSendTransfer: number;
+            estimatedReceiveTransfer: number;
+        };
+    };
+    jettonProxy: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            ownershipAssigned: number;
+            transferNotification: number;
+            errorNotification: number;
+        };
+    };
+    jettonMinter: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            burnNotification: number;
+            mintAfterError: number;
+        };
+    };
+    nftItem: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            send: number;
+            burn: number;
+            errorNotification: number;
+        };
+    };
+    nftProxy: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            ownershipAssigned: number;
+            errorNotification: number;
+        };
+    };
 };
 
 export type TransactionFeeCalculationStep = {
