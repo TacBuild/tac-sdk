@@ -70,7 +70,7 @@ describe('Configuration', () => {
             expect(config).toBeInstanceOf(Configuration);
             expect(config.network).toBe(Network.TESTNET);
             expect(config.nativeTONAddress).toBeTruthy();
-        }, 20000);
+        }, 100000);
 
         it('creates configuration for mainnet network', async () => {
             const config = await Configuration.create(Network.MAINNET, mainnet);
@@ -78,14 +78,14 @@ describe('Configuration', () => {
             expect(config).toBeInstanceOf(Configuration);
             expect(config.network).toBe(Network.MAINNET);
             expect(config.nativeTONAddress).toBeTruthy();
-        }, 20000);
+        }, 100000);
 
         it('creates configuration with custom TON and TAC params', async () => {
             const config = await Configuration.create(Network.TESTNET, testnet, undefined, mockTACParams);
 
             expect(config).toBeInstanceOf(Configuration);
             expect(config.network).toBe(Network.TESTNET);
-        }, 20000);
+        }, 100000);
 
         it('creates configuration with custom lite sequencer endpoints', async () => {
             const customEndpoints = ['https://custom.sequencer.tac'];
@@ -93,7 +93,7 @@ describe('Configuration', () => {
 
             expect(config).toBeInstanceOf(Configuration);
             expect(config.liteSequencerEndpoints).toEqual(customEndpoints);
-        }, 20000);
+        }, 100000);
     });
 
     describe('getter methods', () => {
@@ -101,7 +101,7 @@ describe('Configuration', () => {
 
         beforeEach(async () => {
             config = await Configuration.create(Network.TESTNET, testnet);
-        }, 20000);
+        }, 100000);
 
         it('nativeTONAddress returns correct address', () => {
             const address = config.nativeTONAddress;
@@ -129,7 +129,7 @@ describe('Configuration', () => {
 
         beforeEach(async () => {
             config = await Configuration.create(Network.TESTNET, testnet);
-        }, 20000);
+        }, 100000);
 
         it('returns boolean for valid address', async () => {
             const result = await config.isContractDeployedOnTVM('EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N');

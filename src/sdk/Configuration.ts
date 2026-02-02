@@ -1,7 +1,5 @@
-import { Address, Cell, Dictionary, loadConfigParamsAsSlice, parseFullConfig } from '@ton/ton';
+import { Address, Dictionary, loadConfigParamsAsSlice, parseFullConfig } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
-import fs from 'fs';
-import path from 'path';
 
 import { dev, mainnet, testnet } from '../../artifacts';
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
@@ -20,7 +18,7 @@ export class Configuration implements IConfiguration {
     readonly TONParams: InternalTONParams;
     readonly TACParams: InternalTACParams;
     readonly liteSequencerEndpoints: string[];
-    private readonly logger: ILogger;
+    readonly logger: ILogger;
 
     constructor(
         network: Network,
@@ -103,8 +101,14 @@ export class Configuration implements IConfiguration {
         const nftItemCode = allSettings.get(sha256toBigInt('NFTItemCode'))!;
         const nftCollectionCode = allSettings.get(sha256toBigInt('NFTCollectionCode'))!;
 
-        // Load contract fee usage params from Settings, artifacts, or use defaults
-        const contractFeeUsageParams = this.loadContractFeeUsageParams(allSettings, artifacts, logger);
+        let contractFeeUsageParams = DEFAULT_CONTRACT_FEE_USAGE_PARAMS;
+        const contractFeeUsageParamsCell = allSettings.get(sha256toBigInt('ContractFeeUsageParams'));
+        if (contractFeeUsageParamsCell) {
+            const jsonString = contractFeeUsageParamsCell.beginParse().loadStringTail();
+            contractFeeUsageParams = JSON.parse(jsonString) as ContractFeeUsageParams;
+        } else {
+            logger.debug('Failed to load ContractFeeUsageParams from Settings, used default');
+        }
 
         const feesParams = await this.retrieveTONFeesParams(contractOpener);
 
@@ -274,53 +278,6 @@ export class Configuration implements IConfiguration {
 
     async isContractDeployedOnTVM(address: string): Promise<boolean> {
         return (await this.TONParams.contractOpener.getContractState(Address.parse(address))).state === 'active';
-    }
-
-    private static loadContractFeeUsageParams(
-        allSettings: ReturnType<typeof Dictionary.empty<bigint, Cell>>,
-        artifacts: typeof testnet | typeof mainnet | typeof dev,
-        logger: ILogger,
-    ): ContractFeeUsageParams {
-        try {
-            // Try to load from Settings contract first
-            const contractFeeUsageParamsCell = allSettings.get(sha256toBigInt('ContractFeeUsageParams'));
-            if (contractFeeUsageParamsCell) {
-                const jsonString = contractFeeUsageParamsCell.beginParse().loadStringTail();
-                return JSON.parse(jsonString) as ContractFeeUsageParams;
-            }
-        } catch (error) {
-            logger.warn('Failed to load ContractFeeUsageParams from Settings, trying wrappers:', error);
-        }
-
-        // If not in Settings, load from wrappers
-        try {
-            return this.loadParamsFromWrappers(artifacts);
-        } catch (error) {
-            logger.warn('Failed to load ContractFeeUsageParams from wrappers, using defaults:', error);
-        }
-
-        // Use defaults as fallback
-        return DEFAULT_CONTRACT_FEE_USAGE_PARAMS;
-    }
-
-    private static loadParamsFromWrappers(artifacts: typeof testnet | typeof mainnet | typeof dev): ContractFeeUsageParams {
-        // Try to load from wrappers JSON that contains values from wrapper classes
-        // These files may not exist in all environments - that's OK, we'll use defaults
-        let filePath: string;
-        if (artifacts === dev) {
-            filePath = path.join(__dirname, '../../artifacts/dev/l1_tvm_ton/contract-fee-usage-params.json');
-        } else if (artifacts === testnet) {
-            filePath = path.join(__dirname, '../../artifacts/testnet/l1_tvm_ton/contract-fee-usage-params.json');
-        } else {
-            filePath = path.join(__dirname, '../../artifacts/mainnet/l1_tvm_ton/contract-fee-usage-params.json');
-        }
-
-        if (!fs.existsSync(filePath)) {
-            throw new Error(`Contract fee usage params file not found: ${filePath}`);
-        }
-
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        return JSON.parse(fileContent) as ContractFeeUsageParams;
     }
 
     private static async retrieveTONFeesParams(contractOpener: ContractOpener): Promise<TONFeesParams> {
