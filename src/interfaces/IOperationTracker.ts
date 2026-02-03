@@ -10,7 +10,6 @@ import {
     StatusInfo,
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
-    TacGasPriceResponse,
     TACSimulationParams,
     TACSimulationResult,
     TransactionLinker,
@@ -120,10 +119,4 @@ export interface IOperationTracker {
         params: GetTVMExecutorFeeParams,
         waitOptions?: WaitOptions<SuggestedTVMExecutorFee>,
     ): Promise<SuggestedTVMExecutorFee>;
-
-    /**
-     * Gets TAC gas price.
-     * @returns Promise resolving to TAC gas price.
-     */
-    getTACGasPrice(): Promise<TacGasPriceResponse>;
 }

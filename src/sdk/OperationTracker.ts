@@ -15,7 +15,6 @@ import {
     StatusInfo,
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
-    TacGasPriceResponse,
     TACSimulationParams,
     TACSimulationResult,
     TransactionLinker,
@@ -362,26 +361,6 @@ export class OperationTracker implements IOperationTracker {
         return waitOptions
             ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Simulating TAC message')
             : await requestFn();
-    }
-
-    async getTACGasPrice(): Promise<TacGasPriceResponse> {
-        this.logger.debug(`Getting TAC gas price`);
-        const requestFn = async (): Promise<TacGasPriceResponse> => {
-            let lastError: unknown;
-            for (const client of this.clients) {
-                try {
-                    const result = await client.getTACGasPrice();
-                    this.logger.debug(`TAC gas price retrieved successfully`);
-                    return result;
-                } catch (error) {
-                    this.logger.warn(`Failed to get TAC gas price using one of the endpoints`);
-                    lastError = error;
-                }
-            }
-            this.logger.error('All endpoints failed to get TAC gas price');
-            throw allEndpointsFailedError(lastError);
-        };
-        return await requestFn();
     }
 
     async getTVMExecutorFee(

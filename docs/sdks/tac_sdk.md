@@ -72,6 +72,12 @@
     - [`getOperationTracker`](#getoperationtracker)
       - [**Purpose**](#purpose-4)
       - [**Returns**](#returns-5)
+    - [`getTacExplorerClient`](#gettacexplorerclient)
+      - [**Purpose**](#purpose-5)
+      - [**Returns**](#returns-6)
+    - [`getTACGasPrice`](#gettacgasprice)
+      - [**Purpose**](#purpose-6)
+      - [**Returns**](#returns-7)
     - [`closeConnections`](#closeconnections)
 
 ---
@@ -217,7 +223,7 @@ Prepares the transaction payloads required for a cross-chain operation without s
 
 #### **Returns** `Promise<CrossChainPayloadResult[]>`
 
-Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschainpayloadresult) objects, each containing:
+Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschainpayloadresult-type) objects, each containing:
 - **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
 - **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
 - **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
@@ -588,6 +594,42 @@ Returns the operation tracker instance used for querying operation statuses and 
 - The operation tracker instance for monitoring cross-chain operation status and getting detailed execution information.
 
 ---
+
+### `getTacExplorerClient`
+
+```ts
+getTacExplorerClient(): ITacExplorerClient
+```
+
+#### **Purpose**
+Returns the TAC explorer client instance used for querying blockchain explorer data such as gas prices and blockchain statistics.
+
+This method provides direct access to the explorer client if you need to use it independently or for advanced use cases.
+
+#### **Returns**
+[`ITacExplorerClient`](./tac_explorer_client.md)
+- The TAC explorer client instance for querying blockchain explorer data.
+
+---
+
+### `getTACGasPrice`
+
+```ts
+getTACGasPrice(): Promise<TacGasPrice>
+```
+
+#### **Purpose**
+Retrieves the current TAC gas prices from the blockchain explorer. This method provides recommended gas prices for different transaction speeds.
+
+The gas prices are fetched from the TAC blockchain explorer API and can be used to estimate transaction costs or set appropriate gas prices for TAC transactions.
+
+#### **Returns**
+`Promise<TacGasPrice>`
+- An object containing three gas price levels:
+  - **`average`**: Gas price for normal transaction confirmation speed
+  - **`fast`**: Higher gas price for faster transaction confirmation
+  - **`slow`**: Lower gas price for slower, cheaper transactions
+
 
 ### `closeConnections`
 

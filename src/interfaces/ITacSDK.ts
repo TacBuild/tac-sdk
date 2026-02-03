@@ -28,6 +28,7 @@ import {
 import { Asset } from './Asset';
 import { IConfiguration } from './IConfiguration';
 import { IOperationTracker } from './IOperationTracker';
+import { ITacExplorerClient } from './ITacExplorerClient';
 
 export interface ITacSDK {
     readonly config: IConfiguration;
@@ -254,6 +255,11 @@ export interface ITacSDK {
      * Returns the operation tracker instance used for querying operation statuses and utilities.
      */
     getOperationTracker(): IOperationTracker;
+
+    /**
+     * Returns the TAC explorer client instance used for querying blockchain explorer data.
+     */
+    getTacExplorerClient(): ITacExplorerClient;
 
     /**
      * Prepares the transaction payloads required for a cross-chain operation without sending them.

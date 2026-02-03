@@ -11,6 +11,7 @@ export { ConsoleLogger, NoopLogger } from './sdk/Logger';
 export { OperationTracker } from './sdk/OperationTracker';
 export { Simulator } from './sdk/Simulator';
 export * from './sdk/StartTracking';
+export { TacExplorerClient } from './sdk/TacExplorerClient';
 export { TacSdk } from './sdk/TacSdk';
 export { TACTransactionManager } from './sdk/TACTransactionManager';
 export { TONTransactionManager } from './sdk/TONTransactionManager';

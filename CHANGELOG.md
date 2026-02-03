@@ -19,6 +19,9 @@ All notable changes to this project will be documented in this file.
 - `startTracking` function now exported from SDK for external use.
 - Transaction finalizer v3 with simplified architecture.
 - Gas price calculation for error chain scenarios.
+- New `TacExplorerClient` class for interacting with TAC Explorer API.
+- New structures for TAC gas price data:
+  - `TacGasPrice`: Represents gas prices at different priority levels.
 
 ### Changed
 - FT `withAmount` and `addAmount` methods now automatically apply TEP-526 scaling when supported by token.

@@ -41,7 +41,6 @@ class MockLiteSequencerClient implements ILiteSequencerClient {
     convertCurrency = jest.fn<ILiteSequencerClient['convertCurrency']>();
     simulateTACMessage = jest.fn<ILiteSequencerClient['simulateTACMessage']>();
     getTVMExecutorFee = jest.fn<ILiteSequencerClient['getTVMExecutorFee']>();
-    getTACGasPrice = jest.fn<ILiteSequencerClient['getTACGasPrice']>();
 }
 
 class MockLiteSequencerClientFactory implements ILiteSequencerClientFactory {

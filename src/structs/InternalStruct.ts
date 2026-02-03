@@ -250,3 +250,11 @@ export type TransactionFeeCalculationStep = {
 };
 
 export type TONFeeCalculationParams = TransactionFeeCalculationStep & TONFeesParams;
+
+export type TacGasPriceResponse = {
+    gasPrices: {
+        average: number;
+        fast: number;
+        slow: number;
+    };
+};

@@ -7,6 +7,7 @@ export * from './ILiteSequencerClientFactory';
 export * from './ILogger';
 export * from './IOperationTracker';
 export * from './ISimulator';
+export * from './ITacExplorerClient';
 export * from './ITacSDK';
 export * from './ITACTransactionManager';
 export * from './ITONTransactionManager';

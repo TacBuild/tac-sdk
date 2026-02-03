@@ -1,5 +1,4 @@
-import { getHttpEndpoint, getHttpV4Endpoint } from '@orbs-network/ton-access';
-import { Network as TonNetwork } from '@orbs-network/ton-access';
+import { getHttpEndpoint, getHttpV4Endpoint, Network as TonNetwork } from '@orbs-network/ton-access';
 import { Blockchain } from '@ton/sandbox';
 import {
     Address,
@@ -10,7 +9,7 @@ import {
     storeMessage,
     TonClient,
     TonClient4,
-    Transaction,
+    Transaction
 } from '@ton/ton';
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
@@ -20,7 +19,7 @@ import {
     DEFAULT_FIND_TX_ARCHIVAL,
     DEFAULT_FIND_TX_LIMIT,
     DEFAULT_FIND_TX_RETRY_DELAY_MS,
-    DEFAULT_FIND_TX_TIMEOUT_MS,
+    DEFAULT_FIND_TX_TIMEOUT_MS
 } from '../sdk/Consts';
 import { getNormalizedExtMessageHash, sleep } from '../sdk/Utils';
 import { GetTransactionsOptions } from '../structs/InternalStruct';
@@ -136,14 +135,10 @@ export async function getAdjacentTransactionsHelper(
 
     // 3. Optional: follow the incoming message (if it exists and is internal)
     if (rootTx.inMessage?.info.type === 'internal') {
-        const src = rootTx.inMessage.info.src;
-        if (src instanceof Address) {
-            // The incoming message belongs to the sender's out-message list,
-            // so we look for the same message hash on the sender side.
-            const msgHashB64 = beginCell().store(storeMessage(rootTx.inMessage)).endCell().hash().toString('base64');
-            const tx = await findTransactionByHash(src, msgHashB64, getTransactions, opts);
-            if (tx) adjacent.push(tx);
-        }
+         // The incoming message belongs to the sender's out-message list,
+        const msgHashB64 = beginCell().store(storeMessage(rootTx.inMessage)).endCell().hash().toString('base64');
+        const tx = await findTransactionByHash(rootTx.inMessage.info.src, msgHashB64, getTransactions, opts);
+        if (tx) adjacent.push(tx);
     }
 
     return adjacent;
@@ -200,8 +195,7 @@ export async function liteClientOpener(
             )
             .then((r) => r.transactions);
         const cell = Cell.fromBoc(txsBuffered);
-        const transactions = cell.map((c) => loadTransaction(c.beginParse()));
-        return transactions;
+        return cell.map((c) => loadTransaction(c.beginParse()));
     };
 
     return {
@@ -219,8 +213,7 @@ export async function liteClientOpener(
         open: (contract) => client.open(contract),
         closeConnections,
         getTransactionByHash: async (addr, hash, opts) => {
-            const tx = await findTransactionByHash(addr, hash, getTransactions, opts);
-            return tx;
+            return await findTransactionByHash(addr, hash, getTransactions, opts);
         },
         getAdjacentTransactions: async (addr, hash, opts) =>
             getAdjacentTransactionsHelper(addr, hash, getTransactions, opts),
@@ -275,8 +268,7 @@ export async function orbsOpener(network: Network): Promise<ContractOpener> {
         open: client.open,
         getContractState: client.getContractState,
         getTransactionByHash: async (addr, hash, opts) => {
-            const tx = await findTransactionByHash(addr, hash, client.getTransactions, opts);
-            return tx;
+            return await findTransactionByHash(addr, hash, client.getTransactions, opts);
         },
         getAdjacentTransactions: async (addr, hash, opts) =>
             getAdjacentTransactionsHelper(addr, hash, client.getTransactions, opts),
@@ -329,8 +321,7 @@ export async function orbsOpener4(network: Network, timeout = 10000): Promise<Co
             };
         },
         getTransactionByHash: async (addr, hash, opts) => {
-            const tx = await findTransactionByHash(addr, hash, getTransactions, opts);
-            return tx;
+            return await findTransactionByHash(addr, hash, getTransactions, opts);
         },
         getAdjacentTransactions: async (addr, hash, opts) =>
             getAdjacentTransactionsHelper(addr, hash, getTransactions, opts),
@@ -358,8 +349,7 @@ export function tonClientOpener(client: TonClient): ContractOpener {
         open: client.open.bind(client),
         getContractState: client.getContractState.bind(client),
         getTransactionByHash: async (addr, hash, opts) => {
-            const tx = await findTransactionByHash(addr, hash, client.getTransactions.bind(client), opts);
-            return tx;
+            return await findTransactionByHash(addr, hash, client.getTransactions.bind(client), opts);
         },
         getAdjacentTransactions: async (addr, hash, opts) =>
             getAdjacentTransactionsHelper(addr, hash, client.getTransactions.bind(client), opts),

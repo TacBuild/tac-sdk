@@ -67,6 +67,9 @@ This file documents the primary data structures (types and interfaces often refe
 - [`ConvertedCurrencyResult`](#convertedcurrencyresult)
 - [`GetTVMExecutorFeeParams`](#gettvmexecutorfeeparams)
 
+### TAC Stats
+- [`TacGasPrice`](#tacgasprice)
+
 ### FT Structures
 - [`JettonMinterData`](#jettonminterdata)
 - [`FTOriginAndData`](#ftoriginanddata)
@@ -1269,6 +1272,22 @@ Parameters for calculating TVM executor fees for cross-chain operations.
 - **`feeSymbol`**: Symbol of the token to express the fee in (e.g., 'TAC', 'TON').
 - **`tonAssets`**: Array of [`TONAsset`](#tonasset) objects representing assets involved in the operation.
 - **`tvmValidExecutors`**: Array of valid TVM executor addresses to use for fee calculation.
+
+### `TacGasPrice`
+
+```typescript
+export type TacGasPrice = {
+    average: number;
+    fast: number;
+    slow: number;
+};
+```
+
+Represents TAC gas prices at different priority levels.
+
+- **`average`**: Average gas price for standard transaction processing.
+- **`fast`**: Higher gas price for faster transaction processing.
+- **`slow`**: Lower gas price for slower but more economical transaction processing.
 
 ### `ConvertCurrencyParams`
 

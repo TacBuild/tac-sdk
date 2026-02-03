@@ -526,12 +526,10 @@ export type GeneratePayloadParams = {
     feeParams?: FeeParams;
 };
 
-export type TacGasPriceResponse = {
-    gasPrices: {
-        average: number;
-        fast: number;
-        slow: number;
-    };
+export type TacGasPrice = {
+    average: number;
+    fast: number;
+    slow: number;
 };
 
 export type TrackTransactionTreeParams = {
