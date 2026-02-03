@@ -1,11 +1,15 @@
 import type { SenderAbstraction } from '../sender';
 import {
     BatchCrossChainTx,
+    CrossChainPayloadResult,
+    CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
     CrosschainTx,
     EvmProxyMsg,
+    FeeParams,
     TransactionLinkerWithOperationId,
 } from '../structs/Struct';
+import { Asset } from './Asset';
 
 export interface ITONTransactionManager {
     /**
@@ -33,4 +37,35 @@ export interface ITONTransactionManager {
         txs: BatchCrossChainTx[],
         options?: CrossChainTransactionsOptions,
     ): Promise<TransactionLinkerWithOperationId[]>;
+
+    /**
+     * Builds the fee parameters for a cross-chain transaction.
+     * @param options Transaction configuration options.
+     * @param evmProxyMsg Encoded EVM proxy message.
+     * @param sender Sender abstraction for TVM message sending.
+     * @param tx Cross-chain transaction to bridge.
+     * @returns Promise with the fee parameters.
+     */
+    buildFeeParams(
+        options: CrossChainTransactionOptions,
+        evmProxyMsg: EvmProxyMsg,
+        sender: SenderAbstraction,
+        tx: CrosschainTx,
+    ): Promise<FeeParams>;
+
+
+    /**
+     * Prepares the transaction payloads required for a cross-chain operation without sending them.
+     * @param evmProxyMsg Encoded EVM proxy message.
+     * @param senderAddress TVM address of the transaction sender (wallet address).
+     * @param assets Assets to be included in the transaction.
+     * @param options Optional transaction configuration including error handling and executor settings.
+     * @returns Promise with the prepared transaction payloads.
+     */
+    prepareCrossChainTransactionPayload(
+        evmProxyMsg: EvmProxyMsg,
+        senderAddress: string,
+        assets: Asset[],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainPayloadResult[]>;
 }

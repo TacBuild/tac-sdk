@@ -1,6 +1,5 @@
 import { toNano } from '@ton/ton';
 
-export const TRANSACTION_TON_AMOUNT = toNano(0.55);
 export const JETTON_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.2);
 export const NFT_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.3);
 
@@ -19,8 +18,19 @@ export const TON_SYMBOL = 'TON';
 export const TAC_SYMBOL = 'TAC';
 
 export const FIFTEEN_MINUTES = 15 * 60 * 1000;
+export const ONE_YEAR_SECONDS = 365 * 24 * 3600;
 
 export const TON_DECIMALS = 9;
 export const TAC_DECIMALS = 18;
 
 export const FIVE_MINUTES = 5 * 60 * 1000;
+
+export const TON_BURN_ADDRESS = 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c';
+
+// TX TRACKING
+export const DEFAULT_FIND_TX_TIMEOUT_MS = 60000;
+export const DEFAULT_FIND_TX_RETRY_DELAY_MS = 2000;
+export const DEFAULT_FIND_TX_LIMIT = 10;
+export const DEFAULT_FIND_TX_ARCHIVAL = true;
+export const DEFAULT_FIND_TX_MAX_DEPTH = 10;
+export const IGNORE_MSG_VALUE_1_NANO = 1n;

@@ -9,6 +9,7 @@ import {
     AssetFromNFTItemArg,
     AssetLike,
     BatchCrossChainTxWithAssetLike,
+    CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
     CrosschainTx,
@@ -27,6 +28,7 @@ import {
 import { Asset } from './Asset';
 import { IConfiguration } from './IConfiguration';
 import { IOperationTracker } from './IOperationTracker';
+import { ITacExplorerClient } from './ITacExplorerClient';
 
 export interface ITacSDK {
     readonly config: IConfiguration;
@@ -253,4 +255,24 @@ export interface ITacSDK {
      * Returns the operation tracker instance used for querying operation statuses and utilities.
      */
     getOperationTracker(): IOperationTracker;
+
+    /**
+     * Returns the TAC explorer client instance used for querying blockchain explorer data.
+     */
+    getTacExplorerClient(): ITacExplorerClient;
+
+    /**
+     * Prepares the transaction payloads required for a cross-chain operation without sending them.
+     * @param evmProxyMsg Encoded EVM proxy message.
+     * @param senderAddress TVM address of the transaction sender (wallet address).
+     * @param assets Assets to be included in the transaction.
+     * @param options Optional transaction configuration including error handling and executor settings.
+     * @returns Promise with the prepared transaction payloads.
+     */
+    prepareCrossChainTransactionPayload(
+        evmProxyMsg: EvmProxyMsg,
+        senderAddress: string,
+        assets?: AssetLike[],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainPayloadResult[]>;
 }

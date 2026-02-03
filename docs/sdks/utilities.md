@@ -10,11 +10,9 @@ startTracking(
     maxIterationCount?: number;
     returnValue?: boolean;
     tableView?: boolean;
-    txFinalizerConfig?: {
-      urlBuilder: (hash: string) => string;
-      authorization: { header: string; value: string };
-    };
     logger?: ILogger;
+    txFinalizer?: ITxFinalizer;
+    cclAddress?: string;
   }
 ): Promise<void | ExecutionStages>
 ```
@@ -22,7 +20,7 @@ startTracking(
 Tracks a crosschain operation end-to-end by polling the status using the transaction linker.  
 It will continue until a final state (success or failure) is reached.
 
-If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizerConfig` is provided, the [TonTxFinalizer](#tontxfinalizer) will be used to verify the final TON transaction(s) for success.
+If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` and `cclAddress` are provided, the finalizer will be used to verify the final TON transaction(s) for success.
 
 #### Parameters:
 - `transactionLinker`: Result of `sendCrossChainTransaction(...)`
@@ -33,8 +31,9 @@ If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
   - `maxIterationCount`: max polling attempts (default: 120)
   - `returnValue`: if `true`, returns profiling data instead of logging (default: `false`)
   - `tableView`: if `true`, logs formatted table output (default: `true`)
-  - `txFinalizerConfig`: (optional) configuration for [TonTxFinalizer](#tontxfinalizer) to verify TON transaction success
   - `logger`: custom logger instance for debug messages (default: NoopLogger)
+  - `txFinalizer`: (optional) `ITxFinalizer` instance to verify TON transaction success (e.g., `TonTxFinalizer`)
+  - `cclAddress`: (optional) Cross-chain layer address for transaction verification
 
 #### Returns:
 - `Promise<void>` if `returnValue` is `false`
@@ -42,15 +41,20 @@ If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 
 #### Possible exceptions:
 - `FetchError`: if operation status or ID could not be fetched from sequencer
-- `Error`: if TON transaction fails verification (when using TonTxFinalizer)
+- `Error`: if TON transaction fails verification (when using txFinalizer)
 
 #### Example:
 ```ts
+import { TonIndexerTxFinalizer, ConsoleLogger } from '@tonappchain/sdk';
+
+const finalizer = new TonIndexerTxFinalizer({
+  urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
+  authorization: { header: 'X-API-Key', value: 'your-api-key' }
+}, new ConsoleLogger());
+
 await startTracking(transactionLinker, Network.TESTNET, {
-  txFinalizerConfig: {
-    urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
-    authorization: { header: 'X-API-Key', value: 'your-api-key' }
-  },
+  txFinalizer: finalizer,
+  cclAddress: 'EQB3ncyBUTjZUA5EnFKR5_EnOMI9V1tTEAAPaiU71gc4TiUt',
   logger: new ConsoleLogger()
 });
 ```
@@ -67,11 +71,8 @@ startTrackingMultiple(
     maxIterationCount?: number;
     returnValue?: boolean;
     tableView?: boolean;
-    txFinalizerConfig?: {
-      urlBuilder: (hash: string) => string;
-      authorization: { header: string; value: string };
-    };
     logger?: ILogger;
+    txFinalizer?: ITxFinalizer;
   }
 ): Promise<void | ExecutionStages[]>
 ```
@@ -79,7 +80,7 @@ startTrackingMultiple(
 Tracks multiple crosschain operations in parallel by polling their statuses using transaction linkers.  
 Each operation will be tracked until it reaches a final state (success or failure).
 
-If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizerConfig` is provided, the [TonTxFinalizer](#tontxfinalizer) will be used to verify the final TON transaction(s) for success.
+If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` is provided, the finalizer will be used to verify the final TON transaction(s) for success.
 
 #### Parameters:
 - `transactionLinkers`: Array of results from `sendCrossChainTransaction(...)`
@@ -90,8 +91,8 @@ If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
   - `maxIterationCount`: max polling attempts (default: 120)
   - `returnValue`: if `true`, returns array of profiling data instead of logging (default: `false`)
   - `tableView`: if `true`, logs formatted table output for each operation (default: `true`)
-  - `txFinalizerConfig`: (optional) configuration for [TonTxFinalizer](#tontxfinalizer) to verify TON transaction success
   - `logger`: custom logger instance for debug messages (default: NoopLogger)
+  - `txFinalizer`: (optional) `ITxFinalizer` instance to verify TON transaction success (e.g., `TonTxFinalizer`)
 
 #### Returns:
 - `Promise<void>` if `returnValue` is `false`
@@ -99,15 +100,19 @@ If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 
 #### Possible exceptions:
 - `FetchError`: if operation status or ID could not be fetched from sequencer
-- `Error`: if TON transaction fails verification (when using TonTxFinalizer)
+- `Error`: if TON transaction fails verification (when using txFinalizer)
 
 #### Example:
 ```ts
+import { TonIndexerTxFinalizer, ConsoleLogger } from '@tonappchain/sdk';
+
+const finalizer = new TonIndexerTxFinalizer({
+  urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
+  authorization: { header: 'X-API-Key', value: 'your-api-key' }
+}, new ConsoleLogger());
+
 await startTrackingMultiple([transactionLinker1, transactionLinker2], Network.TESTNET, {
-  txFinalizerConfig: {
-    urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
-    authorization: { header: 'X-API-Key', value: 'your-api-key' }
-  },
+  txFinalizer: finalizer,
   logger: new ConsoleLogger()
 });
 ```
@@ -184,13 +189,13 @@ const assets = await normalizeAssets(config, [
 
 ---
 
-### `TonTxFinalizer`
+### `TonIndexerTxFinalizer`
 
-`TonTxFinalizer` is a utility for verifying the finality and success of TON transactions by traversing the transaction tree using the TON Center API (or a custom API).
+`TonIndexerTxFinalizer` is a utility for verifying the finality and success of TON transactions by traversing the transaction tree using the TON Center API (or a custom API).
 
 #### Constructor
 ```ts
-new TonTxFinalizer(
+new TonIndexerTxFinalizer(
   apiConfig: {
     urlBuilder: (hash: string) => string;
     authorization: { header: string; value: string };
@@ -205,16 +210,73 @@ new TonTxFinalizer(
 - `httpClient`: Optional HTTP client for making API requests; defaults to AxiosHttpClient
 
 #### Methods
-- `trackTransactionTree(hash: string, maxDepth?: number): Promise<void>`
-  - Traverses the transaction tree starting from the given hash, following outgoing transactions up to `maxDepth` (default: 10)
+- `trackTransactionTree(address: string, hash: string, maxDepth?: number): Promise<void>`
+  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` (default: 10)
   - Throws an error if any transaction in the tree is not successful
 
 #### Example
 ```ts
-const finalizer = new TonTxFinalizer({
+const finalizer = new TonIndexerTxFinalizer({
   urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
   authorization: { header: 'X-API-Key', value: 'your-api-key' }
 }, new ConsoleLogger());
 
-await finalizer.trackTransactionTree('TON_TX_HASH');
+await finalizer.trackTransactionTree('EQB3ncyBUTjZUA5EnFKR5_EnOMI9V1tTEAAPaiU71gc4TiUt', 'TON_TX_HASH');
 ```
+
+---
+
+### `TonTxFinalizer`
+
+`TonTxFinalizer` is a utility for verifying the finality and success of TON transactions by traversing the transaction tree using a `ContractOpener` interface. This implementation works directly with TON network clients (like TonClient) to fetch and verify transactions.
+
+#### Constructor
+```ts
+new TonTxFinalizer(
+  contractOpener: ContractOpener,
+  logger?: ILogger
+)
+```
+- `contractOpener`: A `ContractOpener` instance used to fetch adjacent transactions from the TON network
+- `logger`: Optional logger implementing `ILogger`. Pass a `ConsoleLogger` to enable verbose output; defaults to `NoopLogger`
+
+#### Methods
+- `trackTransactionTree(address: string, hash: string, params: { maxDepth?: number }): Promise<void>`
+  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` (default: 10)
+  - Uses the `ContractOpener` to fetch adjacent transactions via `getAdjacentTransactions` method
+  - Throws an error if any transaction in the tree is not successful
+  - Automatically retries on rate limit errors (429) and handles 404 errors gracefully
+
+#### Example
+```ts
+import { TonTxFinalizer, ConsoleLogger, Configuration, Network } from '@tonappchain/sdk';
+import { TonClient } from '@ton/ton';
+
+// Create a contract opener (example using TonClient)
+const client = new TonClient({
+  endpoint: 'https://testnet.toncenter.com/api/v2/jsonRPC'
+});
+const contractOpener = {
+  open: (src) => client.open(src),
+  getContractState: (address) => client.getContractState(address),
+  getAdjacentTransactions: (address, hash, opts) => client.getAdjacentTransactions(address, hash, opts),
+  getTransactionByHash: (address, hash, opts) => client.getTransactionByHash(address, hash, opts),
+  getAddressInformation: (address) => client.getAddressInformation(address)
+};
+
+// Create TonTxFinalizer
+const finalizer = new TonTxFinalizer(contractOpener, new ConsoleLogger());
+
+// Track transaction tree
+await finalizer.trackTransactionTree(
+  'EQB3ncyBUTjZUA5EnFKR5_EnOMI9V1tTEAAPaiU71gc4TiUt', 
+  'TON_TX_HASH',
+  { maxDepth: 10 }
+);
+```
+
+#### Differences from `TonIndexerTxFinalizer`
+
+- **`TonTxFinalizer`**: Uses `ContractOpener` interface to work directly with TON network clients. Requires an address parameter for transaction lookup.
+
+- **`TonIndexerTxFinalizer`**: Uses HTTP API (like TON Center API) with custom URL builder and authorization. Does not require address parameter.

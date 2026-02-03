@@ -7,7 +7,20 @@
   - [Overview](#overview)
   - [Constructor](#constructor)
   - [`sendCrossChainTransaction`](#sendcrosschaintransaction)
+    - [**Purpose**](#purpose)
+    - [**Parameters**](#parameters)
+    - [**Returns** `TransactionLinkerWithOperationId`](#returns-transactionlinkerwithoperationid)
+    - [**Possible exceptions**](#possible-exceptions)
   - [`sendCrossChainTransactions`](#sendcrosschaintransactions)
+    - [**Purpose**](#purpose-1)
+    - [**Parameters**](#parameters-1)
+    - [**Returns** `Promise<TransactionLinkerWithOperationId[]>`](#returns-promisetransactionlinkerwithoperationid)
+  - [`prepareCrossChainTransactionPayload`](#preparecrosschaintransactionpayload)
+    - [**Purpose**](#purpose-2)
+    - [**Parameters**](#parameters-2)
+    - [**Returns** `Promise<CrossChainPayloadResult[]>`](#returns-promisecrosschainpayloadresult)
+    - [**Use Cases**](#use-cases)
+    - [**Example**](#example)
   - [Integration with TacSdk](#integration-with-tacsdk)
   - [Example Usage](#example-usage)
     - [Using via TacSdk (Recommended)](#using-via-tacsdk-recommended)
@@ -39,7 +52,8 @@ new TONTransactionManager(
   config: IConfiguration,
   simulator: ISimulator,
   operationTracker: IOperationTracker,
-  logger?: ILogger
+  logger?: ILogger,
+  txFinalizer?: ITxFinalizer
 )
 ```
 
@@ -50,6 +64,7 @@ Creates a TONTransactionManager instance with the required dependencies.
 - **`simulator`**: Simulator instance implementing `ISimulator` for transaction simulation
 - **`operationTracker`**: OperationTracker instance implementing `IOperationTracker` for tracking operations
 - **`logger`** *(optional)*: Logger implementing `ILogger` (defaults to `NoopLogger`)
+- **`txFinalizer`** *(optional)*: TxFinalizer instance implementing `ITxFinalizer` for tracking transaction tree (defaults to `TonTxFinalizer`)
 
 ---
 
@@ -117,6 +132,68 @@ Sends multiple cross-chain transactions in a batch from TON to TAC. This method 
 ### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
 
 Returns an array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.
+
+---
+
+## `prepareCrossChainTransactionPayload`
+
+```typescript
+async prepareCrossChainTransactionPayload(
+  evmProxyMsg: EvmProxyMsg,
+  senderAddress: string,
+  assets: Asset[],
+  options?: CrossChainTransactionOptions
+): Promise<CrossChainPayloadResult[]>
+```
+
+### **Purpose**
+
+Prepares the transaction payloads required for a cross-chain operation without sending them to the network. This method generates all the necessary message payloads, addresses, and amounts that would be sent in a cross-chain transaction.
+
+### **Parameters**
+
+- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
+- **`senderAddress`**: TVM address string of the transaction sender (wallet address)
+- **`assets`**: Array of [`Asset`](./assets.md) instances to be bridged in the transaction
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) for controlling payload generation
+
+### **Returns** `Promise<CrossChainPayloadResult[]>`
+
+Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschainpayloadresult) objects, each containing:
+- **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
+- **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
+- **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
+- **`tonNetworkFee`**: Network fee for this specific message in nanotons
+- **`tacEstimatedGas`** *(optional)*: Estimated gas required for TAC-side execution
+- **`transactionLinker`**: Transaction linker for tracking the operation across chains
+
+### **Use Cases**
+
+- Build transaction batching systems
+- Create transaction templates for later execution
+- Debug and inspect transaction payloads before sending
+
+### **Example**
+
+```typescript
+const payloads = await tonManager.prepareCrossChainTransactionPayload(
+  evmProxyMsg,
+  "EQD...",
+  [tonAsset, jettonAsset],
+  { calculateRollbackFee: true }
+);
+
+// Inspect payloads before sending
+payloads.forEach((payload, index) => {
+  console.log(`Payload ${index}:`);
+  console.log(`  Destination: ${payload.destinationAddress}`);
+  console.log(`  TON Amount: ${payload.tonAmount} nanotons`);
+  console.log(`  Network Fee: ${payload.tonNetworkFee} nanotons`);
+  console.log(`  TAC Estimated Gas: ${payload.tacEstimatedGas || 'N/A'}`);
+  console.log(`  Transaction Linker: ${JSON.stringify(payload.transactionLinker)}`);
+});
+
+```
 
 ---
 
@@ -188,7 +265,8 @@ const tonManager = new TONTransactionManager(
   config,
   simulator,
   operationTracker,
-  logger
+  logger,
+  txFinalizer // optional, defaults to TonTxFinalizer
 );
 
 // Send TON -> TAC transaction

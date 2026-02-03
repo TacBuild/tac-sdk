@@ -1,10 +1,12 @@
 import { SandboxContract } from '@ton/sandbox';
-import { OpenedContract } from '@ton/ton';
+import { Cell, OpenedContract } from '@ton/ton';
 import { AbstractProvider } from 'ethers';
 
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
+import { ITxFinalizer } from '../interfaces/ITxFinalizer';
+import { SendResult } from './InternalStruct';
 
 export type ContractState = {
     balance: bigint;
@@ -71,6 +73,11 @@ export type TONParams = {
      * Address of TON settings contract. Use only for tests.
      */
     settingsAddress?: string;
+
+    /**
+     * TxFinalizer for tracking transaction tree
+     */
+    txFinalizer?: ITxFinalizer;
 };
 
 export type SDKParams = {
@@ -126,7 +133,6 @@ export type EvmProxyMsg = {
     methodName?: string;
     encodedParameters?: string;
     gasLimit?: bigint;
-    [key: string]: unknown;
 };
 
 export type TransactionLinker = {
@@ -134,7 +140,7 @@ export type TransactionLinker = {
     shardCount: number;
     shardsKey: string;
     timestamp: number;
-    sendTransactionResult?: unknown;
+    sendTransactionResult?: SendResult;
 };
 
 export type TransactionLinkerWithOperationId = TransactionLinker & {
@@ -333,7 +339,14 @@ export type FeeParams = {
     protocolFee: bigint;
     evmExecutorFee: bigint;
     tvmExecutorFee: bigint;
+    evmEstimatedGas?: bigint;
 };
+
+export type evmDataBuilder = (
+    transactionLinker: TransactionLinker,
+    evmProxyMsg: EvmProxyMsg,
+    validExecutors: ValidExecutors,
+) => Cell;
 
 export type CrossChainTransactionOptions = {
     allowSimulationError?: boolean;
@@ -348,6 +361,7 @@ export type CrossChainTransactionOptions = {
     validateAssetsBalance?: boolean;
     waitOperationId?: boolean;
     waitOptions?: WaitOptions<string>;
+    evmDataBuilder?: evmDataBuilder;
 };
 
 export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
@@ -422,6 +436,11 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
      * Receives both the result and optional context with additional parameters
      */
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
+    /**
+     * Ensure that TON transaction is succesful
+     * @default true
+     */
+    ensureTxExecuted?: boolean;
 }
 
 export const defaultWaitOptions: WaitOptions = {
@@ -488,4 +507,32 @@ export type FTOriginAndData = {
     jettonMinter: OpenedContract<JettonMinter> | SandboxContract<JettonMinter>;
     evmAddress?: string;
     jettonData?: JettonMinterData;
+};
+
+export type CrossChainPayloadResult = {
+    body: Cell;
+    destinationAddress: string;
+    tonAmount: bigint;
+    tonNetworkFee: bigint;
+    tacEstimatedGas?: bigint;
+    transactionLinker: TransactionLinker;
+};
+
+export type GeneratePayloadParams = {
+    excessReceiver: string;
+    evmData: Cell;
+    crossChainTonAmount?: bigint;
+    forwardFeeTonAmount?: bigint;
+    feeParams?: FeeParams;
+};
+
+export type TacGasPrice = {
+    average: number;
+    fast: number;
+    slow: number;
+};
+
+export type TrackTransactionTreeParams = {
+    maxDepth?: number;
+    ignoreOpcodeList?: number[];
 };

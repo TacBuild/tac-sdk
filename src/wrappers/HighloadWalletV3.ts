@@ -60,6 +60,14 @@ export class HighloadWalletV3 implements WalletInstanse {
         return 0; // will not be used
     }
 
+    async send(provider: ContractProvider, msg: Cell): Promise<void> {
+        await provider.external(msg);
+    }
+
+    createTransfer(): Cell {
+        throw new Error('Not implemented. Use sendTransfer instead - it returns the BOC as a string');
+    }
+
     async sendTransfer(
         provider: ContractProvider,
         args: {
@@ -71,9 +79,9 @@ export class HighloadWalletV3 implements WalletInstanse {
             subwalletId?: number;
             createdAt?: number;
         },
-    ): Promise<void> {
+    ): Promise<string> {
         if (!args.messages.length) {
-            return;
+            return '';
         }
 
         const state = await provider.getState();
@@ -88,7 +96,7 @@ export class HighloadWalletV3 implements WalletInstanse {
             outMsg: msg,
         }));
 
-        await this.sendBatch(provider, args.secretKey, actions, subwalletId, timeout, args.createdAt);
+        return await this.sendBatch(provider, args.secretKey, actions, subwalletId, timeout, args.createdAt);
     }
 
     static create(config: HighloadWalletV3Config, code: Cell = HIGHLOAD_V3_CODE, workchain = 0) {
@@ -112,7 +120,7 @@ export class HighloadWalletV3 implements WalletInstanse {
             subwalletId: number;
             timeout: number;
         },
-    ) {
+    ): Promise<string> {
         let messageCell: Cell;
 
         if (opts.message instanceof Cell) {
@@ -134,9 +142,14 @@ export class HighloadWalletV3 implements WalletInstanse {
             .storeUint(opts.timeout, TIMEOUT_SIZE)
             .endCell();
 
-        await provider.external(
-            beginCell().storeBuffer(sign(messageInner.hash(), secretKey)).storeRef(messageInner).endCell(),
-        );
+        const externalMessage = beginCell()
+            .storeBuffer(sign(messageInner.hash(), secretKey))
+            .storeRef(messageInner)
+            .endCell();
+
+        await provider.external(externalMessage);
+
+        return externalMessage.toBoc().toString('base64');
     }
 
     async sendBatch(
@@ -147,7 +160,7 @@ export class HighloadWalletV3 implements WalletInstanse {
         timeout: number,
         createdAt?: number,
         value: bigint = 0n,
-    ) {
+    ): Promise<string> {
         if (createdAt == undefined) {
             createdAt = HighloadWalletV3.generateCreatedAt();
         }

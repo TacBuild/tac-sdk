@@ -1,5 +1,9 @@
 import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
-import { convertCurrencyFetchError, getTONFeeInfoFetchError, simulationFetchError } from '../errors/instances';
+import {
+    convertCurrencyFetchError,
+    getTONFeeInfoFetchError,
+    simulationFetchError,
+} from '../errors/instances';
 import { IHttpClient, ILiteSequencerClient } from '../interfaces';
 import {
     ConvertCurrencyResponse,
@@ -59,6 +63,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                 return response.data.response || '';
             }
         } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((error as any)?.response?.status === 404) {
                 return '';
             }
@@ -97,6 +102,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
             );
             return response.data.response || '';
         } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((error as any)?.response?.status === 404) {
                 return '';
             }

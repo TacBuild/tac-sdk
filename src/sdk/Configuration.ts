@@ -1,12 +1,14 @@
-import { Address, Dictionary } from '@ton/ton';
+import { Address, Dictionary, loadConfigParamsAsSlice, parseFullConfig } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
 import { dev, mainnet, testnet } from '../../artifacts';
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
 import { createDefaultRetryableOpener } from '../adapters';
-import { IConfiguration } from '../interfaces';
-import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
+import { ContractOpener, IConfiguration, ILogger } from '../interfaces';
+import { ContractFeeUsageParams, InternalTACParams, InternalTONParams, TONFeesParams } from '../structs/InternalStruct';
 import { Network, TACParams, TONParams } from '../structs/Struct';
+import { DEFAULT_CONTRACT_FEE_USAGE_PARAMS } from './Fees';
+import { NoopLogger } from './Logger';
 import { getAddressString, sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
 
@@ -16,6 +18,7 @@ export class Configuration implements IConfiguration {
     readonly TONParams: InternalTONParams;
     readonly TACParams: InternalTACParams;
     readonly liteSequencerEndpoints: string[];
+    readonly logger: ILogger;
 
     constructor(
         network: Network,
@@ -23,12 +26,14 @@ export class Configuration implements IConfiguration {
         TONParams: InternalTONParams,
         TACParams: InternalTACParams,
         liteSequencerEndpoints: string[],
+        logger: ILogger,
     ) {
         this.network = network;
         this.artifacts = artifacts;
         this.TONParams = TONParams;
         this.TACParams = TACParams;
         this.liteSequencerEndpoints = liteSequencerEndpoints;
+        this.logger = logger;
     }
 
     static async create(
@@ -38,9 +43,10 @@ export class Configuration implements IConfiguration {
         TACParams?: TACParams,
         customLiteSequencerEndpoints?: string[],
         delay?: number,
+        logger: ILogger = new NoopLogger(),
     ): Promise<Configuration> {
         const [internalTONParams, internalTACParams] = await Promise.all([
-            this.prepareTONParams(network, TONParams, delay),
+            this.prepareTONParams(network, artifacts, TONParams, delay, logger),
             this.prepareTACParams(network, TACParams),
         ]);
 
@@ -54,17 +60,18 @@ export class Configuration implements IConfiguration {
             liteSequencerEndpoints = customLiteSequencerEndpoints ?? artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
         }
 
-        return new Configuration(network, artifacts, internalTONParams, internalTACParams, liteSequencerEndpoints);
+        return new Configuration(network, artifacts, internalTONParams, internalTACParams, liteSequencerEndpoints, logger);
     }
 
     private static async prepareTONParams(
         network: Network,
+        artifacts: typeof testnet | typeof mainnet | typeof dev,
         TONParams?: TONParams,
         delay?: number,
+        logger: ILogger = new NoopLogger(),
     ): Promise<InternalTONParams> {
         let contractOpener;
         let settingsAddress: string;
-        const artifacts = network === Network.MAINNET ? mainnet : network === Network.TESTNET ? testnet : dev;
         if (network === Network.DEV) {
             if (!TONParams || !TONParams.contractOpener) {
                 throw new Error('For dev network, a custom contract opener must be provided in TONParams');
@@ -94,6 +101,17 @@ export class Configuration implements IConfiguration {
         const nftItemCode = allSettings.get(sha256toBigInt('NFTItemCode'))!;
         const nftCollectionCode = allSettings.get(sha256toBigInt('NFTCollectionCode'))!;
 
+        let contractFeeUsageParams = DEFAULT_CONTRACT_FEE_USAGE_PARAMS;
+        const contractFeeUsageParamsCell = allSettings.get(sha256toBigInt('ContractFeeUsageParams'));
+        if (contractFeeUsageParamsCell) {
+            const jsonString = contractFeeUsageParamsCell.beginParse().loadStringTail();
+            contractFeeUsageParams = JSON.parse(jsonString) as ContractFeeUsageParams;
+        } else {
+            logger.debug('Failed to load ContractFeeUsageParams from Settings, used default');
+        }
+
+        const feesParams = await this.retrieveTONFeesParams(contractOpener);
+
         return {
             contractOpener,
             jettonProxyAddress,
@@ -103,6 +121,8 @@ export class Configuration implements IConfiguration {
             nftProxyAddress,
             nftItemCode,
             nftCollectionCode,
+            feesParams,
+            contractFeeUsageParams,
         };
     }
 
@@ -258,5 +278,34 @@ export class Configuration implements IConfiguration {
 
     async isContractDeployedOnTVM(address: string): Promise<boolean> {
         return (await this.TONParams.contractOpener.getContractState(Address.parse(address))).state === 'active';
+    }
+
+    private static async retrieveTONFeesParams(contractOpener: ContractOpener): Promise<TONFeesParams> {
+        try {
+            const config = await contractOpener.getConfig();
+            const fullConfig = parseFullConfig(loadConfigParamsAsSlice(config));
+            return {
+                gasPrice: Number(fullConfig.gasPrices.workchain.other.gasPrice),
+                lumpPrice: Number(fullConfig.msgPrices.workchain.lumpPrice),
+                msgBitPrice: Number(fullConfig.msgPrices.workchain.bitPrice),
+                msgCellPrice: Number(fullConfig.msgPrices.workchain.cellPrice),
+                ihrPriceFactor: Number(fullConfig.msgPrices.workchain.ihrPriceFactor),
+                firstFrac: Number(fullConfig.msgPrices.workchain.firstFrac),
+                accountBitPrice: Number(fullConfig.storagePrices[0].bit_price_ps),
+                accountCellPrice: Number(fullConfig.storagePrices[0].cell_price_ps),
+            };
+        } catch {
+            // return standard values from https://tonviewer.com/config#25 in case of failure
+            return {
+                accountBitPrice: 1,
+                accountCellPrice: 500,
+                lumpPrice: 400000,
+                gasPrice: 26214400,
+                firstFrac: 21845,
+                ihrPriceFactor: 98304,
+                msgBitPrice: 26214400,
+                msgCellPrice: 2621440000,
+            };
+        }
     }
 }

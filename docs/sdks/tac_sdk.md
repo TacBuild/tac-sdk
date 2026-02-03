@@ -8,13 +8,27 @@
   - [Creating an Instance of `TacSdk`](#creating-an-instance-of-tacsdk)
   - [Core Functions](#core-functions)
     - [`sendCrossChainTransaction`](#sendcrosschaintransaction)
+      - [**Purpose**](#purpose)
+      - [**Parameters**](#parameters)
+      - [**Returns** `TransactionLinkerWithOperationId`](#returns-transactionlinkerwithoperationid)
+      - [**Possible exceptions**](#possible-exceptions)
+      - [**Functionality**](#functionality)
     - [`getSimulationInfo`](#getsimulationinfo)
     - [`sendCrossChainTransactions`](#sendcrosschaintransactions)
+      - [**Parameters**](#parameters-1)
+      - [**Returns** `Promise<TransactionLinkerWithOperationId[]>`](#returns-promisetransactionlinkerwithoperationid)
+    - [`prepareCrossChainTransactionPayload`](#preparecrosschaintransactionpayload)
+      - [**Parameters**](#parameters-2)
+      - [**Returns** `Promise<CrossChainPayloadResult[]>`](#returns-promisecrosschainpayloadresult)
+      - [**Use Cases**](#use-cases)
+      - [**Example**](#example)
   - [Asset Helpers](#asset-helpers)
     - [`getAsset`](#getasset)
     - [`getFT`](#getft)
     - [`getNFT`](#getnft)
     - [`getEVMTokenAddress`](#getevmtokenaddress)
+      - [**Purpose**](#purpose-1)
+      - [**Returns**](#returns)
     - [`getTVMTokenAddress`](#gettvmtokenaddress)
     - [`nativeTONAddress`](#nativetonaddress)
     - [`nativeTACAddress`](#nativetacaddress)
@@ -23,21 +37,47 @@
     - [`getTrustedTONExecutors`](#gettrustedtonexecutors)
   - [NFT Helpers](#nft-helpers)
     - [`getTVMNFTAddress`](#gettvmnftaddress)
+      - [**Parameters**](#parameters-3)
+      - [**Returns**](#returns-1)
     - [`getEVMNFTAddress`](#getevmnftaddress)
+      - [**Parameters**](#parameters-4)
+      - [**Returns**](#returns-2)
   - [Jetton Helpers](#jetton-helpers)
     - [`getJettonData`](#getjettondata)
     - [`getUserJettonWalletAddress`](#getuserjettonwalletaddress)
     - [`getUserJettonBalance`](#getuserjettonbalance)
     - [`getUserJettonBalanceExtended`](#getuserjettonbalanceextended)
+      - [**Returns** `UserWalletBalanceExtended`](#returns-userwalletbalanceextended)
   - [Advanced](#advanced)
     - [`getSmartAccountAddressForTvmWallet`](#getsmartaccountaddressfortvmwallet)
     - [`simulateTACMessage`](#simulatetacmessage)
+      - [**Parameters**](#parameters-5)
+      - [**Returns** `TACSimulationResult`](#returns-tacsimulationresult)
     - [`simulateTransactions`](#simulatetransactions)
+      - [**Returns** `ExecutionFeeEstimationResult[]`](#returns-executionfeeestimationresult)
     - [`getTVMExecutorFeeInfo`](#gettvmexecutorfeeinfo)
+      - [**Returns** `SuggestedTVMExecutorFee`](#returns-suggestedtvmexecutorfee)
     - [`bridgeTokensToTON`](#bridgetokenstoton)
+      - [**Parameters**](#parameters-6)
+      - [**Returns** `Promise<string>`](#returns-promisestring)
     - [`isContractDeployedOnTVM`](#iscontractdeployedontvm)
+      - [**Purpose**](#purpose-2)
+      - [**Parameters**](#parameters-7)
+      - [**Returns**](#returns-3)
     - [`getNFTItemData`](#getnftitemdata)
+      - [**Purpose**](#purpose-3)
+      - [**Parameters**](#parameters-8)
+      - [**Returns**](#returns-4)
+      - [**Possible exceptions**](#possible-exceptions-1)
     - [`getOperationTracker`](#getoperationtracker)
+      - [**Purpose**](#purpose-4)
+      - [**Returns**](#returns-5)
+    - [`getTacExplorerClient`](#gettacexplorerclient)
+      - [**Purpose**](#purpose-5)
+      - [**Returns**](#returns-6)
+    - [`getTACGasPrice`](#gettacgasprice)
+      - [**Purpose**](#purpose-6)
+      - [**Returns**](#returns-7)
     - [`closeConnections`](#closeconnections)
 
 ---
@@ -158,6 +198,75 @@ Sends multiple cross-chain transactions in a batch. This is useful for scenarios
 
 #### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
   - An array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.
+
+---
+
+### `prepareCrossChainTransactionPayload`
+
+```ts
+prepareCrossChainTransactionPayload(
+  evmProxyMsg: EvmProxyMsg,
+  senderAddress: string,
+  assets?: AssetLike[],
+  options?: CrossChainTransactionOptions
+): Promise<CrossChainPayloadResult[]>
+```
+
+Prepares the transaction payloads required for a cross-chain operation without sending them. This method generates all necessary message payloads, addresses, and amounts that would be sent in a cross-chain transaction.
+
+#### **Parameters**
+
+- **`evmProxyMsg`**: An [`EvmProxyMsg`](./../models/structs.md#evmproxymsg-type) object defining the EVM operation
+- **`senderAddress`**: TVM address string of the transaction sender (wallet address)
+- **`assets`** *(optional)*: Array of `AssetLike` instances to be bridged in the transaction
+- **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) for controlling payload generation
+
+#### **Returns** `Promise<CrossChainPayloadResult[]>`
+
+Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschainpayloadresult-type) objects, each containing:
+- **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
+- **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
+- **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
+- **`tonNetworkFee`**: Network fee for this specific message in nanotons
+- **`tacEstimatedGas`** *(optional)*: Estimated gas required for TAC-side execution
+- **`transactionLinker`**: Transaction linker for tracking the operation across chains
+
+#### **Use Cases**
+
+- Build transaction batching systems
+- Debug and inspect transaction payloads before sending
+
+#### **Example**
+
+```ts
+const payloads = await sdk.prepareCrossChainTransactionPayload(
+  {
+    evmTargetAddress: "0x...",
+    methodName: "deposit",
+    encodedParameters: "0x..."
+  },
+  "EQD...sender_address",
+  [tonAsset, jettonAsset]
+);
+
+// Inspect payloads
+payloads.forEach((payload, i) => {
+  console.log(`Payload ${i}:`);
+  console.log(`  Destination: ${payload.destinationAddress}`);
+  console.log(`  TON Amount: ${payload.tonAmount} nanotons`);
+  console.log(`  Network Fee: ${payload.tonNetworkFee} nanotons`);
+  console.log(`  TAC Estimated Gas: ${payload.tacEstimatedGas || 'N/A'}`);
+});
+
+// Use with custom wallet implementation
+for (const payload of payloads) {
+  await customWallet.sendMessage(
+    payload.destinationAddress, 
+    payload.tonAmount, 
+    payload.body
+  );
+}
+```
 
 ---
 
@@ -485,6 +594,42 @@ Returns the operation tracker instance used for querying operation statuses and 
 - The operation tracker instance for monitoring cross-chain operation status and getting detailed execution information.
 
 ---
+
+### `getTacExplorerClient`
+
+```ts
+getTacExplorerClient(): ITacExplorerClient
+```
+
+#### **Purpose**
+Returns the TAC explorer client instance used for querying blockchain explorer data such as gas prices and blockchain statistics.
+
+This method provides direct access to the explorer client if you need to use it independently or for advanced use cases.
+
+#### **Returns**
+[`ITacExplorerClient`](./tac_explorer_client.md)
+- The TAC explorer client instance for querying blockchain explorer data.
+
+---
+
+### `getTACGasPrice`
+
+```ts
+getTACGasPrice(): Promise<TacGasPrice>
+```
+
+#### **Purpose**
+Retrieves the current TAC gas prices from the blockchain explorer. This method provides recommended gas prices for different transaction speeds.
+
+The gas prices are fetched from the TAC blockchain explorer API and can be used to estimate transaction costs or set appropriate gas prices for TAC transactions.
+
+#### **Returns**
+`Promise<TacGasPrice>`
+- An object containing three gas price levels:
+  - **`average`**: Gas price for normal transaction confirmation speed
+  - **`fast`**: Higher gas price for faster transaction confirmation
+  - **`slow`**: Lower gas price for slower, cheaper transactions
+
 
 ### `closeConnections`
 

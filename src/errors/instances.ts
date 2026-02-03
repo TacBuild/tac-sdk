@@ -1,3 +1,4 @@
+import { Origin } from '../structs/Struct';
 import {
     AddressError,
     BitError,
@@ -12,6 +13,7 @@ import {
     PrepareMessageGroupError,
     SettingError,
     TokenError,
+    TransactionError,
     WalletError,
 } from './errors';
 
@@ -113,3 +115,10 @@ export const convertCurrencyNegativeOrZeroValueError = new FormatError(
     'Value cannot be negative or zero for currency conversion',
     132,
 );
+
+export const unknownAssetOriginError = (origin: Origin) => new TokenError(`Unknown asset origin: ${origin}`, 133);
+
+export const gasPriceFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`Failed to fetch gas price: ${msg}`, 134, inner);
+
+export const txFinalizationError = (msg: string) => new TransactionError(`Transaction failed: ${msg}`, 135);

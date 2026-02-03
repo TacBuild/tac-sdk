@@ -9,6 +9,7 @@ import {
     ILogger,
     IOperationTracker,
     ISimulator,
+    ITacExplorerClient,
     ITacSDK,
     ITACTransactionManager,
     ITONTransactionManager,
@@ -22,6 +23,7 @@ import {
     AssetType,
     BatchCrossChainTx,
     BatchCrossChainTxWithAssetLike,
+    CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
     CrosschainTx,
@@ -32,6 +34,7 @@ import {
     NFTAddressType,
     SDKParams,
     SuggestedTVMExecutorFee,
+    TacGasPrice,
     TACSimulationParams,
     TACSimulationResult,
     TransactionLinkerWithOperationId,
@@ -43,12 +46,15 @@ import { DEFAULT_DELAY } from './Consts';
 import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { Simulator } from './Simulator';
+import { TacExplorerClient } from './TacExplorerClient';
 import { TACTransactionManager } from './TACTransactionManager';
 import { TONTransactionManager } from './TONTransactionManager';
+import { TonTxFinalizer } from './TxFinalizer';
 import { getBouncedAddress, mapAssetsToTonAssets, normalizeAssets } from './Utils';
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
     readonly operationTracker: IOperationTracker;
+    readonly explorerClient: ITacExplorerClient;
     private readonly simulator: ISimulator;
     private readonly tonTransactionManager: ITONTransactionManager;
     private readonly tacTransactionManager: ITACTransactionManager;
@@ -59,12 +65,14 @@ export class TacSdk implements ITacSDK {
         tonTransactionManager: ITONTransactionManager,
         tacTransactionManager: ITACTransactionManager,
         operationTracker: IOperationTracker,
+        explorerClient: ITacExplorerClient,
     ) {
         this.config = config;
         this.simulator = simulator;
         this.tonTransactionManager = tonTransactionManager;
         this.tacTransactionManager = tacTransactionManager;
         this.operationTracker = operationTracker;
+        this.explorerClient = explorerClient;
     }
 
     static async create(sdkParams: SDKParams, logger: ILogger = new NoopLogger()): Promise<TacSdk> {
@@ -93,14 +101,31 @@ export class TacSdk implements ITacSDK {
             sdkParams.TACParams,
             sdkParams.customLiteSequencerEndpoints,
             delay,
+            logger,
         );
 
         const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints);
+        const explorerClient = new TacExplorerClient(artifacts.TAC_EXPLORER_API_ENDPOINT);
         const simulator = new Simulator(config, operationTracker, logger);
-        const tonTransactionManager = new TONTransactionManager(config, simulator, operationTracker, logger);
+        const txFinalizer =
+            sdkParams.TONParams?.txFinalizer ?? new TonTxFinalizer(config.TONParams.contractOpener, logger);
+        const tonTransactionManager = new TONTransactionManager(
+            config,
+            simulator,
+            operationTracker,
+            logger,
+            txFinalizer,
+        );
         const tacTransactionManager = new TACTransactionManager(config, operationTracker, logger);
 
-        return new TacSdk(config, simulator, tonTransactionManager, tacTransactionManager, operationTracker);
+        return new TacSdk(
+            config,
+            simulator,
+            tonTransactionManager,
+            tacTransactionManager,
+            operationTracker,
+            explorerClient,
+        );
     }
 
     closeConnections(): unknown {
@@ -303,5 +328,33 @@ export class TacSdk implements ITacSDK {
 
     getOperationTracker(): IOperationTracker {
         return this.operationTracker;
+    }
+
+    getTacExplorerClient(): ITacExplorerClient {
+        return this.explorerClient;
+    }
+
+    async prepareCrossChainTransactionPayload(
+        evmProxyMsg: EvmProxyMsg,
+        senderAddress: string,
+        assets: AssetLike[] = [],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainPayloadResult[]> {
+        const normalizedAssets = await normalizeAssets(this.config, assets);
+        return this.tonTransactionManager.prepareCrossChainTransactionPayload(
+            evmProxyMsg,
+            senderAddress,
+            normalizedAssets,
+            options,
+        );
+    }
+
+    async getTACGasPrice(): Promise<TacGasPrice> {
+        const response = await this.explorerClient.getTACGasPrice();
+        return {
+            average: response.gasPrices.average,
+            fast: response.gasPrices.fast,
+            slow: response.gasPrices.slow,
+        };
     }
 }

@@ -351,13 +351,13 @@ export class FT implements Asset {
         return this._tvmAddress.toString({ bounceable: true });
     }
 
-    async generatePayload(params: {
+    generatePayload(params: {
         excessReceiver: string;
         evmData: Cell;
         crossChainTonAmount?: bigint;
         forwardFeeTonAmount?: bigint;
         feeParams?: FeeParams;
-    }): Promise<Cell> {
+    }): Cell {
         const { excessReceiver, evmData, crossChainTonAmount = 0n, forwardFeeTonAmount = 0n, feeParams } = params;
 
         const feeData = generateFeeData(feeParams);

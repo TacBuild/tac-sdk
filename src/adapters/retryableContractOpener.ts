@@ -1,10 +1,11 @@
 import { SandboxContract } from '@ton/sandbox';
-import { Address, Contract, OpenedContract, TonClient } from '@ton/ton';
+import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/ton';
 
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener } from '../interfaces';
+import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
 import { ContractState, Network } from '../structs/Struct';
-import { orbsOpener, orbsOpener4 } from './contractOpener';
+import { orbsOpener, orbsOpener4, tonClientOpener } from './contractOpener';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -27,6 +28,30 @@ export class RetryableContractOpener implements ContractOpener {
         this.openerConfigs = openerConfigs;
     }
 
+    async getTransactionByHash(
+        address: Address,
+        hash: string,
+        opts: GetTransactionsOptions,
+    ): Promise<Transaction | null> {
+        const result = await this.executeWithFallback((config) =>
+            config.opener.getTransactionByHash(address, hash, opts),
+        );
+
+        if (result.success && result.data) {
+            return result.data as Transaction | null;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get transaction by hash');
+    }
+
+    async getAdjacentTransactions(address: Address, hash: string): Promise<Transaction[]> {
+        const result = await this.executeWithFallback((config) => config.opener.getAdjacentTransactions(address, hash));
+
+        if (result.success && result.data) {
+            return result.data;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get account transactions');
+    }
+
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T> {
         const firstConfig = this.openerConfigs[0];
         const contract = firstConfig.opener.open(src);
@@ -40,6 +65,24 @@ export class RetryableContractOpener implements ContractOpener {
             return result.data;
         }
         throw result.lastError || allContractOpenerFailedError('Failed to get contract state');
+    }
+
+    async getAddressInformation(address: Address): Promise<AddressInformation> {
+        const result = await this.executeWithFallback((config) => config.opener.getAddressInformation(address));
+
+        if (result.success && result.data) {
+            return result.data;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get address information');
+    }
+
+    async getConfig(): Promise<string> {
+        const result = await this.executeWithFallback((config) => config.opener.getConfig());
+
+        if (result.success && result.data) {
+            return result.data;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get blockchain config');
     }
 
     closeConnections(): void {
@@ -131,11 +174,10 @@ export async function createDefaultRetryableOpener(
 ): Promise<ContractOpener> {
     const openers: OpenerConfig[] = [];
 
-    const tonClient = new TonClient({
-        endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString(),
-    });
+    const tonClient = new TonClient({ endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString() });
+    const opener = tonClientOpener(tonClient);
 
-    openers.push({ opener: tonClient, retries: maxRetries, retryDelay });
+    openers.push({ opener, retries: maxRetries, retryDelay });
 
     if (networkType !== Network.DEV) {
         try {

@@ -1,6 +1,6 @@
 import type { Cell } from '@ton/ton';
 
-import { AssetType, FeeParams } from '../structs/Struct';
+import { AssetType, GeneratePayloadParams, Origin } from '../structs/Struct';
 
 export interface Asset {
     // Address of the token on the blockchain
@@ -11,6 +11,8 @@ export interface Asset {
     rawAmount: bigint;
     // Clone to create new token with the same parameters
     clone: Asset;
+    // Origin of the token
+    origin: Origin;
     /**
      * Returns a new asset instance with the specified transfer amount in human-readable units.
      * Does not mutate the current asset instance.
@@ -63,15 +65,9 @@ export interface Asset {
      * @param params.crossChainTonAmount Optional TON amount to transfer cross-chain with the message.
      * @param params.forwardFeeTonAmount Optional TON amount used to cover forwarding fees on TON.
      * @param params.feeParams Optional fee parameters to fine-tune execution costs.
-     * @returns Promise that resolves to a Cell containing the encoded payload.
+     * @returns Cell containing the encoded payload.
      */
-    generatePayload(params: {
-        excessReceiver: string;
-        evmData: Cell;
-        crossChainTonAmount?: bigint;
-        forwardFeeTonAmount?: bigint;
-        feeParams?: FeeParams;
-    }): Promise<Cell>;
+    generatePayload(params: GeneratePayloadParams): Cell;
     /**
      * Validates whether the specified user is allowed to transfer this asset.
      * Implementations should throw if the transfer is not permitted (e.g., frozen asset, missing wallet, insufficient permissions).

@@ -1,6 +1,7 @@
 import { SandboxContract } from '@ton/sandbox';
-import type { Address, Contract, OpenedContract } from '@ton/ton';
+import type { Address, Contract, OpenedContract, Transaction } from '@ton/ton';
 
+import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
 import { ContractState } from '../structs/Struct';
 
 export interface ContractOpener {
@@ -22,4 +23,8 @@ export interface ContractOpener {
      * Closes any underlying connections if supported by the implementation.
      */
     closeConnections?: () => unknown;
+    getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+    getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]>;
+    getAddressInformation(address: Address): Promise<AddressInformation>;
+    getConfig(): Promise<string>;
 }

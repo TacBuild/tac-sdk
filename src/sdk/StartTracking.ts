@@ -1,12 +1,9 @@
-import Table from 'cli-table3';
-
 import { ILogger } from '../interfaces';
-import { TxFinalizerConfig } from '../structs/InternalStruct';
+import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import { ExecutionStages, Network, OperationType, TransactionLinker } from '../structs/Struct';
-import { MAX_ITERATION_COUNT } from './Consts';
+import { DEFAULT_FIND_TX_MAX_DEPTH, MAX_ITERATION_COUNT } from './Consts';
 import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
-import { TonTxFinalizer } from './TxFinalizer';
 import { sleep } from './Utils';
 
 export async function startTracking(
@@ -18,8 +15,9 @@ export async function startTracking(
         maxIterationCount?: number;
         returnValue?: boolean;
         tableView?: boolean;
-        txFinalizerConfig?: TxFinalizerConfig;
         logger?: ILogger;
+        txFinalizer?: ITxFinalizer;
+        cclAddress?: string;
     },
 ): Promise<void | ExecutionStages> {
     const {
@@ -28,17 +26,20 @@ export async function startTracking(
         maxIterationCount = MAX_ITERATION_COUNT,
         returnValue = false,
         tableView = true,
-        txFinalizerConfig,
         logger = new NoopLogger(),
+        txFinalizer,
+        cclAddress,
     } = options || {};
 
     const tracker = new OperationTracker(network, customLiteSequencerEndpoints, logger);
 
-    logger.debug('Start tracking operation');
-    logger.debug('caller: ' + transactionLinker.caller);
-    logger.debug('shardsKey: ' + transactionLinker.shardsKey);
-    logger.debug('shardCount: ' + transactionLinker.shardCount);
-    logger.debug('timestamp: ' + transactionLinker.timestamp);
+    logger.debug(
+        `Start tracking operation\n` +
+            `caller: ${transactionLinker.caller}\n` +
+            `shardsKey: ${transactionLinker.shardsKey}\n` +
+            `shardCount: ${transactionLinker.shardCount}\n` +
+            `timestamp: ${transactionLinker.timestamp}`,
+    );
 
     let operationId = '';
     let iteration = 0; // number of iterations
@@ -95,14 +96,12 @@ export async function startTracking(
     if (profilingData.executedInTON.exists && profilingData.executedInTON.stageData?.transactions) {
         logger.debug('EXECUTED_IN_TON stage found, verifying transaction success in TON...');
 
-        if (txFinalizerConfig) {
-            const txFinalizer = new TonTxFinalizer(txFinalizerConfig, logger);
-
+        if (txFinalizer && cclAddress) {
             const transactions = profilingData.executedInTON.stageData.transactions;
             for (const tx of transactions) {
                 try {
                     logger.debug(`Verifying transaction: ${tx.hash}`);
-                    await txFinalizer.trackTransactionTree(tx.hash);
+                    await txFinalizer.trackTransactionTree(cclAddress, tx.hash, { maxDepth: DEFAULT_FIND_TX_MAX_DEPTH });
                     logger.debug(`Transaction ${tx.hash} verified successfully in TON`);
                 } catch (error) {
                     logger.debug(`Transaction ${tx.hash} failed verification in TON: ${error}`);
@@ -112,7 +111,7 @@ export async function startTracking(
                 }
             }
         } else {
-            logger.debug('TxFinalizer config not provided, skipping TON transaction verification');
+            logger.debug('TxFinalizer or CCL address is not provided, skipping TON transaction verification');
         }
     }
 
@@ -138,8 +137,8 @@ export async function startTrackingMultiple(
         maxIterationCount?: number;
         returnValue?: boolean;
         tableView?: boolean;
-        txFinalizerConfig?: TxFinalizerConfig;
         logger?: ILogger;
+        txFinalizer?: ITxFinalizer;
     },
 ): Promise<void | ExecutionStages[]> {
     const {
@@ -148,7 +147,7 @@ export async function startTrackingMultiple(
         maxIterationCount = MAX_ITERATION_COUNT,
         returnValue = false,
         tableView = true,
-        txFinalizerConfig,
+        txFinalizer,
         logger = new NoopLogger(),
     } = options || {};
 
@@ -163,7 +162,7 @@ export async function startTrackingMultiple(
                 maxIterationCount,
                 returnValue: true,
                 tableView: false,
-                txFinalizerConfig,
+                txFinalizer,
                 logger,
             });
         }),
@@ -224,38 +223,72 @@ function formatExecutionStages(stages: ExecutionStages) {
     }));
 }
 
-function printExecutionStagesTable(stages: ExecutionStages, logger: ILogger): void {
-    const table = new Table({
-        head: [
-            'Stage',
-            'Exists',
-            'Success',
-            'Timestamp',
-            'Transactions',
-            'NoteContent',
-            'ErrorName',
-            'InternalMsg',
-            'BytesError',
-        ],
-        colWidths: [30, 8, 9, 13, 70, 13, 13, 13, 13],
-        wordWrap: true,
+/**
+ * Simple table formatter that works in both browser and Node.js without external dependencies
+ */
+function createSimpleTable(headers: string[], rows: string[][], colWidths: number[]): string {
+    const lines: string[] = [];
+
+    // Helper to truncate and pad text to fit column width
+    const fitToWidth = (text: string, width: number): string => {
+        // Handle multi-line text by taking only the first line for table cell
+        const firstLine = text.split('\n')[0];
+        if (firstLine.length > width - 2) {
+            return firstLine.substring(0, width - 5) + '...';
+        }
+        return firstLine.padEnd(width, ' ');
+    };
+
+    // Create separator line
+    const separator = '+' + colWidths.map((w) => '-'.repeat(w)).join('+') + '+';
+
+    // Create header row
+    const headerRow = '|' + headers.map((h, i) => fitToWidth(h, colWidths[i])).join('|') + '|';
+
+    lines.push(separator);
+    lines.push(headerRow);
+    lines.push(separator);
+
+    // Create data rows
+    rows.forEach((row) => {
+        const dataRow = '|' + row.map((cell, i) => fitToWidth(cell, colWidths[i])).join('|') + '|';
+        lines.push(dataRow);
     });
+
+    lines.push(separator);
+
+    return '\n' + lines.join('\n');
+}
+
+export function printExecutionStagesTable(stages: ExecutionStages, logger: ILogger): void {
+    const headers = [
+        'Stage',
+        'Exists',
+        'Success',
+        'Timestamp',
+        'Transactions',
+        'NoteContent',
+        'ErrorName',
+        'InternalMsg',
+        'BytesError',
+    ];
+
+    const colWidths = [30, 8, 9, 13, 70, 13, 13, 13, 13];
 
     const tableData = formatExecutionStages(stages);
 
-    tableData.forEach((row) => {
-        table.push([
-            row.stage,
-            row.exists,
-            row.success,
-            row.timestamp,
-            row.transactions,
-            row.noteContent,
-            row.errorName,
-            row.internalMsg,
-            row.bytesError,
-        ]);
-    });
+    const rows = tableData.map((row) => [
+        row.stage,
+        row.exists,
+        row.success,
+        row.timestamp,
+        row.transactions,
+        row.noteContent,
+        row.errorName,
+        row.internalMsg,
+        row.bytesError,
+    ]);
 
-    logger.debug(table.toString());
+    const table = createSimpleTable(headers, rows, colWidths);
+    logger.debug(table);
 }

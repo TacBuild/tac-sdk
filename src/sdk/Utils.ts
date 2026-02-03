@@ -1,4 +1,4 @@
-import { Address, beginCell, Cell, storeStateInit } from '@ton/ton';
+import { Address, beginCell, Cell, Message, storeMessage, storeStateInit } from '@ton/ton';
 import { AbiCoder, ethers } from 'ethers';
 import { sha256_sync } from 'ton-crypto';
 
@@ -51,6 +51,10 @@ export function buildEvmDataCell(
     const evmArguments = evmProxyMsg.encodedParameters
         ? Buffer.from(evmProxyMsg.encodedParameters.split('0x')[1], 'hex').toString('base64')
         : null;
+
+    if (!evmProxyMsg.methodName && evmArguments) {
+        throw invalidMethodNameError(evmProxyMsg.methodName ?? '');
+    }
 
     const json = JSON.stringify({
         evmCall: {
@@ -365,4 +369,54 @@ export function muldivr(a: bigint, b: bigint, c: bigint): bigint {
         throw new Error('Division by zero in muldivr');
     }
     return (a * b + c / 2n) / c;
+}
+
+export function getNormalizedExtMessageHash(message: Message): string {
+    if (message.info.type !== 'external-in') {
+        throw new Error(`Message must be "external-in", got ${message.info.type}`);
+    }
+
+    const info = {
+        ...message.info,
+        src: undefined,
+        importFee: 0n,
+    };
+
+    const normalizedMessage = {
+        ...message,
+        init: null,
+        info: info,
+    };
+
+    return beginCell()
+        .store(storeMessage(normalizedMessage, { forceRef: true }))
+        .endCell()
+        .hash()
+        .toString('base64');
+}
+
+export async function retry<T>(fn: () => Promise<T>, options: { retries: number; delay: number }): Promise<T> {
+    let lastError: Error | undefined;
+    for (let i = 0; i < options.retries; i++) {
+        try {
+            return await fn();
+        } catch (e) {
+            if (e instanceof Error) {
+                lastError = e;
+            }
+            await new Promise((resolve) => setTimeout(resolve, options.delay));
+        }
+    }
+    throw lastError;
+}
+
+export function recurisivelyCollectCellStats(cell: Cell): { bits: number; cells: number } {
+    let bits = cell.bits.length;
+    let cells = 1;
+    for (const ref of cell.refs) {
+        const stats = recurisivelyCollectCellStats(ref);
+        bits += stats.bits;
+        cells += stats.cells;
+    }
+    return { bits, cells };
 }
