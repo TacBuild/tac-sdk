@@ -29,6 +29,7 @@ import { Asset } from './Asset';
 import { IConfiguration } from './IConfiguration';
 import { IOperationTracker } from './IOperationTracker';
 import { ITacExplorerClient } from './ITacExplorerClient';
+import { ContractOpener } from './ContractOpener';
 
 export interface ITacSDK {
     readonly config: IConfiguration;
@@ -260,6 +261,11 @@ export interface ITacSDK {
      * Returns the TAC explorer client instance used for querying blockchain explorer data.
      */
     getTacExplorerClient(): ITacExplorerClient;
+
+    /**
+     * Returns the TON contract opener client instance used for querying TON blockchain data.
+     */
+    getTonContractOpener(): ContractOpener;
 
     /**
      * Prepares the transaction payloads required for a cross-chain operation without sending them.

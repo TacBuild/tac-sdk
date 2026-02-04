@@ -4,7 +4,6 @@ import { FT, NFT, TON } from '../assets';
 import { missingFeeParamsError, missingGasLimitError, missingTvmExecutorFeeError } from '../errors';
 import { sendCrossChainTransactionFailedError } from '../errors/instances';
 import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator, ITONTransactionManager } from '../interfaces';
-import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import { getMockSender, type SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
 import {
@@ -44,7 +43,6 @@ export class TONTransactionManager implements ITONTransactionManager {
         private readonly simulator: ISimulator,
         private readonly operationTracker: IOperationTracker,
         private readonly logger: ILogger = new NoopLogger(),
-        private readonly txFinalizer: ITxFinalizer,
     ) {}
 
     async buildFeeParams(
@@ -280,7 +278,7 @@ export class TONTransactionManager implements ITONTransactionManager {
                 loadMessage(Cell.fromBase64(sendTransactionResult.boc).beginParse()),
             );
             this.logger.info(`Tracking transaction tree for hash: ${hash}`);
-            await this.txFinalizer.trackTransactionTree(sender.getSenderAddress(), hash, {
+            await this.config.TONParams.contractOpener.trackTransactionTree(sender.getSenderAddress(), hash, {
                 maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
             });
             this.logger.info(`Transaction tree successful`);

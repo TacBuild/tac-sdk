@@ -22,6 +22,11 @@ All notable changes to this project will be documented in this file.
 - New `TacExplorerClient` class for interacting with TAC Explorer API.
 - New structures for TAC gas price data:
   - `TacGasPrice`: Represents gas prices at different priority levels.
+- `BaseContractOpener` abstract class with common implementation for all contract openers.
+- `getTransactions()` method added to `ContractOpener` interface for standardized transaction fetching.
+- Shared utility functions in `OpenerUtils.ts`:
+  - `getHttpEndpointWithRetry()`: Unified HTTP endpoint retrieval with retry logic.
+  - `getHttpV4EndpointWithRetry()`: Unified HTTP V4 endpoint retrieval with retry logic.
 
 ### Changed
 - FT `withAmount` and `addAmount` methods now automatically apply TEP-526 scaling when supported by token.
@@ -32,11 +37,29 @@ All notable changes to this project will be documented in this file.
 - Transaction hash calculation fixes and improvements.
 - Improved transaction tracking to work with updated hash calculation.
 - TonClient opener fixes for improved stability.
+- **Major refactoring of ContractOpener architecture**:
+  - All openers converted to class-based implementations extending `BaseContractOpener`:
+    - `TonClientOpener`: Direct TonClient wrapper.
+    - `OrbsOpener`: Orbs TonClient implementation with static `create()` factory.
+    - `OrbsOpener4`: Orbs TonClient4 implementation with static `create()` factory.
+    - `LiteClientOpener`: LiteClient implementation with connection management.
+    - `SandboxOpener`: Sandbox testing implementation.
+  - Eliminated code duplication by moving common logic to base class:
+    - `getTransactionByHash()`: Transaction lookup with retry logic.
+    - `getAdjacentTransactions()`: Child and parent transaction discovery.
+    - `trackTransactionTree()`: Full transaction tree validation.
+  - Simplified helper functions - no longer require passing `ContractOpener` or callback functions.
+  - Each opener now implements only protocol-specific methods (`open`, `getContractState`, `getTransactions`, `getAddressInformation`, `getConfig`).
+- Removed `helpers.ts` file - functionality integrated into `BaseContractOpener`.
+- Moved `IGNORE_OPCODE` constant to `src/sdk/Consts.ts` for centralized configuration.
 
 ### Fixed
 - Transaction tracking for complex multi-step operations.
 - Hash calculation accuracy in transaction processing.
 - Error handling for empty methodName with non-empty payload scenarios.
+- Transaction tree validation errors now always include transaction hash, `exitCode`, and `resultCode` for better debugging.
+- ESLint warnings for explicit `any` types in `BaseContractOpener` abstract methods.
+- ESLint warnings for unused parameters in `SandboxOpener` not-implemented methods.
 
 ### Documentation
 - Updated documentation for new fee calculation system.

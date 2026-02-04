@@ -1,4 +1,4 @@
-import { TonIndexerTxFinalizer } from '../../../src';
+import { TonTxFinalizer } from '../../../src';
 import * as Utils from '../../../src/sdk/Utils';
 
 const sleepSpy = jest.spyOn(Utils, 'sleep').mockResolvedValue(undefined);
@@ -45,7 +45,7 @@ describe('TonTxFinalizer', () => {
             }),
         };
 
-        const finalizer = new TonIndexerTxFinalizer(config, logger, httpClient as never);
+        const finalizer = new TonTxFinalizer(config, logger, httpClient as never);
         await expect(finalizer.trackTransactionTree('', 'hash-1')).resolves.toBeUndefined();
 
         expect(httpClient.get).toHaveBeenCalledWith('https://ton.example/tx/hash-1', {
@@ -76,7 +76,7 @@ describe('TonTxFinalizer', () => {
             }),
         };
 
-        const finalizer = new TonIndexerTxFinalizer(config, logger, httpClient as never);
+        const finalizer = new TonTxFinalizer(config, logger, httpClient as never);
         await expect(finalizer.trackTransactionTree('', 'hash-1', { maxDepth: 1 })).rejects.toThrow(
             'Transaction failed',
         );
@@ -91,7 +91,7 @@ describe('TonTxFinalizer', () => {
                 .mockResolvedValueOnce({ data: { transactions: [] } }),
         };
 
-        const finalizer = new TonIndexerTxFinalizer(config, logger, httpClient as never);
+        const finalizer = new TonTxFinalizer(config, logger, httpClient as never);
         await finalizer.trackTransactionTree('', 'hash-1', { maxDepth: 1 });
 
         expect(httpClient.get).toHaveBeenCalledTimes(2);

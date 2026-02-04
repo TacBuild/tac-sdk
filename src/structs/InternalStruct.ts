@@ -153,7 +153,7 @@ export type ConvertedCurrencyRawResult = {
 };
 
 export type GetTransactionsOptions = {
-    limit: number;
+    limit?: number;
     lt?: string;
     hash?: string;
     to_lt?: string;

@@ -78,6 +78,9 @@
     - [`getTACGasPrice`](#gettacgasprice)
       - [**Purpose**](#purpose-6)
       - [**Returns**](#returns-7)
+    - [`getTonContractOpener`](#gettoncontractopener)
+      - [**Purpose**](#purpose-8)
+      - [**Returns**](#returns-9)
     - [`closeConnections`](#closeconnections)
 
 ---
@@ -609,6 +612,23 @@ This method provides direct access to the explorer client if you need to use it 
 #### **Returns**
 [`ITacExplorerClient`](./tac_explorer_client.md)
 - The TAC explorer client instance for querying blockchain explorer data.
+
+---
+
+### `getTonContractOpener`
+
+```ts
+ getTonContractOpener(): ContractOpener
+```
+
+#### **Purpose**
+Returns the TON contract opener client instance used for querying blockchain data from contracts..
+
+This method provides direct access to the contract opener if you need to use it independently or for advanced use cases.
+
+#### **Returns**
+[`ContractOpener`](./contract_opener.md)
+- The TON contract opener client instance for querying blockchain data.
 
 ---
 

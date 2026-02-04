@@ -2,10 +2,12 @@ import { SandboxContract } from '@ton/sandbox';
 import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/ton';
 
 import { allContractOpenerFailedError } from '../errors/instances';
-import { ContractOpener } from '../interfaces';
+import { ContractOpener, ILogger } from '../interfaces';
 import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
-import { ContractState, Network } from '../structs/Struct';
-import { orbsOpener, orbsOpener4, tonClientOpener } from './contractOpener';
+import { ContractState, Network, TrackTransactionTreeParams } from '../structs/Struct';
+import { orbsOpener } from './OrbsOpener';
+import { orbsOpener4 } from './OrbsOpener4';
+import { tonClientOpener } from './TonClientOpener';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -20,18 +22,29 @@ export interface OpenerConfig {
 
 export class RetryableContractOpener implements ContractOpener {
     private readonly openerConfigs: OpenerConfig[];
+    private logger?: ILogger;
 
-    constructor(openerConfigs: OpenerConfig[]) {
+    constructor(openerConfigs: OpenerConfig[], logger?: ILogger) {
         if (openerConfigs.length === 0) {
             throw new Error('No ContractOpener instances available');
         }
         this.openerConfigs = openerConfigs;
+        this.logger = logger;
+    }
+
+    async getTransactions(address: Address, opts: GetTransactionsOptions): Promise<Transaction[]> {
+        const result = await this.executeWithFallback((config) => config.opener.getTransactions(address, opts));
+
+        if (result.success && result.data) {
+            return result.data;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get transactions');
     }
 
     async getTransactionByHash(
         address: Address,
         hash: string,
-        opts: GetTransactionsOptions,
+        opts?: GetTransactionsOptions,
     ): Promise<Transaction | null> {
         const result = await this.executeWithFallback((config) =>
             config.opener.getTransactionByHash(address, hash, opts),
@@ -43,13 +56,13 @@ export class RetryableContractOpener implements ContractOpener {
         throw result.lastError || allContractOpenerFailedError('Failed to get transaction by hash');
     }
 
-    async getAdjacentTransactions(address: Address, hash: string): Promise<Transaction[]> {
-        const result = await this.executeWithFallback((config) => config.opener.getAdjacentTransactions(address, hash));
+    async getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]> {
+        const result = await this.executeWithFallback((config) => config.opener.getAdjacentTransactions(address, hash, opts));
 
         if (result.success && result.data) {
             return result.data;
         }
-        throw result.lastError || allContractOpenerFailedError('Failed to get account transactions');
+        throw result.lastError || allContractOpenerFailedError('Failed to get adjacent transactions');
     }
 
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T> {
@@ -88,6 +101,20 @@ export class RetryableContractOpener implements ContractOpener {
     closeConnections(): void {
         for (const config of this.openerConfigs) {
             config.opener.closeConnections?.();
+        }
+    }
+
+    async trackTransactionTree(
+        address: string,
+        hash: string,
+        params?: TrackTransactionTreeParams,
+    ): Promise<void> {
+        const result = await this.executeWithFallback(async (config) => {
+            return config.opener.trackTransactionTree(address, hash, params);
+        });
+
+        if (!result.success) {
+            throw result.lastError || allContractOpenerFailedError('Failed to track transaction tree');
         }
     }
 
@@ -171,6 +198,7 @@ export async function createDefaultRetryableOpener(
     networkType: Network,
     maxRetries = 5,
     retryDelay = 1000,
+    logger?: ILogger,
 ): Promise<ContractOpener> {
     const openers: OpenerConfig[] = [];
 
@@ -195,5 +223,5 @@ export async function createDefaultRetryableOpener(
         }
     }
 
-    return new RetryableContractOpener(openers);
+    return new RetryableContractOpener(openers, logger);
 }

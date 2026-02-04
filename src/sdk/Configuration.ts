@@ -84,7 +84,7 @@ export class Configuration implements IConfiguration {
         } else {
             contractOpener =
                 TONParams?.contractOpener ??
-                (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 5, delay));
+                (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 5, delay, logger));
             settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
         }
         const settings = contractOpener.open(

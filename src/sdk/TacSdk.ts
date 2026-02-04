@@ -5,6 +5,7 @@ import { JettonMinterData, NFTItemData } from '../../artifacts/tonTypes';
 import { AssetFactory, FT, NFT } from '../assets';
 import {
     Asset,
+    ContractOpener,
     IConfiguration,
     ILogger,
     IOperationTracker,
@@ -49,10 +50,10 @@ import { Simulator } from './Simulator';
 import { TacExplorerClient } from './TacExplorerClient';
 import { TACTransactionManager } from './TACTransactionManager';
 import { TONTransactionManager } from './TONTransactionManager';
-import { TonTxFinalizer } from './TxFinalizer';
 import { getBouncedAddress, mapAssetsToTonAssets, normalizeAssets } from './Utils';
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
+    readonly contactOpener: ContractOpener;
     readonly operationTracker: IOperationTracker;
     readonly explorerClient: ITacExplorerClient;
     private readonly simulator: ISimulator;
@@ -68,6 +69,7 @@ export class TacSdk implements ITacSDK {
         explorerClient: ITacExplorerClient,
     ) {
         this.config = config;
+        this.contactOpener = config.TONParams.contractOpener;
         this.simulator = simulator;
         this.tonTransactionManager = tonTransactionManager;
         this.tacTransactionManager = tacTransactionManager;
@@ -107,15 +109,7 @@ export class TacSdk implements ITacSDK {
         const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints);
         const explorerClient = new TacExplorerClient(artifacts.TAC_EXPLORER_API_ENDPOINT);
         const simulator = new Simulator(config, operationTracker, logger);
-        const txFinalizer =
-            sdkParams.TONParams?.txFinalizer ?? new TonTxFinalizer(config.TONParams.contractOpener, logger);
-        const tonTransactionManager = new TONTransactionManager(
-            config,
-            simulator,
-            operationTracker,
-            logger,
-            txFinalizer,
-        );
+        const tonTransactionManager = new TONTransactionManager(config, simulator, operationTracker, logger);
         const tacTransactionManager = new TACTransactionManager(config, operationTracker, logger);
 
         return new TacSdk(
@@ -356,5 +350,9 @@ export class TacSdk implements ITacSDK {
             fast: response.gasPrices.fast,
             slow: response.gasPrices.slow,
         };
+    }
+
+    getTonContractOpener(): ContractOpener{
+        return this.contactOpener;
     }
 }

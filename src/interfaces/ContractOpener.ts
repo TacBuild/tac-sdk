@@ -2,7 +2,7 @@ import { SandboxContract } from '@ton/sandbox';
 import type { Address, Contract, OpenedContract, Transaction } from '@ton/ton';
 
 import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
-import { ContractState } from '../structs/Struct';
+import { ContractState, TrackTransactionTreeParams } from '../structs/Struct';
 
 export interface ContractOpener {
     /**
@@ -23,8 +23,18 @@ export interface ContractOpener {
      * Closes any underlying connections if supported by the implementation.
      */
     closeConnections?: () => unknown;
+
+    /**
+     * Fetches transactions for a given address.
+     * @param address Address to fetch transactions for.
+     * @param opts Options for fetching transactions (limit, archival, etc.).
+     * @returns Promise with array of transactions.
+     */
+    getTransactions(address: Address, opts: GetTransactionsOptions): Promise<Transaction[]>;
+
     getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
     getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]>;
     getAddressInformation(address: Address): Promise<AddressInformation>;
     getConfig(): Promise<string>;
+    trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<void>;
 }
