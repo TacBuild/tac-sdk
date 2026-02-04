@@ -1,28 +1,23 @@
 import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/ton';
 
 import { ContractOpener } from '../interfaces';
-import { AxiosHttpClient } from '../sdk/AxiosHttpClient';
-import { DEFAULT_FIND_TX_LIMIT, DEFAULT_HTTP_CLIENT_TIMEOUT_MS } from '../sdk/Consts';
-import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
-import { ContractState, Network } from '../structs/Struct';
+import { DEFAULT_FIND_TX_LIMIT } from '../sdk/Consts';
+import { AddressInformation, ContractState, GetTransactionsOptions,Network } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
 import { getHttpEndpointWithRetry } from './OpenerUtils';
 
 export class OrbsOpener extends BaseContractOpener {
-    private readonly httpClient: AxiosHttpClient;
 
     private constructor(
         private readonly client: TonClient,
-        private readonly endpoint: string,
     ) {
         super();
-        this.httpClient = new AxiosHttpClient({ timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS });
     }
 
     static async create(network: Network): Promise<OrbsOpener> {
         const endpoint = await getHttpEndpointWithRetry(network);
         const client = new TonClient({ endpoint });
-        return new OrbsOpener(client, endpoint);
+        return new OrbsOpener(client);
     }
 
     open<T extends Contract>(contract: T): OpenedContract<T> {
@@ -57,21 +52,9 @@ export class OrbsOpener extends BaseContractOpener {
     }
 
     async getConfig(): Promise<string> {
-        const info = await this.client.getMasterchainInfo();
-        const url = new URL('getConfigAll', this.endpoint);
-        url.searchParams.append('seqno', info.latestSeqno.toString());
-
-        const response = await this.httpClient.get<{
-            ok: boolean;
-            result?: { config?: { bytes?: string } };
-        }>(url.toString());
-        const body = response.data;
-
-        if (!body.ok || !body.result?.config?.bytes) {
-            throw new Error(`Failed to fetch config: ${JSON.stringify(body)}`);
-        }
-
-        return body.result.config.bytes;
+        throw new Error(
+            'getConfig() is not supported by TonClient (orbs v2 API). Use OrbsOpener4 or LiteClientOpener instead, which support blockchain config retrieval.',
+        );
     }
 }
 

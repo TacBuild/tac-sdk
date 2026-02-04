@@ -75,12 +75,12 @@
     - [`getTacExplorerClient`](#gettacexplorerclient)
       - [**Purpose**](#purpose-5)
       - [**Returns**](#returns-6)
-    - [`getTACGasPrice`](#gettacgasprice)
-      - [**Purpose**](#purpose-6)
-      - [**Returns**](#returns-7)
     - [`getTonContractOpener`](#gettoncontractopener)
-      - [**Purpose**](#purpose-8)
-      - [**Returns**](#returns-9)
+      - [**Purpose**](#purpose-7)
+      - [**Returns**](#returns-8)
+    - [`getTACGasPrice`](#gettacgasprice)
+      - [**Purpose**](#purpose-9)
+      - [**Returns**](#returns-10)
     - [`closeConnections`](#closeconnections)
 
 ---

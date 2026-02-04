@@ -4,8 +4,7 @@ import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '
 import { mainnet, testnet } from '../../artifacts';
 import { ContractOpener } from '../interfaces';
 import { DEFAULT_FIND_TX_LIMIT } from '../sdk/Consts';
-import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
-import { ContractState, Network } from '../structs/Struct';
+import { AddressInformation, ContractState, GetTransactionsOptions, Network } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
 
 type LiteServer = { ip: number; port: number; id: { '@type': string; key: string } };

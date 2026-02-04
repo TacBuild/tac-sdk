@@ -3,8 +3,7 @@ import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/
 import { ContractOpener } from '../interfaces';
 import { AxiosHttpClient } from '../sdk/AxiosHttpClient';
 import { DEFAULT_FIND_TX_LIMIT, DEFAULT_HTTP_CLIENT_TIMEOUT_MS } from '../sdk/Consts';
-import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
-import { ContractState } from '../structs/Struct';
+import { AddressInformation, ContractState, GetTransactionsOptions } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
 
 export class TonClientOpener extends BaseContractOpener {
@@ -51,10 +50,12 @@ export class TonClientOpener extends BaseContractOpener {
         const url = new URL('getConfigAll', this.client.parameters.endpoint);
         url.searchParams.append('seqno', info.latestSeqno.toString());
 
+        // Use longer timeout for getConfig as the response is very large (~100KB+)
+        // and Brotli decompression can take significant time
         const response = await this.httpClient.get<{
             ok: boolean;
             result?: { config?: { bytes?: string } };
-        }>(url.toString());
+        }>(url.toString(), { timeout: 60000 });
         const body = response.data;
 
         if (!body?.ok || !body.result?.config?.bytes) {

@@ -2,8 +2,7 @@ import { Blockchain, SandboxContract } from '@ton/sandbox';
 import { Address, Contract, Transaction } from '@ton/ton';
 
 import { ContractOpener } from '../interfaces';
-import { AddressInformation } from '../structs/InternalStruct';
-import { ContractState } from '../structs/Struct';
+import { AddressInformation,ContractState } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
 
 export class SandboxOpener extends BaseContractOpener {

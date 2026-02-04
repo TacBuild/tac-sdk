@@ -526,8 +526,108 @@ export type TacGasPrice = {
     slow: number;
 };
 
+/**
+ * Parameters for tracking and validating transaction trees
+ */
 export type TrackTransactionTreeParams = {
+    /**
+     * Maximum number of transactions to fetch per pagination request
+     * @default 100
+     */
     limit?: number;
+
+    /**
+     * Maximum depth to traverse in the transaction tree (prevents infinite loops)
+     * @default 10
+     */
     maxDepth?: number;
+
+    /**
+     * List of operation codes (opcodes) to skip during validation.
+     * Transactions with these opcodes in their incoming message will not be validated.
+     * @default [ 0xd53276db ] // Excess
+     */
     ignoreOpcodeList?: number[];
+
+    /**
+     * Direction to search the transaction tree:
+     * - 'forward': only search children (outgoing messages)
+     * - 'backward': only search parents (incoming messages)
+     * - 'both': search in both directions (default)
+     * @default 'both'
+     */
+    direction?: 'forward' | 'backward' | 'both';
+};
+
+/**
+ * Details about a transaction validation error
+ */
+export type TransactionValidationError = {
+    /**
+     * Base64-encoded hash of the failed transaction
+     */
+    txHash: string;
+
+    /**
+     * Exit code from the compute phase, or 'N/A' if compute phase is missing
+     */
+    exitCode: number | 'N/A';
+
+    /**
+     * Result code from the action phase, or 'N/A' if action phase is missing
+     */
+    resultCode: number | 'N/A';
+
+    /**
+     * Reason for validation failure:
+     * - 'aborted': default: transaction was aborted
+     * - 'compute_phase_missing': compute phase is missing or skipped
+     * - 'compute_phase_failed': compute phase failed (exitCode !== 0)
+     * - 'action_phase_failed': action phase failed (resultCode !== 0)
+     */
+    reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed';
+};
+
+/**
+ * Result of transaction tree tracking and validation
+ */
+export type TrackTransactionTreeResult = {
+    /**
+     * Whether all transactions in the tree passed validation
+     */
+    success: boolean;
+
+    /**
+     * Details about the first validation error encountered (if any)
+     */
+    error?: TransactionValidationError;
+};
+
+export type GetTransactionsOptions = {
+    /** Maximum number of transactions to retrieve */
+    limit?: number;
+    /** Logical time of the transaction to start from */
+    lt?: string;
+    /** Hash of the transaction to start from */
+    hash?: string;
+    /** Logical time of the transaction to end at */
+    to_lt?: string;
+    /** Whether to include the starting transaction in the results */
+    inclusive?: boolean;
+    /** Whether to search in archival nodes for historical data */
+    archival?: boolean;
+    /** Request timeout in milliseconds */
+    timeoutMs?: number;
+    /** Delay between retry attempts in milliseconds */
+    retryDelayMs?: number;
+};
+
+export type AddressInformation = {
+    /** Information about the last transaction of the address */
+    lastTransaction: {
+        /** Logical time of the last transaction */
+        lt: string;
+        /** Hash of the last transaction */
+        hash: string;
+    };
 };

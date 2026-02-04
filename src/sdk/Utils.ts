@@ -371,6 +371,31 @@ export function muldivr(a: bigint, b: bigint, c: bigint): bigint {
     return (a * b + c / 2n) / c;
 }
 
+/**
+ * Normalize hash string to base64 format
+ * Accepts: base64, hex, or raw string
+ */
+export function normalizeHashToBase64(hash: string): string {
+    // If already base64 (contains +, /, = or matches base64 pattern)
+    if (/^[A-Za-z0-9+/]+={0,2}$/.test(hash)) {
+        try {
+            // Validate it's valid base64
+            Buffer.from(hash, 'base64');
+            return hash;
+        } catch {
+            // Fall through to hex conversion
+        }
+    }
+
+    // Try as hex
+    if (/^[0-9a-fA-F]+$/.test(hash)) {
+        return Buffer.from(hash, 'hex').toString('base64');
+    }
+
+    // Assume it's already base64
+    return hash;
+}
+
 export function getNormalizedExtMessageHash(message: Message): string {
     if (message.info.type !== 'external-in') {
         throw new Error(`Message must be "external-in", got ${message.info.type}`);

@@ -3,8 +3,14 @@ import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/
 
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener, ILogger } from '../interfaces';
-import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
-import { ContractState, Network, TrackTransactionTreeParams } from '../structs/Struct';
+import {
+    AddressInformation,
+    ContractState,
+    GetTransactionsOptions,
+    Network,
+    TrackTransactionTreeParams,
+    TrackTransactionTreeResult,
+} from '../structs/Struct';
 import { orbsOpener } from './OrbsOpener';
 import { orbsOpener4 } from './OrbsOpener4';
 import { tonClientOpener } from './TonClientOpener';
@@ -98,6 +104,51 @@ export class RetryableContractOpener implements ContractOpener {
         throw result.lastError || allContractOpenerFailedError('Failed to get blockchain config');
     }
 
+    async getTransactionByTxHash(
+        address: Address,
+        txHash: string,
+        opts?: GetTransactionsOptions,
+    ): Promise<Transaction | null> {
+        const result = await this.executeWithFallback((config) =>
+            config.opener.getTransactionByTxHash(address, txHash, opts),
+        );
+
+        if (result.success) {
+            return result.data ?? null;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get transaction by transaction hash');
+    }
+
+    async getTransactionByInMsgHash(
+        address: Address,
+        msgHash: string,
+        opts?: GetTransactionsOptions,
+    ): Promise<Transaction | null> {
+        const result = await this.executeWithFallback((config) =>
+            config.opener.getTransactionByInMsgHash(address, msgHash, opts),
+        );
+
+        if (result.success) {
+            return result.data ?? null;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get transaction by message hash');
+    }
+
+    async getTransactionByOutMsgHash(
+        address: Address,
+        msgHash: string,
+        opts?: GetTransactionsOptions,
+    ): Promise<Transaction | null> {
+        const result = await this.executeWithFallback((config) =>
+            config.opener.getTransactionByOutMsgHash(address, msgHash, opts),
+        );
+
+        if (result.success) {
+            return result.data ?? null;
+        }
+        throw result.lastError || allContractOpenerFailedError('Failed to get transaction by outgoing message hash');
+    }
+
     closeConnections(): void {
         for (const config of this.openerConfigs) {
             config.opener.closeConnections?.();
@@ -116,6 +167,22 @@ export class RetryableContractOpener implements ContractOpener {
         if (!result.success) {
             throw result.lastError || allContractOpenerFailedError('Failed to track transaction tree');
         }
+    }
+
+    async trackTransactionTreeWithResult(
+        address: string,
+        hash: string,
+        params?: TrackTransactionTreeParams,
+    ): Promise<TrackTransactionTreeResult> {
+        const result = await this.executeWithFallback(async (config) => {
+            return config.opener.trackTransactionTreeWithResult(address, hash, params);
+        });
+
+        if (!result.success) {
+            throw result.lastError || allContractOpenerFailedError('Failed to track transaction tree with result');
+        }
+
+        return result.data!;
     }
 
     private async executeWithFallback<T>(

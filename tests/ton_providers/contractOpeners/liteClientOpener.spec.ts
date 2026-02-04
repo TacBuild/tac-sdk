@@ -1,8 +1,8 @@
 import '@ton/test-utils';
 
-import { Address } from '@ton/ton';
+import { Address, beginCell, Message, storeMessage, Transaction } from '@ton/ton';
 
-import { LiteClientOpener, liteClientOpener, Network } from '../../src';
+import { LiteClientOpener, liteClientOpener, Network } from '../../../src';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -133,6 +133,55 @@ describe('LiteClientOpener Integration Tests', () => {
         }, 30000);
     });
 
+    describe('getTransactionByTxHash', () => {
+        it('should fetch transaction by transaction hash only', async () => {
+            const txs = await opener.getTransactions(testAddress, { limit: 1 });
+            expect(txs.length).toBeGreaterThan(0);
+
+            const targetTx = txs[0];
+            const txHash = targetTx.hash().toString('base64');
+
+            const fetchedTx = await opener.getTransactionByTxHash(testAddress, txHash, { timeoutMs: 5000 });
+
+            expect(fetchedTx).toBeDefined();
+            expect(fetchedTx?.hash().toString('base64')).toBe(txHash);
+        }, 30000);
+    });
+
+    describe('getTransactionByInMsgHash', () => {
+        it('should fetch transaction by incoming message hash', async () => {
+            const txs = await opener.getTransactions(testAddress, { limit: 10 });
+
+            const txWithInMsg = txs.find((tx: Transaction) => tx.inMessage !== undefined);
+            expect(txWithInMsg).toBeDefined();
+
+            const inMsg = txWithInMsg!.inMessage!;
+            const msgHashB64 = beginCell().store(storeMessage(inMsg)).endCell().hash().toString('base64');
+
+            const fetchedTx = await opener.getTransactionByInMsgHash(testAddress, msgHashB64, { timeoutMs: 5000 });
+
+            expect(fetchedTx).toBeDefined();
+            expect(fetchedTx?.hash().toString('base64')).toBe(txWithInMsg!.hash().toString('base64'));
+        }, 30000);
+    });
+
+    describe('getTransactionByOutMsgHash', () => {
+        it('should fetch transaction by outgoing message hash', async () => {
+            const txs = await opener.getTransactions(testAddress, { limit: 10 });
+
+            const txWithOutMsg = txs.find((tx: Transaction) => tx.outMessages.size > 0);
+            expect(txWithOutMsg).toBeDefined();
+
+            const outMsg = Array.from(txWithOutMsg!.outMessages.values())[0] as Message;
+            const msgHashB64 = beginCell().store(storeMessage(outMsg)).endCell().hash().toString('base64');
+
+            const fetchedTx = await opener.getTransactionByOutMsgHash(testAddress, msgHashB64, { timeoutMs: 5000 });
+
+            expect(fetchedTx).toBeDefined();
+            expect(fetchedTx?.hash().toString('base64')).toBe(txWithOutMsg!.hash().toString('base64'));
+        }, 30000);
+    });
+
     describe('getAdjacentTransactions', () => {
         it('should fetch adjacent transactions', async () => {
             // Get a transaction first
@@ -196,6 +245,35 @@ describe('LiteClientOpener Integration Tests', () => {
         }, 40000);
     });
 
+    describe('trackTransactionTreeWithResult', () => {
+        it('should return success for valid transaction tree', async () => {
+            const txs = await opener.getTransactions(testAddress, { limit: 1 });
+            expect(txs.length).toBeGreaterThan(0);
+
+            const tx = txs[0];
+            const txHash = tx.hash().toString('base64');
+
+            const result = await opener.trackTransactionTreeWithResult(testAddress.toString(), txHash, {
+                maxDepth: 10,
+            });
+
+            expect(result).toBeDefined();
+            expect(result.success).toBe(true);
+            expect(result.error).toBeUndefined();
+        }, 40000);
+
+        it('should return success for empty tree', async () => {
+            const fakeHash = Buffer.alloc(32, 0).toString('base64');
+
+            const result = await opener.trackTransactionTreeWithResult(testAddress.toString(), fakeHash, {
+                maxDepth: 5,
+            });
+
+            expect(result).toBeDefined();
+            expect(result.success).toBe(true);
+        }, 30000);
+    });
+
     describe('closeConnections', () => {
         it('should close lite client connections', async () => {
             const tempOpener = await LiteClientOpener.create({ network: Network.MAINNET });
@@ -227,8 +305,12 @@ describe('LiteClientOpener Integration Tests', () => {
             expect(typeof opener.getAddressInformation).toBe('function');
             expect(typeof opener.getConfig).toBe('function');
             expect(typeof opener.getTransactionByHash).toBe('function');
+            expect(typeof opener.getTransactionByTxHash).toBe('function');
+            expect(typeof opener.getTransactionByInMsgHash).toBe('function');
+            expect(typeof opener.getTransactionByOutMsgHash).toBe('function');
             expect(typeof opener.getAdjacentTransactions).toBe('function');
             expect(typeof opener.trackTransactionTree).toBe('function');
+            expect(typeof opener.trackTransactionTreeWithResult).toBe('function');
             expect(typeof opener.closeConnections).toBe('function');
         });
     });

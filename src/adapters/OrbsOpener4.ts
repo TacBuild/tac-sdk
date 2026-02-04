@@ -1,8 +1,7 @@
 import { Address, Contract, OpenedContract, TonClient4, Transaction } from '@ton/ton';
 
 import { ContractOpener } from '../interfaces';
-import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
-import { ContractState, Network } from '../structs/Struct';
+import { AddressInformation, ContractState, GetTransactionsOptions,Network } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
 import { getHttpV4EndpointWithRetry } from './OpenerUtils';
 

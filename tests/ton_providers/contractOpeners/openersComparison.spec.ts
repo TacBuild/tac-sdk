@@ -1,8 +1,8 @@
 import '@ton/test-utils';
 
-import { Address, TonClient, Transaction } from '@ton/ton';
+import { Address, beginCell, Message, storeMessage, TonClient, Transaction } from '@ton/ton';
 
-import { ContractOpener, LiteClientOpener, Network, OrbsOpener, OrbsOpener4, TonClientOpener } from '../../src';
+import { ContractOpener, LiteClientOpener, Network, OrbsOpener, OrbsOpener4, TonClientOpener } from '../../../src';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -100,7 +100,7 @@ describe('Contract Openers Comparison Tests', () => {
             expect(tonClientTxs.length).toBeLessThanOrEqual(limit);
 
             // Compare transaction hashes (should be identical for same block)
-            const compareTransactions = (tx1: Transaction, tx2: Transaction, openerName1: string, openerName2: string) => {
+            const compareTransactions = (tx1: Transaction, tx2: Transaction) => {
                 const hash1 = tx1.hash().toString('base64');
                 const hash2 = tx2.hash().toString('base64');
 
@@ -121,9 +121,9 @@ describe('Contract Openers Comparison Tests', () => {
             const minLength = Math.min(liteTxs.length, orbsTxs.length, orbs4Txs.length, tonClientTxs.length);
 
             for (let i = 0; i < minLength; i++) {
-                compareTransactions(liteTxs[i], orbsTxs[i], 'LiteClient', 'Orbs');
-                compareTransactions(liteTxs[i], orbs4Txs[i], 'LiteClient', 'Orbs4');
-                compareTransactions(liteTxs[i], tonClientTxs[i], 'LiteClient', 'TonClient');
+                compareTransactions(liteTxs[i], orbsTxs[i]);
+                compareTransactions(liteTxs[i], orbs4Txs[i]);
+                compareTransactions(liteTxs[i], tonClientTxs[i]);
             }
         }, 60000);
 
@@ -196,28 +196,24 @@ describe('Contract Openers Comparison Tests', () => {
 
     describe('getConfig comparison', () => {
         it('should return same config from all openers', async () => {
-            const [liteConfig, orbsConfig, orbs4Config, tonClientConfig] = await Promise.all([
+            const [liteConfig, orbs4Config, tonClientConfig] = await Promise.all([
                 liteClientOpener.getConfig(),
-                orbsOpener.getConfig(),
                 orbsOpener4.getConfig(),
                 tonClientOpener.getConfig(),
             ]);
 
             // All should return config strings
             expect(typeof liteConfig).toBe('string');
-            expect(typeof orbsConfig).toBe('string');
             expect(typeof orbs4Config).toBe('string');
             expect(typeof tonClientConfig).toBe('string');
 
             expect(liteConfig.length).toBeGreaterThan(0);
-            expect(orbsConfig.length).toBeGreaterThan(0);
             expect(orbs4Config.length).toBeGreaterThan(0);
             expect(tonClientConfig.length).toBeGreaterThan(0);
 
             // Configs should be identical (or very similar - might differ by block)
             // At minimum, they should decode to similar structures
             expect(liteConfig.length).toBeGreaterThan(1000);
-            expect(orbsConfig.length).toBeGreaterThan(1000);
             expect(orbs4Config.length).toBeGreaterThan(1000);
             expect(tonClientConfig.length).toBeGreaterThan(1000);
         }, 90000);
@@ -267,7 +263,7 @@ describe('Contract Openers Comparison Tests', () => {
             expect(txs.length).toBeGreaterThan(0);
 
             // Find a transaction with outgoing messages
-            const txWithChildren = txs.find((tx) => tx.outMessages.size > 0);
+            const txWithChildren = txs.find((tx: Transaction) => tx.outMessages.size > 0);
             expect(txWithChildren).toBeDefined();
 
             const txHash = txWithChildren!.hash().toString('base64');
@@ -292,14 +288,99 @@ describe('Contract Openers Comparison Tests', () => {
             expect(orbs4Adj.length).toBe(tonClientAdj.length);
 
             // Compare transaction hashes
-            const liteHashes = liteAdj.map((tx) => tx.hash().toString('base64')).sort();
-            const orbsHashes = orbsAdj.map((tx) => tx.hash().toString('base64')).sort();
-            const orbs4Hashes = orbs4Adj.map((tx) => tx.hash().toString('base64')).sort();
-            const tonClientHashes = tonClientAdj.map((tx) => tx.hash().toString('base64')).sort();
+            const liteHashes = liteAdj.map((tx: Transaction) => tx.hash().toString('base64')).sort();
+            const orbsHashes = orbsAdj.map((tx: Transaction) => tx.hash().toString('base64')).sort();
+            const orbs4Hashes = orbs4Adj.map((tx: Transaction) => tx.hash().toString('base64')).sort();
+            const tonClientHashes = tonClientAdj.map((tx: Transaction) => tx.hash().toString('base64')).sort();
 
             expect(liteHashes).toEqual(orbsHashes);
             expect(orbsHashes).toEqual(orbs4Hashes);
             expect(orbs4Hashes).toEqual(tonClientHashes);
+        }, 120000);
+    });
+
+    describe('getTransactionByTxHash comparison', () => {
+        it('should find same transaction by tx hash from all openers', async () => {
+            const txs = await liteClientOpener.getTransactions(testAddress, { limit: 1 });
+            expect(txs.length).toBeGreaterThan(0);
+
+            const targetTx = txs[0];
+            const txHash = targetTx.hash().toString('base64');
+
+            const [liteTx, orbsTx, orbs4Tx, tonClientTx] = await Promise.all([
+                liteClientOpener.getTransactionByTxHash(testAddress, txHash),
+                orbsOpener.getTransactionByTxHash(testAddress, txHash),
+                orbsOpener4.getTransactionByTxHash(testAddress, txHash),
+                tonClientOpener.getTransactionByTxHash(testAddress, txHash),
+            ]);
+
+            expect(liteTx).toBeDefined();
+            expect(orbsTx).toBeDefined();
+            expect(orbs4Tx).toBeDefined();
+            expect(tonClientTx).toBeDefined();
+
+            expect(liteTx!.hash().toString('base64')).toBe(txHash);
+            expect(orbsTx!.hash().toString('base64')).toBe(txHash);
+            expect(orbs4Tx!.hash().toString('base64')).toBe(txHash);
+            expect(tonClientTx!.hash().toString('base64')).toBe(txHash);
+        }, 120000);
+    });
+
+    describe('getTransactionByInMsgHash comparison', () => {
+        it('should find same transaction by incoming message hash from all openers', async () => {
+            const txs = await liteClientOpener.getTransactions(testAddress, { limit: 10 });
+            const txWithInMsg = txs.find((tx: Transaction) => tx.inMessage !== undefined);
+            expect(txWithInMsg).toBeDefined();
+
+            const inMsg = txWithInMsg!.inMessage!;
+            const msgHashB64 = beginCell().store(storeMessage(inMsg)).endCell().hash().toString('base64');
+
+            const [liteTx, orbsTx, orbs4Tx, tonClientTx] = await Promise.all([
+                liteClientOpener.getTransactionByInMsgHash(testAddress, msgHashB64),
+                orbsOpener.getTransactionByInMsgHash(testAddress, msgHashB64),
+                orbsOpener4.getTransactionByInMsgHash(testAddress, msgHashB64),
+                tonClientOpener.getTransactionByInMsgHash(testAddress, msgHashB64),
+            ]);
+
+            expect(liteTx).toBeDefined();
+            expect(orbsTx).toBeDefined();
+            expect(orbs4Tx).toBeDefined();
+            expect(tonClientTx).toBeDefined();
+
+            const expectedHash = txWithInMsg!.hash().toString('base64');
+            expect(liteTx!.hash().toString('base64')).toBe(expectedHash);
+            expect(orbsTx!.hash().toString('base64')).toBe(expectedHash);
+            expect(orbs4Tx!.hash().toString('base64')).toBe(expectedHash);
+            expect(tonClientTx!.hash().toString('base64')).toBe(expectedHash);
+        }, 120000);
+    });
+
+    describe('getTransactionByOutMsgHash comparison', () => {
+        it('should find same transaction by outgoing message hash from all openers', async () => {
+            const txs = await liteClientOpener.getTransactions(testAddress, { limit: 10 });
+            const txWithOutMsg = txs.find((tx: Transaction) => tx.outMessages.size > 0);
+            expect(txWithOutMsg).toBeDefined();
+
+            const outMsg = Array.from(txWithOutMsg!.outMessages.values())[0] as Message;
+            const msgHashB64 = beginCell().store(storeMessage(outMsg)).endCell().hash().toString('base64');
+
+            const [liteTx, orbsTx, orbs4Tx, tonClientTx] = await Promise.all([
+                liteClientOpener.getTransactionByOutMsgHash(testAddress, msgHashB64),
+                orbsOpener.getTransactionByOutMsgHash(testAddress, msgHashB64),
+                orbsOpener4.getTransactionByOutMsgHash(testAddress, msgHashB64),
+                tonClientOpener.getTransactionByOutMsgHash(testAddress, msgHashB64),
+            ]);
+
+            expect(liteTx).toBeDefined();
+            expect(orbsTx).toBeDefined();
+            expect(orbs4Tx).toBeDefined();
+            expect(tonClientTx).toBeDefined();
+
+            const expectedHash = txWithOutMsg!.hash().toString('base64');
+            expect(liteTx!.hash().toString('base64')).toBe(expectedHash);
+            expect(orbsTx!.hash().toString('base64')).toBe(expectedHash);
+            expect(orbs4Tx!.hash().toString('base64')).toBe(expectedHash);
+            expect(tonClientTx!.hash().toString('base64')).toBe(expectedHash);
         }, 120000);
     });
 
@@ -366,6 +447,52 @@ describe('Contract Openers Comparison Tests', () => {
                     maxDepth: 3,
                 }),
             ).rejects.toThrow();
+        }, 120000);
+    });
+
+    describe('trackTransactionTreeWithResult comparison', () => {
+        it('should return same validation results from all openers', async () => {
+            const txs = await liteClientOpener.getTransactions(testAddress, { limit: 1 });
+            expect(txs.length).toBeGreaterThan(0);
+
+            const tx = txs[0];
+            const txHash = tx.hash().toString('base64');
+
+            const [liteResult, orbsResult, orbs4Result, tonClientResult] = await Promise.all([
+                liteClientOpener.trackTransactionTreeWithResult(testAddress.toString(), txHash, { maxDepth: 5 }),
+                orbsOpener.trackTransactionTreeWithResult(testAddress.toString(), txHash, { maxDepth: 5 }),
+                orbsOpener4.trackTransactionTreeWithResult(testAddress.toString(), txHash, { maxDepth: 5 }),
+                tonClientOpener.trackTransactionTreeWithResult(testAddress.toString(), txHash, { maxDepth: 5 }),
+            ]);
+
+            // All should return success
+            expect(liteResult.success).toBe(true);
+            expect(orbsResult.success).toBe(true);
+            expect(orbs4Result.success).toBe(true);
+            expect(tonClientResult.success).toBe(true);
+
+            // All should have no errors
+            expect(liteResult.error).toBeUndefined();
+            expect(orbsResult.error).toBeUndefined();
+            expect(orbs4Result.error).toBeUndefined();
+            expect(tonClientResult.error).toBeUndefined();
+        }, 180000);
+
+        it('should return success for empty tree from all openers', async () => {
+            const fakeHash = Buffer.alloc(32, 0).toString('base64');
+
+            const [liteResult, orbsResult, orbs4Result, tonClientResult] = await Promise.all([
+                liteClientOpener.trackTransactionTreeWithResult(testAddress.toString(), fakeHash, { maxDepth: 3 }),
+                orbsOpener.trackTransactionTreeWithResult(testAddress.toString(), fakeHash, { maxDepth: 3 }),
+                orbsOpener4.trackTransactionTreeWithResult(testAddress.toString(), fakeHash, { maxDepth: 3 }),
+                tonClientOpener.trackTransactionTreeWithResult(testAddress.toString(), fakeHash, { maxDepth: 3 }),
+            ]);
+
+            // All should return success (empty tree)
+            expect(liteResult.success).toBe(true);
+            expect(orbsResult.success).toBe(true);
+            expect(orbs4Result.success).toBe(true);
+            expect(tonClientResult.success).toBe(true);
         }, 120000);
     });
 

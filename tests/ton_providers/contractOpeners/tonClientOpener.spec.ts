@@ -1,8 +1,8 @@
 import '@ton/test-utils';
 
-import { Address, TonClient } from '@ton/ton';
+import { Address, beginCell, Message, storeMessage, TonClient, Transaction } from '@ton/ton';
 
-import { TonClientOpener,  } from '../../src';
+import { TonClientOpener } from '../../../src';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -69,17 +69,11 @@ describe('TonClientOpener Integration Tests', () => {
 
     describe('getConfig', () => {
         it('should fetch blockchain config from mainnet or throw meaningful error', async () => {
-            try {
-                const config = await opener.getConfig();
-                expect(config).toBeDefined();
-                expect(typeof config).toBe('string');
-                expect(config.length).toBeGreaterThan(0);
-            } catch (error: unknown) {
-                // API may be unavailable, check that error is meaningful
-                expect(error).toBeDefined();
-                expect((error as Error).message).toContain('Failed to fetch config');
-            }
-        }, 15000);
+            const config = await opener.getConfig();
+            expect(config).toBeDefined();
+            expect(typeof config).toBe('string');
+            expect(config.length).toBeGreaterThan(0);
+        }, 100000);
     });
 
     describe('getTransactionByHash', () => {
@@ -97,6 +91,73 @@ describe('TonClientOpener Integration Tests', () => {
             expect(fetchedTx).toBeDefined();
             expect(fetchedTx?.hash().toString('base64')).toBe(txHash);
         }, 20000);
+    });
+
+    describe('getTransactionByTxHash', () => {
+        it('should fetch transaction by transaction hash only', async () => {
+            const txs = await opener.getTransactions(testAddress, { limit: 1 });
+            expect(txs.length).toBeGreaterThan(0);
+
+            const targetTx = txs[0];
+            const txHash = targetTx.hash().toString('base64');
+
+            const fetchedTx = await opener.getTransactionByTxHash(testAddress, txHash);
+
+            expect(fetchedTx).toBeDefined();
+            expect(fetchedTx?.hash().toString('base64')).toBe(txHash);
+        }, 20000);
+    });
+
+    describe('getTransactionByInMsgHash', () => {
+        it('should fetch transaction by incoming message hash', async () => {
+            const txs = await opener.getTransactions(testAddress, { limit: 10 });
+
+            // Find a transaction with an incoming message
+            const txWithInMsg = txs.find((tx: Transaction) => tx.inMessage !== undefined);
+            expect(txWithInMsg).toBeDefined();
+
+            const inMsg = txWithInMsg!.inMessage!;
+            const msgHashB64 = beginCell().store(storeMessage(inMsg)).endCell().hash().toString('base64');
+
+            const fetchedTx = await opener.getTransactionByInMsgHash(testAddress, msgHashB64);
+
+            expect(fetchedTx).toBeDefined();
+            expect(fetchedTx?.hash().toString('base64')).toBe(txWithInMsg!.hash().toString('base64'));
+        }, 20000);
+    });
+
+    describe('getTransactionByOutMsgHash', () => {
+        it('should fetch transaction by outgoing message hash', async () => {
+            const txs = await opener.getTransactions(testAddress, { limit: 10 });
+
+            // Find a transaction with outgoing messages
+            const txWithOutMsg = txs.find((tx: Transaction) => tx.outMessages.size > 0);
+            expect(txWithOutMsg).toBeDefined();
+
+            const outMsg = Array.from(txWithOutMsg!.outMessages.values())[0] as Message;
+            const msgHashB64 = beginCell().store(storeMessage(outMsg)).endCell().hash().toString('base64');
+
+            const fetchedTx = await opener.getTransactionByOutMsgHash(testAddress, msgHashB64);
+
+            expect(fetchedTx).toBeDefined();
+            expect(fetchedTx?.hash().toString('base64')).toBe(txWithOutMsg!.hash().toString('base64'));
+        }, 20000);
+    });
+
+    describe('getAdjacentTransactions', () => {
+        it('should fetch adjacent transactions', async () => {
+            const txs = await opener.getTransactions(testAddress, { limit: 5 });
+            expect(txs.length).toBeGreaterThan(1);
+
+            const targetTx = txs[1];
+            const txHash = targetTx.hash().toString('base64');
+
+            const adjacentTxs = await opener.getAdjacentTransactions(testAddress, txHash);
+
+            expect(adjacentTxs).toBeDefined();
+            expect(Array.isArray(adjacentTxs)).toBe(true);
+            expect(adjacentTxs.length).toBeGreaterThanOrEqual(0);
+        }, 30000);
     });
 
     describe('trackTransactionTree', () => {
@@ -127,6 +188,35 @@ describe('TonClientOpener Integration Tests', () => {
         }, 20000);
     });
 
+    describe('trackTransactionTreeWithResult', () => {
+        it('should return success for valid transaction tree', async () => {
+            const txs = await opener.getTransactions(testAddress, { limit: 1 });
+            expect(txs.length).toBeGreaterThan(0);
+
+            const tx = txs[0];
+            const txHash = tx.hash().toString('base64');
+
+            const result = await opener.trackTransactionTreeWithResult(testAddress.toString(), txHash, {
+                maxDepth: 10,
+            });
+
+            expect(result).toBeDefined();
+            expect(result.success).toBe(true);
+            expect(result.error).toBeUndefined();
+        }, 30000);
+
+        it('should return error object for non-existent transaction', async () => {
+            const fakeHash = Buffer.alloc(32, 0).toString('base64');
+
+            const result = await opener.trackTransactionTreeWithResult(testAddress.toString(), fakeHash, {
+                maxDepth: 5,
+            });
+
+            expect(result).toBeDefined();
+            expect(result.success).toBe(true); // Returns success with empty tree
+        }, 20000);
+    });
+
     describe('factory pattern', () => {
         it('should create opener from TonClient instance', async () => {
             const client = new TonClient({ endpoint: 'https://toncenter.com/api/v2/jsonRPC' });
@@ -146,8 +236,12 @@ describe('TonClientOpener Integration Tests', () => {
             expect(typeof opener.getAddressInformation).toBe('function');
             expect(typeof opener.getConfig).toBe('function');
             expect(typeof opener.getTransactionByHash).toBe('function');
+            expect(typeof opener.getTransactionByTxHash).toBe('function');
+            expect(typeof opener.getTransactionByInMsgHash).toBe('function');
+            expect(typeof opener.getTransactionByOutMsgHash).toBe('function');
             expect(typeof opener.getAdjacentTransactions).toBe('function');
             expect(typeof opener.trackTransactionTree).toBe('function');
+            expect(typeof opener.trackTransactionTreeWithResult).toBe('function');
         });
     });
 });

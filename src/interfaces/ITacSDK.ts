@@ -26,10 +26,10 @@ import {
     WaitOptions,
 } from '../structs/Struct';
 import { Asset } from './Asset';
+import { ContractOpener } from './ContractOpener';
 import { IConfiguration } from './IConfiguration';
 import { IOperationTracker } from './IOperationTracker';
 import { ITacExplorerClient } from './ITacExplorerClient';
-import { ContractOpener } from './ContractOpener';
 
 export interface ITacSDK {
     readonly config: IConfiguration;
