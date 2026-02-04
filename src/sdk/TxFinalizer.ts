@@ -118,19 +118,21 @@ export class TonTxFinalizer implements ITxFinalizer {
                             return 'computePhase not successful';
                         }
                         if (computePhase.exitCode !== 0) {
-                            return `computePhase.exitCode was not zero (exitCode=${computePhase.exitCode})`;
+                            return `computePhase.exitCode was not zero`;
                         }
                         if (actionPhase && !actionPhase.success) {
                             return 'actionPhase not successful';
                         }
                         if (actionPhase && actionPhase.resultCode !== 0) {
-                            return `actionPhase.resultCode was not zero (resultCode=${actionPhase.resultCode})`;
+                            return `actionPhase.resultCode was not zero`;
                         }
                         return null;
                     })();
 
                     if (failureCase) {
-                        throw txFinalizationError(`${tx.hash().toString('base64')}: ${failureCase}`);
+                        const exitCode = computePhase && computePhase.type !== 'skipped' ? computePhase.exitCode : 'N/A';
+                        const resultCode = actionPhase ? actionPhase.resultCode : 'N/A';
+                        throw txFinalizationError(`${tx.hash().toString('base64')}: ${failureCase} (exitCode=${exitCode}, resultCode=${resultCode})`);
                     }
                     if (currentDepth + 1 < maxDepth) {
                         if (tx.outMessages.size > 0) {
@@ -241,19 +243,21 @@ export class TonIndexerTxFinalizer implements ITxFinalizer {
                             return 'computePh not successful';
                         }
                         if (computePh.exitCode !== 0) {
-                            return `computePh.exitCode was not zero (exitCode=${computePh.exitCode})`;
+                            return `computePh.exitCode was not zero`;
                         }
                         if (action && !action.success) {
                             return 'action not successful';
                         }
                         if (action && action.resultCode !== 0) {
-                            return `action.resultCode was not zero (resultCode=${action.resultCode})`;
+                            return `action.resultCode was not zero`;
                         }
                         return null;
                     })();
 
                     if (failureCase) {
-                        throw txFinalizationError(`${tx.hash}: ${failureCase}`);
+                        const exitCode = computePh ? computePh.exitCode : 'N/A';
+                        const resultCode = action ? action.resultCode : 'N/A';
+                        throw txFinalizationError(`${tx.hash}: ${failureCase} (exitCode=${exitCode}, resultCode=${resultCode})`);
                     }
                 
                     if (currentDepth + 1 < maxDepth) {

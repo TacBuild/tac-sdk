@@ -1,4 +1,4 @@
-import { TonIndexerTxFinalizer } from '../../../src/sdk/TxFinalizer';
+import { TonIndexerTxFinalizer } from '../../../src';
 import * as Utils from '../../../src/sdk/Utils';
 
 const sleepSpy = jest.spyOn(Utils, 'sleep').mockResolvedValue(undefined);
