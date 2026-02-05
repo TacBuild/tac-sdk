@@ -14,6 +14,8 @@ This file documents the primary data structures (types and interfaces often refe
 - [`ContractState`](#contractstate-type)
 - [`ContractOpener`](#contractopener-interface)
 - [`RetryableContractOpener`](#retryablecontractopener-class)
+- [`GetTransactionsOptions`](#gettransactionsoptions-type)
+- [`AddressInformation`](#addressinformation-type)
 
 ### Crosschain Transaction
 - [`EvmProxyMsg`](#evmproxymsg-type)
@@ -26,6 +28,9 @@ This file documents the primary data structures (types and interfaces often refe
 - [`TransactionLinkerWithOperationId`](#transactionlinkerwithoperationid-type)
 - [`OperationIds`](#operationids-type)
 - [`OperationIdsByShardsKey`](#operationidsbyshardskey-type)
+- [`TrackTransactionTreeParams`](#tracktransactiontreeparams-type)
+- [`TransactionValidationError`](#transactionvalidationerror-type)
+- [`TrackTransactionTreeResult`](#tracktransactiontreeresult-type)
 
 ### Simulation Structures
 - [`TONAsset`](#tonasset)
@@ -159,22 +164,34 @@ Represents the state of a TON smart contract:
 export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
     getContractState(address: Address): Promise<ContractState>;
+    getTransactions(address: Address, opts: GetTransactionsOptions): Promise<Transaction[]>;
     closeConnections?: () => unknown;
     getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+    getTransactionByTxHash(address: Address, txHash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+    getTransactionByInMsgHash(address: Address, inMsgHash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+    getTransactionByOutMsgHash(address: Address, outMsgHash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
     getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]>;
     getAddressInformation(address: Address): Promise<AddressInformation>;
     getConfig(): Promise<string>;
+    trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<void>;
+    trackTransactionTreeWithResult(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<TrackTransactionTreeResult>;
 }
 ```
 
 Interface for opening and interacting with TON smart contracts:
 - **`open<T extends Contract>(src: T)`**: Opens a contract for interaction, returning an OpenedContract or SandboxContract instance.
 - **`getContractState(address: Address)`**: Retrieves the state of a contract at the specified address.
+- **`getTransactions(address: Address, opts: GetTransactionsOptions)`**: Retrieves transactions for the specified address with pagination options.
 - **`closeConnections?`** *(optional)*: Closes any open connections to the TON network.
-- **`getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its hash for a given address. Returns `null` if not found.
-- **`getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves transactions adjacent to the specified transaction hash.
+- **`getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its hash (transaction hash, incoming message hash, or outgoing message hash). Returns `null` if not found.
+- **`getTransactionByTxHash(address: Address, txHash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its transaction hash specifically. Returns `null` if not found.
+- **`getTransactionByInMsgHash(address: Address, inMsgHash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its incoming message hash. Returns `null` if not found.
+- **`getTransactionByOutMsgHash(address: Address, outMsgHash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its outgoing message hash. Returns `null` if not found.
+- **`getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves transactions adjacent to the specified transaction hash (children and optionally parent).
 - **`getAddressInformation(address: Address)`**: Retrieves address information including last transaction details.
 - **`getConfig()`**: Retrieves the blockchain configuration as a base64 encoded string.
+- **`trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams)`**: Validates entire transaction tree using BFS, throws error if validation fails.
+- **`trackTransactionTreeWithResult(address: string, hash: string, params?: TrackTransactionTreeParams)`**: Validates entire transaction tree using BFS, returns result object instead of throwing.
 ### `RetryableContractOpener (Class)`
 
 ```typescript
@@ -225,6 +242,49 @@ Returns a RetryableContractOpener configured with:
 3. orbsOpener (second fallback)
 
 This function provides a convenient way to create a robust contract opener with sensible defaults for production use.
+
+### `GetTransactionsOptions (Type)`
+
+```typescript
+export type GetTransactionsOptions = {
+    limit?: number;
+    lt?: string;
+    hash?: string;
+    to_lt?: string;
+    inclusive?: boolean;
+    archival?: boolean;
+    timeoutMs?: number;
+    retryDelayMs?: number;
+};
+```
+
+Options for retrieving transactions from the blockchain with pagination and filtering capabilities.
+
+- **`limit`** *(optional)*: Maximum number of transactions to retrieve.
+- **`lt`** *(optional)*: Logical time of the transaction to start from (for pagination).
+- **`hash`** *(optional)*: Hash of the transaction to start from (for pagination).
+- **`to_lt`** *(optional)*: Logical time of the transaction to end at (upper bound).
+- **`inclusive`** *(optional)*: Whether to include the starting transaction in the results.
+- **`archival`** *(optional)*: Whether to search in archival nodes for historical data.
+- **`timeoutMs`** *(optional)*: Request timeout in milliseconds.
+- **`retryDelayMs`** *(optional)*: Delay between retry attempts in milliseconds.
+
+### `AddressInformation (Type)`
+
+```typescript
+export type AddressInformation = {
+    lastTransaction: {
+        lt: string;
+        hash: string;
+    };
+};
+```
+
+Contains information about an address on the TON blockchain.
+
+- **`lastTransaction`**: Information about the most recent transaction of the address.
+  - **`lt`**: Logical time of the last transaction.
+  - **`hash`**: Hash of the last transaction in base64 format.
 
 
 ### `EvmProxyMsg (Type)`
@@ -516,6 +576,63 @@ export type OperationIdsByShardsKey = Record<string, OperationIds>;
 ```
 
 Maps shard keys to their corresponding operation IDs, allowing efficient lookup of operations by shard identifier.
+
+### `TrackTransactionTreeParams (Type)`
+
+```typescript
+export type TrackTransactionTreeParams = {
+    limit?: number;
+    maxDepth?: number;
+    ignoreOpcodeList?: number[];
+    direction?: 'forward' | 'backward' | 'both';
+};
+```
+
+Parameters for tracking and validating transaction trees.
+
+- **`limit`** *(optional)*: Maximum number of transactions to fetch per pagination request. Default: 100.
+- **`maxDepth`** *(optional)*: Maximum depth to traverse in the transaction tree (prevents infinite loops). Default: 10.
+- **`ignoreOpcodeList`** *(optional)*: List of operation codes (opcodes) to skip during validation. Transactions with these opcodes in their incoming message will not be validated. Default: `[0xd53276db]` (excess message).
+- **`direction`** *(optional)*: Direction to search the transaction tree:
+  - `'forward'`: only search children (outgoing messages)
+  - `'backward'`: only search parents (incoming messages)
+  - `'both'`: search in both directions (default)
+
+### `TransactionValidationError (Type)`
+
+```typescript
+export type TransactionValidationError = {
+    txHash: string;
+    exitCode: number | 'N/A';
+    resultCode: number | 'N/A';
+    reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed';
+};
+```
+
+Details about a transaction validation error.
+
+- **`txHash`**: Base64-encoded hash of the failed transaction.
+- **`exitCode`**: Exit code from the compute phase, or `'N/A'` if compute phase is missing.
+- **`resultCode`**: Result code from the action phase, or `'N/A'` if action phase is missing.
+- **`reason`**: Reason for validation failure:
+  - `'aborted'`: transaction was aborted
+  - `'compute_phase_missing'`: compute phase is missing or skipped
+  - `'compute_phase_failed'`: compute phase failed (exitCode !== 0)
+  - `'action_phase_failed'`: action phase failed (resultCode !== 0)
+
+### `TrackTransactionTreeResult (Type)`
+
+```typescript
+export type TrackTransactionTreeResult = {
+    success: boolean;
+    error?: TransactionValidationError;
+};
+```
+
+Result of transaction tree tracking and validation.
+
+- **`success`**: Whether all transactions in the tree passed validation.
+- **`error`** *(optional)*: Details about the first validation error encountered (if any).
 
 ### `TONAsset`
 

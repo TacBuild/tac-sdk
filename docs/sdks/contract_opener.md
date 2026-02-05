@@ -49,16 +49,6 @@ The ContractOpener architecture consists of:
 
 ---
 
-## Architecture Benefits
-
-- **Code Reuse**: Common logic implemented once in `BaseContractOpener`
-- **Type Safety**: Strongly typed with proper TypeScript interfaces
-- **Easy Extension**: New openers only need to implement 5 protocol-specific methods
-- **No Duplication**: Complex methods like `trackTransactionTree` work automatically for all openers
-- **Maintainability**: Changes to common logic affect all openers consistently
-
----
-
 ## BaseContractOpener
 
 The `BaseContractOpener` abstract class provides common functionality for all opener implementations. Subclasses only need to implement protocol-specific methods while inheriting complex transaction tracking logic.
@@ -157,6 +147,122 @@ Validates the entire transaction tree using BFS (breadth-first search) algorithm
 
 ---
 
+#### `trackTransactionTreeWithResult`
+
+```ts
+trackTransactionTreeWithResult(
+  address: string,
+  hash: string,
+  params?: TrackTransactionTreeParams
+): Promise<TrackTransactionTreeResult>
+```
+
+Validates the entire transaction tree using BFS algorithm and returns a result object instead of throwing errors. Useful when you need to handle validation failures programmatically.
+
+**Parameters:**
+- `address: string` - The contract address as string
+- `hash: string` - Root transaction hash to start validation from
+- `params?: TrackTransactionTreeParams` - Tracking parameters (same as `trackTransactionTree`)
+
+**Returns:** `Promise<TrackTransactionTreeResult>` - Result object with validation status and error details if failed
+
+**TrackTransactionTreeResult:**
+```ts
+{
+  success: boolean;  // Whether all transactions passed validation
+  error?: TransactionValidationError;  // Details of first validation error (if any)
+}
+```
+
+**TransactionValidationError:**
+```ts
+{
+  txHash: string;  // Base64-encoded hash of failed transaction
+  exitCode: number | 'N/A';  // Exit code from compute phase
+  resultCode: number | 'N/A';  // Result code from action phase
+  reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed';
+}
+```
+
+**Example:**
+```ts
+const result = await opener.trackTransactionTreeWithResult(address, txHash, { maxDepth: 10 });
+
+if (result.success) {
+  console.log('All transactions successful!');
+} else {
+  console.error('Validation failed:', result.error);
+  console.log('Failed transaction:', result.error.txHash);
+  console.log('Exit code:', result.error.exitCode);
+  console.log('Reason:', result.error.reason);
+}
+```
+
+---
+
+#### `getTransactionByTxHash`
+
+```ts
+getTransactionByTxHash(
+  address: Address,
+  txHash: string,
+  opts?: GetTransactionsOptions
+): Promise<Transaction | null>
+```
+
+Finds a transaction by its transaction hash specifically (not message hash). This method searches only for exact transaction hash matches.
+
+**Parameters:**
+- `address: Address` - The contract address to search transactions for
+- `txHash: string` - Transaction hash in base64 format
+- `opts?: GetTransactionsOptions` - Optional fetch options (same as `getTransactionByHash`)
+
+**Returns:** `Promise<Transaction | null>` - The found transaction or null if not found within timeout
+
+---
+
+#### `getTransactionByInMsgHash`
+
+```ts
+getTransactionByInMsgHash(
+  address: Address,
+  inMsgHash: string,
+  opts?: GetTransactionsOptions
+): Promise<Transaction | null>
+```
+
+Finds a transaction by its incoming message hash. Useful when you have the message hash but not the transaction hash.
+
+**Parameters:**
+- `address: Address` - The contract address to search transactions for
+- `inMsgHash: string` - Incoming message hash in base64 format
+- `opts?: GetTransactionsOptions` - Optional fetch options (same as `getTransactionByHash`)
+
+**Returns:** `Promise<Transaction | null>` - The found transaction or null if not found within timeout
+
+---
+
+#### `getTransactionByOutMsgHash`
+
+```ts
+getTransactionByOutMsgHash(
+  address: Address,
+  outMsgHash: string,
+  opts?: GetTransactionsOptions
+): Promise<Transaction | null>
+```
+
+Finds a transaction by one of its outgoing message hashes. Useful for tracing transaction chains.
+
+**Parameters:**
+- `address: Address` - The contract address to search transactions for
+- `outMsgHash: string` - Outgoing message hash in base64 format
+- `opts?: GetTransactionsOptions` - Optional fetch options (same as `getTransactionByHash`)
+
+**Returns:** `Promise<Transaction | null>` - The found transaction or null if not found within timeout
+
+---
+
 ### Abstract Methods (Must be Implemented)
 
 Each opener implementation must provide these protocol-specific methods:
@@ -241,6 +347,36 @@ const openerCustom = await orbsOpener4(Network.TESTNET, 15000); // 15s timeout
 - Enhanced transaction data format
 - Static `create()` factory method
 - Automatic endpoint discovery
+
+---
+
+### TonClient4Opener
+
+Uses TonClient4 (v4 API) for direct HTTP access to TON blockchain. Provides a clean wrapper around the v4 protocol.
+
+**Usage:**
+```ts
+import { TonClient4Opener, tonHubApi4Opener, Network } from '@tonappchain/sdk';
+
+// Option 1: Create with TonHub public endpoint using factory
+const opener = tonHubApi4Opener(Network.MAINNET);
+
+// Option 2: Create from existing TonClient4 instance
+import { TonClient4 } from '@ton/ton';
+const client = new TonClient4({ endpoint: 'https://mainnet-v4.tonhubapi.com', timeout: 10000 });
+const opener = TonClient4Opener.create('https://mainnet-v4.tonhubapi.com', 10000);
+```
+
+**Features:**
+- V4 API support with improved data format
+- Direct HTTP access without Orbs network layer
+- Configurable request timeout
+- Simple endpoint configuration
+- **Note**: Public TonHub v4 API has limitations - `getAccountTransactions` and `getConfig` methods may return 404 or timeout errors. For full functionality, use LiteClientOpener or v2-based openers (OrbsOpener, TonClientOpener).
+
+**Factory Functions:**
+- `tonHubApi4Opener(network, timeout?)`: Creates opener with TonHub public endpoint
+- `TonClient4Opener.create(endpoint, timeout?)`: Creates opener with custom endpoint
 
 ---
 
@@ -630,25 +766,6 @@ await opener.trackTransactionTree(address, hash, params);
 - ✅ All functionality available directly on opener instance
 - ✅ Cleaner, more intuitive API
 - ✅ Better TypeScript type inference
-
-## Migration from Old Architecture
-
-If you were using the old helper functions:
-
-**Before:**
-```typescript
-import { findTransactionByHash, getAdjacentTransactionsHelper } from './helpers';
-
-const tx = await findTransactionByHash(opener, address, hash, client.getTransactions, opts);
-const adjacent = await getAdjacentTransactionsHelper(opener, address, hash, client.getTransactions, opts);
-```
-
-**After:**
-```typescript
-// Methods are now on the opener itself
-const tx = await opener.getTransactionByHash(address, hash, opts);
-const adjacent = await opener.getAdjacentTransactions(address, hash, opts);
-```
 
 ## See Also
 

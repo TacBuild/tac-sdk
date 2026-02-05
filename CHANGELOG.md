@@ -40,8 +40,8 @@ All notable changes to this project will be documented in this file.
 - **Major refactoring of ContractOpener architecture**:
   - All openers converted to class-based implementations extending `BaseContractOpener`:
     - `TonClientOpener`: Direct TonClient wrapper.
-    - `OrbsOpener`: Orbs TonClient implementation with static `create()` factory.
-    - `OrbsOpener4`: Orbs TonClient4 implementation with static `create()` factory.
+    - `OrbsOpener`: Orbs TonClient implementation.
+    - `OrbsOpener4`: Orbs TonClient4 implementation.
     - `LiteClientOpener`: LiteClient implementation with connection management.
     - `SandboxOpener`: Sandbox testing implementation.
   - Eliminated code duplication by moving common logic to base class:
