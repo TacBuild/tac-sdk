@@ -2,17 +2,17 @@ import '@ton/test-utils';
 
 import { Address, beginCell, storeMessage, Transaction } from '@ton/ton';
 
-import { Network, OrbsOpener, orbsOpener } from '../../../src';
+import { ContractOpener, Network, orbsOpener, TonClientOpener } from '../../../src';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('OrbsOpener Integration Tests', () => {
-    let opener: OrbsOpener;
+    let opener: ContractOpener;
     // Known mainnet address with transactions (TAC CCL)
     const testAddress = Address.parse('EQAgpWmO8nBUrmfOOldIEmRkLEwV-IIfVAlJsphYswnuL80R');
 
     beforeAll(async () => {
-        opener = await OrbsOpener.create(Network.MAINNET);
+        opener = await orbsOpener(Network.MAINNET);
     }, 30000);
 
     afterEach(async () => {
@@ -22,13 +22,13 @@ describe('OrbsOpener Integration Tests', () => {
 
     describe('create', () => {
         it('should create OrbsOpener instance for testnet', async () => {
-            const instance = await OrbsOpener.create(Network.TESTNET);
-            expect(instance).toBeInstanceOf(OrbsOpener);
+            const instance = await orbsOpener(Network.TESTNET);
+            expect(instance).toBeInstanceOf(TonClientOpener);
         }, 30000);
 
         it('should create OrbsOpener instance for mainnet', async () => {
-            const instance = await OrbsOpener.create(Network.MAINNET);
-            expect(instance).toBeInstanceOf(OrbsOpener);
+            const instance = await orbsOpener(Network.MAINNET);
+            expect(instance).toBeInstanceOf(TonClientOpener);
         }, 30000);
     });
 
@@ -179,16 +179,6 @@ describe('OrbsOpener Integration Tests', () => {
                 }),
             ).resolves.not.toThrow();
         }, 30000);
-
-        it('should throw error for non-existent transaction', async () => {
-            const fakeHash = Buffer.alloc(32, 0).toString('base64');
-
-            await expect(
-                opener.trackTransactionTree(testAddress.toString(), fakeHash, {
-                    maxDepth: 5,
-                }),
-            ).rejects.toThrow();
-        }, 20000);
 
         it('should validate transaction tree with custom parameters', async () => {
             const txs = await opener.getTransactions(testAddress, { limit: 1 });

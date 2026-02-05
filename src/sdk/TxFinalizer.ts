@@ -11,8 +11,8 @@ import { TrackTransactionTreeParams } from '../structs/Struct';
 import { AxiosHttpClient } from './AxiosHttpClient';
 import {
     DEFAULT_FIND_TX_MAX_DEPTH,
-    DEFAULT_FIND_TX_RETRY_DELAY_MS,
-    DEFAULT_FIND_TX_RETRY_MAX_COUNT,
+    DEFAULT_RETRY_DELAY_MS,
+    DEFAULT_RETRY_MAX_COUNT,
     IGNORE_MSG_VALUE_1_NANO,
     IGNORE_OPCODE,
 } from './Consts';
@@ -38,8 +38,8 @@ export class TonTxFinalizer implements ITxFinalizer {
     // Fetches adjacent transactions from toncenter
     private async fetchAdjacentTransactions(
         hash: string,
-        retries = DEFAULT_FIND_TX_RETRY_MAX_COUNT,
-        delay = DEFAULT_FIND_TX_RETRY_DELAY_MS,
+        retries = DEFAULT_RETRY_MAX_COUNT,
+        delay = DEFAULT_RETRY_DELAY_MS,
     ): Promise<ToncenterTransaction[]> {
         for (let i = retries; i >= 0; i--) {
             try {

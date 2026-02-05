@@ -2,7 +2,6 @@ import { Address, beginCell, Cell, Contract, loadTransaction, OpenedContract, Tr
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
 import { mainnet, testnet } from '../../artifacts';
-import { ContractOpener } from '../interfaces';
 import { DEFAULT_FIND_TX_LIMIT } from '../sdk/Consts';
 import { AddressInformation, ContractState, GetTransactionsOptions, Network } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
@@ -136,6 +135,6 @@ export class LiteClientOpener extends BaseContractOpener {
 
 export async function liteClientOpener(
     options: { liteservers: LiteServer[] } | { network: Network },
-): Promise<ContractOpener> {
+): Promise<LiteClientOpener> {
     return LiteClientOpener.create(options);
 }

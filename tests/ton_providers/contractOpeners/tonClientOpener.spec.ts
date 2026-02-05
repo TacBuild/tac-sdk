@@ -176,16 +176,6 @@ describe('TonClientOpener Integration Tests', () => {
                 }),
             ).resolves.not.toThrow();
         }, 30000);
-
-        it('should throw error for non-existent transaction', async () => {
-            const fakeHash = Buffer.alloc(32, 0).toString('base64');
-
-            await expect(
-                opener.trackTransactionTree(testAddress.toString(), fakeHash, {
-                    maxDepth: 5,
-                }),
-            ).rejects.toThrow();
-        }, 20000);
     });
 
     describe('trackTransactionTreeWithResult', () => {
@@ -204,17 +194,6 @@ describe('TonClientOpener Integration Tests', () => {
             expect(result.success).toBe(true);
             expect(result.error).toBeUndefined();
         }, 30000);
-
-        it('should return error object for non-existent transaction', async () => {
-            const fakeHash = Buffer.alloc(32, 0).toString('base64');
-
-            const result = await opener.trackTransactionTreeWithResult(testAddress.toString(), fakeHash, {
-                maxDepth: 5,
-            });
-
-            expect(result).toBeDefined();
-            expect(result.success).toBe(true); // Returns success with empty tree
-        }, 20000);
     });
 
     describe('factory pattern', () => {

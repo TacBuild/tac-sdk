@@ -3,6 +3,7 @@ import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/
 
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener, ILogger } from '../interfaces';
+import { DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT } from '../sdk/Consts';
 import {
     AddressInformation,
     ContractState,
@@ -11,9 +12,8 @@ import {
     TrackTransactionTreeParams,
     TrackTransactionTreeResult,
 } from '../structs/Struct';
-import { orbsOpener } from './OrbsOpener';
-import { orbsOpener4 } from './OrbsOpener4';
-import { tonClientOpener } from './TonClientOpener';
+import { orbsOpener4 } from './TonClient4Opener';
+import { orbsOpener, tonClientOpener } from './TonClientOpener';
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -62,8 +62,14 @@ export class RetryableContractOpener implements ContractOpener {
         throw result.lastError || allContractOpenerFailedError('Failed to get transaction by hash');
     }
 
-    async getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]> {
-        const result = await this.executeWithFallback((config) => config.opener.getAdjacentTransactions(address, hash, opts));
+    async getAdjacentTransactions(
+        address: Address,
+        hash: string,
+        opts?: GetTransactionsOptions,
+    ): Promise<Transaction[]> {
+        const result = await this.executeWithFallback((config) =>
+            config.opener.getAdjacentTransactions(address, hash, opts),
+        );
 
         if (result.success && result.data) {
             return result.data;
@@ -155,11 +161,7 @@ export class RetryableContractOpener implements ContractOpener {
         }
     }
 
-    async trackTransactionTree(
-        address: string,
-        hash: string,
-        params?: TrackTransactionTreeParams,
-    ): Promise<void> {
+    async trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<void> {
         const result = await this.executeWithFallback(async (config) => {
             return config.opener.trackTransactionTree(address, hash, params);
         });
@@ -263,10 +265,10 @@ export class RetryableContractOpener implements ContractOpener {
 export async function createDefaultRetryableOpener(
     tonRpcEndpoint: string,
     networkType: Network,
-    maxRetries = 5,
-    retryDelay = 1000,
+    maxRetries = DEFAULT_RETRY_MAX_COUNT,
+    retryDelay = DEFAULT_RETRY_DELAY_MS,
     logger?: ILogger,
-): Promise<ContractOpener> {
+): Promise<RetryableContractOpener> {
     const openers: OpenerConfig[] = [];
 
     const tonClient = new TonClient({ endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString() });
@@ -276,15 +278,15 @@ export async function createDefaultRetryableOpener(
 
     if (networkType !== Network.DEV) {
         try {
-            const opener4 = await orbsOpener4(networkType);
-            openers.push({ opener: opener4, retries: maxRetries, retryDelay });
+            const opener = await orbsOpener(networkType);
+            openers.push({ opener: opener, retries: maxRetries, retryDelay });
         } catch {
             // skip opener in case of failure
         }
 
         try {
-            const opener = await orbsOpener(networkType);
-            openers.push({ opener: opener, retries: maxRetries, retryDelay });
+            const opener4 = await orbsOpener4(networkType);
+            openers.push({ opener: opener4, retries: maxRetries, retryDelay });
         } catch {
             // skip opener in case of failure
         }
