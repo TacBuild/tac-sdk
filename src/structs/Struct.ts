@@ -564,7 +564,7 @@ export type TrackTransactionTreeParams = {
  */
 export type TransactionValidationError = {
     /**
-     * Base64-encoded hash of the failed transaction
+     * Base64-encoded hash of the failed transaction (or the searched hash if not found)
      */
     txHash: string;
 
@@ -581,11 +581,22 @@ export type TransactionValidationError = {
     /**
      * Reason for validation failure:
      * - 'aborted': default: transaction was aborted
-     * - 'compute_phase_missing': compute phase is missing or skipped
+     * - 'compute_phase_missing': compute phase is missing
      * - 'compute_phase_failed': compute phase failed (exitCode !== 0)
      * - 'action_phase_failed': action phase failed (resultCode !== 0)
+     * - 'not_found': transaction or message hash not found during traversal
      */
-    reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed';
+    reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed' | 'not_found';
+
+    /**
+     * Address where the lookup was performed (for reason: 'not_found')
+     */
+    address?: string;
+
+    /**
+     * Hash type used in lookup (for reason: 'not_found')
+     */
+    hashType?: 'unknown' | 'in' | 'out';
 };
 
 /**

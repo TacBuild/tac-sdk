@@ -104,7 +104,7 @@ export interface ContractOpener {
      * @param address Root account address
      * @param hash Root transaction or message hash
      * @param params Tracking parameters (maxDepth, ignoreOpcodeList, etc.)
-     * @throws Error if any transaction in the tree failed
+     * @throws Error if any transaction in the tree failed or if a hash is not found
      */
     trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<void>;
 
@@ -114,7 +114,7 @@ export interface ContractOpener {
      * @param address Root account address
      * @param hash Root transaction or message hash
      * @param params Tracking parameters (maxDepth, ignoreOpcodeList, etc.)
-     * @returns Result object with success flag and error details if validation failed
+     * @returns Result object with success flag and error details if validation failed or a hash was not found
      */
     trackTransactionTreeWithResult(
         address: string,

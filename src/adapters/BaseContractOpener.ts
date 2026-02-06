@@ -107,6 +107,10 @@ export abstract class BaseContractOpener implements ContractOpener {
                 if (msgHash === targetHashB64) {
                     return true;
                 }
+                const rawMsgHash = beginCell().store(storeMessage(tx.inMessage)).endCell().hash().toString('base64');
+                if (rawMsgHash === targetHashB64) {
+                    return true;
+                }
             }
 
             // 3. check incoming message(internal)
@@ -163,6 +167,10 @@ export abstract class BaseContractOpener implements ContractOpener {
             if (tx.inMessage && tx.inMessage.info.type === 'external-in') {
                 const hash = getNormalizedExtMessageHash(tx.inMessage);
                 if (hash === targetHashB64) {
+                    return true;
+                }
+                const rawHash = beginCell().store(storeMessage(tx.inMessage)).endCell().hash().toString('base64');
+                if (rawHash === targetHashB64) {
                     return true;
                 }
             }
@@ -249,21 +257,7 @@ export abstract class BaseContractOpener implements ContractOpener {
         tx: Transaction,
         ignoreOpcodeList: number[],
     ): TransactionValidationError | null {
-        if (tx.description.type !== 'generic' || !tx.inMessage) return null;
-
-        // Skip validation for 1 nano messages
-        if (tx.inMessage.info.type === 'internal' && tx.inMessage.info.value.coins === IGNORE_MSG_VALUE_1_NANO) {
-            return null;
-        }
-
-        const bodySlice = tx.inMessage.body.beginParse();
-        if (bodySlice.remainingBits < 32) return null;
-
-        const opcode = bodySlice.loadUint(32);
-        if (ignoreOpcodeList.includes(opcode)) {
-            this.logger?.debug(`Skipping validation for tx: ${tx.hash().toString('base64')} (opcode in ignore list)`);
-            return null;
-        }
+        if (tx.description.type !== 'generic') return null;
 
         const { aborted, computePhase, actionPhase } = tx.description;
         const txHash = tx.hash().toString('base64');
@@ -273,15 +267,32 @@ export abstract class BaseContractOpener implements ContractOpener {
         if (aborted) {
             return { txHash, exitCode, resultCode, reason: 'aborted' };
         }
-        if (!computePhase || computePhase.type === 'skipped') {
+        if (!computePhase) {
             return { txHash, exitCode, resultCode, reason: 'compute_phase_missing' };
         }
-        if (!computePhase.success || computePhase.exitCode !== 0) {
+        if (computePhase.type !== 'skipped' && (!computePhase.success || computePhase.exitCode !== 0)) {
             return { txHash, exitCode, resultCode, reason: 'compute_phase_failed' };
         }
         if (actionPhase && (!actionPhase.success || actionPhase.resultCode !== 0)) {
             return { txHash, exitCode, resultCode, reason: 'action_phase_failed' };
         }
+
+        if (!tx.inMessage) return null;
+
+        // Log optional skip hints (does not bypass phase validation)
+        if (tx.inMessage.info.type === 'internal' && tx.inMessage.info.value.coins === IGNORE_MSG_VALUE_1_NANO) {
+            this.logger?.debug(`Skipping extra checks for tx: ${txHash} (1 nano message)`);
+            return null;
+        }
+
+        const bodySlice = tx.inMessage.body.beginParse();
+        if (bodySlice.remainingBits >= 32) {
+            const opcode = bodySlice.loadUint(32);
+            if (ignoreOpcodeList.includes(opcode)) {
+                this.logger?.debug(`Skipping extra checks for tx: ${txHash} (opcode in ignore list)`);
+            }
+        }
+
         return null;
     }
 
@@ -320,9 +331,13 @@ export abstract class BaseContractOpener implements ContractOpener {
     ): Promise<void> {
         const result = await this.trackTransactionTreeWithResult(address, hash, params);
         if (!result.success && result.error) {
-            const { txHash, exitCode, resultCode, reason } = result.error;
+            const { txHash, exitCode, resultCode, reason, address: errorAddress, hashType } = result.error;
+            const context =
+                reason === 'not_found'
+                    ? ` address=${errorAddress ?? 'unknown'} hashType=${hashType ?? 'unknown'}`
+                    : '';
             throw txFinalizationError(
-                `${txHash}: reason= ${reason} (exitCode=${exitCode}, resultCode=${resultCode})`,
+                `${txHash}: reason=${reason} (exitCode=${exitCode}, resultCode=${resultCode})${context}`,
             );
         }
     }
@@ -347,8 +362,11 @@ export abstract class BaseContractOpener implements ContractOpener {
             direction = 'both',
         } = params;
         const parsedAddress = Address.parse(address);
+        const normalizedRootHash = normalizeHashToBase64(hash);
         const visitedNodes = new Set<string>();
-        const queue: TransactionDepth[] = [{ address: parsedAddress, hash, depth: 0, hashType: 'unknown' }];
+        const queue: TransactionDepth[] = [
+            { address: parsedAddress, hash: normalizedRootHash, depth: 0, hashType: 'unknown' },
+        ];
 
         while (queue.length > 0) {
             const { hash: currentHash, depth: currentDepth, address: currentAddress, hashType } = queue.shift()!;
@@ -362,8 +380,20 @@ export abstract class BaseContractOpener implements ContractOpener {
             const tx = await this.findTransactionByHashType(currentAddress!, currentHash, hashType, limit);
 
             if (!tx) {
-                this.logger?.debug(`Transaction not found for hash: ${currentHash}`);
-                continue;
+                this.logger?.debug(
+                    `Transaction not found for hash: ${currentHash} (address=${currentAddress?.toString()}, hashType=${hashType ?? 'unknown'})`,
+                );
+                return {
+                    success: false,
+                    error: {
+                        txHash: currentHash,
+                        exitCode: 'N/A',
+                        resultCode: 'N/A',
+                        reason: 'not_found',
+                        address: currentAddress?.toString(),
+                        hashType: hashType ?? 'unknown',
+                    },
+                };
             }
 
             // Validate transaction and return error if found
@@ -373,7 +403,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             }
 
             // Add adjacent transactions to queue
-            if (currentDepth + 1 < maxDepth) {
+            if (currentDepth < maxDepth) {
                 if ((direction === 'forward' || direction === 'both') && tx.outMessages.size > 0) {
                     for (const msg of tx.outMessages.values()) {
                         const dst = msg.info.dest;

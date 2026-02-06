@@ -376,24 +376,20 @@ export function muldivr(a: bigint, b: bigint, c: bigint): bigint {
  * Accepts: base64, hex, or raw string
  */
 export function normalizeHashToBase64(hash: string): string {
-    // If already base64 (contains +, /, = or matches base64 pattern)
-    if (/^[A-Za-z0-9+/]+={0,2}$/.test(hash)) {
-        try {
-            // Validate it's valid base64
-            Buffer.from(hash, 'base64');
-            return hash;
-        } catch {
-            // Fall through to hex conversion
-        }
+    const input = hash.trim();
+    if (!input) return input;
+
+    const hex = input.startsWith('0x') ? input.slice(2) : input;
+    if (/^[0-9a-fA-F]{64}$/.test(hex)) {
+        return Buffer.from(hex, 'hex').toString('base64');
     }
 
-    // Try as hex
-    if (/^[0-9a-fA-F]+$/.test(hash)) {
-        return Buffer.from(hash, 'hex').toString('base64');
+    const decoded = decodeBase64Like(input);
+    if (decoded) {
+        return decoded.toString('base64');
     }
 
-    // Assume it's already base64
-    return hash;
+    return input;
 }
 
 /**
@@ -402,24 +398,36 @@ export function normalizeHashToBase64(hash: string): string {
  */
 export function normalizeHashToHex(hash: string): string {
     const input = hash.trim();
+    if (!input) return input;
 
     const maybeHex = input.startsWith('0x') ? input.slice(2) : input;
     if (/^[0-9a-fA-F]+$/.test(maybeHex) && maybeHex.length % 2 === 0) {
         return maybeHex.toLowerCase();
     }
 
-    if (/^[A-Za-z0-9+/]+={0,2}$/.test(input)) {
-        try {
-            const buf = Buffer.from(input, 'base64');
-            if (buf.length > 0) {
-                return buf.toString('hex');
-            }
-        } catch {
-            // ignore
-        }
+    const decoded = decodeBase64Like(input);
+    if (decoded) {
+        return decoded.toString('hex');
     }
 
     return input;
+}
+
+function decodeBase64Like(input: string): Buffer | null {
+    const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+    const padLength = normalized.length % 4;
+    const padded = padLength === 0 ? normalized : normalized + '='.repeat(4 - padLength);
+
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(padded)) {
+        return null;
+    }
+
+    try {
+        const buf = Buffer.from(padded, 'base64');
+        return buf.length > 0 ? buf : null;
+    } catch {
+        return null;
+    }
 }
 
 export function getNormalizedExtMessageHash(message: Message): string {

@@ -129,21 +129,23 @@ Validates the entire transaction tree using BFS (breadth-first search) algorithm
 - `address: string` - The contract address as string
 - `hash: string` - Root transaction hash to start validation from
 - `params?: TrackTransactionTreeParams` - Tracking parameters:
-  - `maxDepth?: number` - Maximum tree depth to traverse (default: 10)
-  - `ignoreOpcodeList?: number[]` - Opcodes to skip validation (default: [0xd53276db])
+  - `maxDepth?: number` - Maximum tree depth to traverse, inclusive (depth 0 is the root, default: 10)
+  - `ignoreOpcodeList?: number[]` - Opcodes that mark transactions as skippable for extra checks (phase validation still applies, default: [0xd53276db])
 
 **Returns:** `Promise<void>` - Resolves if all transactions successful, throws error otherwise
 
 **Error Format:**
 ```
-<txHash>: <error_description> (exitCode=<exitCode>, resultCode=<resultCode>)
+<txHash>: reason=<reason> (exitCode=<exitCode>, resultCode=<resultCode>) address=<address> hashType=<hashType>
 ```
+`address` and `hashType` are included only for `reason=not_found`.
 
 **Example Error Messages:**
-- `abc123...: Transaction was aborted (exitCode=5, resultCode=37)`
-- `def456...: computePhase not present or skipped (exitCode=N/A, resultCode=N/A)`
-- `ghi789...: computePhase failed (exitCode=7, resultCode=0)`
-- `jkl012...: actionPhase failed (exitCode=0, resultCode=42)`
+- `abc123...: reason=aborted (exitCode=5, resultCode=37)`
+- `def456...: reason=compute_phase_missing (exitCode=N/A, resultCode=N/A)`
+- `ghi789...: reason=compute_phase_failed (exitCode=7, resultCode=0)`
+- `jkl012...: reason=action_phase_failed (exitCode=0, resultCode=42)`
+- `mno345...: reason=not_found (exitCode=N/A, resultCode=N/A) address=EQ... hashType=in`
 
 ---
 
@@ -180,7 +182,9 @@ Validates the entire transaction tree using BFS algorithm and returns a result o
   txHash: string;  // Base64-encoded hash of failed transaction
   exitCode: number | 'N/A';  // Exit code from compute phase
   resultCode: number | 'N/A';  // Result code from action phase
-  reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed';
+  reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed' | 'not_found';
+  address?: string;  // Address where the lookup happened (for not_found)
+  hashType?: 'unknown' | 'in' | 'out';  // Hash type used in lookup (for not_found)
 }
 ```
 
@@ -535,7 +539,7 @@ export const DEFAULT_FIND_TX_MAX_DEPTH = 10;
 // Transaction value to ignore (notification messages)
 export const IGNORE_MSG_VALUE_1_NANO = 1n;
 
-// Opcodes to skip validation (known system messages)
+// Opcodes to skip extra checks (known system messages)
 export const IGNORE_OPCODE = [
   0xd53276db, // Excess message - returns unused TON
 ];
@@ -549,21 +553,23 @@ All transaction tree validation errors include comprehensive diagnostic informat
 
 **Error Format:**
 ```
-<txHash>: <error_description> (exitCode=<exitCode>, resultCode=<resultCode>)
+<txHash>: reason=<reason> (exitCode=<exitCode>, resultCode=<resultCode>) address=<address> hashType=<hashType>
 ```
 
 **Components:**
 - `txHash`: Transaction hash in base64 format for identification
-- `error_description`: Human-readable description of the failure
+- `reason`: Machine-readable reason of the failure
 - `exitCode`: Compute phase exit code (or 'N/A' if unavailable)
 - `resultCode`: Action phase result code (or 'N/A' if action phase absent)
+- `address` / `hashType`: Present only for `reason=not_found`
 
 **Example Errors:**
 ```
-abc123xyz789...: Transaction was aborted (exitCode=5, resultCode=37)
-def456uvw012...: computePhase not present or skipped (exitCode=N/A, resultCode=N/A)
-ghi789rst345...: computePhase failed (exitCode=7, resultCode=0)
-jkl012mno678...: actionPhase failed (exitCode=0, resultCode=42)
+abc123xyz789...: reason=aborted (exitCode=5, resultCode=37)
+def456uvw012...: reason=compute_phase_missing (exitCode=N/A, resultCode=N/A)
+ghi789rst345...: reason=compute_phase_failed (exitCode=7, resultCode=0)
+jkl012mno678...: reason=action_phase_failed (exitCode=0, resultCode=42)
+mno345pqr901...: reason=not_found (exitCode=N/A, resultCode=N/A) address=EQ... hashType=in
 ```
 
 **Error Handling Example:**

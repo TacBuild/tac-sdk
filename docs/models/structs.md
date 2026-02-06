@@ -590,9 +590,9 @@ export type TrackTransactionTreeParams = {
 
 Parameters for tracking and validating transaction trees.
 
-- **`limit`** *(optional)*: Maximum number of transactions to fetch per pagination request. Default: 100.
-- **`maxDepth`** *(optional)*: Maximum depth to traverse in the transaction tree (prevents infinite loops). Default: 10.
-- **`ignoreOpcodeList`** *(optional)*: List of operation codes (opcodes) to skip during validation. Transactions with these opcodes in their incoming message will not be validated. Default: `[0xd53276db]` (excess message).
+- **`limit`** *(optional)*: Maximum number of transactions to fetch per pagination request. Default: 10.
+- **`maxDepth`** *(optional)*: Maximum depth to traverse in the transaction tree, inclusive (depth 0 is the root). Default: 10.
+- **`ignoreOpcodeList`** *(optional)*: List of operation codes (opcodes) that mark transactions as skippable for extra checks. Phase validation is still applied. Default: `[0xd53276db]` (excess message).
 - **`direction`** *(optional)*: Direction to search the transaction tree:
   - `'forward'`: only search children (outgoing messages)
   - `'backward'`: only search parents (incoming messages)
@@ -605,7 +605,9 @@ export type TransactionValidationError = {
     txHash: string;
     exitCode: number | 'N/A';
     resultCode: number | 'N/A';
-    reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed';
+    reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed' | 'not_found';
+    address?: string;
+    hashType?: 'unknown' | 'in' | 'out';
 };
 ```
 
@@ -616,9 +618,12 @@ Details about a transaction validation error.
 - **`resultCode`**: Result code from the action phase, or `'N/A'` if action phase is missing.
 - **`reason`**: Reason for validation failure:
   - `'aborted'`: transaction was aborted
-  - `'compute_phase_missing'`: compute phase is missing or skipped
+  - `'compute_phase_missing'`: compute phase is missing
   - `'compute_phase_failed'`: compute phase failed (exitCode !== 0)
   - `'action_phase_failed'`: action phase failed (resultCode !== 0)
+  - `'not_found'`: transaction or message hash not found during traversal
+- **`address`** *(optional)*: Address where the lookup happened (for `'not_found'`).
+- **`hashType`** *(optional)*: Hash type used in lookup (`'unknown' | 'in' | 'out'`, for `'not_found'`).
 
 ### `TrackTransactionTreeResult (Type)`
 

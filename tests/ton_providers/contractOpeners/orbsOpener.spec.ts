@@ -214,7 +214,7 @@ describe('OrbsOpener Integration Tests', () => {
             expect(result.error).toBeUndefined();
         }, 30000);
 
-        it('should return success for empty tree', async () => {
+        it('should return not_found for empty tree', async () => {
             const fakeHash = Buffer.alloc(32, 0).toString('base64');
 
             const result = await opener.trackTransactionTreeWithResult(testAddress.toString(), fakeHash, {
@@ -222,7 +222,8 @@ describe('OrbsOpener Integration Tests', () => {
             });
 
             expect(result).toBeDefined();
-            expect(result.success).toBe(true);
+            expect(result.success).toBe(false);
+            expect(result.error?.reason).toBe('not_found');
         }, 20000);
     });
 

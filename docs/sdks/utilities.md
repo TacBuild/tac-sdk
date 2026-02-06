@@ -211,8 +211,8 @@ new TonIndexerTxFinalizer(
 
 #### Methods
 - `trackTransactionTree(address: string, hash: string, maxDepth?: number): Promise<void>`
-  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` (default: 10)
-  - Throws an error if any transaction in the tree is not successful
+  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` inclusive (depth 0 is the root, default: 10)
+  - Throws an error if any transaction in the tree is not successful or if a hash is not found
 
 #### Example
 ```ts
@@ -242,9 +242,9 @@ new TonTxFinalizer(
 
 #### Methods
 - `trackTransactionTree(address: string, hash: string, params: { maxDepth?: number }): Promise<void>`
-  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` (default: 10)
+  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` inclusive (depth 0 is the root, default: 10)
   - Uses the `ContractOpener` to fetch adjacent transactions via `getAdjacentTransactions` method
-  - Throws an error if any transaction in the tree is not successful
+  - Throws an error if any transaction in the tree is not successful or if a hash is not found
   - Automatically retries on rate limit errors (429) and handles 404 errors gracefully
 
 #### Example
