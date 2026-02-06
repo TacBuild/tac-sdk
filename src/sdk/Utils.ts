@@ -396,6 +396,32 @@ export function normalizeHashToBase64(hash: string): string {
     return hash;
 }
 
+/**
+ * Normalize hash string to hex format
+ * Accepts: base64, hex
+ */
+export function normalizeHashToHex(hash: string): string {
+    const input = hash.trim();
+
+    const maybeHex = input.startsWith('0x') ? input.slice(2) : input;
+    if (/^[0-9a-fA-F]+$/.test(maybeHex) && maybeHex.length % 2 === 0) {
+        return maybeHex.toLowerCase();
+    }
+
+    if (/^[A-Za-z0-9+/]+={0,2}$/.test(input)) {
+        try {
+            const buf = Buffer.from(input, 'base64');
+            if (buf.length > 0) {
+                return buf.toString('hex');
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    return input;
+}
+
 export function getNormalizedExtMessageHash(message: Message): string {
     if (message.info.type !== 'external-in') {
         throw new Error(`Message must be "external-in", got ${message.info.type}`);

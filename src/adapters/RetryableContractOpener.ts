@@ -1,6 +1,7 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/ton';
 
+import { TransactionError } from '../errors';
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener, ILogger } from '../interfaces';
 import { DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT } from '../sdk/Consts';
@@ -167,6 +168,9 @@ export class RetryableContractOpener implements ContractOpener {
         });
 
         if (!result.success) {
+            if (result.lastError instanceof TransactionError) {
+                throw result.lastError;
+            }
             throw result.lastError || allContractOpenerFailedError('Failed to track transaction tree');
         }
     }
@@ -181,6 +185,9 @@ export class RetryableContractOpener implements ContractOpener {
         });
 
         if (!result.success) {
+            if (result.lastError instanceof TransactionError) {
+                throw result.lastError;
+            }
             throw result.lastError || allContractOpenerFailedError('Failed to track transaction tree with result');
         }
 
@@ -199,6 +206,9 @@ export class RetryableContractOpener implements ContractOpener {
                 return { success: true, data: result.data };
             }
             lastError = result.lastError;
+            if (lastError instanceof TransactionError) {
+                return { success: false, lastError };
+            }
         }
 
         return { success: false, lastError };
@@ -216,6 +226,9 @@ export class RetryableContractOpener implements ContractOpener {
                 return { success: true, data };
             } catch (error) {
                 lastError = error as Error;
+                if (lastError instanceof TransactionError) {
+                    return { success: false, lastError };
+                }
                 if (attempt < config.retries) {
                     await sleep(config.retryDelay);
                 }

@@ -59,6 +59,7 @@ export abstract class BaseContractOpener implements ContractOpener {
                 limit,
                 lt: currentLt,
                 hash: currentHash,
+                inclusive: true,
                 archival: opts?.archival ?? DEFAULT_FIND_TX_ARCHIVAL,
             });
 

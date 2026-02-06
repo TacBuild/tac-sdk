@@ -136,7 +136,7 @@ export type AdjacentTransactionsResponse = {
 
 export type TxFinalizerConfig = {
     urlBuilder: (hash: string) => string;
-    authorization: { header: string; value: string };
+    authorization?: { header: string; value: string };
 };
 
 export type USDPriceInfoRaw = {

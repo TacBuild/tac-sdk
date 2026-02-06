@@ -2,6 +2,7 @@ import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/
 
 import { AxiosHttpClient } from '../sdk/AxiosHttpClient';
 import { DEFAULT_FIND_TX_LIMIT, DEFAULT_HTTP_CLIENT_TIMEOUT_MS } from '../sdk/Consts';
+import { normalizeHashToHex } from '../sdk/Utils';
 import { AddressInformation, ContractState, GetTransactionsOptions, Network } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
 import { getHttpEndpointWithRetry } from './OpenerUtils';
@@ -32,7 +33,7 @@ export class TonClientOpener extends BaseContractOpener {
         const clientOpts = {
             limit: opts.limit ?? DEFAULT_FIND_TX_LIMIT,
             lt: opts.lt,
-            hash: opts.hash,
+            hash: opts.hash ? normalizeHashToHex(opts.hash) : undefined,
             to_lt: opts.to_lt,
             inclusive: opts.inclusive,
             archival: opts.archival,
