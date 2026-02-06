@@ -117,6 +117,15 @@ export abstract class BaseContractOpener implements ContractOpener {
                 }
             }
 
+            // 4. check outcoming message
+            for (const outMsg of tx.outMessages.values()) {
+                const messageCell = beginCell().store(storeMessage(outMsg)).endCell();
+                const hash = messageCell.hash();
+                if (hash.toString('base64') === targetHashB64) {
+                    return true;
+                }
+            }
+
             return false;
         });
     }
@@ -261,19 +270,17 @@ export abstract class BaseContractOpener implements ContractOpener {
         const resultCode = actionPhase ? actionPhase.resultCode : ('N/A' as const);
 
         if (aborted) {
-            if (!computePhase || computePhase.type === 'skipped') {
-                return { txHash, exitCode, resultCode, reason: 'compute_phase_missing' };
-            }
-            if (!computePhase.success || computePhase.exitCode !== 0) {
-                return { txHash, exitCode, resultCode, reason: 'compute_phase_failed' };
-            }
-            if (actionPhase && (!actionPhase.success || actionPhase.resultCode !== 0)) {
-                return { txHash, exitCode, resultCode, reason: 'action_phase_failed' };
-            }
-
             return { txHash, exitCode, resultCode, reason: 'aborted' };
         }
-
+        if (!computePhase || computePhase.type === 'skipped') {
+            return { txHash, exitCode, resultCode, reason: 'compute_phase_missing' };
+        }
+        if (!computePhase.success || computePhase.exitCode !== 0) {
+            return { txHash, exitCode, resultCode, reason: 'compute_phase_failed' };
+        }
+        if (actionPhase && (!actionPhase.success || actionPhase.resultCode !== 0)) {
+            return { txHash, exitCode, resultCode, reason: 'action_phase_failed' };
+        }
         return null;
     }
 
@@ -339,14 +346,15 @@ export abstract class BaseContractOpener implements ContractOpener {
             direction = 'both',
         } = params;
         const parsedAddress = Address.parse(address);
-        const visitedHashes = new Set<string>();
+        const visitedNodes = new Set<string>();
         const queue: TransactionDepth[] = [{ address: parsedAddress, hash, depth: 0, hashType: 'unknown' }];
 
         while (queue.length > 0) {
             const { hash: currentHash, depth: currentDepth, address: currentAddress, hashType } = queue.shift()!;
 
-            if (visitedHashes.has(currentHash)) continue;
-            visitedHashes.add(currentHash);
+            const visitedKey = `${currentAddress!.toString()}:${currentHash}:${hashType}`;
+            if (visitedNodes.has(visitedKey)) continue;
+            visitedNodes.add(visitedKey);
 
             this.logger?.debug(`Checking hash (depth ${currentDepth}): ${currentHash}`);
 
