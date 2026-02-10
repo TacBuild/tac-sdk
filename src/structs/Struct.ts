@@ -616,6 +616,11 @@ export type TrackTransactionTreeResult = {
     success: boolean;
 
     /**
+     * Count of unique transactions checked during traversal
+     */
+    checkedCount?: number;
+
+    /**
      * Details about the first validation error encountered (if any)
      */
     error?: TransactionValidationError;

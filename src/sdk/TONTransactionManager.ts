@@ -249,6 +249,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         );
 
         await TON.checkBalance(sender, this.config, [transaction]);
+        const shouldWaitForOperationId = tx.options?.waitOperationId ?? true;
         this.logger.debug(`Sending transaction: ${formatObjectForLogging(transactionLinker)}`);
 
         const sendTransactionResult = await sender.sendShardTransaction(
@@ -262,8 +263,6 @@ export class TONTransactionManager implements ITONTransactionManager {
                 sendTransactionResult.error?.message ?? 'Transaction failed to send',
             );
         }
-
-        const shouldWaitForOperationId = tx.options?.waitOperationId ?? true;
 
         if (!shouldWaitForOperationId) {
             return { sendTransactionResult, ...transactionLinker };

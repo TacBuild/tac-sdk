@@ -54,19 +54,44 @@ export abstract class BaseContractOpener implements ContractOpener {
         predicate: (tx: Transaction) => boolean,
     ): Promise<Transaction | null> {
         const limit = opts?.limit ?? DEFAULT_FIND_TX_LIMIT;
+        const inclusive = opts?.inclusive ?? true;
+        const toLt = opts?.to_lt ? BigInt(opts.to_lt) : undefined;
         let currentLt: string | undefined = opts?.lt;
-        let currentHash: string | undefined = opts?.hash;
+        let currentHash: string | undefined = opts?.hash ? normalizeHashToBase64(opts.hash) : undefined;
+        const seenCursors = new Set<string>();
+        const prevHashToBase64 = (hash: bigint): string => {
+            const hex = hash.toString(16).padStart(64, '0');
+            return Buffer.from(hex, 'hex').toString('base64');
+        };
 
         while (true) {
             const batch = await this.getTransactions(addr, {
                 limit,
                 lt: currentLt,
                 hash: currentHash,
-                inclusive: true,
+                to_lt: opts?.to_lt,
+                inclusive,
                 archival: opts?.archival ?? DEFAULT_FIND_TX_ARCHIVAL,
             });
 
             if (batch.length === 0) break;
+
+            if (currentLt && currentHash) {
+                const first = batch[0];
+                const firstHash = first.hash().toString('base64');
+                if (first.lt.toString() === currentLt && firstHash === currentHash) {
+                    batch.shift();
+                    if (batch.length === 0) {
+                        if (first.prevTransactionLt === 0n) break;
+                        currentLt = first.prevTransactionLt.toString();
+                        currentHash = prevHashToBase64(first.prevTransactionHash);
+                        const cursorKey = `${currentLt}:${currentHash}`;
+                        if (seenCursors.has(cursorKey)) break;
+                        seenCursors.add(cursorKey);
+                        continue;
+                    }
+                }
+            }
 
             for (const tx of batch) {
                 if (predicate(tx)) {
@@ -76,10 +101,18 @@ export abstract class BaseContractOpener implements ContractOpener {
 
             const oldestTx = batch[batch.length - 1];
             if (oldestTx.prevTransactionLt === 0n) break;
+            if (toLt !== undefined) {
+                if (inclusive ? oldestTx.lt <= toLt : oldestTx.lt < toLt) break;
+            }
 
-            currentLt = oldestTx.prevTransactionLt.toString();
-            const hashHex = oldestTx.prevTransactionHash.toString(16).padStart(64, '0');
-            currentHash = Buffer.from(hashHex, 'hex').toString('base64');
+            const nextLt = oldestTx.lt.toString();
+            const nextHash = oldestTx.hash().toString('base64');
+            if (currentLt && BigInt(nextLt) >= BigInt(currentLt)) break;
+            const cursorKey = `${nextLt}:${nextHash}`;
+            if (seenCursors.has(cursorKey)) break;
+            seenCursors.add(cursorKey);
+            currentLt = nextLt;
+            currentHash = nextHash;
         }
 
         return null;
@@ -306,16 +339,16 @@ export abstract class BaseContractOpener implements ContractOpener {
         address: Address,
         hash: string,
         hashType: 'unknown' | 'in' | 'out' | undefined,
-        limit: number,
+        opts: GetTransactionsOptions,
     ): Promise<Transaction | null> {
-        const opts = { limit, archival: true };
+        const searchOpts: GetTransactionsOptions = { archival: true, ...opts };
 
         if (hashType === 'in') {
-            return this.getTransactionByInMsgHash(address, hash, opts);
+            return this.getTransactionByInMsgHash(address, hash, searchOpts);
         } else if (hashType === 'out') {
-            return this.getTransactionByOutMsgHash(address, hash, opts);
+            return this.getTransactionByOutMsgHash(address, hash, searchOpts);
         } else {
-            return this.getTransactionByHash(address, hash, opts);
+            return this.getTransactionByHash(address, hash, searchOpts);
         }
     }
 
@@ -335,29 +368,65 @@ export abstract class BaseContractOpener implements ContractOpener {
                     hashType ?? 'unknown'
                 })`,
             );
-            return this.findTransactionByHashType(address, hash, hashType, limit);
+            return this.findTransactionByHashType(address, hash, hashType, { limit, archival: true });
         }
 
         const attempts = Math.ceil(
             DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS / DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS,
         );
-        this.logger?.debug(
-            `Waiting for root transaction for up to ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS}ms (${attempts} attempts, retry every ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms)`,
-        );
+        let baselineLt: string | undefined;
+        let baselineHash: string | undefined;
+
+        try {
+            const baseline = await this.getAddressInformation(address);
+            baselineLt = baseline.lastTransaction.lt || undefined;
+            baselineHash = baseline.lastTransaction.hash || undefined;
+        } catch (error) {
+            this.logger?.debug(`Root transaction lookup failed to read baseline lastTx: ${error}`);
+        }
 
         for (let attempt = 1; attempt <= attempts; attempt++) {
-            const tx = await this.findTransactionByHashType(address, hash, hashType, limit);
+            let searchOpts: GetTransactionsOptions = { limit, archival: true };
+            if (baselineLt && baselineHash) {
+                try {
+                    const info = await this.getAddressInformation(address);
+                    const lastLt = info.lastTransaction.lt;
+                    const lastHash = info.lastTransaction.hash;
+
+                    if (!lastLt || !lastHash || (lastLt === baselineLt && lastHash === baselineHash)) {
+                        this.logger?.debug(
+                            `Root transaction not found yet (attempt ${attempt}/${attempts}), lastTx unchanged, retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
+                        );
+                        await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
+                        continue;
+                    }
+
+                    searchOpts = {
+                        ...searchOpts,
+                        lt: lastLt,
+                        hash: lastHash,
+                        to_lt: baselineLt,
+                        inclusive: true,
+                    };
+                } catch (error) {
+                    this.logger?.debug(
+                        `Root transaction lookup failed to read lastTx (attempt ${attempt}/${attempts}): ${error}`,
+                    );
+                    await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
+                    continue;
+                }
+            }
+
+            const tx = await this.findTransactionByHashType(address, hash, hashType, searchOpts);
             if (tx) {
                 this.logger?.debug(`Root transaction found on attempt ${attempt}/${attempts}`);
                 return tx;
             }
 
-            if (attempt < attempts) {
-                this.logger?.debug(
-                    `Root transaction not found yet (attempt ${attempt}/${attempts}), retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
-                );
-                await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
-            }
+            this.logger?.debug(
+                `Root transaction not found yet (attempt ${attempt}/${attempts}), retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
+            );
+            await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
         }
 
         this.logger?.debug(`Root transaction not found after ${attempts} attempts`);
@@ -379,6 +448,9 @@ export abstract class BaseContractOpener implements ContractOpener {
         },
     ): Promise<void> {
         const result = await this.trackTransactionTreeWithResult(address, hash, params);
+        if (this.logger && typeof result.checkedCount === 'number') {
+            this.logger.debug(`Transaction tree checked: ${result.checkedCount} unique transaction(s)`);
+        }
         if (!result.success && result.error) {
             const { txHash, exitCode, resultCode, reason, address: errorAddress, hashType } = result.error;
             const context =
@@ -415,6 +487,10 @@ export abstract class BaseContractOpener implements ContractOpener {
         const parsedAddress = Address.parse(address);
         const normalizedRootHash = normalizeHashToBase64(hash);
         const visitedNodes = new Set<string>();
+        const loggedHashes = new Set<string>();
+        const processedTxDepth = new Map<string, number>();
+        let checkedCount = 0;
+        const searchOpts: GetTransactionsOptions = { limit, archival: true };
         const queue: TransactionDepth[] = [
             { address: parsedAddress, hash: normalizedRootHash, depth: 0, hashType: 'unknown' },
         ];
@@ -426,7 +502,11 @@ export abstract class BaseContractOpener implements ContractOpener {
             if (visitedNodes.has(visitedKey)) continue;
             visitedNodes.add(visitedKey);
 
-            this.logger?.debug(`Checking hash (depth ${currentDepth}): ${currentHash}`);
+            const loggedKey = currentHash;
+            if (!loggedHashes.has(loggedKey)) {
+                this.logger?.debug(`Checking hash (depth ${currentDepth}): ${currentHash}`);
+                loggedHashes.add(loggedKey);
+            }
 
             const tx =
                 currentDepth === 0
@@ -437,7 +517,7 @@ export abstract class BaseContractOpener implements ContractOpener {
                           limit,
                           waitForRootTransaction,
                       )
-                    : await this.findTransactionByHashType(currentAddress!, currentHash, hashType, limit);
+                    : await this.findTransactionByHashType(currentAddress!, currentHash, hashType, searchOpts);
 
             if (!tx) {
                 this.logger?.debug(
@@ -445,6 +525,7 @@ export abstract class BaseContractOpener implements ContractOpener {
                 );
                 return {
                     success: false,
+                    checkedCount,
                     error: {
                         txHash: currentHash,
                         exitCode: 'N/A',
@@ -456,10 +537,21 @@ export abstract class BaseContractOpener implements ContractOpener {
                 };
             }
 
+            const txHash = tx.hash().toString('base64');
+            const txKey = `${currentAddress!.toString()}:${txHash}`;
+            const prevDepth = processedTxDepth.get(txKey);
+            if (prevDepth !== undefined && prevDepth <= currentDepth) {
+                continue;
+            }
+            processedTxDepth.set(txKey, currentDepth);
+            if (prevDepth === undefined) {
+                checkedCount += 1;
+            }
+
             // Validate transaction and return error if found
             const validationError = this.validateTransactionWithResult(tx, ignoreOpcodeList);
             if (validationError) {
-                return { success: false, error: validationError };
+                return { success: false, checkedCount, error: validationError };
             }
 
             // Add adjacent transactions to queue
@@ -488,10 +580,8 @@ export abstract class BaseContractOpener implements ContractOpener {
                     });
                 }
             }
-
-            this.logger?.debug(`Finished checking hash (depth ${currentDepth}): ${currentHash}`);
         }
 
-        return { success: true };
+        return { success: true, checkedCount };
     }
 }

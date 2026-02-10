@@ -46,7 +46,9 @@ export class RetryableContractOpener implements ContractOpener {
     }
 
     async getTransactions(address: Address, opts: GetTransactionsOptions): Promise<Transaction[]> {
-        const result = await this.executeWithFallback((config) => config.opener.getTransactions(address, opts));
+        const result = await this.executeWithFallback((config) => config.opener.getTransactions(address, opts), {
+            operationName: 'getTransactions',
+        });
 
         if (result.success && result.data !== undefined) {
             return result.data;
@@ -59,8 +61,9 @@ export class RetryableContractOpener implements ContractOpener {
         hash: string,
         opts?: GetTransactionsOptions,
     ): Promise<Transaction | null> {
-        const result = await this.executeWithFallback((config) =>
-            config.opener.getTransactionByHash(address, hash, opts),
+        const result = await this.executeWithFallback(
+            (config) => config.opener.getTransactionByHash(address, hash, opts),
+            { operationName: 'getTransactionByHash' },
         );
 
         if (result.success) {
@@ -74,8 +77,9 @@ export class RetryableContractOpener implements ContractOpener {
         hash: string,
         opts?: GetTransactionsOptions,
     ): Promise<Transaction[]> {
-        const result = await this.executeWithFallback((config) =>
-            config.opener.getAdjacentTransactions(address, hash, opts),
+        const result = await this.executeWithFallback(
+            (config) => config.opener.getAdjacentTransactions(address, hash, opts),
+            { operationName: 'getAdjacentTransactions' },
         );
 
         if (result.success && result.data !== undefined) {
@@ -91,7 +95,9 @@ export class RetryableContractOpener implements ContractOpener {
     }
 
     async getContractState(address: Address): Promise<ContractState> {
-        const result = await this.executeWithFallback((config) => config.opener.getContractState(address));
+        const result = await this.executeWithFallback((config) => config.opener.getContractState(address), {
+            operationName: 'getContractState',
+        });
 
         if (result.success && result.data !== undefined) {
             return result.data;
@@ -100,7 +106,9 @@ export class RetryableContractOpener implements ContractOpener {
     }
 
     async getAddressInformation(address: Address): Promise<AddressInformation> {
-        const result = await this.executeWithFallback((config) => config.opener.getAddressInformation(address));
+        const result = await this.executeWithFallback((config) => config.opener.getAddressInformation(address), {
+            operationName: 'getAddressInformation',
+        });
 
         if (result.success && result.data !== undefined) {
             return result.data;
@@ -109,7 +117,9 @@ export class RetryableContractOpener implements ContractOpener {
     }
 
     async getConfig(): Promise<string> {
-        const result = await this.executeWithFallback((config) => config.opener.getConfig());
+        const result = await this.executeWithFallback((config) => config.opener.getConfig(), {
+            operationName: 'getConfig',
+        });
 
         if (result.success && result.data !== undefined) {
             return result.data;
@@ -122,8 +132,9 @@ export class RetryableContractOpener implements ContractOpener {
         txHash: string,
         opts?: GetTransactionsOptions,
     ): Promise<Transaction | null> {
-        const result = await this.executeWithFallback((config) =>
-            config.opener.getTransactionByTxHash(address, txHash, opts),
+        const result = await this.executeWithFallback(
+            (config) => config.opener.getTransactionByTxHash(address, txHash, opts),
+            { operationName: 'getTransactionByTxHash' },
         );
 
         if (result.success) {
@@ -137,8 +148,9 @@ export class RetryableContractOpener implements ContractOpener {
         msgHash: string,
         opts?: GetTransactionsOptions,
     ): Promise<Transaction | null> {
-        const result = await this.executeWithFallback((config) =>
-            config.opener.getTransactionByInMsgHash(address, msgHash, opts),
+        const result = await this.executeWithFallback(
+            (config) => config.opener.getTransactionByInMsgHash(address, msgHash, opts),
+            { operationName: 'getTransactionByInMsgHash' },
         );
 
         if (result.success) {
@@ -152,8 +164,9 @@ export class RetryableContractOpener implements ContractOpener {
         msgHash: string,
         opts?: GetTransactionsOptions,
     ): Promise<Transaction | null> {
-        const result = await this.executeWithFallback((config) =>
-            config.opener.getTransactionByOutMsgHash(address, msgHash, opts),
+        const result = await this.executeWithFallback(
+            (config) => config.opener.getTransactionByOutMsgHash(address, msgHash, opts),
+            { operationName: 'getTransactionByOutMsgHash' },
         );
 
         if (result.success) {
@@ -172,7 +185,6 @@ export class RetryableContractOpener implements ContractOpener {
         const result = await this.executeWithFallback(
             async (config) => config.opener.trackTransactionTree(address, hash, params),
             {
-                useRetries: false,
                 shouldFallbackOnError: (error) => this.isTransportError(error),
                 operationName: 'trackTransactionTree',
             },
@@ -194,7 +206,6 @@ export class RetryableContractOpener implements ContractOpener {
         const result = await this.executeWithFallback(
             async (config) => config.opener.trackTransactionTreeWithResult(address, hash, params),
             {
-                useRetries: false,
                 shouldFallbackOnError: (error) => this.isTransportError(error),
                 operationName: 'trackTransactionTreeWithResult',
             },
@@ -246,6 +257,12 @@ export class RetryableContractOpener implements ContractOpener {
                 );
                 return { success: false, lastError };
             }
+            if (lastError && this.isContractExecutionError(lastError)) {
+                this.logger?.debug(
+                    `[RetryableContractOpener] ${operationName}: stopping fallback because of contract execution error`,
+                );
+                return { success: false, lastError };
+            }
             if (lastError && shouldFallbackOnError) {
                 const shouldFallback = shouldFallbackOnError(lastError);
                 if (!shouldFallback) {
@@ -254,10 +271,6 @@ export class RetryableContractOpener implements ContractOpener {
                     );
                     return { success: false, lastError };
                 }
-
-                this.logger?.debug(
-                    `[RetryableContractOpener] ${operationName}: moving to next opener due to transport error`,
-                );
             }
         }
 
@@ -286,7 +299,7 @@ export class RetryableContractOpener implements ContractOpener {
                 return { success: true, data };
             } catch (error) {
                 lastError = error as Error;
-                if (lastError instanceof TransactionError) {
+                if (lastError instanceof TransactionError || this.isContractExecutionError(lastError)) {
                     return { success: false, lastError };
                 }
                 if (attempt < config.retries) {
@@ -299,6 +312,24 @@ export class RetryableContractOpener implements ContractOpener {
         }
 
         return { success: false, lastError };
+    }
+
+    private isContractExecutionError(error: Error): boolean {
+        const errorWithExit = error as Error & { exitCode?: number; vmExitCode?: number; exit_code?: number };
+        if (
+            typeof errorWithExit.exitCode === 'number' ||
+            typeof errorWithExit.vmExitCode === 'number' ||
+            typeof errorWithExit.exit_code === 'number'
+        ) {
+            return true;
+        }
+
+        const message = String(error.message ?? error);
+        return (
+            /unable to execute get method/i.test(message) ||
+            /exit[_\s-]*code\s*:\s*\d+/i.test(message) ||
+            /vm exit code\s*:\s*\d+/i.test(message)
+        );
     }
 
     private isTransportError(error: Error): boolean {
@@ -324,11 +355,7 @@ export class RetryableContractOpener implements ContractOpener {
         }
 
         const message = String(error.message ?? error);
-        if (/too many requests|timeout|timed out|network|connection/i.test(message)) {
-            return true;
-        }
-
-        return false;
+        return /too many requests|timeout|timed out|network|connection/i.test(message);
     }
 
     private createRetryableContract<T extends Contract>(
@@ -352,6 +379,7 @@ export class RetryableContractOpener implements ContractOpener {
         args: unknown[],
         src: T,
     ): Promise<unknown> {
+        const addressLabel = src.address ? src.address.toString() : 'unknown';
         const result = await this.executeWithFallback((config) => {
             const contract = config.opener.open(src);
             const method = Reflect.get(contract, methodName);
@@ -361,7 +389,7 @@ export class RetryableContractOpener implements ContractOpener {
             }
 
             return method.call(contract, ...args);
-        });
+        }, { operationName: `${String(methodName)} (address=${addressLabel})` });
 
         if (result.success) return result.data;
         throw result.lastError || allContractOpenerFailedError('failed to call method in contract');
