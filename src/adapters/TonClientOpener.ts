@@ -80,6 +80,6 @@ export function tonClientOpener(client: TonClient, logger?: ILogger): TonClientO
 
 export async function orbsOpener(network: Network, logger?: ILogger): Promise<TonClientOpener> {
     const endpoint = await getHttpEndpointWithRetry(network);
-    const client = new TonClient({ endpoint });
+    const client = new TonClient({ endpoint, timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS });
     return new TonClientOpener(client, logger);
 }

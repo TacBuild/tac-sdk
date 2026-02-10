@@ -486,9 +486,8 @@ export abstract class BaseContractOpener implements ContractOpener {
         } = params;
         const parsedAddress = Address.parse(address);
         const normalizedRootHash = normalizeHashToBase64(hash);
-        const visitedNodes = new Set<string>();
-        const loggedHashes = new Set<string>();
-        const processedTxDepth = new Map<string, number>();
+        const visitedSearchKeys = new Set<string>();
+        const processedTxHashes = new Set<string>();
         let checkedCount = 0;
         const searchOpts: GetTransactionsOptions = { limit, archival: true };
         const queue: TransactionDepth[] = [
@@ -499,14 +498,8 @@ export abstract class BaseContractOpener implements ContractOpener {
             const { hash: currentHash, depth: currentDepth, address: currentAddress, hashType } = queue.shift()!;
 
             const visitedKey = `${currentAddress!.toString()}:${currentHash}:${hashType}`;
-            if (visitedNodes.has(visitedKey)) continue;
-            visitedNodes.add(visitedKey);
-
-            const loggedKey = currentHash;
-            if (!loggedHashes.has(loggedKey)) {
-                this.logger?.debug(`Checking hash (depth ${currentDepth}): ${currentHash}`);
-                loggedHashes.add(loggedKey);
-            }
+            if (visitedSearchKeys.has(visitedKey)) continue;
+            visitedSearchKeys.add(visitedKey);
 
             const tx =
                 currentDepth === 0
@@ -538,15 +531,12 @@ export abstract class BaseContractOpener implements ContractOpener {
             }
 
             const txHash = tx.hash().toString('base64');
-            const txKey = `${currentAddress!.toString()}:${txHash}`;
-            const prevDepth = processedTxDepth.get(txKey);
-            if (prevDepth !== undefined && prevDepth <= currentDepth) {
+            if (processedTxHashes.has(txHash)) {
                 continue;
             }
-            processedTxDepth.set(txKey, currentDepth);
-            if (prevDepth === undefined) {
-                checkedCount += 1;
-            }
+            processedTxHashes.add(txHash);
+            checkedCount += 1;
+            this.logger?.debug(`Checking tx (depth ${currentDepth}): ${txHash}`);
 
             // Validate transaction and return error if found
             const validationError = this.validateTransactionWithResult(tx, ignoreOpcodeList);

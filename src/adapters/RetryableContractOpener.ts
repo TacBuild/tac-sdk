@@ -4,7 +4,7 @@ import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/
 import { TransactionError } from '../errors';
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener, ILogger } from '../interfaces';
-import { DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT } from '../sdk/Consts';
+import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS, DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT } from '../sdk/Consts';
 import {
     AddressInformation,
     ContractState,
@@ -405,7 +405,10 @@ export async function createDefaultRetryableOpener(
 ): Promise<RetryableContractOpener> {
     const openers: OpenerConfig[] = [];
 
-    const tonClient = new TonClient({ endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString() });
+    const tonClient = new TonClient({
+        endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString(),
+        timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
+    });
     const opener = tonClientOpener(tonClient, logger);
 
     openers.push({ opener, retries: maxRetries, retryDelay });
