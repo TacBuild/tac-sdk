@@ -420,6 +420,19 @@ opener.closeConnections?.();
 
 **Important:** Always call `closeConnections()` when done to prevent resource leaks.
 
+For one-shot scripts, wrap network work in `try/finally` and add a short drain delay after close:
+
+```ts
+try {
+  // ...network operations
+} finally {
+  opener.closeConnections?.();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+}
+```
+
+If your CLI environment still keeps the process alive because of external handles, use `process.exit()` only as a last-resort fallback.
+
 ---
 
 ### SandboxOpener

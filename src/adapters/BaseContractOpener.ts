@@ -62,41 +62,58 @@ export abstract class BaseContractOpener implements ContractOpener {
         const seenCursors = new Set<string>();
         let scannedTransactions = 0;
         const maxScannedTransactions = opts?.maxScannedTransactions ?? DEFAULT_MAX_SCANNED_TRANSACTIONS;
-        const prevHashToBase64 = (hash: bigint): string => {
-            const hex = hash.toString(16).padStart(64, '0');
-            return Buffer.from(hex, 'hex').toString('base64');
-        };
 
         while (true) {
-            const batch = await this.getTransactions(addr, {
+            const list = await this.getTransactions(addr, {
                 limit,
                 lt: currentLt,
                 hash: currentHash,
                 to_lt: opts?.to_lt,
                 inclusive,
                 archival: opts?.archival ?? DEFAULT_FIND_TX_ARCHIVAL,
+                timeoutMs: opts?.timeoutMs,
+                retryDelayMs: opts?.retryDelayMs,
             });
 
-            if (batch.length === 0) break;
+            if (list.length === 0) {
+                break;
+            }
 
-            if (currentLt && currentHash) {
-                const first = batch[0];
-                const firstHash = first.hash().toString('base64');
-                if (first.lt.toString() === currentLt && firstHash === currentHash) {
-                    batch.shift();
-                    if (batch.length === 0) {
-                        if (first.prevTransactionLt === 0n) break;
-                        currentLt = first.prevTransactionLt.toString();
-                        currentHash = prevHashToBase64(first.prevTransactionHash);
-                        const cursorKey = `${currentLt}:${currentHash}`;
-                        if (seenCursors.has(cursorKey)) break;
-                        seenCursors.add(cursorKey);
-                        continue;
+            let startIndex = 0;
+            const firstTx = list[0];
+            const firstTxMatchesCursor =
+                currentLt &&
+                currentHash &&
+                firstTx.lt.toString() === currentLt &&
+                firstTx.hash().toString('base64') === currentHash;
+
+            if (firstTxMatchesCursor) {
+                startIndex = 1;
+                if (list.length === 1) {
+                    if (firstTx.prevTransactionLt === 0n) {
+                        break;
                     }
+                    const nextLt = firstTx.prevTransactionLt.toString();
+                    const nextHash = Buffer.from(
+                        firstTx.prevTransactionHash.toString(16).padStart(64, '0'),
+                        'hex',
+                    ).toString('base64');
+                    if (currentLt && BigInt(nextLt) >= BigInt(currentLt)) {
+                        break;
+                    }
+                    const cursorKey = `${nextLt}:${nextHash}`;
+                    if (seenCursors.has(cursorKey)) {
+                        break;
+                    }
+                    seenCursors.add(cursorKey);
+                    currentLt = nextLt;
+                    currentHash = nextHash;
+                    continue;
                 }
             }
 
-            for (const tx of batch) {
+            for (let i = startIndex; i < list.length; i++) {
+                const tx = list[i];
                 scannedTransactions += 1;
                 if (scannedTransactions > maxScannedTransactions) {
                     this.logger?.debug(
@@ -109,7 +126,7 @@ export abstract class BaseContractOpener implements ContractOpener {
                 }
             }
 
-            const oldestTx = batch[batch.length - 1];
+            const oldestTx = list[list.length - 1];
             if (oldestTx.prevTransactionLt === 0n) break;
             if (toLt !== undefined) {
                 if (inclusive ? oldestTx.lt <= toLt : oldestTx.lt < toLt) break;
@@ -117,9 +134,13 @@ export abstract class BaseContractOpener implements ContractOpener {
 
             const nextLt = oldestTx.lt.toString();
             const nextHash = oldestTx.hash().toString('base64');
-            if (currentLt && BigInt(nextLt) >= BigInt(currentLt)) break;
+            if (currentLt && BigInt(nextLt) >= BigInt(currentLt)) {
+                break;
+            }
             const cursorKey = `${nextLt}:${nextHash}`;
-            if (seenCursors.has(cursorKey)) break;
+            if (seenCursors.has(cursorKey)) {
+                break;
+            }
             seenCursors.add(cursorKey);
             currentLt = nextLt;
             currentHash = nextHash;

@@ -29,12 +29,18 @@ async function getDefaultLiteServers(network: Network): Promise<LiteServer[]> {
 }
 
 export class LiteClientOpener extends BaseContractOpener {
+    private readonly singleEngines: LiteSingleEngine[];
+    private isClosing = false;
+    private isClosed = false;
+
     private constructor(
         private readonly client: LiteClient,
         private readonly engine: LiteEngine,
         logger?: ILogger,
+        singleEngines: LiteSingleEngine[] = [],
     ) {
         super(logger);
+        this.singleEngines = singleEngines;
     }
 
     static async create(
@@ -43,7 +49,7 @@ export class LiteClientOpener extends BaseContractOpener {
     ): Promise<LiteClientOpener> {
         const liteservers =
             'liteservers' in options ? options.liteservers : await getDefaultLiteServers(options.network);
-        const engines: LiteEngine[] = [];
+        const engines: LiteSingleEngine[] = [];
         for (const server of liteservers) {
             const engine = await LiteSingleEngine.create({
                 host: `tcp://${intToIP(server.ip)}:${server.port}`,
@@ -55,15 +61,39 @@ export class LiteClientOpener extends BaseContractOpener {
         const engine: LiteEngine = new LiteRoundRobinEngine(engines);
         const client = new LiteClient({ engine });
 
-        return new LiteClientOpener(client, engine, logger);
+        return new LiteClientOpener(client, engine, logger, engines);
     }
 
     open<T extends Contract>(contract: T): OpenedContract<T> {
         return this.client.open(contract);
     }
 
+    private disableReconnect(singleEngine: LiteSingleEngine): void {
+        const engine = singleEngine as unknown as {
+            connect?: () => Promise<void>;
+            onClosed?: () => void;
+        };
+
+        engine.connect = async () => undefined;
+        engine.onClosed = () => undefined;
+    }
+
     closeConnections(): void {
-        this.engine.close();
+        if (this.isClosing || this.isClosed) {
+            return;
+        }
+
+        this.isClosing = true;
+        try {
+            for (const singleEngine of this.singleEngines) {
+                this.disableReconnect(singleEngine);
+                singleEngine.close();
+            }
+            this.engine.close();
+            this.isClosed = true;
+        } finally {
+            this.isClosing = false;
+        }
     }
 
     async getContractState(addr: Address): Promise<ContractState> {
