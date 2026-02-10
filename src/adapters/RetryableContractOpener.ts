@@ -27,6 +27,12 @@ export interface OpenerConfig {
     retryDelay: number;
 }
 
+interface ExecuteWithFallbackOptions {
+    useRetries?: boolean;
+    shouldFallbackOnError?: (error: Error) => boolean;
+    operationName?: string;
+}
+
 export class RetryableContractOpener implements ContractOpener {
     private readonly openerConfigs: OpenerConfig[];
     private logger?: ILogger;
@@ -42,7 +48,7 @@ export class RetryableContractOpener implements ContractOpener {
     async getTransactions(address: Address, opts: GetTransactionsOptions): Promise<Transaction[]> {
         const result = await this.executeWithFallback((config) => config.opener.getTransactions(address, opts));
 
-        if (result.success && result.data) {
+        if (result.success && result.data !== undefined) {
             return result.data;
         }
         throw result.lastError || allContractOpenerFailedError('Failed to get transactions');
@@ -57,8 +63,8 @@ export class RetryableContractOpener implements ContractOpener {
             config.opener.getTransactionByHash(address, hash, opts),
         );
 
-        if (result.success && result.data) {
-            return result.data as Transaction | null;
+        if (result.success) {
+            return result.data ?? null;
         }
         throw result.lastError || allContractOpenerFailedError('Failed to get transaction by hash');
     }
@@ -72,7 +78,7 @@ export class RetryableContractOpener implements ContractOpener {
             config.opener.getAdjacentTransactions(address, hash, opts),
         );
 
-        if (result.success && result.data) {
+        if (result.success && result.data !== undefined) {
             return result.data;
         }
         throw result.lastError || allContractOpenerFailedError('Failed to get adjacent transactions');
@@ -87,7 +93,7 @@ export class RetryableContractOpener implements ContractOpener {
     async getContractState(address: Address): Promise<ContractState> {
         const result = await this.executeWithFallback((config) => config.opener.getContractState(address));
 
-        if (result.success && result.data) {
+        if (result.success && result.data !== undefined) {
             return result.data;
         }
         throw result.lastError || allContractOpenerFailedError('Failed to get contract state');
@@ -96,7 +102,7 @@ export class RetryableContractOpener implements ContractOpener {
     async getAddressInformation(address: Address): Promise<AddressInformation> {
         const result = await this.executeWithFallback((config) => config.opener.getAddressInformation(address));
 
-        if (result.success && result.data) {
+        if (result.success && result.data !== undefined) {
             return result.data;
         }
         throw result.lastError || allContractOpenerFailedError('Failed to get address information');
@@ -105,7 +111,7 @@ export class RetryableContractOpener implements ContractOpener {
     async getConfig(): Promise<string> {
         const result = await this.executeWithFallback((config) => config.opener.getConfig());
 
-        if (result.success && result.data) {
+        if (result.success && result.data !== undefined) {
             return result.data;
         }
         throw result.lastError || allContractOpenerFailedError('Failed to get blockchain config');
@@ -163,9 +169,14 @@ export class RetryableContractOpener implements ContractOpener {
     }
 
     async trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<void> {
-        const result = await this.executeWithFallback(async (config) => {
-            return config.opener.trackTransactionTree(address, hash, params);
-        });
+        const result = await this.executeWithFallback(
+            async (config) => config.opener.trackTransactionTree(address, hash, params),
+            {
+                useRetries: false,
+                shouldFallbackOnError: (error) => this.isTransportError(error),
+                operationName: 'trackTransactionTree',
+            },
+        );
 
         if (!result.success) {
             if (result.lastError instanceof TransactionError) {
@@ -180,9 +191,14 @@ export class RetryableContractOpener implements ContractOpener {
         hash: string,
         params?: TrackTransactionTreeParams,
     ): Promise<TrackTransactionTreeResult> {
-        const result = await this.executeWithFallback(async (config) => {
-            return config.opener.trackTransactionTreeWithResult(address, hash, params);
-        });
+        const result = await this.executeWithFallback(
+            async (config) => config.opener.trackTransactionTreeWithResult(address, hash, params),
+            {
+                useRetries: false,
+                shouldFallbackOnError: (error) => this.isTransportError(error),
+                operationName: 'trackTransactionTreeWithResult',
+            },
+        );
 
         if (!result.success) {
             if (result.lastError instanceof TransactionError) {
@@ -196,27 +212,71 @@ export class RetryableContractOpener implements ContractOpener {
 
     private async executeWithFallback<T>(
         operation: (config: OpenerConfig) => Promise<T>,
+        options: ExecuteWithFallbackOptions = {},
     ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+        const { useRetries = true, shouldFallbackOnError, operationName = 'operation' } = options;
         let lastError: Error | undefined;
 
-        for (const config of this.openerConfigs) {
-            const result = await this.tryWithRetries(() => operation(config), config);
+        for (let index = 0; index < this.openerConfigs.length; index++) {
+            const config = this.openerConfigs[index];
+            const openerLabel = `opener ${index + 1}/${this.openerConfigs.length}`;
+            this.logger?.debug(
+                `[RetryableContractOpener] ${operationName}: trying ${openerLabel}${
+                    useRetries ? ` (max retries ${config.retries})` : ' (single attempt)'
+                }`,
+            );
+
+            const result = useRetries
+                ? await this.tryWithRetries(() => operation(config), config, `${operationName} ${openerLabel}`)
+                : await this.trySingleAttempt(() => operation(config));
 
             if (result.success) {
+                this.logger?.debug(`[RetryableContractOpener] ${operationName}: ${openerLabel} succeeded`);
                 return { success: true, data: result.data };
             }
             lastError = result.lastError;
+            if (lastError) {
+                this.logger?.debug(
+                    `[RetryableContractOpener] ${operationName}: ${openerLabel} failed: ${lastError.message}`,
+                );
+            }
             if (lastError instanceof TransactionError) {
+                this.logger?.debug(
+                    `[RetryableContractOpener] ${operationName}: stopping fallback because of TransactionError`,
+                );
                 return { success: false, lastError };
+            }
+            if (lastError && shouldFallbackOnError) {
+                const shouldFallback = shouldFallbackOnError(lastError);
+                if (!shouldFallback) {
+                    this.logger?.debug(
+                        `[RetryableContractOpener] ${operationName}: stopping fallback due to non-transport error`,
+                    );
+                    return { success: false, lastError };
+                }
+
+                this.logger?.debug(
+                    `[RetryableContractOpener] ${operationName}: moving to next opener due to transport error`,
+                );
             }
         }
 
         return { success: false, lastError };
     }
 
+    private async trySingleAttempt<T>(operation: () => Promise<T>): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+        try {
+            const data = await operation();
+            return { success: true, data };
+        } catch (error) {
+            return { success: false, lastError: error as Error };
+        }
+    }
+
     private async tryWithRetries<T>(
         operation: () => Promise<T>,
         config: OpenerConfig,
+        operationContext = 'operation',
     ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
         let lastError: Error | undefined;
 
@@ -230,12 +290,45 @@ export class RetryableContractOpener implements ContractOpener {
                     return { success: false, lastError };
                 }
                 if (attempt < config.retries) {
+                    this.logger?.debug(
+                        `[RetryableContractOpener] ${operationContext}: attempt ${attempt + 1}/${config.retries + 1} failed, retrying in ${config.retryDelay}ms`,
+                    );
                     await sleep(config.retryDelay);
                 }
             }
         }
 
         return { success: false, lastError };
+    }
+
+    private isTransportError(error: Error): boolean {
+        if (error instanceof TransactionError) {
+            return false;
+        }
+
+        const errorWithResponse = error as Error & {
+            response?: {
+                status?: number;
+                statusCode?: number;
+            };
+            code?: string;
+        };
+        const status = errorWithResponse.response?.status ?? errorWithResponse.response?.statusCode;
+        if (typeof status === 'number') {
+            return status === 429 || status >= 500;
+        }
+
+        const code = errorWithResponse.code ?? '';
+        if (['ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN'].includes(code)) {
+            return true;
+        }
+
+        const message = String(error.message ?? error);
+        if (/too many requests|timeout|timed out|network|connection/i.test(message)) {
+            return true;
+        }
+
+        return false;
     }
 
     private createRetryableContract<T extends Contract>(
@@ -285,20 +378,20 @@ export async function createDefaultRetryableOpener(
     const openers: OpenerConfig[] = [];
 
     const tonClient = new TonClient({ endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString() });
-    const opener = tonClientOpener(tonClient);
+    const opener = tonClientOpener(tonClient, logger);
 
     openers.push({ opener, retries: maxRetries, retryDelay });
 
     if (networkType !== Network.DEV) {
         try {
-            const opener = await orbsOpener(networkType);
+            const opener = await orbsOpener(networkType, logger);
             openers.push({ opener: opener, retries: maxRetries, retryDelay });
         } catch {
             // skip opener in case of failure
         }
 
         try {
-            const opener4 = await orbsOpener4(networkType);
+            const opener4 = await orbsOpener4(networkType, undefined, logger);
             openers.push({ opener: opener4, retries: maxRetries, retryDelay });
         } catch {
             // skip opener in case of failure

@@ -15,6 +15,9 @@ describe('TonTxFinalizer', () => {
         urlBuilder: (hash: string) => `https://ton.example/tx/${hash}`,
         authorization: { header: 'X-Key', value: 'secret' },
     };
+    const configWithoutAuth = {
+        urlBuilder: (hash: string) => `https://ton.example/tx/${hash}`,
+    };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -96,5 +99,22 @@ describe('TonTxFinalizer', () => {
 
         expect(httpClient.get).toHaveBeenCalledTimes(2);
         expect(sleepSpy).toHaveBeenCalled();
+    });
+
+    it('works without authorization header in config', async () => {
+        const httpClient = {
+            get: jest.fn().mockResolvedValue({
+                data: {
+                    transactions: [],
+                },
+            }),
+        };
+
+        const finalizer = new TonTxFinalizer(configWithoutAuth, logger, httpClient as never);
+        await expect(finalizer.trackTransactionTree('', 'hash-1', { maxDepth: 1 })).resolves.toBeUndefined();
+
+        expect(httpClient.get).toHaveBeenCalledWith('https://ton.example/tx/hash-1', {
+            transformResponse: expect.any(Array),
+        });
     });
 });

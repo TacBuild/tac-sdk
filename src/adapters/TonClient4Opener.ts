@@ -1,18 +1,19 @@
 import { Address, Contract, OpenedContract, TonClient4, Transaction } from '@ton/ton';
 
+import { ILogger } from '../interfaces';
 import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS } from '../sdk/Consts';
 import { AddressInformation, ContractState, GetTransactionsOptions, Network } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
 import { getHttpV4EndpointWithRetry } from './OpenerUtils';
 
 export class TonClient4Opener extends BaseContractOpener {
-    constructor(private readonly client4: TonClient4) {
-        super();
+    constructor(private readonly client4: TonClient4, logger?: ILogger) {
+        super(logger);
     }
 
-    static create(endpoint: string, timeout = 10000): TonClient4Opener {
+    static create(endpoint: string, timeout = 10000, logger?: ILogger): TonClient4Opener {
         const client4 = new TonClient4({ endpoint, timeout });
-        return new TonClient4Opener(client4);
+        return new TonClient4Opener(client4, logger);
     }
 
     open<T extends Contract>(contract: T): OpenedContract<T> {
@@ -80,20 +81,28 @@ export class TonClient4Opener extends BaseContractOpener {
  * Creates a TonClient4Opener instance using TonHub public API
  * @param network Network to connect to (mainnet or testnet)
  * @param timeout Request timeout in milliseconds
+ * @param logger
  */
-export function tonHubApi4Opener(network: Network, timeout = DEFAULT_HTTP_CLIENT_TIMEOUT_MS): TonClient4Opener {
+export function tonHubApi4Opener(
+    network: Network,
+    timeout = DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
+    logger?: ILogger,
+): TonClient4Opener {
     const endpoint =
         network === Network.MAINNET ? 'https://mainnet-v4.tonhubapi.com' : 'https://testnet-v4.tonhubapi.com';
-    return TonClient4Opener.create(endpoint, timeout);
+    return TonClient4Opener.create(endpoint, timeout, logger);
 }
 
-export function tonClient4Opener(client: TonClient4): TonClient4Opener {
-    return new TonClient4Opener(client);
+export function tonClient4Opener(client: TonClient4, logger?: ILogger): TonClient4Opener {
+    return new TonClient4Opener(client, logger);
 }
 
-export async function orbsOpener4(network: Network, timeout = DEFAULT_HTTP_CLIENT_TIMEOUT_MS): Promise<TonClient4Opener> {
+export async function orbsOpener4(
+    network: Network,
+    timeout = DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
+    logger?: ILogger,
+): Promise<TonClient4Opener> {
     const endpoint = await getHttpV4EndpointWithRetry(network);
     const client = new TonClient4({ endpoint, timeout });
-    return new TonClient4Opener(client);
+    return new TonClient4Opener(client, logger);
 }
-

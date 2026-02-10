@@ -3,7 +3,7 @@ import { Address, Cell, Contract, Transaction } from '@ton/ton';
 
 import { ContractState } from '../../../src';
 import { BaseContractOpener } from '../../../src';
-import { AddressInformation } from '../../../src/structs/InternalStruct';
+import { AddressInformation } from '../../../src/structs/Struct';
 
 export class UnstableContractOpener extends BaseContractOpener {
     public callCounts = new Map<string, number>();

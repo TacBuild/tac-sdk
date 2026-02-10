@@ -1,5 +1,5 @@
 import { txFinalizationError } from '../errors';
-import {  IHttpClient, ILogger } from '../interfaces';
+import { IHttpClient, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import {
     AdjacentTransactionsResponse,
@@ -44,10 +44,11 @@ export class TonTxFinalizer implements ITxFinalizer {
         for (let i = retries; i >= 0; i--) {
             try {
                 const url = this.apiConfig.urlBuilder(hash);
+                const authHeaders = this.apiConfig.authorization
+                    ? { [this.apiConfig.authorization.header]: this.apiConfig.authorization.value }
+                    : undefined;
                 const response = await this.httpClient.get<AdjacentTransactionsResponse>(url, {
-                    headers: {
-                        [this.apiConfig.authorization.header]: this.apiConfig.authorization.value,
-                    },
+                    ...(authHeaders ? { headers: authHeaders } : {}),
                     transformResponse: [toCamelCaseTransformer],
                 });
                 return response.data.transactions || [];

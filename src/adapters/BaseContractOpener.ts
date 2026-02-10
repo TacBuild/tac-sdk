@@ -330,24 +330,37 @@ export abstract class BaseContractOpener implements ContractOpener {
         waitForRootTransaction: boolean,
     ): Promise<Transaction | null> {
         if (!waitForRootTransaction) {
+            this.logger?.debug(
+                `Root transaction waiting disabled, using single lookup (address=${address.toString()}, hashType=${
+                    hashType ?? 'unknown'
+                })`,
+            );
             return this.findTransactionByHashType(address, hash, hashType, limit);
         }
 
         const attempts = Math.ceil(
             DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS / DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS,
         );
+        this.logger?.debug(
+            `Waiting for root transaction for up to ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS}ms (${attempts} attempts, retry every ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms)`,
+        );
 
         for (let attempt = 1; attempt <= attempts; attempt++) {
             const tx = await this.findTransactionByHashType(address, hash, hashType, limit);
             if (tx) {
+                this.logger?.debug(`Root transaction found on attempt ${attempt}/${attempts}`);
                 return tx;
             }
 
             if (attempt < attempts) {
+                this.logger?.debug(
+                    `Root transaction not found yet (attempt ${attempt}/${attempts}), retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
+                );
                 await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
             }
         }
 
+        this.logger?.debug(`Root transaction not found after ${attempts} attempts`);
         return null;
     }
 

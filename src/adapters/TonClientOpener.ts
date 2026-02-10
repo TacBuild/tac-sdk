@@ -1,5 +1,6 @@
 import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/ton';
 
+import { ILogger } from '../interfaces';
 import { AxiosHttpClient } from '../sdk/AxiosHttpClient';
 import { DEFAULT_FIND_TX_LIMIT, DEFAULT_HTTP_CLIENT_TIMEOUT_MS } from '../sdk/Consts';
 import { normalizeHashToHex } from '../sdk/Utils';
@@ -10,14 +11,14 @@ import { getHttpEndpointWithRetry } from './OpenerUtils';
 export class TonClientOpener extends BaseContractOpener {
     private readonly httpClient: AxiosHttpClient;
 
-    constructor(private readonly client: TonClient) {
-        super();
+    constructor(private readonly client: TonClient, logger?: ILogger) {
+        super(logger);
         this.httpClient = new AxiosHttpClient({ timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS });
     }
 
-    static create(endpoint: string, timeout = DEFAULT_HTTP_CLIENT_TIMEOUT_MS): TonClientOpener {
+    static create(endpoint: string, timeout = DEFAULT_HTTP_CLIENT_TIMEOUT_MS, logger?: ILogger): TonClientOpener {
         const client = new TonClient({ endpoint, timeout });
-        return new TonClientOpener(client);
+        return new TonClientOpener(client, logger);
     }
 
     open<T extends Contract>(contract: T): OpenedContract<T> {
@@ -72,12 +73,12 @@ export class TonClientOpener extends BaseContractOpener {
     }
 }
 
-export function tonClientOpener(client: TonClient): TonClientOpener {
-    return new TonClientOpener(client);
+export function tonClientOpener(client: TonClient, logger?: ILogger): TonClientOpener {
+    return new TonClientOpener(client, logger);
 }
 
-export async function orbsOpener(network: Network): Promise<TonClientOpener> {
+export async function orbsOpener(network: Network, logger?: ILogger): Promise<TonClientOpener> {
     const endpoint = await getHttpEndpointWithRetry(network);
     const client = new TonClient({ endpoint });
-    return new TonClientOpener(client);
+    return new TonClientOpener(client, logger);
 }
