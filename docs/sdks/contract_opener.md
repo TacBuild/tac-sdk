@@ -130,6 +130,7 @@ Validates the entire transaction tree using BFS (breadth-first search) algorithm
 - `hash: string` - Root transaction hash to start validation from
 - `params?: TrackTransactionTreeParams` - Tracking parameters:
   - `maxDepth?: number` - Maximum tree depth to traverse, inclusive (depth 0 is the root, default: 10)
+  - `maxScannedTransactions?: number` - Maximum number of transactions scanned in account history during hash lookup (default: 100)
   - `ignoreOpcodeList?: number[]` - Opcodes that mark transactions as skippable for extra checks (phase validation still applies, default: [0xd53276db])
 
 **Returns:** `Promise<void>` - Resolves if all transactions successful, throws error otherwise

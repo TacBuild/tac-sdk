@@ -123,10 +123,12 @@ export class LiteClientOpener extends BaseContractOpener {
     async getAddressInformation(addr: Address): Promise<AddressInformation> {
         const block = await this.client.getMasterchainInfo();
         const state = await this.client.getAccountState(addr, block.last);
+        const lastHashHex = state.lastTx ? state.lastTx.hash.toString(16).padStart(64, '0') : '';
+        const lastHashB64 = lastHashHex ? Buffer.from(lastHashHex, 'hex').toString('base64') : '';
         return {
             lastTransaction: {
                 lt: state.lastTx?.lt.toString() ?? '',
-                hash: Buffer.from(state.lastTx?.hash.toString(16) ?? '', 'hex').toString('base64'),
+                hash: lastHashB64,
             },
         };
     }

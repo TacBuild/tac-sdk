@@ -7,6 +7,7 @@ import {
     DEFAULT_FIND_TX_ARCHIVAL,
     DEFAULT_FIND_TX_LIMIT,
     DEFAULT_FIND_TX_MAX_DEPTH,
+    DEFAULT_MAX_SCANNED_TRANSACTIONS,
     DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
     DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS,
     DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS,
@@ -59,6 +60,8 @@ export abstract class BaseContractOpener implements ContractOpener {
         let currentLt: string | undefined = opts?.lt;
         let currentHash: string | undefined = opts?.hash ? normalizeHashToBase64(opts.hash) : undefined;
         const seenCursors = new Set<string>();
+        let scannedTransactions = 0;
+        const maxScannedTransactions = opts?.maxScannedTransactions ?? DEFAULT_MAX_SCANNED_TRANSACTIONS;
         const prevHashToBase64 = (hash: bigint): string => {
             const hex = hash.toString(16).padStart(64, '0');
             return Buffer.from(hex, 'hex').toString('base64');
@@ -94,6 +97,13 @@ export abstract class BaseContractOpener implements ContractOpener {
             }
 
             for (const tx of batch) {
+                scannedTransactions += 1;
+                if (scannedTransactions > maxScannedTransactions) {
+                    this.logger?.debug(
+                        `Scan limit reached (${maxScannedTransactions} transactions), stopping history scan`,
+                    );
+                    return null;
+                }
                 if (predicate(tx)) {
                     return tx;
                 }
@@ -360,69 +370,53 @@ export abstract class BaseContractOpener implements ContractOpener {
         hash: string,
         hashType: 'unknown' | 'in' | 'out' | undefined,
         limit: number,
+        maxScannedTransactions: number,
         waitForRootTransaction: boolean,
     ): Promise<Transaction | null> {
         if (!waitForRootTransaction) {
-            this.logger?.debug(
-                `Root transaction waiting disabled, using single lookup (address=${address.toString()}, hashType=${
-                    hashType ?? 'unknown'
-                })`,
-            );
-            return this.findTransactionByHashType(address, hash, hashType, { limit, archival: true });
+            return this.findTransactionByHashType(address, hash, hashType, {
+                limit,
+                archival: true,
+                maxScannedTransactions,
+            });
         }
 
         const attempts = Math.ceil(
             DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS / DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS,
         );
-        let baselineLt: string | undefined;
-        let baselineHash: string | undefined;
+        const broadSearchOpts: GetTransactionsOptions = { limit, archival: true, maxScannedTransactions };
+        const baselineInfo = await this.getAddressInformation(address);
+        let seenLt: string | undefined = baselineInfo.lastTransaction.lt || undefined;
 
-        try {
-            const baseline = await this.getAddressInformation(address);
-            baselineLt = baseline.lastTransaction.lt || undefined;
-            baselineHash = baseline.lastTransaction.hash || undefined;
-        } catch (error) {
-            this.logger?.debug(`Root transaction lookup failed to read baseline lastTx: ${error}`);
+        // Capture baseline before first search.
+        const firstTx = await this.findTransactionByHashType(address, hash, hashType, broadSearchOpts);
+        if (firstTx) {
+            this.logger?.debug(`Root transaction found on attempt 1/${attempts}`);
+            return firstTx;
         }
+        this.logger?.debug(
+            `Root transaction not found yet (attempt 1/${attempts}), retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
+        );
+        await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
 
-        for (let attempt = 1; attempt <= attempts; attempt++) {
-            let searchOpts: GetTransactionsOptions = { limit, archival: true };
-            if (baselineLt && baselineHash) {
-                try {
-                    const info = await this.getAddressInformation(address);
-                    const lastLt = info.lastTransaction.lt;
-                    const lastHash = info.lastTransaction.hash;
+        for (let attempt = 2; attempt <= attempts; attempt++) {
+            const info = await this.getAddressInformation(address);
+            const currentLt = info.lastTransaction.lt || undefined;
 
-                    if (!lastLt || !lastHash || (lastLt === baselineLt && lastHash === baselineHash)) {
-                        this.logger?.debug(
-                            `Root transaction not found yet (attempt ${attempt}/${attempts}), lastTx unchanged, retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
-                        );
-                        await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
-                        continue;
-                    }
-
-                    searchOpts = {
-                        ...searchOpts,
-                        lt: lastLt,
-                        hash: lastHash,
-                        to_lt: baselineLt,
-                        inclusive: true,
-                    };
-                } catch (error) {
-                    this.logger?.debug(
-                        `Root transaction lookup failed to read lastTx (attempt ${attempt}/${attempts}): ${error}`,
-                    );
-                    await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
-                    continue;
-                }
+            if (!currentLt || currentLt === seenLt) {
+                this.logger?.debug(
+                    `Root transaction not found yet (attempt ${attempt}/${attempts}), lastTx unchanged, retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
+                );
+                await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
+                continue;
             }
 
-            const tx = await this.findTransactionByHashType(address, hash, hashType, searchOpts);
+            seenLt = currentLt;
+            const tx = await this.findTransactionByHashType(address, hash, hashType, broadSearchOpts);
             if (tx) {
                 this.logger?.debug(`Root transaction found on attempt ${attempt}/${attempts}`);
                 return tx;
             }
-
             this.logger?.debug(
                 `Root transaction not found yet (attempt ${attempt}/${attempts}), retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
             );
@@ -481,6 +475,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             maxDepth = DEFAULT_FIND_TX_MAX_DEPTH,
             ignoreOpcodeList = IGNORE_OPCODE,
             limit = DEFAULT_FIND_TX_LIMIT,
+            maxScannedTransactions = DEFAULT_MAX_SCANNED_TRANSACTIONS,
             direction = 'both',
             waitForRootTransaction = DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
         } = params;
@@ -489,7 +484,7 @@ export abstract class BaseContractOpener implements ContractOpener {
         const visitedSearchKeys = new Set<string>();
         const processedTxHashes = new Set<string>();
         let checkedCount = 0;
-        const searchOpts: GetTransactionsOptions = { limit, archival: true };
+        const searchOpts: GetTransactionsOptions = { limit, archival: true, maxScannedTransactions };
         const queue: TransactionDepth[] = [
             { address: parsedAddress, hash: normalizedRootHash, depth: 0, hashType: 'unknown' },
         ];
@@ -508,6 +503,7 @@ export abstract class BaseContractOpener implements ContractOpener {
                           currentHash,
                           hashType,
                           limit,
+                          maxScannedTransactions,
                           waitForRootTransaction,
                       )
                     : await this.findTransactionByHashType(currentAddress!, currentHash, hashType, searchOpts);

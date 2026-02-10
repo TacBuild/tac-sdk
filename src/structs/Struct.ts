@@ -532,7 +532,7 @@ export type TacGasPrice = {
 export type TrackTransactionTreeParams = {
     /**
      * Maximum number of transactions to fetch per pagination request
-     * @default 10
+     * @default 100
      */
     limit?: number;
 
@@ -541,6 +541,13 @@ export type TrackTransactionTreeParams = {
      * @default 10
      */
     maxDepth?: number;
+
+    /**
+     * Maximum number of transactions to scan while searching by hash in account history.
+     * Prevents excessive full-history scans on high-activity accounts.
+     * @default 100
+     */
+    maxScannedTransactions?: number;
 
     /**
      * List of operation codes (opcodes) to skip for extra checks.
@@ -643,6 +650,8 @@ export type GetTransactionsOptions = {
     timeoutMs?: number;
     /** Delay between retry attempts in milliseconds */
     retryDelayMs?: number;
+    /** Internal scan guard: maximum transactions to inspect while traversing history */
+    maxScannedTransactions?: number;
 };
 
 export type AddressInformation = {

@@ -5,7 +5,7 @@ export const NFT_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.3);
 
 export const MAX_ITERATION_COUNT = 120;
 
-export const DEFAULT_DELAY = 1000;
+export const DEFAULT_DELAY = 0;
 
 export const SOLIDITY_SIGNATURE_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*(\((bytes,bytes)\))?$/;
 export const SOLIDITY_METHOD_NAME_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -31,7 +31,8 @@ export const TON_BURN_ADDRESS = 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9
 export const DEFAULT_HTTP_CLIENT_TIMEOUT_MS = 30000;
 export const DEFAULT_RETRY_MAX_COUNT = 5;
 export const DEFAULT_RETRY_DELAY_MS = 1000;
-export const DEFAULT_FIND_TX_LIMIT = 10;
+export const DEFAULT_FIND_TX_LIMIT = 100;
+export const DEFAULT_MAX_SCANNED_TRANSACTIONS = 100;
 export const DEFAULT_FIND_TX_ARCHIVAL = true;
 export const DEFAULT_FIND_TX_MAX_DEPTH = 10;
 export const DEFAULT_WAIT_FOR_ROOT_TRANSACTION = true;

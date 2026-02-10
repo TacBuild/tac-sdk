@@ -422,7 +422,7 @@ export async function createDefaultRetryableOpener(
         }
 
         try {
-            const opener4 = await orbsOpener4(networkType, undefined, logger);
+            const opener4 = await orbsOpener4(networkType, DEFAULT_HTTP_CLIENT_TIMEOUT_MS, logger);
             openers.push({ opener: opener4, retries: maxRetries, retryDelay });
         } catch {
             // skip opener in case of failure

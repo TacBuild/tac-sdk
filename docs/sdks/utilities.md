@@ -241,8 +241,9 @@ new TonTxFinalizer(
 - `logger`: Optional logger implementing `ILogger`. Pass a `ConsoleLogger` to enable verbose output; defaults to `NoopLogger`
 
 #### Methods
-- `trackTransactionTree(address: string, hash: string, params: { maxDepth?: number }): Promise<void>`
+- `trackTransactionTree(address: string, hash: string, params: { maxDepth?: number; maxScannedTransactions?: number }): Promise<void>`
   - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` inclusive (depth 0 is the root, default: 10)
+  - `maxScannedTransactions` limits hash-history scanning per lookup (default: 100)
   - Uses the `ContractOpener` to fetch adjacent transactions via `getAdjacentTransactions` method
   - Throws an error if any transaction in the tree is not successful or if a hash is not found
   - Automatically retries on rate limit errors (429) and handles 404 errors gracefully
@@ -271,7 +272,7 @@ const finalizer = new TonTxFinalizer(contractOpener, new ConsoleLogger());
 await finalizer.trackTransactionTree(
   'EQB3ncyBUTjZUA5EnFKR5_EnOMI9V1tTEAAPaiU71gc4TiUt', 
   'TON_TX_HASH',
-  { maxDepth: 10 }
+  { maxDepth: 10, maxScannedTransactions: 100 }
 );
 ```
 

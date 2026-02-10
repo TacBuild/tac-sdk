@@ -583,6 +583,7 @@ Maps shard keys to their corresponding operation IDs, allowing efficient lookup 
 export type TrackTransactionTreeParams = {
     limit?: number;
     maxDepth?: number;
+    maxScannedTransactions?: number;
     ignoreOpcodeList?: number[];
     direction?: 'forward' | 'backward' | 'both';
 };
@@ -590,8 +591,9 @@ export type TrackTransactionTreeParams = {
 
 Parameters for tracking and validating transaction trees.
 
-- **`limit`** *(optional)*: Maximum number of transactions to fetch per pagination request. Default: 10.
+- **`limit`** *(optional)*: Maximum number of transactions to fetch per pagination request. Default: 100.
 - **`maxDepth`** *(optional)*: Maximum depth to traverse in the transaction tree, inclusive (depth 0 is the root). Default: 10.
+- **`maxScannedTransactions`** *(optional)*: Maximum number of transactions to scan while searching by hash in account history. Default: 100.
 - **`ignoreOpcodeList`** *(optional)*: List of operation codes (opcodes) that mark transactions as skippable for extra checks. Phase validation is still applied. Default: `[0xd53276db]` (excess message).
 - **`direction`** *(optional)*: Direction to search the transaction tree:
   - `'forward'`: only search children (outgoing messages)
