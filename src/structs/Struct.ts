@@ -532,19 +532,19 @@ export type TacGasPrice = {
 export type TrackTransactionTreeParams = {
     /**
      * Maximum number of transactions to fetch per pagination request
-     * @default 100
+     * @default 10
      */
     limit?: number;
 
     /**
-     * Maximum depth to traverse in the transaction tree (prevents infinite loops)
+     * Maximum depth to traverse in the transaction tree, inclusive (prevents infinite loops)
      * @default 10
      */
     maxDepth?: number;
 
     /**
-     * List of operation codes (opcodes) to skip during validation.
-     * Transactions with these opcodes in their incoming message will not be validated.
+     * List of operation codes (opcodes) to skip for extra checks.
+     * Core phase validation is still applied.
      * @default [ 0xd53276db ] // Excess
      */
     ignoreOpcodeList?: number[];
@@ -557,6 +557,13 @@ export type TrackTransactionTreeParams = {
      * @default 'both'
      */
     direction?: 'forward' | 'backward' | 'both';
+
+    /**
+     * Internal option: wait for the root transaction to appear before failing with `not_found`.
+     * Useful right after sending a message when transaction indexing is eventually consistent.
+     * @default true
+     */
+    waitForRootTransaction?: boolean;
 };
 
 /**

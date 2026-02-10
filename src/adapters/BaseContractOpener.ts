@@ -7,10 +7,13 @@ import {
     DEFAULT_FIND_TX_ARCHIVAL,
     DEFAULT_FIND_TX_LIMIT,
     DEFAULT_FIND_TX_MAX_DEPTH,
+    DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
+    DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS,
+    DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS,
     IGNORE_MSG_VALUE_1_NANO,
     IGNORE_OPCODE,
 } from '../sdk/Consts';
-import { getNormalizedExtMessageHash, normalizeHashToBase64 } from '../sdk/Utils';
+import { getNormalizedExtMessageHash, normalizeHashToBase64, sleep } from '../sdk/Utils';
 import { TransactionDepth } from '../structs/InternalStruct';
 import { AddressInformation, GetTransactionsOptions } from '../structs/Struct';
 import {
@@ -317,6 +320,38 @@ export abstract class BaseContractOpener implements ContractOpener {
     }
 
     /**
+     * Retry lookup for root transaction because it may appear in indexers with a delay.
+     */
+    private async findRootTransactionWithRetry(
+        address: Address,
+        hash: string,
+        hashType: 'unknown' | 'in' | 'out' | undefined,
+        limit: number,
+        waitForRootTransaction: boolean,
+    ): Promise<Transaction | null> {
+        if (!waitForRootTransaction) {
+            return this.findTransactionByHashType(address, hash, hashType, limit);
+        }
+
+        const attempts = Math.ceil(
+            DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS / DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS,
+        );
+
+        for (let attempt = 1; attempt <= attempts; attempt++) {
+            const tx = await this.findTransactionByHashType(address, hash, hashType, limit);
+            if (tx) {
+                return tx;
+            }
+
+            if (attempt < attempts) {
+                await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Track transaction tree and validate all transactions
      */
     async trackTransactionTree(
@@ -327,6 +362,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             ignoreOpcodeList: IGNORE_OPCODE,
             limit: DEFAULT_FIND_TX_LIMIT,
             direction: 'both',
+            waitForRootTransaction: DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
         },
     ): Promise<void> {
         const result = await this.trackTransactionTreeWithResult(address, hash, params);
@@ -353,6 +389,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             ignoreOpcodeList: IGNORE_OPCODE,
             limit: DEFAULT_FIND_TX_LIMIT,
             direction: 'both',
+            waitForRootTransaction: DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
         },
     ): Promise<TrackTransactionTreeResult> {
         const {
@@ -360,6 +397,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             ignoreOpcodeList = IGNORE_OPCODE,
             limit = DEFAULT_FIND_TX_LIMIT,
             direction = 'both',
+            waitForRootTransaction = DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
         } = params;
         const parsedAddress = Address.parse(address);
         const normalizedRootHash = normalizeHashToBase64(hash);
@@ -377,7 +415,16 @@ export abstract class BaseContractOpener implements ContractOpener {
 
             this.logger?.debug(`Checking hash (depth ${currentDepth}): ${currentHash}`);
 
-            const tx = await this.findTransactionByHashType(currentAddress!, currentHash, hashType, limit);
+            const tx =
+                currentDepth === 0
+                    ? await this.findRootTransactionWithRetry(
+                          currentAddress!,
+                          currentHash,
+                          hashType,
+                          limit,
+                          waitForRootTransaction,
+                      )
+                    : await this.findTransactionByHashType(currentAddress!, currentHash, hashType, limit);
 
             if (!tx) {
                 this.logger?.debug(
