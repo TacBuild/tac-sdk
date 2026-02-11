@@ -87,6 +87,9 @@ export class Configuration implements IConfiguration {
                 (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 5, delay, logger));
             settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
         }
+
+        contractOpener.setLogger(logger);
+
         const settings = contractOpener.open(
             artifacts.ton.wrappers.Settings.createFromAddress(Address.parse(settingsAddress)),
         );

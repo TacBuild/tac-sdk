@@ -34,6 +34,12 @@ export abstract class BaseContractOpener implements ContractOpener {
         this.logger = logger;
     }
 
+    setLogger(logger: ILogger): void {
+        if (!this.logger) {
+            this.logger = logger;
+        }
+    }
+
     abstract open<T extends Contract>(contract: T): OpenedContract<T> | SandboxContract<T>;
     abstract getContractState(address: Address): Promise<ContractState>;
     abstract getTransactions(address: Address, opts: GetTransactionsOptions): Promise<Transaction[]>;

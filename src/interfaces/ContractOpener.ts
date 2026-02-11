@@ -8,6 +8,7 @@ import {
     TrackTransactionTreeParams,
     TrackTransactionTreeResult,
 } from '../structs/Struct';
+import { ILogger } from './ILogger';
 
 export interface ContractOpener {
     /**
@@ -56,7 +57,11 @@ export interface ContractOpener {
      * @param opts Search options
      * @returns Transaction if found, null otherwise
      */
-    getTransactionByTxHash(address: Address, txHash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+    getTransactionByTxHash(
+        address: Address,
+        txHash: string,
+        opts?: GetTransactionsOptions,
+    ): Promise<Transaction | null>;
 
     /**
      * Find transaction by its incoming message hash.
@@ -121,4 +126,6 @@ export interface ContractOpener {
         hash: string,
         params?: TrackTransactionTreeParams,
     ): Promise<TrackTransactionTreeResult>;
+
+    setLogger(logger: ILogger): void;
 }

@@ -43,6 +43,22 @@ export class RetryableContractOpener implements ContractOpener {
         }
         this.openerConfigs = openerConfigs;
         this.logger = logger;
+        if (logger) {
+            this.applyLoggerToOpeners(logger);
+        }
+    }
+
+    setLogger(logger: ILogger): void {
+        if (!this.logger) {
+            this.logger = logger;
+        }
+        this.applyLoggerToOpeners(logger);
+    }
+
+    private applyLoggerToOpeners(logger: ILogger): void {
+        for (const config of this.openerConfigs) {
+            config.opener.setLogger(logger);
+        }
     }
 
     async getTransactions(address: Address, opts: GetTransactionsOptions): Promise<Transaction[]> {
