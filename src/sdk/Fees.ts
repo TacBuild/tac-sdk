@@ -70,8 +70,8 @@ export const createCrossChainLayerTvmMsgToEvmStep = (
     msgBits: number,
     msgCells: number,
 ): TransactionFeeCalculationStep => ({
-    accountBits: params.crossChainLayer.accountBits,
-    accountCells: params.crossChainLayer.accountCells,
+    accountBits: 0,
+    accountCells: 0,
     gasUsed: params.crossChainLayer.gas.tvmMsgToEvm,
     msgBits,
     msgCells,
@@ -122,8 +122,8 @@ export const createJettonProxyOwnershipAssignedStep = (
     msgBits: number,
     msgCells: number,
 ): TransactionFeeCalculationStep => ({
-    accountBits: params.jettonProxy.accountBits,
-    accountCells: params.jettonProxy.accountCells,
+    accountBits: 0,
+    accountCells: 0,
     gasUsed: params.jettonProxy.gas.ownershipAssigned,
     msgBits,
     msgCells,
@@ -174,8 +174,8 @@ export const createNftProxyOwnershipAssignedStep = (
     msgBits: number,
     msgCells: number,
 ): TransactionFeeCalculationStep => ({
-    accountBits: params.nftProxy.accountBits,
-    accountCells: params.nftProxy.accountCells,
+    accountBits: 0,
+    accountCells: 0,
     gasUsed: params.nftProxy.gas.ownershipAssigned,
     msgBits,
     msgCells,
