@@ -17,7 +17,7 @@ import {
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
     NFTAddressType,
-    SuggestedTVMExecutorFee,
+    SuggestedTVMExecutorFee, TacGasPrice,
     TACSimulationParams,
     TACSimulationResult,
     TransactionLinkerWithOperationId,
@@ -281,4 +281,10 @@ export interface ITacSDK {
         assets?: AssetLike[],
         options?: CrossChainTransactionOptions,
     ): Promise<CrossChainPayloadResult[]>;
+
+    /**
+     * Returns TAC gas price for the current network.
+     * @returns Promise resolving to the gas price in wei (bigint).
+     */
+    getTACGasPrice(): Promise<TacGasPrice>;
 }
