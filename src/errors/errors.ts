@@ -32,7 +32,13 @@ export class FetchError extends ErrorWithStatusCode {
     ) {
         super(message, errorCode);
         this.name = 'FetchError';
-        this.inner = inner;
+        // Keep raw nested error accessible, but hide it from default object inspection output.
+        Object.defineProperty(this, 'inner', {
+            value: inner,
+            enumerable: false,
+            writable: false,
+            configurable: false,
+        });
 
         if (inner && typeof inner === 'object') {
             const err = inner as {
@@ -58,7 +64,12 @@ export class FetchError extends ErrorWithStatusCode {
                 this.innerMessage = err.message;
             }
             if (options?.includeInnerStack && typeof err.stack === 'string') {
-                this.innerStack = err.stack;
+                Object.defineProperty(this, 'innerStack', {
+                    value: err.stack,
+                    enumerable: false,
+                    writable: false,
+                    configurable: false,
+                });
             }
         }
     }
