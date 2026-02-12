@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
-import { ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } from '../../src';
+import { FetchError, ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } from '../../src';
 import {
     AssetType,
     BlockchainType,
@@ -812,12 +812,18 @@ describe('OperationTracker', () => {
                 ],
                 tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
             };
-            const error = new Error('Simulation error');
+            const error = Object.assign(new Error('Simulation error'), { response: { status: 422 } });
 
             mockClients[0].simulateTACMessage.mockRejectedValue(error);
             mockClients[1].simulateTACMessage.mockRejectedValue(error);
 
-            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow();
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow(FetchError);
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toMatchObject({
+                errorCode: 117,
+                httpStatus: 422,
+                innerErrorName: 'Error',
+                innerMessage: 'Simulation error',
+            });
             expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to simulate TAC message');
         });
 
@@ -866,6 +872,47 @@ describe('OperationTracker', () => {
             const result = await operationTracker.simulateTACMessage(params, waitOptions);
 
             expect(result).toBe(expectedResult);
+        });
+
+        it('should include inner stack when waitOptions.includeErrorTrace is true', async () => {
+            const params = {
+                tacCallParams: {
+                    arguments: '0xabcdef',
+                    methodName: 'transfer',
+                    target: '0x1234567890123456789012345678901234567890',
+                },
+                shardsKey: '12345',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+            };
+            const error = Object.assign(new Error('Simulation error with stack'), { response: { status: 500 } });
+
+            mockClients[0].simulateTACMessage.mockRejectedValue(error);
+            mockClients[1].simulateTACMessage.mockRejectedValue(error);
+
+            await expect(
+                operationTracker.simulateTACMessage(params, {
+                    includeErrorTrace: true,
+                    maxAttempts: 1,
+                }),
+            ).rejects.toMatchObject({
+                errorCode: 117,
+                httpStatus: 500,
+                innerMessage: 'Simulation error with stack',
+            });
+
+            await expect(
+                operationTracker.simulateTACMessage(params, {
+                    includeErrorTrace: true,
+                    maxAttempts: 1,
+                }),
+            ).rejects.toHaveProperty('innerStack');
         });
     });
 

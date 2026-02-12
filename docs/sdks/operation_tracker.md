@@ -170,6 +170,11 @@ interface WaitOptions<T = unknown, TContext = unknown> {
      * Can be used for additional processing like profiling data retrieval
      */
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
+    /**
+     * Include underlying stack trace in FetchError.innerStack when all endpoints fail
+     * @default false
+     */
+    includeErrorTrace?: boolean;
 }
 ```
 

@@ -74,7 +74,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to get operation id by transactionHash');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions
@@ -102,7 +102,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to get operation type');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions
@@ -126,7 +126,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to get operation id');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions
@@ -160,7 +160,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to get operation ids by shards keys');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions
@@ -189,7 +189,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to get stage profiling');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions
@@ -217,7 +217,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to get stage profilings');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions
@@ -245,7 +245,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to get operation statuses');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions
@@ -273,7 +273,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to get operation status');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         const status = waitOptions
@@ -282,7 +282,7 @@ export class OperationTracker implements IOperationTracker {
 
         this.logger.debug(
             `operation status resolved stage=${status.stage ?? 'unknown'} success=${
-                typeof status.success === 'boolean' ? String(status.success) : 'unknown'
+                (String(status.success))
             }`,
         );
         return status;
@@ -333,7 +333,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to convert currency');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions
@@ -361,7 +361,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to simulate TAC message');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions
@@ -388,7 +388,7 @@ export class OperationTracker implements IOperationTracker {
                 }
             }
             this.logger.error('All endpoints failed to get TVM executor fee');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
         return waitOptions

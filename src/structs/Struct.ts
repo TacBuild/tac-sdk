@@ -441,6 +441,11 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
      * @default true
      */
     ensureTxExecuted?: boolean;
+    /**
+     * Include underlying error stack trace in FetchError (innerStack)
+     * @default false
+     */
+    includeErrorTrace?: boolean;
 }
 
 export const defaultWaitOptions: WaitOptions = {

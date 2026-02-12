@@ -1239,6 +1239,7 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
     successCheck?: (result: T, context?: TContext) => boolean;
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
     ensureTxExecuted?: boolean;
+    includeErrorTrace?: boolean;
 }
 ```
 
@@ -1252,6 +1253,7 @@ Allows to specify custom options for waiting for operation resolution with enhan
 - **`successCheck`** *(optional)*: Function to check if the result is successful. Receives both the result and optional context parameter. If not provided, any non-error result is considered successful.
 - **`onSuccess`** *(optional)*: Custom callback function that executes when operation is successful. Receives both the result and optional context with additional parameters. Can be used for additional processing like profiling data retrieval. Supports both synchronous and asynchronous callbacks.
 - **`ensureTxExecuted`** *(optional)*: Ensure that TON transaction is successful. Default is `true`.
+- **`includeErrorTrace`** *(optional)*: Include underlying stack trace in `FetchError.innerStack` when all endpoints fail. Default is `false`.
 
 #### Usage Examples
 

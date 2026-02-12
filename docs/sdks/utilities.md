@@ -40,7 +40,7 @@ If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 - `Promise<ExecutionStages>` if `returnValue` is `true`
 
 #### Possible exceptions:
-- `FetchError`: if operation status or ID could not be fetched from sequencer
+- `FetchError`: if operation status or ID could not be fetched from sequencer. Includes `errorCode`, HTTP status as `httpStatus` (when available), `innerErrorCode`, `innerMessage`, and optional `innerStack` (trace). `innerStack` is included only when `waitOptions.includeErrorTrace = true`. Use `error.toDebugString(true)` to print full details with trace.
 - `Error`: if TON transaction fails verification (when using txFinalizer)
 
 #### Example:
@@ -99,7 +99,7 @@ If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 - `Promise<ExecutionStages[]>` if `returnValue` is `true`
 
 #### Possible exceptions:
-- `FetchError`: if operation status or ID could not be fetched from sequencer
+- `FetchError`: if operation status or ID could not be fetched from sequencer. Includes `errorCode`, HTTP status as `httpStatus` (when available), `innerErrorCode`, `innerMessage`, and optional `innerStack` (trace). `innerStack` is included only when `waitOptions.includeErrorTrace = true`. Use `error.toDebugString(true)` to print full details with trace.
 - `Error`: if TON transaction fails verification (when using txFinalizer)
 
 #### Example:
