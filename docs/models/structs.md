@@ -103,6 +103,7 @@ export type SDKParams = {
     TACParams?: TACParams;
     TONParams?: TONParams;
     customLiteSequencerEndpoints?: string[];
+    passLoggerToOpeners?: boolean;
 }
 ```
 
@@ -112,6 +113,7 @@ Parameters for SDK:
 - **`TACParams`** *(optional)*: Custom parameters for TAC side
 - **`TONParams`** *(optional)*: Custom parameters for TON side
 - **`customLiteSequencerEndpoints`** *(optional)*: Custom lite sequencer endpoints for API access.
+- **`passLoggerToOpeners`** *(optional, default: `true`)*: Controls whether the logger passed to `TacSdk.create` is propagated to TON `contractOpener`(s). Set `false` to keep SDK-level logs while keeping openers silent.
 
 ### `TONParams (Type)`
 ```typescript

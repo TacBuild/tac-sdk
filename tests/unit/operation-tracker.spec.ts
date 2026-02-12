@@ -360,6 +360,10 @@ describe('OperationTracker', () => {
 
             expect(result).toEqual(expectedStatus);
             expect(mockClients[0].getOperationStatuses).toHaveBeenCalledWith([operationId]);
+            expect(mockLogger.debug).not.toHaveBeenCalledWith('Operation status retrieved successfully');
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `operation status resolved stage=${StageName.EXECUTED_IN_TAC} success=true`,
+            );
         });
 
         it('should throw error if no operation status found', async () => {
@@ -370,6 +374,55 @@ describe('OperationTracker', () => {
 
             await expect(operationTracker.getOperationStatus(operationId)).rejects.toThrow();
             expect(mockLogger.warn).toHaveBeenCalledWith(`No operation status for operationId=${operationId}`);
+        });
+
+        it('should log pending one-liner for intermediate status while waiting', async () => {
+            const operationId = 'op123';
+            const pendingStatus: StatusInfo = {
+                stage: StageName.INCLUDED_IN_TON_CONSENSUS,
+                success: true,
+                timestamp: Date.now(),
+                transactions: [
+                    {
+                        hash: '0x69d97176890b6968837c20ff9fff36d8791e5108cb0a8bb366da13db6bd556ab',
+                        blockchainType: BlockchainType.TON,
+                    },
+                ],
+                note: null,
+            };
+            const finalStatus: StatusInfo = {
+                stage: StageName.EXECUTED_IN_TON,
+                success: true,
+                timestamp: Date.now(),
+                transactions: [
+                    {
+                        hash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                        blockchainType: BlockchainType.TON,
+                    },
+                ],
+                note: null,
+            };
+
+            mockClients[0].getOperationStatuses
+                .mockResolvedValueOnce({ [operationId]: pendingStatus })
+                .mockResolvedValueOnce({ [operationId]: finalStatus });
+
+            const waitOptions: WaitOptions<StatusInfo> = {
+                timeout: 1000,
+                maxAttempts: 5,
+                delay: 1,
+                logger: mockLogger,
+                successCheck: (status) => status.stage === StageName.EXECUTED_IN_TON,
+            };
+
+            const result = await operationTracker.getOperationStatus(operationId, waitOptions);
+            expect(result).toEqual(finalStatus);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                '[OperationTracker: Getting operation status] pending attempt=1/5 stage=includedInTONConsensus success=true tx=0x69d97176890b6968837c20ff9fff36d8791e5108cb0a8bb366da13db6bd556ab retry_in=1ms',
+            );
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `operation status resolved stage=${StageName.EXECUTED_IN_TON} success=true`,
+            );
         });
     });
 

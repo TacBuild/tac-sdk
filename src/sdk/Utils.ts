@@ -198,9 +198,8 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
             if (result === undefined || result === null) {
                 throw new Error(`Empty result`);
             }
-            options.logger?.debug(`${contextPrefix}Result: ${formatObjectForLogging(result)}`);
             if (successCheck && !successCheck(result, context)) {
-                throw new Error(`Result is not successful`);
+                throw new Error(`Result is not successful: ${formatObjectForLogging(result)}`);
             }
             options.logger?.debug(`${contextPrefix}Attempt ${attempt} successful`);
 
@@ -224,8 +223,14 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
                 options.logger?.debug(`${contextPrefix}Max attempts (${maxAttempts}) reached`);
                 throw error;
             }
-            options.logger?.debug(`${contextPrefix}Error on attempt ${attempt}: ${error}`);
-            options.logger?.debug(`${contextPrefix}Waiting ${delay}ms before next attempt`);
+            const pendingMessage = statusRetryMessageFromError(error, attempt, maxAttempts, delay);
+            if (pendingMessage) {
+                options.logger?.debug(`${contextPrefix}${pendingMessage}`);
+            } else {
+                options.logger?.debug(
+                    `${contextPrefix}attempt=${attempt}/${maxAttempts} failed; retry_in=${delay}ms; error=${String(error)}`,
+                );
+            }
             await sleep(delay);
             attempt++;
         }
@@ -234,6 +239,55 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
 
 export function formatObjectForLogging(obj: unknown): string {
     return JSON.stringify(obj, (key, value) => (typeof value === 'bigint' ? value.toString() : value));
+}
+
+function statusRetryMessageFromError(error: unknown, attempt: number, maxAttempts: number, delay: number): string | null {
+    const prefix = 'Result is not successful: ';
+    const message = String(error);
+    const index = message.indexOf(prefix);
+    if (index < 0) {
+        return null;
+    }
+
+    const payloadString = message.slice(index + prefix.length).trim();
+    let payload: unknown;
+    try {
+        payload = JSON.parse(payloadString);
+    } catch {
+        return null;
+    }
+
+    if (typeof payload !== 'object' || payload === null) {
+        return null;
+    }
+    const statusPayload = payload as {
+        stage?: unknown;
+        success?: unknown;
+        transactions?: unknown;
+    };
+    if (
+        statusPayload.stage === undefined &&
+        statusPayload.success === undefined &&
+        statusPayload.transactions === undefined
+    ) {
+        return null;
+    }
+
+    const stage = typeof statusPayload.stage === 'string' && statusPayload.stage ? statusPayload.stage : 'unknown';
+    const success = typeof statusPayload.success === 'boolean' ? String(statusPayload.success) : 'unknown';
+
+    let txHash = '-';
+    if (Array.isArray(statusPayload.transactions) && statusPayload.transactions.length > 0) {
+        const first = statusPayload.transactions[0];
+        if (typeof first === 'object' && first !== null && 'hash' in first) {
+            const maybeHash = (first as { hash?: unknown }).hash;
+            if (typeof maybeHash === 'string' && maybeHash) {
+                txHash = maybeHash;
+            }
+        }
+    }
+
+    return `pending attempt=${attempt}/${maxAttempts} stage=${stage} success=${success} tx=${txHash} retry_in=${delay}ms`;
 }
 
 export function getBouncedAddress(tvmAddress: string): string {

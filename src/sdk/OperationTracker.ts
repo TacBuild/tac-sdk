@@ -266,7 +266,6 @@ export class OperationTracker implements IOperationTracker {
                         this.logger.warn(`No operation status for operationId=${operationId}`);
                         throw new Error(`No operation status for operationId=${operationId}`);
                     }
-                    this.logger.debug(`Operation status retrieved successfully`);
                     return result;
                 } catch (error) {
                     this.logger.warn(`Failed to get operation status using one of the endpoints`);
@@ -277,9 +276,16 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError);
         };
 
-        return waitOptions
+        const status = waitOptions
             ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation status')
             : await requestFn();
+
+        this.logger.debug(
+            `operation status resolved stage=${status.stage ?? 'unknown'} success=${
+                typeof status.success === 'boolean' ? String(status.success) : 'unknown'
+            }`,
+        );
+        return status;
     }
 
     async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {

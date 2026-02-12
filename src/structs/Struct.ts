@@ -99,6 +99,12 @@ export type SDKParams = {
      * URLs of lite sequencers
      */
     customLiteSequencerEndpoints?: string[];
+
+    /**
+     * Whether SDK logger should be passed to TON contract opener(s).
+     * Default: true
+     */
+    passLoggerToOpeners?: boolean;
 };
 
 export enum AssetType {

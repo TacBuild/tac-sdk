@@ -80,6 +80,7 @@ export class TacSdk implements ITacSDK {
     static async create(sdkParams: SDKParams, logger: ILogger = new NoopLogger()): Promise<TacSdk> {
         const network = sdkParams.network;
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
+        const passLoggerToOpeners = sdkParams.passLoggerToOpeners ?? true;
 
         let artifacts;
         switch (network) {
@@ -104,6 +105,7 @@ export class TacSdk implements ITacSDK {
             sdkParams.customLiteSequencerEndpoints,
             delay,
             logger,
+            passLoggerToOpeners,
         );
 
         const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints);

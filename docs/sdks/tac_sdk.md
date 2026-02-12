@@ -99,6 +99,8 @@ TacSdk.create(sdkParams: SDKParams, logger?: ILogger): Promise<TacSdk>
 
 Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](./../models/structs.md#tonparams-type) and [`TACParams`](./../models/structs.md#tacparams-type). The optional `logger` parameter allows you to provide a custom logger instance; if not provided, a no-op logger is used by default.
 
+If `sdkParams.passLoggerToOpeners` is set to `false`, the SDK logger is not passed to TON contract opener(s). Default is `true`.
+
 ---
 
 ## Core Functions
