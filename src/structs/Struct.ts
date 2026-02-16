@@ -344,6 +344,16 @@ export type evmDataBuilder = (
 
 export type CrossChainTransactionOptions = {
     allowSimulationError?: boolean;
+    /**
+     * If true, ensures TON transaction execution is validated before waiting for operation id.
+     * @default true
+     */
+    ensureTxExecuted?: boolean;
+    /**
+     * If true, validates explicitly provided fee params against suggested values.
+     * @default true
+     */
+    shouldValidateFees?: boolean;
     isRoundTrip?: boolean;
     protocolFee?: bigint;
     evmValidExecutors?: string[];
@@ -358,7 +368,10 @@ export type CrossChainTransactionOptions = {
     evmDataBuilder?: evmDataBuilder;
 };
 
-export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
+export type BatchCrossChainTransactionOptions = Omit<
+    CrossChainTransactionOptions,
+    'waitOperationId' | 'waitOptions' | 'ensureTxExecuted'
+>;
 
 export type CrossChainTransactionsOptions = {
     waitOperationIds?: boolean;
@@ -430,11 +443,6 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
      * Receives both the result and optional context with additional parameters
      */
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
-    /**
-     * Ensure that TON transaction is succesful
-     * @default true
-     */
-    ensureTxExecuted?: boolean;
 }
 
 export const defaultWaitOptions: WaitOptions = {

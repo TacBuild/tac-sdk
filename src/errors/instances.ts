@@ -122,3 +122,9 @@ export const gasPriceFetchError = (msg: string, inner?: unknown) =>
     new FetchError(`Failed to fetch gas price: ${msg}`, 134, inner);
 
 export const txFinalizationError = (msg: string) => new TransactionError(`Transaction failed: ${msg}`, 135);
+
+export const insufficientFeeParamsError = (feeName: string, provided: bigint, required: bigint) =>
+    new FormatError(
+        `Provided ${feeName} (${provided}) is lower than required (${required}). Set shouldValidateFees: false to bypass.`,
+        136,
+    );

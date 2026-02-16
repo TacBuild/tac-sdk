@@ -88,6 +88,7 @@ Sends a single cross-chain transaction from TON to TAC. This method prepares the
 - **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the transaction sender
 - **`tx`**: [`CrosschainTx`](./../models/structs.md#crosschaintx) cross-chain transaction data to bridge, including:
   - **`options.waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending
+  - **`options.ensureTxExecuted`** *(optional, default: true)*: Whether to validate TON transaction execution before waiting for operation ID
   - **`options.waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for operation tracking customization
 
 ### **Returns** [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type)
@@ -124,7 +125,7 @@ Sends multiple cross-chain transactions in a batch from TON to TAC. This method 
 
 - **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the transaction sender
 - **`txs`**: Array of [`BatchCrossChainTx`](./../models/structs.md#batchcrosschaintx) objects, each defining a single cross-chain transaction
-  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId` or `waitOptions` in their options as these are controlled at the batch level.
+  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId`, `waitOptions`, or `ensureTxExecuted` in their options as these are controlled at the batch level.
 - **`options`** *(optional)*: [`CrossChainTransactionsOptions`](./../models/structs.md#crosschaintransactionsoptions) controlling batch-level behavior:
   - **`waitOperationIds`** *(optional, default: true)*: Whether to wait for operation IDs for all transactions in the batch
   - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for customizing operation IDs waiting behavior

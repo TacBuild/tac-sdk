@@ -311,6 +311,8 @@ An optional configuration object for customizing advanced crosschain transaction
 ```ts
 export type CrossChainTransactionOptions = {
     allowSimulationError?: boolean;
+    ensureTxExecuted?: boolean;
+    shouldValidateFees?: boolean;
     isRoundTrip?: boolean;
     protocolFee?: bigint;
     evmValidExecutors?: string[];
@@ -329,6 +331,14 @@ export type CrossChainTransactionOptions = {
 - **allowSimulationError** *(optional)*:  
   If true, transaction simulation phase is skipped.  
   **Default**: false
+
+- **ensureTxExecuted** *(optional)*:  
+  If true, validates TON transaction execution before waiting for operation ID.  
+  **Default**: true
+
+- **shouldValidateFees** *(optional)*:  
+  If true, validates explicitly provided fee params against suggested values.  
+  **Default**: true
 
 - **isRoundTrip** *(optional)*:  
   Indicates whether the transaction involves a round-trip execution (e.g., a return message from TAC to TON).  
@@ -377,10 +387,10 @@ export type CrossChainTransactionOptions = {
 A restricted version of CrossChainTransactionOptions for use in batch operations.
 
 ```ts
-export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions' | 'ensureTxExecuted'>;
 ```
 
-This type excludes `waitOperationId` and `waitOptions` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
+This type excludes `waitOperationId`, `waitOptions`, and `ensureTxExecuted` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
 
 ### `CrossChainTransactionsOptions`
 Configuration options for batch cross-chain transaction operations.
@@ -428,7 +438,7 @@ export type BatchCrossChainTx = {
 Represents a crosschain transaction for use in batch operations.
 - **`evmProxyMsg`**: The message to be sent to the TAC proxy.
 - **`assets`** *(optional)*: An array of assets involved in the transaction.
-- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId` and `waitOptions` which are controlled at batch level).
+- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId`, `waitOptions`, and `ensureTxExecuted` which are controlled at batch level).
 
 ### `AssetLike`
 
@@ -1236,7 +1246,6 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
     context?: TContext;
     successCheck?: (result: T, context?: TContext) => boolean;
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
-    ensureTxExecuted?: boolean;
 }
 ```
 
@@ -1249,7 +1258,6 @@ Allows to specify custom options for waiting for operation resolution with enhan
 - **`context`** *(optional)*: Optional context object to pass additional parameters to callbacks. This allows passing custom data like OperationTracker instances, configurations, user settings, and other dependencies without relying on closures.
 - **`successCheck`** *(optional)*: Function to check if the result is successful. Receives both the result and optional context parameter. If not provided, any non-error result is considered successful.
 - **`onSuccess`** *(optional)*: Custom callback function that executes when operation is successful. Receives both the result and optional context with additional parameters. Can be used for additional processing like profiling data retrieval. Supports both synchronous and asynchronous callbacks.
-- **`ensureTxExecuted`** *(optional)*: Ensure that TON transaction is successful. Default is `true`.
 
 #### Usage Examples
 
