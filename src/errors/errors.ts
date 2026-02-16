@@ -16,11 +16,71 @@ export class ContractError extends ErrorWithStatusCode {
 
 export class FetchError extends ErrorWithStatusCode {
     readonly inner?: unknown;
+    readonly httpStatus?: number;
+    readonly innerErrorCode?: number;
+    readonly innerErrorName?: string;
+    readonly innerMessage?: string;
+    readonly innerStack?: string;
 
-    constructor(message: string, errorCode: number, inner?: unknown) {
+    constructor(
+        message: string,
+        errorCode: number,
+        inner?: unknown,
+        options?: {
+            includeInnerStack?: boolean;
+        },
+    ) {
         super(message, errorCode);
         this.name = 'FetchError';
         this.inner = inner;
+
+        if (inner && typeof inner === 'object') {
+            const err = inner as {
+                name?: string;
+                message?: string;
+                stack?: string;
+                errorCode?: unknown;
+                status?: unknown;
+                response?: { status?: unknown };
+            };
+            if (typeof err.status === 'number') {
+                this.httpStatus = err.status;
+            } else if (typeof err.response?.status === 'number') {
+                this.httpStatus = err.response.status;
+            }
+            if (typeof err.errorCode === 'number') {
+                this.innerErrorCode = err.errorCode;
+            }
+            if (typeof err.name === 'string') {
+                this.innerErrorName = err.name;
+            }
+            if (typeof err.message === 'string') {
+                this.innerMessage = err.message;
+            }
+            if (options?.includeInnerStack && typeof err.stack === 'string') {
+                this.innerStack = err.stack;
+            }
+        }
+    }
+
+    toDebugString(includeTrace = false): string {
+        const parts = [`${this.name} (${this.errorCode}): ${this.message}`];
+        if (this.httpStatus !== undefined) {
+            parts.push(`httpStatus: ${this.httpStatus}`);
+        }
+        if (this.innerErrorCode !== undefined) {
+            parts.push(`innerErrorCode: ${this.innerErrorCode}`);
+        }
+        if (this.innerErrorName) {
+            parts.push(`innerErrorName: ${this.innerErrorName}`);
+        }
+        if (this.innerMessage) {
+            parts.push(`innerMessage: ${this.innerMessage}`);
+        }
+        if (includeTrace && this.innerStack) {
+            parts.push(`innerStack:\n${this.innerStack}`);
+        }
+        return parts.join('\n');
     }
 }
 

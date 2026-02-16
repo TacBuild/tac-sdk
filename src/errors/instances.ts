@@ -63,8 +63,50 @@ export const prepareMessageGroupError = (isBocSizeValid: boolean, isDepthValid: 
 
 export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 116);
 
-export const allEndpointsFailedError = (inner: unknown) =>
-    new FetchError('All endpoints failed, last err: ' + (inner as Error).message, 117, inner);
+function buildInnerErrorSummary(inner: unknown): string {
+    if (inner && typeof inner === 'object') {
+        const err = inner as {
+            errorCode?: unknown;
+            message?: unknown;
+            name?: unknown;
+            status?: unknown;
+            response?: { status?: unknown };
+        };
+        const parts: string[] = [];
+        const httpStatus =
+            typeof err.status === 'number'
+                ? err.status
+                : typeof err.response?.status === 'number'
+                  ? err.response.status
+                  : undefined;
+        if (typeof httpStatus === 'number') {
+            parts.push(`httpStatus=${httpStatus}`);
+        }
+        if (typeof err.errorCode === 'number') {
+            parts.push(`code=${err.errorCode}`);
+        }
+        if (typeof err.name === 'string' && err.name.length > 0) {
+            parts.push(`name=${err.name}`);
+        }
+        if (typeof err.message === 'string' && err.message.length > 0) {
+            parts.push(`message=${err.message}`);
+        }
+        if (parts.length > 0) {
+            return parts.join(', ');
+        }
+    }
+
+    if (typeof inner === 'string' && inner.length > 0) {
+        return `message=${inner}`;
+    }
+
+    return 'message=unknown error';
+}
+
+export const allEndpointsFailedError = (inner: unknown, includeInnerStack = false) =>
+    new FetchError(`All endpoints failed, last err: ${buildInnerErrorSummary(inner)}`, 117, inner, {
+        includeInnerStack,
+    });
 
 export const allContractOpenerFailedError = (inner: unknown) =>
     new FetchError('All contract opener failed', 118, inner);

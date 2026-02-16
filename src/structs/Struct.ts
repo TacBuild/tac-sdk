@@ -99,6 +99,12 @@ export type SDKParams = {
      * URLs of lite sequencers
      */
     customLiteSequencerEndpoints?: string[];
+
+    /**
+     * Whether SDK logger should be passed to TON contract opener(s).
+     * Default: true
+     */
+    passLoggerToOpeners?: boolean;
 };
 
 export enum AssetType {
@@ -443,6 +449,11 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
      * Receives both the result and optional context with additional parameters
      */
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
+    /**
+     * Include underlying error stack trace in FetchError (innerStack)
+     * @default false
+     */
+    includeErrorTrace?: boolean;
 }
 
 export const defaultWaitOptions: WaitOptions = {

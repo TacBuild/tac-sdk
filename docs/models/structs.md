@@ -103,6 +103,7 @@ export type SDKParams = {
     TACParams?: TACParams;
     TONParams?: TONParams;
     customLiteSequencerEndpoints?: string[];
+    passLoggerToOpeners?: boolean;
 }
 ```
 
@@ -112,6 +113,7 @@ Parameters for SDK:
 - **`TACParams`** *(optional)*: Custom parameters for TAC side
 - **`TONParams`** *(optional)*: Custom parameters for TON side
 - **`customLiteSequencerEndpoints`** *(optional)*: Custom lite sequencer endpoints for API access.
+- **`passLoggerToOpeners`** *(optional, default: `true`)*: Controls whether the logger passed to `TacSdk.create` is propagated to TON `contractOpener`(s). Set `false` to keep SDK-level logs while keeping openers silent.
 
 ### `TONParams (Type)`
 ```typescript
@@ -1246,6 +1248,7 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
     context?: TContext;
     successCheck?: (result: T, context?: TContext) => boolean;
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
+    includeErrorTrace?: boolean;
 }
 ```
 
@@ -1258,6 +1261,7 @@ Allows to specify custom options for waiting for operation resolution with enhan
 - **`context`** *(optional)*: Optional context object to pass additional parameters to callbacks. This allows passing custom data like OperationTracker instances, configurations, user settings, and other dependencies without relying on closures.
 - **`successCheck`** *(optional)*: Function to check if the result is successful. Receives both the result and optional context parameter. If not provided, any non-error result is considered successful.
 - **`onSuccess`** *(optional)*: Custom callback function that executes when operation is successful. Receives both the result and optional context with additional parameters. Can be used for additional processing like profiling data retrieval. Supports both synchronous and asynchronous callbacks.
+- **`includeErrorTrace`** *(optional)*: Include underlying stack trace in `FetchError.innerStack` when all endpoints fail. Default is `false`.
 
 #### Usage Examples
 
