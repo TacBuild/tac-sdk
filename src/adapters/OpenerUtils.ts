@@ -1,9 +1,14 @@
 import { getHttpEndpoint, getHttpV4Endpoint, Network as TonNetwork } from '@orbs-network/ton-access';
 
+import { DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT } from '../sdk/Consts';
 import { sleep } from '../sdk/Utils';
 import { Network } from '../structs/Struct';
 
-export async function getHttpEndpointWithRetry(network: Network, maxRetries = 5, delay = 1000): Promise<string> {
+export async function getHttpEndpointWithRetry(
+    network: Network,
+    maxRetries = DEFAULT_RETRY_MAX_COUNT,
+    delay = DEFAULT_RETRY_DELAY_MS,
+): Promise<string> {
     let lastError: Error | undefined;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -21,7 +26,11 @@ export async function getHttpEndpointWithRetry(network: Network, maxRetries = 5,
     throw lastError || new Error('Failed to get HTTP endpoint after retries');
 }
 
-export async function getHttpV4EndpointWithRetry(network: Network, maxRetries = 5, delay = 1000): Promise<string> {
+export async function getHttpV4EndpointWithRetry(
+    network: Network,
+    maxRetries = DEFAULT_RETRY_MAX_COUNT,
+    delay = DEFAULT_RETRY_DELAY_MS,
+): Promise<string> {
     let lastError: Error | undefined;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
