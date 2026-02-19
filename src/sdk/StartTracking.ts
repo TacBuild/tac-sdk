@@ -1,13 +1,13 @@
 import { ContractOpener, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
-import { ExecutionStages, Network, OperationType, TransactionLinker } from '../structs/Struct';
+import { ExecutionStages, Network, OperationType, TransactionLinkerWithOperationId } from '../structs/Struct';
 import { DEFAULT_FIND_TX_MAX_DEPTH, MAX_ITERATION_COUNT } from './Consts';
 import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
 
 export async function startTracking(
-    transactionLinker: TransactionLinker,
+    transactionLinker: TransactionLinkerWithOperationId,
     network: Network,
     options?: {
         customLiteSequencerEndpoints?: string[];
@@ -43,7 +43,7 @@ export async function startTracking(
             `timestamp: ${transactionLinker.timestamp}`,
     );
 
-    let operationId = '';
+    let operationId = transactionLinker.operationId ?? '';
     let iteration = 0; // number of iterations
     let operationType = '';
     let ok = true; // finished successfully
@@ -62,7 +62,8 @@ export async function startTracking(
 
             try {
                 operationId = await tracker.getOperationId(transactionLinker);
-            } catch {
+            } catch (err) {
+                logger.debug('failed to get operationId: ' + err);
                 // Ignore error and continue
             }
         } else {
@@ -136,7 +137,7 @@ export async function startTracking(
 }
 
 export async function startTrackingMultiple(
-    transactionLinkers: TransactionLinker[],
+    transactionLinkers: TransactionLinkerWithOperationId[],
     network: Network,
     options?: {
         customLiteSequencerEndpoints?: string[];

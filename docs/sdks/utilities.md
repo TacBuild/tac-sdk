@@ -2,7 +2,7 @@
 
 ```ts
 startTracking(
-  transactionLinker: TransactionLinker,
+  transactionLinker: TransactionLinkerWithOperationId,
   network: Network,
   options?: {
     customLiteSequencerEndpoints?: string[];
@@ -23,7 +23,7 @@ It will continue until a final state (success or failure) is reached.
 If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` and `cclAddress` are provided, the finalizer will be used to verify the final TON transaction(s) for success.
 
 #### Parameters:
-- `transactionLinker`: Result of `sendCrossChainTransaction(...)`
+- `transactionLinker`: Result of `sendCrossChainTransaction(...)`. If `operationId` is already set, `startTracking` will use it and skip `getOperationId(...)` request.
 - `network`: `Network.TESTNET` or `Network.MAINNET`
 - `options` *(optional)*:
   - `customLiteSequencerEndpoints`: override default sequencer URL
@@ -63,7 +63,7 @@ await startTracking(transactionLinker, Network.TESTNET, {
 
 ```ts
 startTrackingMultiple(
-  transactionLinkers: TransactionLinker[],
+  transactionLinkers: TransactionLinkerWithOperationId[],
   network: Network,
   options?: {
     customLiteSequencerEndpoints?: string[];
@@ -83,7 +83,7 @@ Each operation will be tracked until it reaches a final state (success or failur
 If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` is provided, the finalizer will be used to verify the final TON transaction(s) for success.
 
 #### Parameters:
-- `transactionLinkers`: Array of results from `sendCrossChainTransaction(...)`
+- `transactionLinkers`: Array of results from `sendCrossChainTransaction(...)`. If an item already has `operationId`, it will be used directly.
 - `network`: `Network.TESTNET` or `Network.MAINNET`
 - `options` *(optional)*:
   - `customLiteSequencerEndpoints`: override default sequencer URL
