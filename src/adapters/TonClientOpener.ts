@@ -1,17 +1,27 @@
-import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/ton';
+import { getHttpEndpoint, Network as TonNetwork } from '@orbs-network/ton-access';
+import { Address, Contract, OpenedContract, TonClient, TonClient4, Transaction } from '@ton/ton';
 
 import { ILogger } from '../interfaces';
 import { AxiosHttpClient } from '../sdk/AxiosHttpClient';
-import { DEFAULT_FIND_TX_LIMIT, DEFAULT_HTTP_CLIENT_TIMEOUT_MS } from '../sdk/Consts';
+import {
+    DEFAULT_FIND_TX_LIMIT,
+    DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
+    DEFAULT_RETRY_DELAY_MS,
+    DEFAULT_RETRY_MAX_COUNT,
+} from '../sdk/Consts';
 import { normalizeHashToBase64 } from '../sdk/Utils';
 import { AddressInformation, ContractState, GetTransactionsOptions, Network } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
 import { getHttpEndpointWithRetry } from './OpenerUtils';
+import { TonClient4Opener } from './TonClient4Opener';
 
 export class TonClientOpener extends BaseContractOpener {
     private readonly httpClient: AxiosHttpClient;
 
-    constructor(private readonly client: TonClient, logger?: ILogger) {
+    constructor(
+        private readonly client: TonClient,
+        logger?: ILogger,
+    ) {
         super(logger);
         this.httpClient = new AxiosHttpClient({ timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS });
     }
@@ -79,7 +89,20 @@ export function tonClientOpener(client: TonClient, logger?: ILogger): TonClientO
 }
 
 export async function orbsOpener(network: Network, logger?: ILogger): Promise<TonClientOpener> {
-    const endpoint = await getHttpEndpointWithRetry(network);
+    const tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
+    const endpoint = await getHttpEndpoint({ network: tonNetwork });
     const client = new TonClient({ endpoint, timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS });
     return new TonClientOpener(client, logger);
+}
+
+export async function getOrbsOpenerWithRetry(
+    network: Network,
+    timeout = DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
+    logger?: ILogger,
+    maxRetries = DEFAULT_RETRY_MAX_COUNT,
+    delay = DEFAULT_RETRY_DELAY_MS,
+): Promise<TonClient4Opener> {
+    const endpoint = await getHttpEndpointWithRetry(network, maxRetries, delay);
+    const client = new TonClient4({ endpoint, timeout });
+    return new TonClient4Opener(client, logger);
 }

@@ -1,7 +1,8 @@
+import { getHttpV4Endpoint, Network as TonNetwork } from '@orbs-network/ton-access';
 import { Address, Contract, OpenedContract, TonClient4, Transaction } from '@ton/ton';
 
 import { ILogger } from '../interfaces';
-import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS } from '../sdk/Consts';
+import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS, DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT } from '../sdk/Consts';
 import { AddressInformation, ContractState, GetTransactionsOptions, Network } from '../structs/Struct';
 import { BaseContractOpener } from './BaseContractOpener';
 import { getHttpV4EndpointWithRetry } from './OpenerUtils';
@@ -102,7 +103,20 @@ export async function orbsOpener4(
     timeout = DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
     logger?: ILogger,
 ): Promise<TonClient4Opener> {
-    const endpoint = await getHttpV4EndpointWithRetry(network);
+    const tonNetwork: TonNetwork = network === Network.MAINNET ? 'mainnet' : 'testnet';
+    const endpoint = await getHttpV4Endpoint({ network: tonNetwork });
+    const client = new TonClient4({ endpoint, timeout });
+    return new TonClient4Opener(client, logger);
+}
+
+export async function getOrbsOpener4WithRetry(
+    network: Network,
+    timeout = DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
+    logger?: ILogger,
+    maxRetries = DEFAULT_RETRY_MAX_COUNT,
+    delay = DEFAULT_RETRY_DELAY_MS,
+): Promise<TonClient4Opener> {
+    const endpoint = await getHttpV4EndpointWithRetry(network, maxRetries, delay);
     const client = new TonClient4({ endpoint, timeout });
     return new TonClient4Opener(client, logger);
 }
