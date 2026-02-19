@@ -262,31 +262,32 @@ export class RetryableContractOpener implements ContractOpener {
                 return { success: true, data: result.data };
             }
             lastError = result.lastError;
+            const isTransactionError = lastError instanceof TransactionError;
+            const isContractExecutionError = !!lastError && this.isContractExecutionError(lastError);
+            const shouldStopOnNonTransportError =
+                !!lastError && !!shouldFallbackOnError && !shouldFallbackOnError(lastError);
             if (lastError) {
+                const stopReason = isTransactionError
+                    ? 'TransactionError'
+                    : isContractExecutionError
+                      ? 'contract execution error'
+                      : shouldStopOnNonTransportError
+                        ? 'non-transport error'
+                        : undefined;
                 this.logger?.debug(
-                    `[RetryableContractOpener] ${operationName}: ${openerLabel} failed: ${lastError.message}`,
+                    `[RetryableContractOpener] ${operationName}: ${openerLabel} failed${
+                        stopReason ? ` (stopping fallback because of ${stopReason})` : ''
+                    }: ${lastError.message}`,
                 );
             }
-            if (lastError instanceof TransactionError) {
-                this.logger?.debug(
-                    `[RetryableContractOpener] ${operationName}: stopping fallback because of TransactionError`,
-                );
+            if (isTransactionError) {
                 return { success: false, lastError };
             }
-            if (lastError && this.isContractExecutionError(lastError)) {
-                this.logger?.debug(
-                    `[RetryableContractOpener] ${operationName}: stopping fallback because of contract execution error`,
-                );
+            if (isContractExecutionError) {
                 return { success: false, lastError };
             }
-            if (lastError && shouldFallbackOnError) {
-                const shouldFallback = shouldFallbackOnError(lastError);
-                if (!shouldFallback) {
-                    this.logger?.debug(
-                        `[RetryableContractOpener] ${operationName}: stopping fallback due to non-transport error`,
-                    );
-                    return { success: false, lastError };
-                }
+            if (shouldStopOnNonTransportError) {
+                return { success: false, lastError };
             }
         }
 
