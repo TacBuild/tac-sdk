@@ -7,6 +7,42 @@ export class ErrorWithStatusCode extends Error {
     }
 }
 
+type UnknownRecord = Record<string, unknown>;
+
+function asString(value: unknown): string | undefined {
+    return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function asNumber(value: unknown): number | undefined {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+    if (typeof value === 'string' && value.trim().length > 0) {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) {
+            return parsed;
+        }
+    }
+    return undefined;
+}
+
+function extractResponseMessage(responseData: unknown): string | undefined {
+    if (typeof responseData === 'string' && responseData.length > 0) {
+        return responseData;
+    }
+
+    const data = responseData as UnknownRecord | undefined;
+    const nestedError =
+        data?.error && typeof data.error === 'object' ? (data.error as UnknownRecord) : undefined;
+
+    return (
+        asString(data?.message) ??
+        asString(data?.error) ??
+        asString(nestedError?.message) ??
+        asString(nestedError?.error)
+    );
+}
+
 export class ContractError extends ErrorWithStatusCode {
     constructor(message: string, errorCode: number) {
         super(message, errorCode);
@@ -41,22 +77,14 @@ export class FetchError extends ErrorWithStatusCode {
                 stack?: string;
                 errorCode?: unknown;
                 status?: unknown;
-                response?: { status?: unknown };
+                response?: { status?: unknown; data?: unknown };
             };
-            if (typeof err.status === 'number') {
-                this.httpStatus = err.status;
-            } else if (typeof err.response?.status === 'number') {
-                this.httpStatus = err.response.status;
-            }
-            if (typeof err.errorCode === 'number') {
-                this.innerErrorCode = err.errorCode;
-            }
+            this.httpStatus = asNumber(err.status) ?? asNumber(err.response?.status);
+            this.innerErrorCode = asNumber(err.errorCode);
             if (typeof err.name === 'string') {
                 this.innerErrorName = err.name;
             }
-            if (typeof err.message === 'string') {
-                this.innerMessage = err.message;
-            }
+            this.innerMessage = extractResponseMessage(err.response?.data) ?? asString(err.message);
             if (options?.includeInnerStack && typeof err.stack === 'string') {
                 this.innerStack = err.stack;
             }

@@ -827,6 +827,54 @@ describe('OperationTracker', () => {
             expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to simulate TAC message');
         });
 
+        it('should include http status and response message when all endpoints fail', async () => {
+            const params = {
+                tacCallParams: {
+                    arguments: '0xabcdef',
+                    methodName: 'transfer',
+                    target: '0x1234567890123456789012345678901234567890',
+                },
+                shardsKey: '12345',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+            };
+            const error = Object.assign(
+                new Error(
+                    'failed to fetch simulate tac msg: request POST http://localhost:8090/tac/simulator/simulate-message failed to complete request',
+                ),
+                {
+                name: 'AxiosError',
+                response: {
+                    status: 422,
+                    data: {
+                        errorCode: 9001,
+                        message: 'Bad TAC payload',
+                    },
+                },
+                },
+            );
+
+            mockClients[0].simulateTACMessage.mockRejectedValue(error);
+            mockClients[1].simulateTACMessage.mockRejectedValue(error);
+
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toMatchObject({
+                errorCode: 117,
+                httpStatus: 422,
+                innerMessage: 'Bad TAC payload',
+            });
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow('httpStatus=422');
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow('httpMessage=Bad TAC payload');
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow(
+                'endpoint=http://localhost:8090/tac/simulator/simulate-message',
+            );
+        });
+
         it('should use waitUntilSuccess when wait options provided', async () => {
             const params = {
                 tacCallParams: {

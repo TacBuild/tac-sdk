@@ -63,33 +63,62 @@ export const prepareMessageGroupError = (isBocSizeValid: boolean, isDepthValid: 
 
 export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 116);
 
+function extractEndpoint(message: string): string | undefined {
+    const match = message.match(/https?:\/\/\S+/i);
+    if (!match) {
+        return undefined;
+    }
+    return match[0].replace(/[),.;]+$/, '');
+}
+
+function extractResponseMessage(data: unknown): string | undefined {
+    if (typeof data === 'string' && data.length > 0) {
+        return data;
+    }
+    if (!data || typeof data !== 'object') {
+        return undefined;
+    }
+
+    const payload = data as Record<string, unknown>;
+    if (typeof payload.message === 'string' && payload.message.length > 0) {
+        return payload.message;
+    }
+    if (typeof payload.error === 'string' && payload.error.length > 0) {
+        return payload.error;
+    }
+
+    return undefined;
+}
+
 function buildInnerErrorSummary(inner: unknown): string {
     if (inner && typeof inner === 'object') {
         const err = inner as {
-            errorCode?: unknown;
             message?: unknown;
-            name?: unknown;
+            innerMessage?: unknown;
             status?: unknown;
-            response?: { status?: unknown };
+            httpStatus?: unknown;
+            response?: {
+                status?: unknown;
+                data?: unknown;
+            };
         };
         const parts: string[] = [];
-        const httpStatus =
-            typeof err.status === 'number'
-                ? err.status
-                : typeof err.response?.status === 'number'
-                  ? err.response.status
-                  : undefined;
+        const responseMessage = extractResponseMessage(err.response?.data);
+        const httpStatus = [err.httpStatus, err.status, err.response?.status].find((value) => typeof value === 'number');
+        const httpMessage =
+            typeof err.innerMessage === 'string' && err.innerMessage.length > 0 ? err.innerMessage : responseMessage;
+
         if (typeof httpStatus === 'number') {
             parts.push(`httpStatus=${httpStatus}`);
         }
-        if (typeof err.errorCode === 'number') {
-            parts.push(`code=${err.errorCode}`);
-        }
-        if (typeof err.name === 'string' && err.name.length > 0) {
-            parts.push(`name=${err.name}`);
+        if (typeof httpMessage === 'string' && httpMessage.length > 0) {
+            parts.push(`httpMessage=${httpMessage}`);
         }
         if (typeof err.message === 'string' && err.message.length > 0) {
-            parts.push(`message=${err.message}`);
+            const endpoint = extractEndpoint(err.message);
+            if (endpoint) {
+                parts.push(`endpoint=${endpoint}`);
+            }
         }
         if (parts.length > 0) {
             return parts.join(', ');
