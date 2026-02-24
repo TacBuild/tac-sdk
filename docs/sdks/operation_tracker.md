@@ -142,12 +142,12 @@ interface WaitOptions<T = unknown, TContext = unknown> {
     timeout?: number;
     /**
      * Maximum number of attempts
-     * @default 30
+     * @default 5
      */
     maxAttempts?: number;
     /**
      * Delay between attempts in milliseconds
-     * @default 10000 (10 seconds)
+     * @default 1000 (1 second)
      */
     delay?: number;
     /**
@@ -178,6 +178,39 @@ interface WaitOptions<T = unknown, TContext = unknown> {
 }
 ```
 
+### Default Retry Behavior
+
+**When `waitOptions` is not specified (undefined):**
+All `OperationTracker` methods automatically use default retry settings:
+- `timeout`: 300000ms (5 minutes) - from `DEFAULT_TIMEOUT_MS`
+- `maxAttempts`: 5 - from `DEFAULT_RETRY_MAX_COUNT`
+- `delay`: 1000ms (1 second) - from `DEFAULT_RETRY_DELAY_MS`
+- Logger from the `OperationTracker` instance is automatically passed
+
+This ensures resilient behavior against rate limits and temporary network issues.
+
+### Disabling Retries
+
+**To disable retry behavior and use a single attempt, explicitly pass `null`:**
+
+```typescript
+// Single attempt, no retries
+await tracker.getOperationId(linker, null);
+```
+
+### Custom Retry Configuration
+
+**To customize retry behavior, pass a `WaitOptions` object:**
+
+```typescript
+// Custom retry settings
+await tracker.getOperationId(linker, {
+    maxAttempts: 5,
+    delay: 2000,
+    timeout: 60000
+});
+```
+
 ### Usage Examples
 
 For comprehensive examples and usage patterns, including detailed context parameter usage, see the [Enhanced WaitOptions Examples](../examples/enhanced-waitoptions.md) documentation.
@@ -191,7 +224,7 @@ For comprehensive examples and usage patterns, including detailed context parame
 ```ts
 getOperationId(
     transactionLinker: TransactionLinker,
-    waitOptions?: WaitOptions<string>
+    waitOptions?: WaitOptions<string> | null
 ): Promise<string>
 ```
 
@@ -199,7 +232,10 @@ Fetches the cross-chain `operationId` based on a transaction linker. Tries each 
 
 **Parameters:**
 - `transactionLinker`: Transaction linker object containing sharding information
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*:
+  - `undefined` (default): Uses default retry settings (5 attempts, 1s delay, 5min timeout)
+  - `null`: Single attempt, no retries
+  - `WaitOptions` object: Custom retry configuration
 
 **Returns:** Operation ID string (empty string if not found)
 

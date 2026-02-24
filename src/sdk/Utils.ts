@@ -13,6 +13,7 @@ import {
     AssetFromNFTItemArg,
     AssetLike,
     AssetType,
+    defaultWaitOptions,
     EvmProxyMsg,
     FeeParams,
     NFTAddressType,
@@ -176,9 +177,9 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
     operationDescription?: string,
     ...args: A
 ): Promise<T> {
-    const timeout = options.timeout ?? 300000;
-    const maxAttempts = options.maxAttempts ?? 30;
-    const delay = options.delay ?? 10000;
+    const timeout = options.timeout ?? defaultWaitOptions.timeout!;
+    const maxAttempts = options.maxAttempts ?? defaultWaitOptions.maxAttempts!;
+    const delay = options.delay ?? defaultWaitOptions.delay!;
     const successCheck = options.successCheck;
     const context = options.context;
 

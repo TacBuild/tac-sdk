@@ -5,6 +5,7 @@ import { AbstractProvider } from 'ethers';
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
+import { DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT, DEFAULT_TIMEOUT_MS } from '../sdk/Consts';
 import { SendResult } from './InternalStruct';
 
 export type ContractState = {
@@ -417,17 +418,17 @@ export type BatchCrossChainTxWithAssetLike = Omit<BatchCrossChainTx, 'assets'> &
 export interface WaitOptions<T = unknown, TContext = unknown> {
     /**
      * Timeout in milliseconds
-     * @default 300000 (5 minutes)
+     * @default 30000 (5 minutes)
      */
     timeout?: number;
     /**
      * Maximum number of attempts
-     * @default 30
+     * @default 10
      */
     maxAttempts?: number;
     /**
      * Delay between attempts in milliseconds
-     * @default 10000 (10 seconds)
+     * @default 1000 (1 seconds)
      */
     delay?: number;
     /**
@@ -457,9 +458,9 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
 }
 
 export const defaultWaitOptions: WaitOptions = {
-    timeout: 300000,
-    maxAttempts: 30,
-    delay: 10000,
+    timeout: DEFAULT_TIMEOUT_MS,
+    maxAttempts: DEFAULT_RETRY_MAX_COUNT,
+    delay: DEFAULT_RETRY_DELAY_MS,
 };
 
 export enum Origin {
