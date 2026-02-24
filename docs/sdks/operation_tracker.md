@@ -142,12 +142,12 @@ interface WaitOptions<T = unknown, TContext = unknown> {
     timeout?: number;
     /**
      * Maximum number of attempts
-     * @default 5
+     * @default 30
      */
     maxAttempts?: number;
     /**
      * Delay between attempts in milliseconds
-     * @default 1000 (1 second)
+     * @default 10000 (10 seconds)
      */
     delay?: number;
     /**
@@ -182,9 +182,9 @@ interface WaitOptions<T = unknown, TContext = unknown> {
 
 **When `waitOptions` is not specified (undefined):**
 All `OperationTracker` methods automatically use default retry settings:
-- `timeout`: 300000ms (5 minutes) - from `DEFAULT_TIMEOUT_MS`
-- `maxAttempts`: 5 - from `DEFAULT_RETRY_MAX_COUNT`
-- `delay`: 1000ms (1 second) - from `DEFAULT_RETRY_DELAY_MS`
+- `timeout`: 300000ms (5 minutes) - from `DEFAULT_WAIT_TIMEOUT_MS`
+- `maxAttempts`: 30 - from `DEFAULT_WAIT_MAX_ATTEMPTS`
+- `delay`: 10000ms (10 seconds) - from `DEFAULT_WAIT_DELAY_MS`
 - Logger from the `OperationTracker` instance is automatically passed
 
 This ensures resilient behavior against rate limits and temporary network issues.
@@ -233,7 +233,7 @@ Fetches the cross-chain `operationId` based on a transaction linker. Tries each 
 **Parameters:**
 - `transactionLinker`: Transaction linker object containing sharding information
 - `waitOptions` *(optional)*:
-  - `undefined` (default): Uses default retry settings (5 attempts, 1s delay, 5min timeout)
+  - `undefined` (default): Uses default retry settings (30 attempts, 10s delay, 5min timeout)
   - `null`: Single attempt, no retries
   - `WaitOptions` object: Custom retry configuration
 

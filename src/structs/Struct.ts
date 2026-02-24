@@ -5,7 +5,7 @@ import { AbstractProvider } from 'ethers';
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
-import { DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT, DEFAULT_TIMEOUT_MS } from '../sdk/Consts';
+import { DEFAULT_WAIT_DELAY_MS, DEFAULT_WAIT_MAX_ATTEMPTS, DEFAULT_WAIT_TIMEOUT_MS } from '../sdk/Consts';
 import { SendResult } from './InternalStruct';
 
 export type ContractState = {
@@ -458,9 +458,9 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
 }
 
 export const defaultWaitOptions: WaitOptions = {
-    timeout: DEFAULT_TIMEOUT_MS,
-    maxAttempts: DEFAULT_RETRY_MAX_COUNT,
-    delay: DEFAULT_RETRY_DELAY_MS,
+    timeout: DEFAULT_WAIT_TIMEOUT_MS,
+    maxAttempts: DEFAULT_WAIT_MAX_ATTEMPTS,
+    delay: DEFAULT_WAIT_DELAY_MS,
 };
 
 export enum Origin {
@@ -586,11 +586,23 @@ export type TrackTransactionTreeParams = {
     direction?: 'forward' | 'backward' | 'both';
 
     /**
-     * Internal option: wait for the root transaction to appear before failing with `not_found`.
-     * Useful right after sending a message when transaction indexing is eventually consistent.
+     * Retry transaction lookup when `not_found` error occurs.
+     * Useful when transaction indexing has delays or when transactions appear gradually.
      * @default true
      */
-    waitForRootTransaction?: boolean;
+    retryOnNotFound?: boolean;
+
+    /**
+     * Delay in milliseconds between retry attempts for transaction lookup
+     * @default 5000
+     */
+    retryDelayMs?: number;
+
+    /**
+     * Number of retry attempts for transaction lookup
+     * @default 10
+     */
+    retries?: number;
 };
 
 /**
@@ -670,6 +682,8 @@ export type GetTransactionsOptions = {
     timeoutMs?: number;
     /** Delay between retry attempts in milliseconds */
     retryDelayMs?: number;
+    /** Number of retry attempts */
+    retries?: number;
     /** Internal scan guard: maximum transactions to inspect while traversing history */
     maxScannedTransactions?: number;
 };

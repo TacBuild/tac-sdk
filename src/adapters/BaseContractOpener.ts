@@ -8,9 +8,9 @@ import {
     DEFAULT_FIND_TX_LIMIT,
     DEFAULT_FIND_TX_MAX_DEPTH,
     DEFAULT_MAX_SCANNED_TRANSACTIONS,
-    DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
-    DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS,
-    DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS,
+    DEFAULT_RETRY_ON_NOT_FOUND,
+    DEFAULT_RETRY_ON_NOT_FOUND_DELAY_MS,
+    DEFAULT_RETRY_ON_NOT_FOUND_RETRIES,
     IGNORE_MSG_VALUE_1_NANO,
     IGNORE_OPCODE,
 } from '../sdk/Consts';
@@ -390,67 +390,42 @@ export abstract class BaseContractOpener implements ContractOpener {
     }
 
     /**
-     * Retry lookup for root transaction because it may appear in indexers with a delay.
+     * Find transaction with retry logic
      */
-    private async findRootTransactionWithRetry(
+    private async findTransactionWithRetry(
         address: Address,
         hash: string,
         hashType: 'unknown' | 'in' | 'out' | undefined,
-        limit: number,
-        maxScannedTransactions: number,
-        waitForRootTransaction: boolean,
+        opts: GetTransactionsOptions,
+        depth: number,
     ): Promise<Transaction | null> {
-        if (!waitForRootTransaction) {
-            return this.findTransactionByHashType(address, hash, hashType, {
-                limit,
-                archival: true,
-                maxScannedTransactions,
-            });
-        }
+        const retryDelayMs = opts.retryDelayMs ?? DEFAULT_RETRY_ON_NOT_FOUND_DELAY_MS;
+        const maxRetries = opts.retries ?? DEFAULT_RETRY_ON_NOT_FOUND_RETRIES;
 
-        const attempts = Math.ceil(
-            DEFAULT_WAIT_FOR_ROOT_TRANSACTION_TIMEOUT_MS / DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS,
-        );
-        const broadSearchOpts: GetTransactionsOptions = { limit, archival: true, maxScannedTransactions };
-        const baselineInfo = await this.getAddressInformation(address);
-        let seenLt: string | undefined = baselineInfo.lastTransaction.lt || undefined;
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            let errorMsg: string | undefined;
 
-        // Capture baseline before first search.
-        const firstTx = await this.findTransactionByHashType(address, hash, hashType, broadSearchOpts);
-        if (firstTx) {
-            this.logger?.debug(`Root transaction found on attempt 1/${attempts}`);
-            return firstTx;
-        }
-        this.logger?.debug(
-            `Root transaction not found yet (attempt 1/${attempts}), retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
-        );
-        await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
-
-        for (let attempt = 2; attempt <= attempts; attempt++) {
-            const info = await this.getAddressInformation(address);
-            const currentLt = info.lastTransaction.lt || undefined;
-
-            if (!currentLt || currentLt === seenLt) {
-                this.logger?.debug(
-                    `Root transaction not found yet (attempt ${attempt}/${attempts}), lastTx unchanged, retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
-                );
-                await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
-                continue;
+            try {
+                const tx = await this.findTransactionByHashType(address, hash, hashType, opts);
+                if (tx) {
+                    return tx;
+                }
+            } catch (error) {
+                errorMsg = error instanceof Error ? error.message : String(error);
             }
 
-            seenLt = currentLt;
-            const tx = await this.findTransactionByHashType(address, hash, hashType, broadSearchOpts);
-            if (tx) {
-                this.logger?.debug(`Root transaction found on attempt ${attempt}/${attempts}`);
-                return tx;
+            const isLastAttempt = attempt >= maxRetries;
+            const reason = errorMsg ?? 'not found';
+            const retryInfo = isLastAttempt ? '' : `, retrying in ${retryDelayMs}ms`;
+            this.logger?.debug(`Transaction not found at depth ${depth} (attempt ${attempt + 1}/${maxRetries + 1}): ${reason}${retryInfo}`);
+
+            if (isLastAttempt) {
+                return null;
             }
-            this.logger?.debug(
-                `Root transaction not found yet (attempt ${attempt}/${attempts}), retrying in ${DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS}ms`,
-            );
-            await sleep(DEFAULT_WAIT_FOR_ROOT_TRANSACTION_RETRY_DELAY_MS);
+
+            await sleep(retryDelayMs);
         }
 
-        this.logger?.debug(`Root transaction not found after ${attempts} attempts`);
         return null;
     }
 
@@ -465,7 +440,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             ignoreOpcodeList: IGNORE_OPCODE,
             limit: DEFAULT_FIND_TX_LIMIT,
             direction: 'both',
-            waitForRootTransaction: DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
+            retryOnNotFound: DEFAULT_RETRY_ON_NOT_FOUND,
         },
     ): Promise<void> {
         const result = await this.trackTransactionTreeWithResult(address, hash, params);
@@ -478,9 +453,13 @@ export abstract class BaseContractOpener implements ContractOpener {
                 reason === 'not_found'
                     ? ` address=${errorAddress ?? 'unknown'} hashType=${hashType ?? 'unknown'}`
                     : '';
-            throw txFinalizationError(
-                `${txHash}: reason=${reason} (exitCode=${exitCode}, resultCode=${resultCode})${context}`,
-            );
+            const message = `${txHash}: reason=${reason} (exitCode=${exitCode}, resultCode=${resultCode})${context}`;
+
+            if (reason === 'not_found') {
+                throw new Error(message);
+            } else {
+                throw txFinalizationError(message);
+            }
         }
     }
 
@@ -495,7 +474,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             ignoreOpcodeList: IGNORE_OPCODE,
             limit: DEFAULT_FIND_TX_LIMIT,
             direction: 'both',
-            waitForRootTransaction: DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
+            retryOnNotFound: DEFAULT_RETRY_ON_NOT_FOUND,
         },
     ): Promise<TrackTransactionTreeResult> {
         const {
@@ -504,14 +483,22 @@ export abstract class BaseContractOpener implements ContractOpener {
             limit = DEFAULT_FIND_TX_LIMIT,
             maxScannedTransactions = DEFAULT_MAX_SCANNED_TRANSACTIONS,
             direction = 'both',
-            waitForRootTransaction = DEFAULT_WAIT_FOR_ROOT_TRANSACTION,
+            retryOnNotFound = DEFAULT_RETRY_ON_NOT_FOUND,
+            retryDelayMs,
+            retries,
         } = params;
         const parsedAddress = Address.parse(address);
         const normalizedRootHash = normalizeHashToBase64(hash);
         const visitedSearchKeys = new Set<string>();
         const processedTxHashes = new Set<string>();
         let checkedCount = 0;
-        const searchOpts: GetTransactionsOptions = { limit, archival: true, maxScannedTransactions };
+        const searchOpts: GetTransactionsOptions = {
+            limit,
+            archival: true,
+            maxScannedTransactions,
+            retryDelayMs,
+            retries,
+        };
         const queue: TransactionDepth[] = [
             { address: parsedAddress, hash: normalizedRootHash, depth: 0, hashType: 'unknown' },
         ];
@@ -523,17 +510,9 @@ export abstract class BaseContractOpener implements ContractOpener {
             if (visitedSearchKeys.has(visitedKey)) continue;
             visitedSearchKeys.add(visitedKey);
 
-            const tx =
-                currentDepth === 0
-                    ? await this.findRootTransactionWithRetry(
-                          currentAddress!,
-                          currentHash,
-                          hashType,
-                          limit,
-                          maxScannedTransactions,
-                          waitForRootTransaction,
-                      )
-                    : await this.findTransactionByHashType(currentAddress!, currentHash, hashType, searchOpts);
+            const tx = retryOnNotFound
+                ? await this.findTransactionWithRetry(currentAddress!, currentHash, hashType, searchOpts, currentDepth)
+                : await this.findTransactionByHashType(currentAddress!, currentHash, hashType, searchOpts);
 
             if (!tx) {
                 this.logger?.debug(

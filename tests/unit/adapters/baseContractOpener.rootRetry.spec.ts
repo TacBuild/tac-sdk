@@ -1,8 +1,8 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, Contract, OpenedContract, Transaction } from '@ton/ton';
 
-import { BaseContractOpener } from '../../../src/adapters/BaseContractOpener';
-import { AddressInformation, ContractState, GetTransactionsOptions } from '../../../src/structs/Struct';
+import { BaseContractOpener } from '../../../src';
+import { AddressInformation, ContractState, GetTransactionsOptions } from '../../../src';
 
 jest.mock('../../../src/sdk/Utils', () => {
     const actual = jest.requireActual('../../../src/sdk/Utils');
@@ -60,16 +60,17 @@ describe('BaseContractOpener root retry strategy', () => {
         opener: RootRetryTestOpener,
         hash: string,
     ): Promise<Transaction | null> => {
-        const fn = Reflect.get(opener as object, 'findRootTransactionWithRetry') as (
+        const fn = Reflect.get(opener as object, 'findTransactionWithRetry') as (
             address: Address,
             hash: string,
             hashType: 'unknown' | 'in' | 'out' | undefined,
             limit: number,
             maxScannedTransactions: number,
-            waitForRootTransaction: boolean,
+            retryOnNotFound: boolean,
+            depth: number,
         ) => Promise<Transaction | null>;
 
-        return fn.call(opener, address, hash, 'unknown', 10, 100, true);
+        return fn.call(opener, address, hash, 'unknown', 10, 100, true, 0);
     };
 
     it('captures baseline then searches immediately on first attempt', async () => {

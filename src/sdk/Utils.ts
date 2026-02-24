@@ -185,9 +185,6 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
 
     const contextPrefix = operationDescription ? `[${operationDescription}] ` : '';
 
-    options.logger?.debug(
-        `${contextPrefix}Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`,
-    );
     const startTime = Date.now();
     let attempt = 1;
 
@@ -202,9 +199,9 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
             if (successCheck && !successCheck(result, context)) {
                 throw new Error(`Result is not successful: ${formatObjectForLogging(result)}`);
             }
-            options.logger?.debug(`${contextPrefix}Attempt ${attempt} successful`);
 
-            // Execute custom onSuccess callback if provided
+            options.logger?.debug(`${contextPrefix}Success (attempt ${attempt}/${maxAttempts})`);
+
             if (options.onSuccess) {
                 try {
                     await options.onSuccess(result, context);
@@ -228,8 +225,12 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
             if (pendingMessage) {
                 options.logger?.debug(`${contextPrefix}${pendingMessage}`);
             } else {
+                let errorMessage = error instanceof Error ? error.message : String(error);
+                if (errorMessage.includes('<!doctype html>') || errorMessage.includes('<html')) {
+                    errorMessage = errorMessage.replace(/<!doctype html>[\s\S]*?<\/html>/gi, '[HTML response]');
+                }
                 options.logger?.debug(
-                    `${contextPrefix}attempt=${attempt}/${maxAttempts} failed; retry_in=${delay}ms; error=${String(error)}`,
+                    `${contextPrefix}attempt=${attempt}/${maxAttempts} failed; retry_in=${delay}ms; error=${errorMessage}`,
                 );
             }
             await sleep(delay);

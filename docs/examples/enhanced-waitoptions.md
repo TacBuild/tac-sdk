@@ -9,8 +9,8 @@ The `WaitOptions` interface provides powerful callback mechanisms that allow you
 ```typescript
 interface WaitOptions<T = unknown, TContext = unknown> {
     timeout?: number;           // Timeout in milliseconds (default: 300000 - 5 minutes)
-    maxAttempts?: number;       // Maximum number of attempts (default: 5)
-    delay?: number;             // Delay between attempts in milliseconds (default: 1000 - 1 second)
+    maxAttempts?: number;       // Maximum number of attempts (default: 30)
+    delay?: number;             // Delay between attempts in milliseconds (default: 10000 - 10 seconds)
     logger?: ILogger;           // Logger instance
     context?: TContext;         // Optional context object for additional parameters
     successCheck?: (result: T, context?: TContext) => boolean;  // Custom success validation
@@ -21,9 +21,9 @@ interface WaitOptions<T = unknown, TContext = unknown> {
 
 **Default Values:**
 When `waitOptions` is not specified (undefined), the SDK uses default retry behavior:
-- `timeout`: 300000ms (5 minutes) - from `DEFAULT_TIMEOUT_MS`
-- `maxAttempts`: 5 - from `DEFAULT_RETRY_MAX_COUNT`
-- `delay`: 1000ms (1 second) - from `DEFAULT_RETRY_DELAY_MS`
+- `timeout`: 300000ms (5 minutes) - from `DEFAULT_WAIT_TIMEOUT_MS`
+- `maxAttempts`: 30 - from `DEFAULT_WAIT_MAX_ATTEMPTS`
+- `delay`: 10000ms (10 seconds) - from `DEFAULT_WAIT_DELAY_MS`
 
 **Disabling Retries:**
 To disable retry behavior and use a single attempt, explicitly pass `null`:
@@ -31,11 +31,11 @@ To disable retry behavior and use a single attempt, explicitly pass `null`:
 // Single attempt, no retries
 await operationTracker.getOperationId(linker, null);
 
-// Default retry behavior (5 attempts with 1s delay)
+// Default retry behavior (30 attempts with 10s delay)
 await operationTracker.getOperationId(linker);
 
-// Custom retry behavior (30 attempts with 10s delay)
-await operationTracker.getOperationId(linker, { maxAttempts: 5, delay: 2000 });
+// Custom retry behavior
+await operationTracker.getOperationId(linker, { maxAttempts: 30, delay: 2000 });
 ```
 
 ## Basic onSuccess Example
@@ -45,8 +45,8 @@ import { TacSdk, WaitOptions, Network, ConsoleLogger } from 'tac-sdk';
 
 const basicWaitOptions: WaitOptions<string> = {
     timeout: 300000,
-    maxAttempts: 5,
-    delay: 1000,
+    maxAttempts: 30,
+    delay: 10000,
     logger: new ConsoleLogger(),
     
     onSuccess: async (operationId: string) => {
@@ -93,8 +93,8 @@ const createManualTrackingWaitOptions = (
     
     return {
         timeout: 300000,
-        maxAttempts: 5,
-        delay: 1000,
+        maxAttempts: 30,
+        delay: 10000,
         logger: logger,
         context: context, // Pass context with operationTracker
         

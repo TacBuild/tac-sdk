@@ -1255,8 +1255,8 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
 Allows to specify custom options for waiting for operation resolution with enhanced callback capabilities and context parameter support.
 
 - **`timeout`** *(optional)*: Timeout in milliseconds. Default is 300000 (5 minutes).
-- **`maxAttempts`** *(optional)*: Maximum number of attempts. Default is 5.
-- **`delay`** *(optional)*: Delay between attempts in milliseconds. Default is 1000 (1 second).
+- **`maxAttempts`** *(optional)*: Maximum number of attempts. Default is 30.
+- **`delay`** *(optional)*: Delay between attempts in milliseconds. Default is 10000 (10 seconds).
 - **`logger`** *(optional)*: Logger used to output debug information during waiting.
 - **`context`** *(optional)*: Optional context object to pass additional parameters to callbacks. This allows passing custom data like OperationTracker instances, configurations, user settings, and other dependencies without relying on closures.
 - **`successCheck`** *(optional)*: Function to check if the result is successful. Receives both the result and optional context parameter. If not provided, any non-error result is considered successful.
@@ -1267,8 +1267,8 @@ Allows to specify custom options for waiting for operation resolution with enhan
 
 When `waitOptions` parameter is not specified (undefined) in methods like `OperationTracker.getOperationId()`, the SDK automatically applies default retry settings defined in `defaultWaitOptions`:
 - `timeout`: 300000ms (5 minutes)
-- `maxAttempts`: 5 - from `DEFAULT_RETRY_MAX_COUNT`
-- `delay`: 1000ms (1 second) - from `DEFAULT_RETRY_DELAY_MS`
+- `maxAttempts`: 30 - from `DEFAULT_WAIT_MAX_ATTEMPTS`
+- `delay`: 10000ms (10 seconds) - from `DEFAULT_WAIT_DELAY_MS`
 
 This ensures resilient behavior against rate limits and temporary network issues without requiring explicit configuration.
 
@@ -1280,11 +1280,11 @@ To disable retry behavior and use a single attempt, explicitly pass `null` inste
 // Single attempt, no retries
 await tracker.getOperationId(linker, null);
 
-// Default retry behavior (5 attempts with 1s delay)
+// Default retry behavior (30 attempts with 10s delay)
 await tracker.getOperationId(linker);
 
 // Custom retry behavior
-await tracker.getOperationId(linker, { maxAttempts: 30, delay: 10000 });
+await tracker.getOperationId(linker, { maxAttempts: 5, delay: 2000 });
 ```
 
 #### Usage Examples
@@ -1508,15 +1508,15 @@ The SDK exports `defaultWaitOptions` constant with the following default values:
 
 ```typescript
 export const defaultWaitOptions: WaitOptions = {
-    timeout: DEFAULT_TIMEOUT_MS,         // 300000ms = 5 minutes
-    maxAttempts: DEFAULT_RETRY_MAX_COUNT, // 5
-    delay: DEFAULT_RETRY_DELAY_MS,       // 1000ms = 1 second
+    timeout: DEFAULT_WAIT_TIMEOUT_MS,    // 300000ms = 5 minutes
+    maxAttempts: DEFAULT_WAIT_MAX_ATTEMPTS,    // 30
+    delay: DEFAULT_WAIT_DELAY_MS,       // 10000ms = 10 seconds
 };
 ```
 
 These defaults are automatically applied when `waitOptions` parameter is not specified (undefined) in methods that support retry behavior, such as all `OperationTracker` methods. This provides robust retry logic to handle rate limits and temporary network issues without explicit configuration.
 
 The underlying constants are defined in `src/sdk/Consts.ts`:
-- `DEFAULT_TIMEOUT_MS = 300000` (5 minutes)
-- `DEFAULT_RETRY_MAX_COUNT = 5`
-- `DEFAULT_RETRY_DELAY_MS = 1000` (1 second)
+- `DEFAULT_WAIT_TIMEOUT_MS = 300000` (5 minutes)
+- `DEFAULT_WAIT_MAX_ATTEMPTS = 30`
+- `DEFAULT_WAIT_DELAY_MS = 10000` (10 seconds)

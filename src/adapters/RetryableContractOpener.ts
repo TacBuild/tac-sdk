@@ -248,9 +248,7 @@ export class RetryableContractOpener implements ContractOpener {
             const config = this.openerConfigs[index];
             const openerLabel = `opener ${index + 1}/${this.openerConfigs.length}`;
             this.logger?.debug(
-                `[RetryableContractOpener] ${operationName}: trying ${openerLabel}${
-                    useRetries ? ` (max retries ${config.retries})` : ' (single attempt)'
-                }`,
+                `[RetryableContractOpener] ${operationName}: trying ${openerLabel}`,
             );
 
             const result = useRetries
@@ -258,7 +256,6 @@ export class RetryableContractOpener implements ContractOpener {
                 : await this.trySingleAttempt(() => operation(config));
 
             if (result.success) {
-                this.logger?.debug(`[RetryableContractOpener] ${operationName}: ${openerLabel} succeeded`);
                 return { success: true, data: result.data };
             }
             lastError = result.lastError;
@@ -321,7 +318,7 @@ export class RetryableContractOpener implements ContractOpener {
                 }
                 if (attempt < config.retries) {
                     this.logger?.debug(
-                        `[RetryableContractOpener] ${operationContext}: attempt ${attempt + 1}/${config.retries + 1} failed, retrying in ${config.retryDelay}ms`,
+                        `[RetryableContractOpener] ${operationContext}: attempt ${attempt + 1}/${config.retries + 1} failed (${lastError.message}), retrying in ${config.retryDelay}ms`,
                     );
                     await sleep(config.retryDelay);
                 }

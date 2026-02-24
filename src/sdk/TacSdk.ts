@@ -108,7 +108,7 @@ export class TacSdk implements ITacSDK {
             passLoggerToOpeners,
         );
 
-        const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints);
+        const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints, logger);
         const explorerClient = new TacExplorerClient(artifacts.TAC_EXPLORER_API_ENDPOINT);
         const simulator = new Simulator(config, operationTracker, logger);
         const tonTransactionManager = new TONTransactionManager(config, simulator, operationTracker, logger);

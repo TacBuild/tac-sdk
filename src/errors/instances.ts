@@ -71,8 +71,12 @@ function extractEndpoint(message: string): string | undefined {
     return match[0].replace(/[),.;]+$/, '');
 }
 
-function extractResponseMessage(data: unknown): string | undefined {
+function extractResponseMessage(data: unknown, includeFullTrace: boolean): string | undefined {
     if (typeof data === 'string' && data.length > 0) {
+        const isHtml = data.includes('<!doctype html>') || data.includes('<html');
+        if (isHtml && !includeFullTrace) {
+            return '[HTML response]';
+        }
         return data;
     }
     if (!data || typeof data !== 'object') {
@@ -90,7 +94,7 @@ function extractResponseMessage(data: unknown): string | undefined {
     return undefined;
 }
 
-function buildInnerErrorSummary(inner: unknown): string {
+function buildInnerErrorSummary(inner: unknown, includeFullTrace: boolean): string {
     if (inner && typeof inner === 'object') {
         const err = inner as {
             message?: unknown;
@@ -103,7 +107,7 @@ function buildInnerErrorSummary(inner: unknown): string {
             };
         };
         const parts: string[] = [];
-        const responseMessage = extractResponseMessage(err.response?.data);
+        const responseMessage = extractResponseMessage(err.response?.data, includeFullTrace);
         const httpStatus = [err.httpStatus, err.status, err.response?.status].find((value) => typeof value === 'number');
         const httpMessage =
             typeof err.innerMessage === 'string' && err.innerMessage.length > 0 ? err.innerMessage : responseMessage;
@@ -133,7 +137,7 @@ function buildInnerErrorSummary(inner: unknown): string {
 }
 
 export const allEndpointsFailedError = (inner: unknown, includeInnerStack = false) =>
-    new FetchError(`All endpoints failed, last err: ${buildInnerErrorSummary(inner)}`, 117, inner, {
+    new FetchError(`All endpoints failed, last err: ${buildInnerErrorSummary(inner, includeInnerStack)}`, 117, inner, {
         includeInnerStack,
     });
 
