@@ -50,7 +50,7 @@
     ],
     "scripts": {
         "litebuild": "rm -rf dist && tsc --declaration",
-        "build": "rm -rf dist && npm run build:artifacts && tsc --declaration",
+        "build": "bash build.sh",
         "build:artifacts:tac:dev": "cd artifacts/dev/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",
         "build:artifacts:ton:dev": "cd artifacts/dev/l1_tvm_ton && npm i && npm run compile:ts && npm run build:all && rsync -avh --delete ./build ./wrappers ../ton/internal/",
         "build:artifacts:tac:testnet": "cd artifacts/testnet/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",
