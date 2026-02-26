@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.7.2] - 2026-02-26
 
 ### Added
 - TEP-526 support for scaled UI in FT tokens with display multiplier functionality (display multiplier caching with 5-minute TTL for FT assets)
