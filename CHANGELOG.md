@@ -5,66 +5,34 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- TEP-526 support for scaled UI in FT tokens with display multiplier functionality.
-- Display multiplier caching with 5-minute TTL for FT assets.
-- New fee module with comprehensive fee calculation utilities and contract usage parameters for all contracts.
+- TEP-526 support for scaled UI in FT tokens with display multiplier functionality (display multiplier caching with 5-minute TTL for FT assets)
 - Fee parameter constants and factory functions for transaction fee calculation steps.
 - Automatic TON blockchain fee parameters retrieval from network config with fallback to standard values.
-- `TONFeesParams` structure in configuration for storing blockchain fee parameters.
-- New methods in `ITONTransactionManager`:
-  - `buildFeeParams()`: Builds fee parameters for cross-chain transactions.
-  - `prepareCrossChainTransactionPayload()`: Prepares transaction payloads without sending them.
 - Enhanced transaction tracking with failure case handling and track params.
-- Transaction linker support for preparing cross-chain payloads.
-- `startTracking` function now exported from SDK for external use.
-- Transaction finalizer v3 with simplified architecture.
-- Gas price calculation for error chain scenarios.
+- TacSdk support for preparing cross-chain payloads.
 - New `TacExplorerClient` class for interacting with TAC Explorer API.
-- New structures for TAC gas price data:
-  - `TacGasPrice`: Represents gas prices at different priority levels.
-- `BaseContractOpener` abstract class with common implementation for all contract openers.
 - `getTransactions()` method added to `ContractOpener` interface for standardized transaction fetching.
-- Shared utility functions in `OpenerUtils.ts`:
-  - `getHttpEndpointWithRetry()`: Unified HTTP endpoint retrieval with retry logic.
-  - `getHttpV4EndpointWithRetry()`: Unified HTTP V4 endpoint retrieval with retry logic.
 
 ### Changed
-- FT `withAmount` and `addAmount` methods now automatically apply TEP-526 scaling when supported by token.
-- Updated FT class to fetch and cache display multiplier on token initialization.
-- Enhanced Asset interface documentation with TEP-526 scaling behavior notes.
 - `Configuration` class now retrieves and stores TON fee parameters during initialization.
 - Refactored transaction finalization logic for improved speed and reliability.
-- Transaction hash calculation fixes and improvements.
-- Improved transaction tracking to work with updated hash calculation.
-- TonClient opener fixes for improved stability.
-- **Major refactoring of ContractOpener architecture**:
+- Refactoring of ContractOpener architecture:
   - All openers converted to class-based implementations extending `BaseContractOpener`:
-    - `TonClientOpener`: Direct TonClient wrapper.
-    - `OrbsOpener`: Orbs TonClient implementation.
-    - `OrbsOpener4`: Orbs TonClient4 implementation.
+    - `TonClientOpener`: TonClient implementation.
+    - `TonClient4Opener`: TonClient4 implementation.
     - `LiteClientOpener`: LiteClient implementation with connection management.
     - `SandboxOpener`: Sandbox testing implementation.
   - Eliminated code duplication by moving common logic to base class:
     - `getTransactionByHash()`: Transaction lookup with retry logic.
     - `getAdjacentTransactions()`: Child and parent transaction discovery.
     - `trackTransactionTree()`: Full transaction tree validation.
-  - Simplified helper functions - no longer require passing `ContractOpener` or callback functions.
-  - Each opener now implements only protocol-specific methods (`open`, `getContractState`, `getTransactions`, `getAddressInformation`, `getConfig`).
-- Removed `helpers.ts` file - functionality integrated into `BaseContractOpener`.
-- Moved `IGNORE_OPCODE` constant to `src/sdk/Consts.ts` for centralized configuration.
-
-### Fixed
-- Transaction tracking for complex multi-step operations.
-- Hash calculation accuracy in transaction processing.
-- Error handling for empty methodName with non-empty payload scenarios.
+  - Each opener now implements only provider-specific methods (`open`, `getContractState`, `getTransactions`, `getAddressInformation`, `getConfig`).
+  - Removed `helpers.ts` file - functionality integrated into `BaseContractOpener`.
+  - Shared utility functions in `OpenerUtils.ts`:
+    - `getHttpEndpointWithRetry()`: Unified HTTP endpoint retrieval with retry logic.
+    - `getHttpV4EndpointWithRetry()`: Unified HTTP V4 endpoint retrieval with retry logic.
 - Transaction tree validation errors now always include transaction hash, `exitCode`, and `resultCode` for better debugging.
-- ESLint warnings for explicit `any` types in `BaseContractOpener` abstract methods.
-- ESLint warnings for unused parameters in `SandboxOpener` not-implemented methods.
 
-### Documentation
-- Updated documentation for new fee calculation system.
-- Enhanced API documentation for TONTransactionManager methods.
-- Added detailed comments for fee parameters and calculation steps.
 
 ## [0.7.1] - 2025-10-02
 
