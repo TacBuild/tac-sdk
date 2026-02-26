@@ -1,10 +1,14 @@
 import { Cell, loadMessage } from '@ton/ton';
 
 import { FT, NFT, TON } from '../assets';
-import { missingFeeParamsError, missingGasLimitError, missingTvmExecutorFeeError } from '../errors';
+import {
+    insufficientFeeParamsError,
+    missingFeeParamsError,
+    missingGasLimitError,
+    missingTvmExecutorFeeError,
+} from '../errors';
 import { sendCrossChainTransactionFailedError } from '../errors/instances';
 import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator, ITONTransactionManager } from '../interfaces';
-import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import { getMockSender, type SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
 import {
@@ -44,7 +48,6 @@ export class TONTransactionManager implements ITONTransactionManager {
         private readonly simulator: ISimulator,
         private readonly operationTracker: IOperationTracker,
         private readonly logger: ILogger = new NoopLogger(),
-        private readonly txFinalizer: ITxFinalizer,
     ) {}
 
     async buildFeeParams(
@@ -53,7 +56,14 @@ export class TONTransactionManager implements ITONTransactionManager {
         sender: SenderAbstraction,
         tx: CrosschainTx,
     ): Promise<FeeParams> {
-        const { withoutSimulation, protocolFee, evmExecutorFee, tvmExecutorFee, isRoundTrip } = options;
+        const {
+            withoutSimulation,
+            protocolFee,
+            evmExecutorFee,
+            tvmExecutorFee,
+            isRoundTrip,
+            shouldValidateFees = true,
+        } = options;
 
         if (withoutSimulation) {
             if (protocolFee === undefined || evmExecutorFee === undefined) {
@@ -76,7 +86,33 @@ export class TONTransactionManager implements ITONTransactionManager {
         }
 
         const simulationResult = await this.simulator.getSimulationInfo(sender, tx);
+
         if (!evmProxyMsg.gasLimit) evmProxyMsg.gasLimit = simulationResult.feeParams.gasLimit;
+
+        const shouldValidateSuggestedFees = shouldValidateFees && (simulationResult.simulation?.simulationStatus ?? true);
+        if (shouldValidateSuggestedFees) {
+            if (protocolFee !== undefined && protocolFee < simulationResult.feeParams.protocolFee) {
+                throw insufficientFeeParamsError('protocolFee', protocolFee, simulationResult.feeParams.protocolFee);
+            }
+            if (evmExecutorFee !== undefined && evmExecutorFee < simulationResult.feeParams.evmExecutorFee) {
+                throw insufficientFeeParamsError(
+                    'evmExecutorFee',
+                    evmExecutorFee,
+                    simulationResult.feeParams.evmExecutorFee,
+                );
+            }
+            if (
+                simulationResult.feeParams.isRoundTrip &&
+                tvmExecutorFee !== undefined &&
+                tvmExecutorFee < simulationResult.feeParams.tvmExecutorFee
+            ) {
+                throw insufficientFeeParamsError(
+                    'tvmExecutorFee',
+                    tvmExecutorFee,
+                    simulationResult.feeParams.tvmExecutorFee,
+                );
+            }
+        }
 
         return {
             protocolFee: protocolFee ?? simulationResult.feeParams.protocolFee,
@@ -251,6 +287,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         );
 
         await TON.checkBalance(sender, this.config, [transaction]);
+        const shouldWaitForOperationId = tx.options?.waitOperationId ?? true;
         this.logger.debug(`Sending transaction: ${formatObjectForLogging(transactionLinker)}`);
 
         const sendTransactionResult = await sender.sendShardTransaction(
@@ -265,22 +302,19 @@ export class TONTransactionManager implements ITONTransactionManager {
             );
         }
 
-        const shouldWaitForOperationId = tx.options?.waitOperationId ?? true;
-
         if (!shouldWaitForOperationId) {
             return { sendTransactionResult, ...transactionLinker };
         }
 
-        const waitOptions = tx.options?.waitOptions ?? {
-            ensureTxExecuted: true,
-        };
+        const waitOptions = tx.options?.waitOptions ?? {};
+        const ensureTxExecuted = tx.options?.ensureTxExecuted ?? true;
 
-        if (waitOptions.ensureTxExecuted && sendTransactionResult.boc) {
+        if (ensureTxExecuted && sendTransactionResult.boc) {
             const hash = getNormalizedExtMessageHash(
                 loadMessage(Cell.fromBase64(sendTransactionResult.boc).beginParse()),
             );
             this.logger.info(`Tracking transaction tree for hash: ${hash}`);
-            await this.txFinalizer.trackTransactionTree(sender.getSenderAddress(), hash, {
+            await this.config.TONParams.contractOpener.trackTransactionTree(sender.getSenderAddress(), hash, {
                 maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
             });
             this.logger.info(`Transaction tree successful`);

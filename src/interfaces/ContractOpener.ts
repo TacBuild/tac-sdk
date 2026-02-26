@@ -1,8 +1,14 @@
 import { SandboxContract } from '@ton/sandbox';
 import type { Address, Contract, OpenedContract, Transaction } from '@ton/ton';
 
-import { AddressInformation, GetTransactionsOptions } from '../structs/InternalStruct';
-import { ContractState } from '../structs/Struct';
+import {
+    AddressInformation,
+    ContractState,
+    GetTransactionsOptions,
+    TrackTransactionTreeParams,
+    TrackTransactionTreeResult,
+} from '../structs/Struct';
+import { ILogger } from './ILogger';
 
 export interface ContractOpener {
     /**
@@ -23,8 +29,103 @@ export interface ContractOpener {
      * Closes any underlying connections if supported by the implementation.
      */
     closeConnections?: () => unknown;
+
+    /**
+     * Fetches transactions for a given address.
+     * @param address Address to fetch transactions for.
+     * @param opts Options for fetching transactions (limit, archival, etc.).
+     * @returns Promise with array of transactions.
+     */
+    getTransactions(address: Address, opts: GetTransactionsOptions): Promise<Transaction[]>;
+
+    /**
+     * Find transaction by its hash.
+     * Searches by transaction hash, and also by incoming message hash (both external-in and internal).
+     * This is a universal method that checks all possible hash types.
+     * @param address Account address where to search
+     * @param hash Transaction or message hash in any format (base64, hex)
+     * @param opts Search options (limit, pagination, etc.)
+     * @returns Transaction if found, null otherwise
+     */
     getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+
+    /**
+     * Find transaction by its transaction hash only.
+     * More efficient than getTransactionByHash if you know it's a transaction hash.
+     * @param address Account address where to search
+     * @param txHash Transaction hash in any format (base64, hex)
+     * @param opts Search options
+     * @returns Transaction if found, null otherwise
+     */
+    getTransactionByTxHash(
+        address: Address,
+        txHash: string,
+        opts?: GetTransactionsOptions,
+    ): Promise<Transaction | null>;
+
+    /**
+     * Find transaction by its incoming message hash.
+     * Useful for finding the transaction that processed a specific message.
+     * @param address Account address where to search
+     * @param msgHash Message hash in any format (base64, hex)
+     * @param opts Search options
+     * @returns Transaction if found, null otherwise
+     */
+    getTransactionByInMsgHash(
+        address: Address,
+        msgHash: string,
+        opts?: GetTransactionsOptions,
+    ): Promise<Transaction | null>;
+
+    /**
+     * Find transaction by its outgoing message hash.
+     * Useful for finding the parent transaction that sent a specific message.
+     * @param address Account address where to search
+     * @param msgHash Outgoing message hash in any format (base64, hex)
+     * @param opts Search options
+     * @returns Transaction if found, null otherwise
+     */
+    getTransactionByOutMsgHash(
+        address: Address,
+        msgHash: string,
+        opts?: GetTransactionsOptions,
+    ): Promise<Transaction | null>;
+
+    /**
+     * Get adjacent transactions (children via outgoing messages and parent via incoming message).
+     * @param address Account address
+     * @param hash Transaction or message hash in any format (base64, hex)
+     * @param opts Search options
+     * @returns Array of adjacent transactions
+     */
     getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]>;
+
     getAddressInformation(address: Address): Promise<AddressInformation>;
     getConfig(): Promise<string>;
+
+    /**
+     * Track and validate entire transaction tree starting from a root transaction.
+     * Recursively follows outgoing messages and validates all child transactions.
+     * @param address Root account address
+     * @param hash Root transaction or message hash
+     * @param params Tracking parameters (maxDepth, ignoreOpcodeList, etc.)
+     * @throws Error if any transaction in the tree failed or if a hash is not found
+     */
+    trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<void>;
+
+    /**
+     * Track and validate entire transaction tree starting from a root transaction (returns result instead of throwing).
+     * Recursively follows outgoing messages and validates all child transactions.
+     * @param address Root account address
+     * @param hash Root transaction or message hash
+     * @param params Tracking parameters (maxDepth, ignoreOpcodeList, etc.)
+     * @returns Result object with success flag and error details if validation failed or a hash was not found
+     */
+    trackTransactionTreeWithResult(
+        address: string,
+        hash: string,
+        params?: TrackTransactionTreeParams,
+    ): Promise<TrackTransactionTreeResult>;
+
+    setLogger(logger: ILogger): void;
 }

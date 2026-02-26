@@ -11,6 +11,7 @@ import { DEFAULT_CONTRACT_FEE_USAGE_PARAMS } from './Fees';
 import { NoopLogger } from './Logger';
 import { getAddressString, sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
+import { DEFAULT_RETRY_MAX_COUNT } from './Consts';
 
 export class Configuration implements IConfiguration {
     readonly network: Network;
@@ -44,9 +45,10 @@ export class Configuration implements IConfiguration {
         customLiteSequencerEndpoints?: string[],
         delay?: number,
         logger: ILogger = new NoopLogger(),
+        passLoggerToOpeners = true,
     ): Promise<Configuration> {
         const [internalTONParams, internalTACParams] = await Promise.all([
-            this.prepareTONParams(network, artifacts, TONParams, delay, logger),
+            this.prepareTONParams(network, artifacts, TONParams, delay, logger, passLoggerToOpeners),
             this.prepareTACParams(network, TACParams),
         ]);
 
@@ -69,6 +71,7 @@ export class Configuration implements IConfiguration {
         TONParams?: TONParams,
         delay?: number,
         logger: ILogger = new NoopLogger(),
+        passLoggerToOpeners = true,
     ): Promise<InternalTONParams> {
         let contractOpener;
         let settingsAddress: string;
@@ -84,9 +87,20 @@ export class Configuration implements IConfiguration {
         } else {
             contractOpener =
                 TONParams?.contractOpener ??
-                (await createDefaultRetryableOpener(artifacts.TON_RPC_ENDPOINT_BY_TAC, network, 5, delay));
+                (await createDefaultRetryableOpener(
+                    artifacts.TON_RPC_ENDPOINT_BY_TAC,
+                    network,
+                    DEFAULT_RETRY_MAX_COUNT,
+                    delay,
+                    passLoggerToOpeners ? logger : undefined,
+                ));
             settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
         }
+
+        if (passLoggerToOpeners) {
+            contractOpener.setLogger(logger);
+        }
+
         const settings = contractOpener.open(
             artifacts.ton.wrappers.Settings.createFromAddress(Address.parse(settingsAddress)),
         );

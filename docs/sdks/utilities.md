@@ -2,7 +2,7 @@
 
 ```ts
 startTracking(
-  transactionLinker: TransactionLinker,
+  transactionLinker: TransactionLinkerWithOperationId,
   network: Network,
   options?: {
     customLiteSequencerEndpoints?: string[];
@@ -23,7 +23,7 @@ It will continue until a final state (success or failure) is reached.
 If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` and `cclAddress` are provided, the finalizer will be used to verify the final TON transaction(s) for success.
 
 #### Parameters:
-- `transactionLinker`: Result of `sendCrossChainTransaction(...)`
+- `transactionLinker`: Result of `sendCrossChainTransaction(...)`. If `operationId` is already set, `startTracking` will use it and skip `getOperationId(...)` request.
 - `network`: `Network.TESTNET` or `Network.MAINNET`
 - `options` *(optional)*:
   - `customLiteSequencerEndpoints`: override default sequencer URL
@@ -40,7 +40,7 @@ If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 - `Promise<ExecutionStages>` if `returnValue` is `true`
 
 #### Possible exceptions:
-- `FetchError`: if operation status or ID could not be fetched from sequencer
+- `FetchError`: if operation status or ID could not be fetched from sequencer. Includes `errorCode`, HTTP status as `httpStatus` (when available), `innerErrorCode`, `innerMessage`, and optional `innerStack` (trace). `innerStack` is included only when `waitOptions.includeErrorTrace = true`. Use `error.toDebugString(true)` to print full details with trace.
 - `Error`: if TON transaction fails verification (when using txFinalizer)
 
 #### Example:
@@ -63,7 +63,7 @@ await startTracking(transactionLinker, Network.TESTNET, {
 
 ```ts
 startTrackingMultiple(
-  transactionLinkers: TransactionLinker[],
+  transactionLinkers: TransactionLinkerWithOperationId[],
   network: Network,
   options?: {
     customLiteSequencerEndpoints?: string[];
@@ -83,7 +83,7 @@ Each operation will be tracked until it reaches a final state (success or failur
 If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` is provided, the finalizer will be used to verify the final TON transaction(s) for success.
 
 #### Parameters:
-- `transactionLinkers`: Array of results from `sendCrossChainTransaction(...)`
+- `transactionLinkers`: Array of results from `sendCrossChainTransaction(...)`. If an item already has `operationId`, it will be used directly.
 - `network`: `Network.TESTNET` or `Network.MAINNET`
 - `options` *(optional)*:
   - `customLiteSequencerEndpoints`: override default sequencer URL
@@ -99,7 +99,7 @@ If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 - `Promise<ExecutionStages[]>` if `returnValue` is `true`
 
 #### Possible exceptions:
-- `FetchError`: if operation status or ID could not be fetched from sequencer
+- `FetchError`: if operation status or ID could not be fetched from sequencer. Includes `errorCode`, HTTP status as `httpStatus` (when available), `innerErrorCode`, `innerMessage`, and optional `innerStack` (trace). `innerStack` is included only when `waitOptions.includeErrorTrace = true`. Use `error.toDebugString(true)` to print full details with trace.
 - `Error`: if TON transaction fails verification (when using txFinalizer)
 
 #### Example:
@@ -211,8 +211,8 @@ new TonIndexerTxFinalizer(
 
 #### Methods
 - `trackTransactionTree(address: string, hash: string, maxDepth?: number): Promise<void>`
-  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` (default: 10)
-  - Throws an error if any transaction in the tree is not successful
+  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` inclusive (depth 0 is the root, default: 10)
+  - Throws an error if any transaction in the tree is not successful or if a hash is not found
 
 #### Example
 ```ts
@@ -241,10 +241,11 @@ new TonTxFinalizer(
 - `logger`: Optional logger implementing `ILogger`. Pass a `ConsoleLogger` to enable verbose output; defaults to `NoopLogger`
 
 #### Methods
-- `trackTransactionTree(address: string, hash: string, params: { maxDepth?: number }): Promise<void>`
-  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` (default: 10)
+- `trackTransactionTree(address: string, hash: string, params: { maxDepth?: number; maxScannedTransactions?: number }): Promise<void>`
+  - Traverses the transaction tree starting from the given address and hash, following outgoing transactions up to `maxDepth` inclusive (depth 0 is the root, default: 10)
+  - `maxScannedTransactions` limits hash-history scanning per lookup (default: 100)
   - Uses the `ContractOpener` to fetch adjacent transactions via `getAdjacentTransactions` method
-  - Throws an error if any transaction in the tree is not successful
+  - Throws an error if any transaction in the tree is not successful or if a hash is not found
   - Automatically retries on rate limit errors (429) and handles 404 errors gracefully
 
 #### Example
@@ -271,7 +272,7 @@ const finalizer = new TonTxFinalizer(contractOpener, new ConsoleLogger());
 await finalizer.trackTransactionTree(
   'EQB3ncyBUTjZUA5EnFKR5_EnOMI9V1tTEAAPaiU71gc4TiUt', 
   'TON_TX_HASH',
-  { maxDepth: 10 }
+  { maxDepth: 10, maxScannedTransactions: 100 }
 );
 ```
 

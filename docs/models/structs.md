@@ -14,6 +14,8 @@ This file documents the primary data structures (types and interfaces often refe
 - [`ContractState`](#contractstate-type)
 - [`ContractOpener`](#contractopener-interface)
 - [`RetryableContractOpener`](#retryablecontractopener-class)
+- [`GetTransactionsOptions`](#gettransactionsoptions-type)
+- [`AddressInformation`](#addressinformation-type)
 
 ### Crosschain Transaction
 - [`EvmProxyMsg`](#evmproxymsg-type)
@@ -26,6 +28,9 @@ This file documents the primary data structures (types and interfaces often refe
 - [`TransactionLinkerWithOperationId`](#transactionlinkerwithoperationid-type)
 - [`OperationIds`](#operationids-type)
 - [`OperationIdsByShardsKey`](#operationidsbyshardskey-type)
+- [`TrackTransactionTreeParams`](#tracktransactiontreeparams-type)
+- [`TransactionValidationError`](#transactionvalidationerror-type)
+- [`TrackTransactionTreeResult`](#tracktransactiontreeresult-type)
 
 ### Simulation Structures
 - [`TONAsset`](#tonasset)
@@ -98,6 +103,7 @@ export type SDKParams = {
     TACParams?: TACParams;
     TONParams?: TONParams;
     customLiteSequencerEndpoints?: string[];
+    passLoggerToOpeners?: boolean;
 }
 ```
 
@@ -107,6 +113,7 @@ Parameters for SDK:
 - **`TACParams`** *(optional)*: Custom parameters for TAC side
 - **`TONParams`** *(optional)*: Custom parameters for TON side
 - **`customLiteSequencerEndpoints`** *(optional)*: Custom lite sequencer endpoints for API access.
+- **`passLoggerToOpeners`** *(optional, default: `true`)*: Controls whether the logger passed to `TacSdk.create` is propagated to TON `contractOpener`(s). Set `false` to keep SDK-level logs while keeping openers silent.
 
 ### `TONParams (Type)`
 ```typescript
@@ -159,22 +166,34 @@ Represents the state of a TON smart contract:
 export interface ContractOpener {
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
     getContractState(address: Address): Promise<ContractState>;
+    getTransactions(address: Address, opts: GetTransactionsOptions): Promise<Transaction[]>;
     closeConnections?: () => unknown;
     getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+    getTransactionByTxHash(address: Address, txHash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+    getTransactionByInMsgHash(address: Address, inMsgHash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
+    getTransactionByOutMsgHash(address: Address, outMsgHash: string, opts?: GetTransactionsOptions): Promise<Transaction | null>;
     getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]>;
     getAddressInformation(address: Address): Promise<AddressInformation>;
     getConfig(): Promise<string>;
+    trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<void>;
+    trackTransactionTreeWithResult(address: string, hash: string, params?: TrackTransactionTreeParams): Promise<TrackTransactionTreeResult>;
 }
 ```
 
 Interface for opening and interacting with TON smart contracts:
 - **`open<T extends Contract>(src: T)`**: Opens a contract for interaction, returning an OpenedContract or SandboxContract instance.
 - **`getContractState(address: Address)`**: Retrieves the state of a contract at the specified address.
+- **`getTransactions(address: Address, opts: GetTransactionsOptions)`**: Retrieves transactions for the specified address with pagination options.
 - **`closeConnections?`** *(optional)*: Closes any open connections to the TON network.
-- **`getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its hash for a given address. Returns `null` if not found.
-- **`getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves transactions adjacent to the specified transaction hash.
+- **`getTransactionByHash(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its hash (transaction hash, incoming message hash, or outgoing message hash). Returns `null` if not found.
+- **`getTransactionByTxHash(address: Address, txHash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its transaction hash specifically. Returns `null` if not found.
+- **`getTransactionByInMsgHash(address: Address, inMsgHash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its incoming message hash. Returns `null` if not found.
+- **`getTransactionByOutMsgHash(address: Address, outMsgHash: string, opts?: GetTransactionsOptions)`**: Retrieves a transaction by its outgoing message hash. Returns `null` if not found.
+- **`getAdjacentTransactions(address: Address, hash: string, opts?: GetTransactionsOptions)`**: Retrieves transactions adjacent to the specified transaction hash (children and optionally parent).
 - **`getAddressInformation(address: Address)`**: Retrieves address information including last transaction details.
 - **`getConfig()`**: Retrieves the blockchain configuration as a base64 encoded string.
+- **`trackTransactionTree(address: string, hash: string, params?: TrackTransactionTreeParams)`**: Validates entire transaction tree using BFS, throws error if validation fails.
+- **`trackTransactionTreeWithResult(address: string, hash: string, params?: TrackTransactionTreeParams)`**: Validates entire transaction tree using BFS, returns result object instead of throwing.
 ### `RetryableContractOpener (Class)`
 
 ```typescript
@@ -226,6 +245,49 @@ Returns a RetryableContractOpener configured with:
 
 This function provides a convenient way to create a robust contract opener with sensible defaults for production use.
 
+### `GetTransactionsOptions (Type)`
+
+```typescript
+export type GetTransactionsOptions = {
+    limit?: number;
+    lt?: string;
+    hash?: string;
+    to_lt?: string;
+    inclusive?: boolean;
+    archival?: boolean;
+    timeoutMs?: number;
+    retryDelayMs?: number;
+};
+```
+
+Options for retrieving transactions from the blockchain with pagination and filtering capabilities.
+
+- **`limit`** *(optional)*: Maximum number of transactions to retrieve.
+- **`lt`** *(optional)*: Logical time of the transaction to start from (for pagination).
+- **`hash`** *(optional)*: Hash of the transaction to start from (for pagination).
+- **`to_lt`** *(optional)*: Logical time of the transaction to end at (upper bound).
+- **`inclusive`** *(optional)*: Whether to include the starting transaction in the results.
+- **`archival`** *(optional)*: Whether to search in archival nodes for historical data.
+- **`timeoutMs`** *(optional)*: Request timeout in milliseconds.
+- **`retryDelayMs`** *(optional)*: Delay between retry attempts in milliseconds.
+
+### `AddressInformation (Type)`
+
+```typescript
+export type AddressInformation = {
+    lastTransaction: {
+        lt: string;
+        hash: string;
+    };
+};
+```
+
+Contains information about an address on the TON blockchain.
+
+- **`lastTransaction`**: Information about the most recent transaction of the address.
+  - **`lt`**: Logical time of the last transaction.
+  - **`hash`**: Hash of the last transaction in base64 format.
+
 
 ### `EvmProxyMsg (Type)`
 ```typescript
@@ -251,6 +313,8 @@ An optional configuration object for customizing advanced crosschain transaction
 ```ts
 export type CrossChainTransactionOptions = {
     allowSimulationError?: boolean;
+    ensureTxExecuted?: boolean;
+    shouldValidateFees?: boolean;
     isRoundTrip?: boolean;
     protocolFee?: bigint;
     evmValidExecutors?: string[];
@@ -269,6 +333,14 @@ export type CrossChainTransactionOptions = {
 - **allowSimulationError** *(optional)*:  
   If true, transaction simulation phase is skipped.  
   **Default**: false
+
+- **ensureTxExecuted** *(optional)*:  
+  If true, validates TON transaction execution before waiting for operation ID.  
+  **Default**: true
+
+- **shouldValidateFees** *(optional)*:  
+  If true, validates explicitly provided fee params against suggested values.  
+  **Default**: true
 
 - **isRoundTrip** *(optional)*:  
   Indicates whether the transaction involves a round-trip execution (e.g., a return message from TAC to TON).  
@@ -317,10 +389,10 @@ export type CrossChainTransactionOptions = {
 A restricted version of CrossChainTransactionOptions for use in batch operations.
 
 ```ts
-export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions' | 'ensureTxExecuted'>;
 ```
 
-This type excludes `waitOperationId` and `waitOptions` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
+This type excludes `waitOperationId`, `waitOptions`, and `ensureTxExecuted` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
 
 ### `CrossChainTransactionsOptions`
 Configuration options for batch cross-chain transaction operations.
@@ -368,7 +440,7 @@ export type BatchCrossChainTx = {
 Represents a crosschain transaction for use in batch operations.
 - **`evmProxyMsg`**: The message to be sent to the TAC proxy.
 - **`assets`** *(optional)*: An array of assets involved in the transaction.
-- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId` and `waitOptions` which are controlled at batch level).
+- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId`, `waitOptions`, and `ensureTxExecuted` which are controlled at batch level).
 
 ### `AssetLike`
 
@@ -516,6 +588,70 @@ export type OperationIdsByShardsKey = Record<string, OperationIds>;
 ```
 
 Maps shard keys to their corresponding operation IDs, allowing efficient lookup of operations by shard identifier.
+
+### `TrackTransactionTreeParams (Type)`
+
+```typescript
+export type TrackTransactionTreeParams = {
+    limit?: number;
+    maxDepth?: number;
+    maxScannedTransactions?: number;
+    ignoreOpcodeList?: number[];
+    direction?: 'forward' | 'backward' | 'both';
+};
+```
+
+Parameters for tracking and validating transaction trees.
+
+- **`limit`** *(optional)*: Maximum number of transactions to fetch per pagination request. Default: 100.
+- **`maxDepth`** *(optional)*: Maximum depth to traverse in the transaction tree, inclusive (depth 0 is the root). Default: 10.
+- **`maxScannedTransactions`** *(optional)*: Maximum number of transactions to scan while searching by hash in account history. Default: 100.
+- **`ignoreOpcodeList`** *(optional)*: List of operation codes (opcodes) that mark transactions as skippable for extra checks. Phase validation is still applied. Default: `[0xd53276db]` (excess message).
+- **`direction`** *(optional)*: Direction to search the transaction tree:
+  - `'forward'`: only search children (outgoing messages)
+  - `'backward'`: only search parents (incoming messages)
+  - `'both'`: search in both directions (default)
+
+### `TransactionValidationError (Type)`
+
+```typescript
+export type TransactionValidationError = {
+    txHash: string;
+    exitCode: number | 'N/A';
+    resultCode: number | 'N/A';
+    reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed' | 'not_found';
+    address?: string;
+    hashType?: 'unknown' | 'in' | 'out';
+};
+```
+
+Details about a transaction validation error.
+
+- **`txHash`**: Base64-encoded hash of the failed transaction.
+- **`exitCode`**: Exit code from the compute phase, or `'N/A'` if compute phase is missing.
+- **`resultCode`**: Result code from the action phase, or `'N/A'` if action phase is missing.
+- **`reason`**: Reason for validation failure:
+  - `'aborted'`: transaction was aborted
+  - `'compute_phase_missing'`: compute phase is missing
+  - `'compute_phase_failed'`: compute phase failed (exitCode !== 0)
+  - `'action_phase_failed'`: action phase failed (resultCode !== 0)
+  - `'not_found'`: transaction or message hash not found during traversal
+- **`address`** *(optional)*: Address where the lookup happened (for `'not_found'`).
+- **`hashType`** *(optional)*: Hash type used in lookup (`'unknown' | 'in' | 'out'`, for `'not_found'`).
+
+### `TrackTransactionTreeResult (Type)`
+
+```typescript
+export type TrackTransactionTreeResult = {
+    success: boolean;
+    error?: TransactionValidationError;
+};
+```
+
+Result of transaction tree tracking and validation.
+
+- **`success`**: Whether all transactions in the tree passed validation.
+- **`error`** *(optional)*: Details about the first validation error encountered (if any).
 
 ### `TONAsset`
 
@@ -1112,7 +1248,7 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
     context?: TContext;
     successCheck?: (result: T, context?: TContext) => boolean;
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
-    ensureTxExecuted?: boolean;
+    includeErrorTrace?: boolean;
 }
 ```
 
@@ -1125,7 +1261,31 @@ Allows to specify custom options for waiting for operation resolution with enhan
 - **`context`** *(optional)*: Optional context object to pass additional parameters to callbacks. This allows passing custom data like OperationTracker instances, configurations, user settings, and other dependencies without relying on closures.
 - **`successCheck`** *(optional)*: Function to check if the result is successful. Receives both the result and optional context parameter. If not provided, any non-error result is considered successful.
 - **`onSuccess`** *(optional)*: Custom callback function that executes when operation is successful. Receives both the result and optional context with additional parameters. Can be used for additional processing like profiling data retrieval. Supports both synchronous and asynchronous callbacks.
-- **`ensureTxExecuted`** *(optional)*: Ensure that TON transaction is successful. Default is `true`.
+- **`includeErrorTrace`** *(optional)*: Include underlying stack trace in `FetchError.innerStack` when all endpoints fail. Default is `false`.
+
+#### Default Behavior
+
+When `waitOptions` parameter is not specified (undefined) in methods like `OperationTracker.getOperationId()`, the SDK automatically applies default retry settings defined in `defaultWaitOptions`:
+- `timeout`: 300000ms (5 minutes)
+- `maxAttempts`: 30 - from `DEFAULT_WAIT_MAX_ATTEMPTS`
+- `delay`: 10000ms (10 seconds) - from `DEFAULT_WAIT_DELAY_MS`
+
+This ensures resilient behavior against rate limits and temporary network issues without requiring explicit configuration.
+
+#### Disabling Retries
+
+To disable retry behavior and use a single attempt, explicitly pass `null` instead of `WaitOptions`:
+
+```typescript
+// Single attempt, no retries
+await tracker.getOperationId(linker, null);
+
+// Default retry behavior (30 attempts with 10s delay)
+await tracker.getOperationId(linker);
+
+// Custom retry behavior
+await tracker.getOperationId(linker, { maxAttempts: 5, delay: 2000 });
+```
 
 #### Usage Examples
 
@@ -1342,9 +1502,21 @@ Contains conversion results with detailed price information:
 - **`tacPrice`** & **`tonPrice`**: Reference USD price information for TAC and TON tokens used in the conversion calculation
 
 
-### WaitOptions Defaults
+### `defaultWaitOptions`
 
-The SDK provides the following defaults (see `defaultWaitOptions` in the code):
-- timeout: 300000 (5 minutes)
-- maxAttempts: 30
-- delay: 10000 (10 seconds)
+The SDK exports `defaultWaitOptions` constant with the following default values:
+
+```typescript
+export const defaultWaitOptions: WaitOptions = {
+    timeout: DEFAULT_WAIT_TIMEOUT_MS,    // 300000ms = 5 minutes
+    maxAttempts: DEFAULT_WAIT_MAX_ATTEMPTS,    // 30
+    delay: DEFAULT_WAIT_DELAY_MS,       // 10000ms = 10 seconds
+};
+```
+
+These defaults are automatically applied when `waitOptions` parameter is not specified (undefined) in methods that support retry behavior, such as all `OperationTracker` methods. This provides robust retry logic to handle rate limits and temporary network issues without explicit configuration.
+
+The underlying constants are defined in `src/sdk/Consts.ts`:
+- `DEFAULT_WAIT_TIMEOUT_MS = 300000` (5 minutes)
+- `DEFAULT_WAIT_MAX_ATTEMPTS = 30`
+- `DEFAULT_WAIT_DELAY_MS = 10000` (10 seconds)

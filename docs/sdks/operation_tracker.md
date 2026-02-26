@@ -170,7 +170,45 @@ interface WaitOptions<T = unknown, TContext = unknown> {
      * Can be used for additional processing like profiling data retrieval
      */
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
+    /**
+     * Include underlying stack trace in FetchError.innerStack when all endpoints fail
+     * @default false
+     */
+    includeErrorTrace?: boolean;
 }
+```
+
+### Default Retry Behavior
+
+**When `waitOptions` is not specified (undefined):**
+All `OperationTracker` methods automatically use default retry settings:
+- `timeout`: 300000ms (5 minutes) - from `DEFAULT_WAIT_TIMEOUT_MS`
+- `maxAttempts`: 30 - from `DEFAULT_WAIT_MAX_ATTEMPTS`
+- `delay`: 10000ms (10 seconds) - from `DEFAULT_WAIT_DELAY_MS`
+- Logger from the `OperationTracker` instance is automatically passed
+
+This ensures resilient behavior against rate limits and temporary network issues.
+
+### Disabling Retries
+
+**To disable retry behavior and use a single attempt, explicitly pass `null`:**
+
+```typescript
+// Single attempt, no retries
+await tracker.getOperationId(linker, null);
+```
+
+### Custom Retry Configuration
+
+**To customize retry behavior, pass a `WaitOptions` object:**
+
+```typescript
+// Custom retry settings
+await tracker.getOperationId(linker, {
+    maxAttempts: 5,
+    delay: 2000,
+    timeout: 60000
+});
 ```
 
 ### Usage Examples
@@ -186,7 +224,7 @@ For comprehensive examples and usage patterns, including detailed context parame
 ```ts
 getOperationId(
     transactionLinker: TransactionLinker,
-    waitOptions?: WaitOptions<string>
+    waitOptions?: WaitOptions<string> | null
 ): Promise<string>
 ```
 
@@ -194,7 +232,10 @@ Fetches the cross-chain `operationId` based on a transaction linker. Tries each 
 
 **Parameters:**
 - `transactionLinker`: Transaction linker object containing sharding information
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*:
+  - `undefined` (default): Uses default retry settings (30 attempts, 10s delay, 5min timeout)
+  - `null`: Single attempt, no retries
+  - `WaitOptions` object: Custom retry configuration
 
 **Returns:** Operation ID string (empty string if not found)
 

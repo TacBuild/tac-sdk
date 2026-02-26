@@ -8,14 +8,34 @@ The `WaitOptions` interface provides powerful callback mechanisms that allow you
 
 ```typescript
 interface WaitOptions<T = unknown, TContext = unknown> {
-    timeout?: number;           // Timeout in milliseconds (default: 300000)
+    timeout?: number;           // Timeout in milliseconds (default: 300000 - 5 minutes)
     maxAttempts?: number;       // Maximum number of attempts (default: 30)
-    delay?: number;             // Delay between attempts in milliseconds (default: 10000)
+    delay?: number;             // Delay between attempts in milliseconds (default: 10000 - 10 seconds)
     logger?: ILogger;           // Logger instance
     context?: TContext;         // Optional context object for additional parameters
     successCheck?: (result: T, context?: TContext) => boolean;  // Custom success validation
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;  // Success callback
+    includeErrorTrace?: boolean; // Include error stack trace (default: false)
 }
+```
+
+**Default Values:**
+When `waitOptions` is not specified (undefined), the SDK uses default retry behavior:
+- `timeout`: 300000ms (5 minutes) - from `DEFAULT_WAIT_TIMEOUT_MS`
+- `maxAttempts`: 30 - from `DEFAULT_WAIT_MAX_ATTEMPTS`
+- `delay`: 10000ms (10 seconds) - from `DEFAULT_WAIT_DELAY_MS`
+
+**Disabling Retries:**
+To disable retry behavior and use a single attempt, explicitly pass `null`:
+```typescript
+// Single attempt, no retries
+await operationTracker.getOperationId(linker, null);
+
+// Default retry behavior (30 attempts with 10s delay)
+await operationTracker.getOperationId(linker);
+
+// Custom retry behavior
+await operationTracker.getOperationId(linker, { maxAttempts: 30, delay: 2000 });
 ```
 
 ## Basic onSuccess Example

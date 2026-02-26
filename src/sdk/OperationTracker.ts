@@ -58,118 +58,97 @@ export class OperationTracker implements IOperationTracker {
         this.logger = logger;
     }
 
-    async getOperationIdByTransactionHash(transactionHash: string, waitOptions?: WaitOptions<string>): Promise<string> {
-        this.logger.debug(`Getting operation ID for transactionHash: ${formatObjectForLogging(transactionHash)}`);
-
+    async getOperationIdByTransactionHash(transactionHash: string, waitOptions?: WaitOptions<string> | null): Promise<string> {
         const requestFn = async (): Promise<string> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const id = await client.getOperationIdByTransactionHash(transactionHash);
-                    this.logger.debug(`Operation ID ${id == '' ? 'does not exist' : 'retrieved successfully'}`);
                     return id;
                 } catch (error) {
-                    this.logger.warn(`Failed to get OperationId by transactionHash using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to get operation id by transactionHash');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(
-                  waitOptions,
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
                   requestFn,
-                  'OperationTracker: Getting operation ID by transaction hash',
-              )
-            : await requestFn();
+                  `OperationTracker: Getting operation ID by transaction hash ${formatObjectForLogging(transactionHash)}`,
+              );
     }
 
-    async getOperationType(operationId: string, waitOptions?: WaitOptions<OperationType>): Promise<OperationType> {
-        this.logger.debug(`Getting operation type for ${formatObjectForLogging(operationId)}`);
-
+    async getOperationType(operationId: string, waitOptions?: WaitOptions<OperationType> | null): Promise<OperationType> {
         const requestFn = async (): Promise<OperationType> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const type = await client.getOperationType(operationId);
-                    this.logger.debug(`Operation retrieved successfully`);
                     return type;
                 } catch (error) {
-                    this.logger.warn(`Failed to get operationType using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to get operation type');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation type')
-            : await requestFn();
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting operation type for ${formatObjectForLogging(operationId)}`);
     }
 
-    async getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string>): Promise<string> {
-        this.logger.debug(`Getting operation ID for transaction linker: ${formatObjectForLogging(transactionLinker)}`);
-
+    async getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string> | null): Promise<string> {
         const requestFn = async (): Promise<string> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const id = await client.getOperationId(transactionLinker);
-                    this.logger.debug(`Operation ID ${id == '' ? 'does not exist' : 'retrieved successfully'}`);
                     return id;
                 } catch (error) {
-                    this.logger.warn(`Failed to get OperationId using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to get operation id');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(
-                  waitOptions,
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
                   requestFn,
-                  'OperationTracker: Getting operation ID by transaction linker',
-              )
-            : await requestFn();
+                  `OperationTracker: Getting operation ID by transaction linker ${formatObjectForLogging(transactionLinker)}`,
+              );
     }
 
     async getOperationIdsByShardsKeys(
         shardsKeys: string[],
         caller: string,
-        waitOptions?: WaitOptions<OperationIdsByShardsKey>,
+        waitOptions?: WaitOptions<OperationIdsByShardsKey> | null,
         chunkSize: number = 100,
     ): Promise<OperationIdsByShardsKey> {
-        this.logger.debug(`Getting operation IDs for shards keys: ${formatObjectForLogging(shardsKeys)}`);
-        this.logger.debug(`Caller: ${caller}, Chunk size: ${chunkSize}`);
         const requestFn = async (): Promise<OperationIdsByShardsKey> => {
             let lastError: unknown;
 
             for (const client of this.clients) {
                 try {
                     const result = await client.getOperationIdsByShardsKeys(shardsKeys, caller, chunkSize);
-                    this.logger.debug(`Operation IDs by shards keys retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.logger.warn(`Failed to get OperationIds using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to get operation ids by shards keys');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation IDs by shards keys')
-            : await requestFn();
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting operation IDs by shards keys ${formatObjectForLogging(shardsKeys)} caller=${caller} chunkSize=${chunkSize}`);
     }
 
-    async getStageProfiling(operationId: string, waitOptions?: WaitOptions<ExecutionStages>): Promise<ExecutionStages> {
-        this.logger.debug(`Getting stage profiling for operation ${operationId}`);
+    async getStageProfiling(operationId: string, waitOptions?: WaitOptions<ExecutionStages> | null): Promise<ExecutionStages> {
         const requestFn = async (): Promise<ExecutionStages> => {
             let lastError: unknown;
 
@@ -178,83 +157,68 @@ export class OperationTracker implements IOperationTracker {
                     const map = await client.getStageProfilings([operationId]);
                     const result = map[operationId];
                     if (!result) {
-                        this.logger.warn(`No stageProfiling data for operationId=${operationId}`);
                         throw new Error(`No stageProfiling data for operationId=${operationId}`);
                     }
-                    this.logger.debug(`Stage profiling retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.logger.warn(`Failed to get stage profiling using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to get stage profiling');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting stage profiling')
-            : await requestFn();
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting stage profiling for operation ${operationId}`);
     }
 
     async getStageProfilings(
         operationIds: string[],
-        waitOptions?: WaitOptions<ExecutionStagesByOperationId>,
+        waitOptions?: WaitOptions<ExecutionStagesByOperationId> | null,
         chunkSize: number = 100,
     ): Promise<ExecutionStagesByOperationId> {
-        this.logger.debug(`Getting stage profilings for operations: ${operationIds.join(', ')}`);
-        this.logger.debug(`Chunk size: ${chunkSize}`);
         const requestFn = async (): Promise<ExecutionStagesByOperationId> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const result = await client.getStageProfilings(operationIds, chunkSize);
-                    this.logger.debug(`Stage profilings retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.logger.warn(`Failed to get stage profilings using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to get stage profilings');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting stage profilings')
-            : await requestFn();
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting stage profilings for operations: ${operationIds.join(', ')} chunkSize=${chunkSize}`);
     }
 
     async getOperationStatuses(
         operationIds: string[],
-        waitOptions?: WaitOptions<StatusInfosByOperationId>,
+        waitOptions?: WaitOptions<StatusInfosByOperationId> | null,
         chunkSize: number = 100,
     ): Promise<StatusInfosByOperationId> {
-        this.logger.debug(`Getting operation statuses for operations: ${formatObjectForLogging(operationIds)}`);
-        this.logger.debug(`Chunk size: ${chunkSize}`);
         const requestFn = async (): Promise<StatusInfosByOperationId> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const result = await client.getOperationStatuses(operationIds, chunkSize);
-                    this.logger.debug(`Operation statuses retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.logger.warn(`Failed to get operation statuses using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to get operation statuses');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation statuses')
-            : await requestFn();
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting operation statuses for operations: ${formatObjectForLogging(operationIds)} chunkSize=${chunkSize}`);
     }
 
-    async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo>): Promise<StatusInfo> {
-        this.logger.debug(`Getting operation status for ${formatObjectForLogging(operationId)}`);
+    async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo> | null): Promise<StatusInfo> {
         const requestFn = async (): Promise<StatusInfo> => {
             let lastError: unknown;
 
@@ -263,30 +227,29 @@ export class OperationTracker implements IOperationTracker {
                     const map = await client.getOperationStatuses([operationId]);
                     const result = map[operationId];
                     if (!result) {
-                        this.logger.warn(`No operation status for operationId=${operationId}`);
                         throw new Error(`No operation status for operationId=${operationId}`);
                     }
-                    this.logger.debug(`Operation status retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.logger.warn(`Failed to get operation status using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to get operation status');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting operation status')
-            : await requestFn();
+        const status = waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting operation status for ${formatObjectForLogging(operationId)}`);
+
+        this.logger.debug(
+            `operation status resolved stage=${status.stage ?? 'unknown'} success=${
+                (String(status.success))
+            }`,
+        );
+        return status;
     }
 
     async getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<SimplifiedStatuses> {
-        this.logger.debug(
-            `Getting simplified operation status for transaction linker: ${formatObjectForLogging(transactionLinker)}`,
-        );
-
         const operationId = await this.getOperationId(transactionLinker);
         if (operationId == '') {
             this.logger.warn('Operation ID not found');
@@ -307,86 +270,73 @@ export class OperationTracker implements IOperationTracker {
 
     async convertCurrency(
         params: ConvertCurrencyParams,
-        waitOptions?: WaitOptions<ConvertedCurrencyResult>,
+        waitOptions?: WaitOptions<ConvertedCurrencyResult> | null,
     ): Promise<ConvertedCurrencyResult> {
         if (params.value <= 0n) {
             throw convertCurrencyNegativeOrZeroValueError;
         }
-        this.logger.debug(`Converting currency: ${formatObjectForLogging(params)}`);
 
         const requestFn = async (): Promise<ConvertedCurrencyResult> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const result = await client.convertCurrency(params);
-                    this.logger.debug(`Conversion result retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.logger.warn(`Failed to convert currency using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to convert currency');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Converting currency')
-            : await requestFn();
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Converting currency ${formatObjectForLogging(params)}`);
     }
 
     async simulateTACMessage(
         params: TACSimulationParams,
-        waitOptions?: WaitOptions<TACSimulationResult>,
+        waitOptions?: WaitOptions<TACSimulationResult> | null,
     ): Promise<TACSimulationResult> {
         Validator.validateTACSimulationParams(params);
-        this.logger.debug(`Simulating TAC message: ${formatObjectForLogging(params)}`);
 
         const requestFn = async (): Promise<TACSimulationResult> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const result = await client.simulateTACMessage(params);
-                    this.logger.debug(`Simulation result retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.logger.warn(`Failed to simulate TAC message using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to simulate TAC message');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Simulating TAC message')
-            : await requestFn();
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Simulating TAC message ${formatObjectForLogging(params)}`);
     }
 
     async getTVMExecutorFee(
         params: GetTVMExecutorFeeParams,
-        waitOptions?: WaitOptions<SuggestedTVMExecutorFee>,
+        waitOptions?: WaitOptions<SuggestedTVMExecutorFee> | null,
     ): Promise<SuggestedTVMExecutorFee> {
-        this.logger.debug(`get TVM executor fee: ${formatObjectForLogging(params)}`);
-
         const requestFn = async (): Promise<SuggestedTVMExecutorFee> => {
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
                     const result = await client.getTVMExecutorFee(params);
-                    this.logger.debug(`Suggested TVM executor fee retrieved successfully`);
                     return result;
                 } catch (error) {
-                    this.logger.warn(`Failed to get TVM executor fee using one of the endpoints`);
                     lastError = error;
                 }
             }
-            this.logger.error('All endpoints failed to get TVM executor fee');
-            throw allEndpointsFailedError(lastError);
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        return waitOptions
-            ? await waitUntilSuccess(waitOptions, requestFn, 'OperationTracker: Getting TVM executor fee')
-            : await requestFn();
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting TVM executor fee ${formatObjectForLogging(params)}`);
     }
 }

@@ -17,7 +17,7 @@ import {
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
     NFTAddressType,
-    SuggestedTVMExecutorFee,
+    SuggestedTVMExecutorFee, TacGasPrice,
     TACSimulationParams,
     TACSimulationResult,
     TransactionLinkerWithOperationId,
@@ -26,6 +26,7 @@ import {
     WaitOptions,
 } from '../structs/Struct';
 import { Asset } from './Asset';
+import { ContractOpener } from './ContractOpener';
 import { IConfiguration } from './IConfiguration';
 import { IOperationTracker } from './IOperationTracker';
 import { ITacExplorerClient } from './ITacExplorerClient';
@@ -262,6 +263,11 @@ export interface ITacSDK {
     getTacExplorerClient(): ITacExplorerClient;
 
     /**
+     * Returns the TON contract opener client instance used for querying TON blockchain data.
+     */
+    getTonContractOpener(): ContractOpener;
+
+    /**
      * Prepares the transaction payloads required for a cross-chain operation without sending them.
      * @param evmProxyMsg Encoded EVM proxy message.
      * @param senderAddress TVM address of the transaction sender (wallet address).
@@ -275,4 +281,10 @@ export interface ITacSDK {
         assets?: AssetLike[],
         options?: CrossChainTransactionOptions,
     ): Promise<CrossChainPayloadResult[]>;
+
+    /**
+     * Returns TAC gas price for the current network.
+     * @returns Promise resolving to the gas price in wei (bigint).
+     */
+    getTACGasPrice(): Promise<TacGasPrice>;
 }

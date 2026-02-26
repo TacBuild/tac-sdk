@@ -1,13 +1,13 @@
-import { ILogger } from '../interfaces';
+import { ContractOpener, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
-import { ExecutionStages, Network, OperationType, TransactionLinker } from '../structs/Struct';
+import { ExecutionStages, Network, OperationType, TransactionLinkerWithOperationId } from '../structs/Struct';
 import { DEFAULT_FIND_TX_MAX_DEPTH, MAX_ITERATION_COUNT } from './Consts';
 import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
 
 export async function startTracking(
-    transactionLinker: TransactionLinker,
+    transactionLinker: TransactionLinkerWithOperationId,
     network: Network,
     options?: {
         customLiteSequencerEndpoints?: string[];
@@ -17,6 +17,7 @@ export async function startTracking(
         tableView?: boolean;
         logger?: ILogger;
         txFinalizer?: ITxFinalizer;
+        contractOpener?: ContractOpener;
         cclAddress?: string;
     },
 ): Promise<void | ExecutionStages> {
@@ -28,6 +29,7 @@ export async function startTracking(
         tableView = true,
         logger = new NoopLogger(),
         txFinalizer,
+        contractOpener,
         cclAddress,
     } = options || {};
 
@@ -41,7 +43,7 @@ export async function startTracking(
             `timestamp: ${transactionLinker.timestamp}`,
     );
 
-    let operationId = '';
+    let operationId = transactionLinker.operationId ?? '';
     let iteration = 0; // number of iterations
     let operationType = '';
     let ok = true; // finished successfully
@@ -60,7 +62,8 @@ export async function startTracking(
 
             try {
                 operationId = await tracker.getOperationId(transactionLinker);
-            } catch {
+            } catch (err) {
+                logger.debug('failed to get operationId: ' + err);
                 // Ignore error and continue
             }
         } else {
@@ -92,16 +95,19 @@ export async function startTracking(
 
     const profilingData = await tracker.getStageProfiling(operationId);
 
-    // Check if EXECUTED_IN_TON stage exists and use TxFinalizer to verify transaction success
+    // Check if EXECUTED_IN_TON stage exists and use ContractOpener to verify transaction success
     if (profilingData.executedInTON.exists && profilingData.executedInTON.stageData?.transactions) {
         logger.debug('EXECUTED_IN_TON stage found, verifying transaction success in TON...');
 
-        if (txFinalizer && cclAddress) {
+        const finalizer = txFinalizer || contractOpener;
+        if (finalizer && cclAddress) {
             const transactions = profilingData.executedInTON.stageData.transactions;
             for (const tx of transactions) {
                 try {
                     logger.debug(`Verifying transaction: ${tx.hash}`);
-                    await txFinalizer.trackTransactionTree(cclAddress, tx.hash, { maxDepth: DEFAULT_FIND_TX_MAX_DEPTH });
+                    await finalizer.trackTransactionTree(cclAddress, tx.hash, {
+                        maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
+                    });
                     logger.debug(`Transaction ${tx.hash} verified successfully in TON`);
                 } catch (error) {
                     logger.debug(`Transaction ${tx.hash} failed verification in TON: ${error}`);
@@ -111,7 +117,9 @@ export async function startTracking(
                 }
             }
         } else {
-            logger.debug('TxFinalizer or CCL address is not provided, skipping TON transaction verification');
+            logger.debug(
+                'Finalizer, ContractOpener or CCL address is not provided, skipping TON transaction verification',
+            );
         }
     }
 
@@ -129,7 +137,7 @@ export async function startTracking(
 }
 
 export async function startTrackingMultiple(
-    transactionLinkers: TransactionLinker[],
+    transactionLinkers: TransactionLinkerWithOperationId[],
     network: Network,
     options?: {
         customLiteSequencerEndpoints?: string[];
@@ -139,6 +147,8 @@ export async function startTrackingMultiple(
         tableView?: boolean;
         logger?: ILogger;
         txFinalizer?: ITxFinalizer;
+        contractOpener?: ContractOpener;
+        cclAddress?: string;
     },
 ): Promise<void | ExecutionStages[]> {
     const {
@@ -148,6 +158,8 @@ export async function startTrackingMultiple(
         returnValue = false,
         tableView = true,
         txFinalizer,
+        contractOpener,
+        cclAddress,
         logger = new NoopLogger(),
     } = options || {};
 
@@ -163,6 +175,8 @@ export async function startTrackingMultiple(
                 returnValue: true,
                 tableView: false,
                 txFinalizer,
+                contractOpener,
+                cclAddress,
                 logger,
             });
         }),

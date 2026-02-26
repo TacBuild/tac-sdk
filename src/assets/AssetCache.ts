@@ -1,6 +1,7 @@
 import { Asset } from '../interfaces';
 
 type AssetKey = string;
+type AssetCacheToken = { address: string; index?: bigint; tokenType?: string };
 
 export class AssetCache {
     private static readonly cache = new Map<AssetKey, Asset>();
@@ -8,7 +9,7 @@ export class AssetCache {
     /**
      * Get asset from cache
      */
-    static get(token: { address: string; index?: bigint }): Asset | undefined {
+    static get(token: AssetCacheToken): Asset | undefined {
         const key = this.generateKey(token);
         return this.cache.get(key);
     }
@@ -16,7 +17,7 @@ export class AssetCache {
     /**
      * Set asset in cache
      */
-    static set(token: { address: string; index?: bigint }, asset: Asset): void {
+    static set(token: AssetCacheToken, asset: Asset): void {
         const key = this.generateKey(token);
         this.cache.set(key, asset);
     }
@@ -28,10 +29,14 @@ export class AssetCache {
         this.cache.clear();
     }
 
-    private static generateKey(token: { address: string; index?: bigint }): AssetKey {
+    private static generateKey(token: AssetCacheToken): AssetKey {
         // Normalize address to lowercase for consistency
         const normalizedAddress = token.address.toLowerCase();
         const parts = [normalizedAddress];
+
+        if (token.tokenType !== undefined) {
+            parts.push(token.tokenType);
+        }
 
         if (token.index !== undefined) {
             parts.push(token.index.toString());

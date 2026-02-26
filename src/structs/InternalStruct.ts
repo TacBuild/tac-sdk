@@ -127,6 +127,7 @@ export type TransactionDepth = {
     address?: Address;
     hash: string;
     depth: number;
+    hashType?: 'unknown' | 'in' | 'out';
 };
 
 export type AdjacentTransactionsResponse = {
@@ -135,7 +136,7 @@ export type AdjacentTransactionsResponse = {
 
 export type TxFinalizerConfig = {
     urlBuilder: (hash: string) => string;
-    authorization: { header: string; value: string };
+    authorization?: { header: string; value: string };
 };
 
 export type USDPriceInfoRaw = {
@@ -150,24 +151,6 @@ export type ConvertedCurrencyRawResult = {
     currency: CurrencyType;
     tacPrice: USDPriceInfoRaw;
     tonPrice: USDPriceInfoRaw;
-};
-
-export type GetTransactionsOptions = {
-    limit: number;
-    lt?: string;
-    hash?: string;
-    to_lt?: string;
-    inclusive?: boolean;
-    archival?: boolean;
-    timeoutMs?: number;
-    retryDelayMs?: number;
-};
-
-export type AddressInformation = {
-    lastTransaction: {
-        lt: string;
-        hash: string;
-    };
 };
 
 export type TONFeesParams = {

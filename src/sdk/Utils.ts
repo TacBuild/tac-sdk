@@ -13,6 +13,7 @@ import {
     AssetFromNFTItemArg,
     AssetLike,
     AssetType,
+    defaultWaitOptions,
     EvmProxyMsg,
     FeeParams,
     NFTAddressType,
@@ -176,17 +177,14 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
     operationDescription?: string,
     ...args: A
 ): Promise<T> {
-    const timeout = options.timeout ?? 300000;
-    const maxAttempts = options.maxAttempts ?? 30;
-    const delay = options.delay ?? 10000;
+    const timeout = options.timeout ?? defaultWaitOptions.timeout!;
+    const maxAttempts = options.maxAttempts ?? defaultWaitOptions.maxAttempts!;
+    const delay = options.delay ?? defaultWaitOptions.delay!;
     const successCheck = options.successCheck;
     const context = options.context;
 
     const contextPrefix = operationDescription ? `[${operationDescription}] ` : '';
 
-    options.logger?.debug(
-        `${contextPrefix}Starting wait for success with timeout=${timeout}ms, maxAttempts=${maxAttempts}, delay=${delay}ms`,
-    );
     const startTime = Date.now();
     let attempt = 1;
 
@@ -198,13 +196,12 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
             if (result === undefined || result === null) {
                 throw new Error(`Empty result`);
             }
-            options.logger?.debug(`${contextPrefix}Result: ${formatObjectForLogging(result)}`);
             if (successCheck && !successCheck(result, context)) {
-                throw new Error(`Result is not successful`);
+                throw new Error(`Result is not successful: ${formatObjectForLogging(result)}`);
             }
-            options.logger?.debug(`${contextPrefix}Attempt ${attempt} successful`);
 
-            // Execute custom onSuccess callback if provided
+            options.logger?.debug(`${contextPrefix}Success (attempt ${attempt}/${maxAttempts})`);
+
             if (options.onSuccess) {
                 try {
                     await options.onSuccess(result, context);
@@ -224,8 +221,18 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
                 options.logger?.debug(`${contextPrefix}Max attempts (${maxAttempts}) reached`);
                 throw error;
             }
-            options.logger?.debug(`${contextPrefix}Error on attempt ${attempt}: ${error}`);
-            options.logger?.debug(`${contextPrefix}Waiting ${delay}ms before next attempt`);
+            const pendingMessage = statusRetryMessageFromError(error, attempt, maxAttempts, delay);
+            if (pendingMessage) {
+                options.logger?.debug(`${contextPrefix}${pendingMessage}`);
+            } else {
+                let errorMessage = error instanceof Error ? error.message : String(error);
+                if (errorMessage.includes('<!doctype html>') || errorMessage.includes('<html')) {
+                    errorMessage = errorMessage.replace(/<!doctype html>[\s\S]*?<\/html>/gi, '[HTML response]');
+                }
+                options.logger?.debug(
+                    `${contextPrefix}attempt=${attempt}/${maxAttempts} failed; retry_in=${delay}ms; error=${errorMessage}`,
+                );
+            }
             await sleep(delay);
             attempt++;
         }
@@ -234,6 +241,55 @@ export async function waitUntilSuccess<T, TContext = unknown, A extends unknown[
 
 export function formatObjectForLogging(obj: unknown): string {
     return JSON.stringify(obj, (key, value) => (typeof value === 'bigint' ? value.toString() : value));
+}
+
+function statusRetryMessageFromError(error: unknown, attempt: number, maxAttempts: number, delay: number): string | null {
+    const prefix = 'Result is not successful: ';
+    const message = String(error);
+    const index = message.indexOf(prefix);
+    if (index < 0) {
+        return null;
+    }
+
+    const payloadString = message.slice(index + prefix.length).trim();
+    let payload: unknown;
+    try {
+        payload = JSON.parse(payloadString);
+    } catch {
+        return null;
+    }
+
+    if (typeof payload !== 'object' || payload === null) {
+        return null;
+    }
+    const statusPayload = payload as {
+        stage?: unknown;
+        success?: unknown;
+        transactions?: unknown;
+    };
+    if (
+        statusPayload.stage === undefined &&
+        statusPayload.success === undefined &&
+        statusPayload.transactions === undefined
+    ) {
+        return null;
+    }
+
+    const stage = typeof statusPayload.stage === 'string' && statusPayload.stage ? statusPayload.stage : 'unknown';
+    const success = typeof statusPayload.success === 'boolean' ? String(statusPayload.success) : 'unknown';
+
+    let txHash = '-';
+    if (Array.isArray(statusPayload.transactions) && statusPayload.transactions.length > 0) {
+        const first = statusPayload.transactions[0];
+        if (typeof first === 'object' && first !== null && 'hash' in first) {
+            const maybeHash = (first as { hash?: unknown }).hash;
+            if (typeof maybeHash === 'string' && maybeHash) {
+                txHash = maybeHash;
+            }
+        }
+    }
+
+    return `pending attempt=${attempt}/${maxAttempts} stage=${stage} success=${success} tx=${txHash} retry_in=${delay}ms`;
 }
 
 export function getBouncedAddress(tvmAddress: string): string {
@@ -369,6 +425,65 @@ export function muldivr(a: bigint, b: bigint, c: bigint): bigint {
         throw new Error('Division by zero in muldivr');
     }
     return (a * b + c / 2n) / c;
+}
+
+/**
+ * Normalize hash string to base64 format
+ * Accepts: base64, hex, or raw string
+ */
+export function normalizeHashToBase64(hash: string): string {
+    const input = hash.trim();
+    if (!input) return input;
+
+    const hex = input.startsWith('0x') ? input.slice(2) : input;
+    if (/^[0-9a-fA-F]{64}$/.test(hex)) {
+        return Buffer.from(hex, 'hex').toString('base64');
+    }
+
+    const decoded = decodeBase64Like(input);
+    if (decoded) {
+        return decoded.toString('base64');
+    }
+
+    return input;
+}
+
+/**
+ * Normalize hash string to hex format
+ * Accepts: base64, hex
+ */
+export function normalizeHashToHex(hash: string): string {
+    const input = hash.trim();
+    if (!input) return input;
+
+    const maybeHex = input.startsWith('0x') ? input.slice(2) : input;
+    if (/^[0-9a-fA-F]+$/.test(maybeHex) && maybeHex.length % 2 === 0) {
+        return maybeHex.toLowerCase();
+    }
+
+    const decoded = decodeBase64Like(input);
+    if (decoded) {
+        return decoded.toString('hex');
+    }
+
+    return input;
+}
+
+function decodeBase64Like(input: string): Buffer | null {
+    const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+    const padLength = normalized.length % 4;
+    const padded = padLength === 0 ? normalized : normalized + '='.repeat(4 - padLength);
+
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(padded)) {
+        return null;
+    }
+
+    try {
+        const buf = Buffer.from(padded, 'base64');
+        return buf.length > 0 ? buf : null;
+    } catch {
+        return null;
+    }
 }
 
 export function getNormalizedExtMessageHash(message: Message): string {

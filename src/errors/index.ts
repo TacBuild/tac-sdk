@@ -20,6 +20,7 @@ export {
     evmAddressError,
     indexRequiredError,
     insufficientBalanceError,
+    insufficientFeeParamsError,
     invalidMethodNameError,
     missingDecimals,
     missingFeeParamsError,
