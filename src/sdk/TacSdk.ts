@@ -354,7 +354,7 @@ export class TacSdk implements ITacSDK {
         };
     }
 
-    getTonContractOpener(): ContractOpener{
+    getTonContractOpener(): ContractOpener {
         return this.contactOpener;
     }
 }

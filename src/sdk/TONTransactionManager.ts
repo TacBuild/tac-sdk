@@ -89,7 +89,8 @@ export class TONTransactionManager implements ITONTransactionManager {
 
         if (!evmProxyMsg.gasLimit) evmProxyMsg.gasLimit = simulationResult.feeParams.gasLimit;
 
-        const shouldValidateSuggestedFees = shouldValidateFees && (simulationResult.simulation?.simulationStatus ?? true);
+        const shouldValidateSuggestedFees =
+            shouldValidateFees && (simulationResult.simulation?.simulationStatus ?? true);
         if (shouldValidateSuggestedFees) {
             if (protocolFee !== undefined && protocolFee < simulationResult.feeParams.protocolFee) {
                 throw insufficientFeeParamsError('protocolFee', protocolFee, simulationResult.feeParams.protocolFee);

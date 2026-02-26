@@ -247,9 +247,7 @@ export class RetryableContractOpener implements ContractOpener {
         for (let index = 0; index < this.openerConfigs.length; index++) {
             const config = this.openerConfigs[index];
             const openerLabel = `opener ${index + 1}/${this.openerConfigs.length}`;
-            this.logger?.debug(
-                `[RetryableContractOpener] ${operationName}: trying ${openerLabel}`,
-            );
+            this.logger?.debug(`[RetryableContractOpener] ${operationName}: trying ${openerLabel}`);
 
             const result = useRetries
                 ? await this.tryWithRetries(() => operation(config), config, `${operationName} ${openerLabel}`)
@@ -291,7 +289,9 @@ export class RetryableContractOpener implements ContractOpener {
         return { success: false, lastError };
     }
 
-    private async trySingleAttempt<T>(operation: () => Promise<T>): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+    private async trySingleAttempt<T>(
+        operation: () => Promise<T>,
+    ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
         try {
             const data = await operation();
             return { success: true, data };
@@ -394,16 +394,19 @@ export class RetryableContractOpener implements ContractOpener {
         src: T,
     ): Promise<unknown> {
         const addressLabel = src.address ? src.address.toString() : 'unknown';
-        const result = await this.executeWithFallback((config) => {
-            const contract = config.opener.open(src);
-            const method = Reflect.get(contract, methodName);
+        const result = await this.executeWithFallback(
+            (config) => {
+                const contract = config.opener.open(src);
+                const method = Reflect.get(contract, methodName);
 
-            if (typeof method !== 'function') {
-                throw new Error(`Method ${String(methodName)} is not a function`);
-            }
+                if (typeof method !== 'function') {
+                    throw new Error(`Method ${String(methodName)} is not a function`);
+                }
 
-            return method.call(contract, ...args);
-        }, { operationName: `${String(methodName)} (address=${addressLabel})` });
+                return method.call(contract, ...args);
+            },
+            { operationName: `${String(methodName)} (address=${addressLabel})` },
+        );
 
         if (result.success) return result.data;
         throw result.lastError || allContractOpenerFailedError('failed to call method in contract');

@@ -108,7 +108,9 @@ function buildInnerErrorSummary(inner: unknown, includeFullTrace: boolean): stri
         };
         const parts: string[] = [];
         const responseMessage = extractResponseMessage(err.response?.data, includeFullTrace);
-        const httpStatus = [err.httpStatus, err.status, err.response?.status].find((value) => typeof value === 'number');
+        const httpStatus = [err.httpStatus, err.status, err.response?.status].find(
+            (value) => typeof value === 'number',
+        );
         const httpMessage =
             typeof err.innerMessage === 'string' && err.innerMessage.length > 0 ? err.innerMessage : responseMessage;
 

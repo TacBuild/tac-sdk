@@ -19,7 +19,6 @@ import {
 import { NoopLogger } from './Logger';
 import { sleep, toCamelCaseTransformer } from './Utils';
 
-
 export class TonTxFinalizer implements ITxFinalizer {
     private logger: ILogger;
     private apiConfig: TxFinalizerConfig;

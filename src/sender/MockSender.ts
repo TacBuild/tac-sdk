@@ -1,4 +1,4 @@
-import { SenderAbstraction } from '../interfaces/SenderAbstraction';
+import { SenderAbstraction } from '../interfaces';
 
 export const getMockSender = (senderAddress: string): SenderAbstraction => {
     return {

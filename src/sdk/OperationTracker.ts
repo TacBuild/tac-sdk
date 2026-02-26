@@ -58,7 +58,10 @@ export class OperationTracker implements IOperationTracker {
         this.logger = logger;
     }
 
-    async getOperationIdByTransactionHash(transactionHash: string, waitOptions?: WaitOptions<string> | null): Promise<string> {
+    async getOperationIdByTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string> {
         const requestFn = async (): Promise<string> => {
             let lastError: unknown;
             for (const client of this.clients) {
@@ -81,7 +84,10 @@ export class OperationTracker implements IOperationTracker {
               );
     }
 
-    async getOperationType(operationId: string, waitOptions?: WaitOptions<OperationType> | null): Promise<OperationType> {
+    async getOperationType(
+        operationId: string,
+        waitOptions?: WaitOptions<OperationType> | null,
+    ): Promise<OperationType> {
         const requestFn = async (): Promise<OperationType> => {
             let lastError: unknown;
             for (const client of this.clients) {
@@ -97,10 +103,17 @@ export class OperationTracker implements IOperationTracker {
 
         return waitOptions === null
             ? await requestFn()
-            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting operation type for ${formatObjectForLogging(operationId)}`);
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation type for ${formatObjectForLogging(operationId)}`,
+              );
     }
 
-    async getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string> | null): Promise<string> {
+    async getOperationId(
+        transactionLinker: TransactionLinker,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string> {
         const requestFn = async (): Promise<string> => {
             let lastError: unknown;
             for (const client of this.clients) {
@@ -145,10 +158,17 @@ export class OperationTracker implements IOperationTracker {
 
         return waitOptions === null
             ? await requestFn()
-            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting operation IDs by shards keys ${formatObjectForLogging(shardsKeys)} caller=${caller} chunkSize=${chunkSize}`);
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation IDs by shards keys ${formatObjectForLogging(shardsKeys)} caller=${caller} chunkSize=${chunkSize}`,
+              );
     }
 
-    async getStageProfiling(operationId: string, waitOptions?: WaitOptions<ExecutionStages> | null): Promise<ExecutionStages> {
+    async getStageProfiling(
+        operationId: string,
+        waitOptions?: WaitOptions<ExecutionStages> | null,
+    ): Promise<ExecutionStages> {
         const requestFn = async (): Promise<ExecutionStages> => {
             let lastError: unknown;
 
@@ -169,7 +189,11 @@ export class OperationTracker implements IOperationTracker {
 
         return waitOptions === null
             ? await requestFn()
-            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting stage profiling for operation ${operationId}`);
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting stage profiling for operation ${operationId}`,
+              );
     }
 
     async getStageProfilings(
@@ -192,7 +216,11 @@ export class OperationTracker implements IOperationTracker {
 
         return waitOptions === null
             ? await requestFn()
-            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting stage profilings for operations: ${operationIds.join(', ')} chunkSize=${chunkSize}`);
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting stage profilings for operations: ${operationIds.join(', ')} chunkSize=${chunkSize}`,
+              );
     }
 
     async getOperationStatuses(
@@ -215,7 +243,11 @@ export class OperationTracker implements IOperationTracker {
 
         return waitOptions === null
             ? await requestFn()
-            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting operation statuses for operations: ${formatObjectForLogging(operationIds)} chunkSize=${chunkSize}`);
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation statuses for operations: ${formatObjectForLogging(operationIds)} chunkSize=${chunkSize}`,
+              );
     }
 
     async getOperationStatus(operationId: string, waitOptions?: WaitOptions<StatusInfo> | null): Promise<StatusInfo> {
@@ -237,14 +269,17 @@ export class OperationTracker implements IOperationTracker {
             throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
         };
 
-        const status = waitOptions === null
-            ? await requestFn()
-            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting operation status for ${formatObjectForLogging(operationId)}`);
+        const status =
+            waitOptions === null
+                ? await requestFn()
+                : await waitUntilSuccess(
+                      { logger: this.logger, ...waitOptions },
+                      requestFn,
+                      `OperationTracker: Getting operation status for ${formatObjectForLogging(operationId)}`,
+                  );
 
         this.logger.debug(
-            `operation status resolved stage=${status.stage ?? 'unknown'} success=${
-                (String(status.success))
-            }`,
+            `operation status resolved stage=${status.stage ?? 'unknown'} success=${String(status.success)}`,
         );
         return status;
     }
@@ -291,7 +326,11 @@ export class OperationTracker implements IOperationTracker {
 
         return waitOptions === null
             ? await requestFn()
-            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Converting currency ${formatObjectForLogging(params)}`);
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Converting currency ${formatObjectForLogging(params)}`,
+              );
     }
 
     async simulateTACMessage(
@@ -315,7 +354,11 @@ export class OperationTracker implements IOperationTracker {
 
         return waitOptions === null
             ? await requestFn()
-            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Simulating TAC message ${formatObjectForLogging(params)}`);
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Simulating TAC message ${formatObjectForLogging(params)}`,
+              );
     }
 
     async getTVMExecutorFee(
@@ -337,6 +380,10 @@ export class OperationTracker implements IOperationTracker {
 
         return waitOptions === null
             ? await requestFn()
-            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, `OperationTracker: Getting TVM executor fee ${formatObjectForLogging(params)}`);
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting TVM executor fee ${formatObjectForLogging(params)}`,
+              );
     }
 }

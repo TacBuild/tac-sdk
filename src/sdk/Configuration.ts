@@ -7,11 +7,11 @@ import { createDefaultRetryableOpener } from '../adapters';
 import { ContractOpener, IConfiguration, ILogger } from '../interfaces';
 import { ContractFeeUsageParams, InternalTACParams, InternalTONParams, TONFeesParams } from '../structs/InternalStruct';
 import { Network, TACParams, TONParams } from '../structs/Struct';
+import { DEFAULT_RETRY_MAX_COUNT } from './Consts';
 import { DEFAULT_CONTRACT_FEE_USAGE_PARAMS } from './Fees';
 import { NoopLogger } from './Logger';
 import { getAddressString, sha256toBigInt } from './Utils';
 import { Validator } from './Validator';
-import { DEFAULT_RETRY_MAX_COUNT } from './Consts';
 
 export class Configuration implements IConfiguration {
     readonly network: Network;
@@ -62,7 +62,14 @@ export class Configuration implements IConfiguration {
             liteSequencerEndpoints = customLiteSequencerEndpoints ?? artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
         }
 
-        return new Configuration(network, artifacts, internalTONParams, internalTACParams, liteSequencerEndpoints, logger);
+        return new Configuration(
+            network,
+            artifacts,
+            internalTONParams,
+            internalTACParams,
+            liteSequencerEndpoints,
+            logger,
+        );
     }
 
     private static async prepareTONParams(

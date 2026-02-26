@@ -1,9 +1,5 @@
 import { emptyArrayError, operationFetchError, profilingFetchError, statusFetchError } from '../errors';
-import {
-    convertCurrencyFetchError,
-    getTONFeeInfoFetchError,
-    simulationFetchError,
-} from '../errors/instances';
+import { convertCurrencyFetchError, getTONFeeInfoFetchError, simulationFetchError } from '../errors/instances';
 import { IHttpClient, ILiteSequencerClient } from '../interfaces';
 import {
     ConvertCurrencyResponse,
@@ -80,14 +76,11 @@ export class LiteSequencerClient implements ILiteSequencerClient {
         const path = 'operation-type';
         const requestLabel = this.getRequestLabel('GET', path);
         try {
-            const response = await this.httpClient.get<OperationTypeResponse>(
-                new URL(path, this.endpoint).toString(),
-                {
-                    params: {
-                        operationId,
-                    },
+            const response = await this.httpClient.get<OperationTypeResponse>(new URL(path, this.endpoint).toString(), {
+                params: {
+                    operationId,
                 },
-            );
+            });
             return response.data.response || '';
         } catch (error) {
             throw operationFetchError(`request ${requestLabel} failed to complete request`, error);

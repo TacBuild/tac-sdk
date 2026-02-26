@@ -32,8 +32,7 @@ function extractResponseMessage(responseData: unknown): string | undefined {
     }
 
     const data = responseData as UnknownRecord | undefined;
-    const nestedError =
-        data?.error && typeof data.error === 'object' ? (data.error as UnknownRecord) : undefined;
+    const nestedError = data?.error && typeof data.error === 'object' ? (data.error as UnknownRecord) : undefined;
 
     return (
         asString(data?.message) ??

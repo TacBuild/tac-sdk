@@ -243,7 +243,12 @@ export function formatObjectForLogging(obj: unknown): string {
     return JSON.stringify(obj, (key, value) => (typeof value === 'bigint' ? value.toString() : value));
 }
 
-function statusRetryMessageFromError(error: unknown, attempt: number, maxAttempts: number, delay: number): string | null {
+function statusRetryMessageFromError(
+    error: unknown,
+    attempt: number,
+    maxAttempts: number,
+    delay: number,
+): string | null {
     const prefix = 'Result is not successful: ';
     const message = String(error);
     const index = message.indexOf(prefix);

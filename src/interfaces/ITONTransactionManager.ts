@@ -53,7 +53,6 @@ export interface ITONTransactionManager {
         tx: CrosschainTx,
     ): Promise<FeeParams>;
 
-
     /**
      * Prepares the transaction payloads required for a cross-chain operation without sending them.
      * @param evmProxyMsg Encoded EVM proxy message.

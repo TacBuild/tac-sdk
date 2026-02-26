@@ -290,11 +290,7 @@ export abstract class BaseContractOpener implements ContractOpener {
      * @param hash Transaction hash in any format (base64, hex)
      * @param opts Search options
      */
-    async getAdjacentTransactions(
-        addr: Address,
-        hash: string,
-        opts?: GetTransactionsOptions,
-    ): Promise<Transaction[]> {
+    async getAdjacentTransactions(addr: Address, hash: string, opts?: GetTransactionsOptions): Promise<Transaction[]> {
         // 1. Find the root transaction (hash will be normalized inside getTransactionByHash)
         const rootTx = await this.getTransactionByHash(addr, hash, opts);
         if (!rootTx) return [];
@@ -417,7 +413,9 @@ export abstract class BaseContractOpener implements ContractOpener {
             const isLastAttempt = attempt >= maxRetries;
             const reason = errorMsg ?? 'not found';
             const retryInfo = isLastAttempt ? '' : `, retrying in ${retryDelayMs}ms`;
-            this.logger?.debug(`Transaction not found at depth ${depth} (attempt ${attempt + 1}/${maxRetries + 1}): ${reason}${retryInfo}`);
+            this.logger?.debug(
+                `Transaction not found at depth ${depth} (attempt ${attempt + 1}/${maxRetries + 1}): ${reason}${retryInfo}`,
+            );
 
             if (isLastAttempt) {
                 return null;
@@ -450,9 +448,7 @@ export abstract class BaseContractOpener implements ContractOpener {
         if (!result.success && result.error) {
             const { txHash, exitCode, resultCode, reason, address: errorAddress, hashType } = result.error;
             const context =
-                reason === 'not_found'
-                    ? ` address=${errorAddress ?? 'unknown'} hashType=${hashType ?? 'unknown'}`
-                    : '';
+                reason === 'not_found' ? ` address=${errorAddress ?? 'unknown'} hashType=${hashType ?? 'unknown'}` : '';
             const message = `${txHash}: reason=${reason} (exitCode=${exitCode}, resultCode=${resultCode})${context}`;
 
             if (reason === 'not_found') {

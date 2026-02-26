@@ -8,7 +8,10 @@ import { BaseContractOpener } from './BaseContractOpener';
 import { getHttpV4EndpointWithRetry } from './OpenerUtils';
 
 export class TonClient4Opener extends BaseContractOpener {
-    constructor(private readonly client4: TonClient4, logger?: ILogger) {
+    constructor(
+        private readonly client4: TonClient4,
+        logger?: ILogger,
+    ) {
         super(logger);
     }
 
