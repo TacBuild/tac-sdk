@@ -1,27 +1,45 @@
-import { Cell } from '@ton/ton';
+import { Cell, loadMessage } from '@ton/ton';
 
 import { FT, NFT, TON } from '../assets';
-import { missingFeeParamsError, missingGasLimitError, missingTvmExecutorFeeError } from '../errors';
+import {
+    insufficientFeeParamsError,
+    missingFeeParamsError,
+    missingGasLimitError,
+    missingTvmExecutorFeeError,
+} from '../errors';
 import { sendCrossChainTransactionFailedError } from '../errors/instances';
 import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator, ITONTransactionManager } from '../interfaces';
-import type { SenderAbstraction } from '../sender';
+import { getMockSender, type SenderAbstraction } from '../sender';
 import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
 import {
     BatchCrossChainTx,
+    CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
     CrosschainTx,
     EvmProxyMsg,
     FeeParams,
+    GeneratePayloadParams,
     OperationIdsByShardsKey,
     TransactionLinker,
     TransactionLinkerWithOperationId,
     ValidExecutors,
     WaitOptions,
 } from '../structs/Struct';
-import { FIFTEEN_MINUTES, TRANSACTION_TON_AMOUNT } from './Consts';
+import {
+    DEFAULT_FIND_TX_MAX_DEPTH,
+    FIFTEEN_MINUTES,
+    JETTON_TRANSFER_FORWARD_TON_AMOUNT,
+    NFT_TRANSFER_FORWARD_TON_AMOUNT,
+} from './Consts';
 import { NoopLogger } from './Logger';
-import { aggregateTokens, buildEvmDataCell, formatObjectForLogging, generateTransactionLinker } from './Utils';
+import {
+    aggregateTokens,
+    buildEvmDataCell,
+    formatObjectForLogging,
+    generateTransactionLinker,
+    getNormalizedExtMessageHash,
+} from './Utils';
 import { Validator } from './Validator';
 
 export class TONTransactionManager implements ITONTransactionManager {
@@ -32,13 +50,20 @@ export class TONTransactionManager implements ITONTransactionManager {
         private readonly logger: ILogger = new NoopLogger(),
     ) {}
 
-    protected async buildFeeParams(
+    async buildFeeParams(
         options: CrossChainTransactionOptions,
         evmProxyMsg: EvmProxyMsg,
         sender: SenderAbstraction,
         tx: CrosschainTx,
     ): Promise<FeeParams> {
-        const { withoutSimulation, protocolFee, evmExecutorFee, tvmExecutorFee, isRoundTrip } = options;
+        const {
+            withoutSimulation,
+            protocolFee,
+            evmExecutorFee,
+            tvmExecutorFee,
+            isRoundTrip,
+            shouldValidateFees = true,
+        } = options;
 
         if (withoutSimulation) {
             if (protocolFee === undefined || evmExecutorFee === undefined) {
@@ -61,7 +86,34 @@ export class TONTransactionManager implements ITONTransactionManager {
         }
 
         const simulationResult = await this.simulator.getSimulationInfo(sender, tx);
+
         if (!evmProxyMsg.gasLimit) evmProxyMsg.gasLimit = simulationResult.feeParams.gasLimit;
+
+        const shouldValidateSuggestedFees =
+            shouldValidateFees && (simulationResult.simulation?.simulationStatus ?? true);
+        if (shouldValidateSuggestedFees) {
+            if (protocolFee !== undefined && protocolFee < simulationResult.feeParams.protocolFee) {
+                throw insufficientFeeParamsError('protocolFee', protocolFee, simulationResult.feeParams.protocolFee);
+            }
+            if (evmExecutorFee !== undefined && evmExecutorFee < simulationResult.feeParams.evmExecutorFee) {
+                throw insufficientFeeParamsError(
+                    'evmExecutorFee',
+                    evmExecutorFee,
+                    simulationResult.feeParams.evmExecutorFee,
+                );
+            }
+            if (
+                simulationResult.feeParams.isRoundTrip &&
+                tvmExecutorFee !== undefined &&
+                tvmExecutorFee < simulationResult.feeParams.tvmExecutorFee
+            ) {
+                throw insufficientFeeParamsError(
+                    'tvmExecutorFee',
+                    tvmExecutorFee,
+                    simulationResult.feeParams.tvmExecutorFee,
+                );
+            }
+        }
 
         return {
             protocolFee: protocolFee ?? simulationResult.feeParams.protocolFee,
@@ -72,6 +124,7 @@ export class TONTransactionManager implements ITONTransactionManager {
                     : simulationResult.feeParams.tvmExecutorFee,
             gasLimit: evmProxyMsg.gasLimit ?? simulationResult.feeParams.gasLimit,
             isRoundTrip: isRoundTrip ?? simulationResult.feeParams.isRoundTrip,
+            evmEstimatedGas: simulationResult.simulation?.estimatedGas,
         };
     }
 
@@ -89,6 +142,7 @@ export class TONTransactionManager implements ITONTransactionManager {
             isRoundTrip = undefined,
             calculateRollbackFee = true,
             validateAssetsBalance = true,
+            evmDataBuilder = buildEvmDataCell,
         } = options || {};
         const { evmValidExecutors = [], tvmValidExecutors = [] } = options || {};
 
@@ -135,7 +189,7 @@ export class TONTransactionManager implements ITONTransactionManager {
             tac: tacExecutors,
             ton: tonExecutors,
         };
-        const evmData = buildEvmDataCell(transactionLinker, evmProxyMsg, validExecutors);
+        const evmData = evmDataBuilder(transactionLinker, evmProxyMsg, validExecutors);
         const messages = await this.generateCrossChainMessages(caller, evmData, aggregatedData, feeParams);
 
         return {
@@ -163,11 +217,21 @@ export class TONTransactionManager implements ITONTransactionManager {
         this.logger.debug(`Crosschain ton amount: ${crossChainTonAmount}, Fee ton amount: ${feeTonAmount}`);
 
         if (!totalAssets.length) {
+            const tonNetworkFee = this.simulator.estimateTONFee(ton, {
+                excessReceiver: caller,
+                evmData,
+                feeParams,
+            });
+
             return [
                 {
                     address: this.config.TONParams.crossChainLayerAddress,
-                    value: crossChainTonAmount + feeTonAmount + TRANSACTION_TON_AMOUNT,
+                    value: crossChainTonAmount + feeTonAmount + tonNetworkFee,
                     payload: await ton.generatePayload({ excessReceiver: caller, evmData, feeParams }),
+                    extra: {
+                        tonNetworkFee,
+                        tacEstimatedGas: feeParams.evmEstimatedGas,
+                    },
                 },
             ];
         }
@@ -176,20 +240,30 @@ export class TONTransactionManager implements ITONTransactionManager {
         let currentFeeParams: FeeParams | undefined = feeParams;
 
         for (const asset of totalAssets) {
-            const payload = await asset.generatePayload({
+            const params: GeneratePayloadParams = {
                 excessReceiver: caller,
                 evmData,
                 crossChainTonAmount,
                 forwardFeeTonAmount: feeTonAmount,
                 feeParams: currentFeeParams,
-            });
+            };
+
+            const payload = await asset.generatePayload(params);
 
             const address = asset instanceof FT ? await asset.getUserWalletAddress(caller) : asset.address;
+            const forwardAmount =
+                asset instanceof FT ? JETTON_TRANSFER_FORWARD_TON_AMOUNT : NFT_TRANSFER_FORWARD_TON_AMOUNT;
+
+            const tonNetworkFee = this.simulator.estimateTONFee(asset, params);
 
             messages.push({
                 address,
-                value: crossChainTonAmount + feeTonAmount + TRANSACTION_TON_AMOUNT,
+                value: crossChainTonAmount + feeTonAmount + tonNetworkFee + forwardAmount,
                 payload,
+                extra: {
+                    tonNetworkFee,
+                    tacEstimatedGas: currentFeeParams?.evmEstimatedGas,
+                },
             });
 
             crossChainTonAmount = 0n;
@@ -214,6 +288,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         );
 
         await TON.checkBalance(sender, this.config, [transaction]);
+        const shouldWaitForOperationId = tx.options?.waitOperationId ?? true;
         this.logger.debug(`Sending transaction: ${formatObjectForLogging(transactionLinker)}`);
 
         const sendTransactionResult = await sender.sendShardTransaction(
@@ -228,13 +303,24 @@ export class TONTransactionManager implements ITONTransactionManager {
             );
         }
 
-        const shouldWaitForOperationId = tx.options?.waitOperationId ?? true;
-
         if (!shouldWaitForOperationId) {
             return { sendTransactionResult, ...transactionLinker };
         }
 
         const waitOptions = tx.options?.waitOptions ?? {};
+        const ensureTxExecuted = tx.options?.ensureTxExecuted ?? true;
+
+        if (ensureTxExecuted && sendTransactionResult.boc) {
+            const hash = getNormalizedExtMessageHash(
+                loadMessage(Cell.fromBase64(sendTransactionResult.boc).beginParse()),
+            );
+            this.logger.info(`Tracking transaction tree for hash: ${hash}`);
+            await this.config.TONParams.contractOpener.trackTransactionTree(sender.getSenderAddress(), hash, {
+                maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
+            });
+            this.logger.info(`Transaction tree successful`);
+        }
+
         waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);
         waitOptions.logger = waitOptions.logger ?? this.logger;
 
@@ -332,11 +418,33 @@ export class TONTransactionManager implements ITONTransactionManager {
             this.logger.debug(`Operation IDs: ${formatObjectForLogging(operationIds)}`);
             return transactionLinkers.map((linker) => ({
                 ...linker,
-                operationId: operationIds[linker.shardsKey].operationIds.at(0),
+                operationId: operationIds[linker.shardsKey].operationIds[0],
             }));
         } catch (error) {
             this.logger.error(`Error while waiting for operation IDs: ${error}`);
             return transactionLinkers;
         }
+    }
+
+    async prepareCrossChainTransactionPayload(
+        evmProxyMsg: EvmProxyMsg,
+        senderAddress: string,
+        assets: Asset[] = [],
+        options?: CrossChainTransactionOptions,
+    ): Promise<CrossChainPayloadResult[]> {
+        this.logger.debug('Preparing cross-chain transaction payload');
+
+        const mockSender = getMockSender(senderAddress);
+
+        const result = await this.prepareCrossChainTransaction(evmProxyMsg, mockSender, assets, options, true);
+
+        return result.transaction.messages.map((r) => ({
+            body: r.payload,
+            destinationAddress: r.address,
+            tonAmount: r.value,
+            tonNetworkFee: r.extra.tonNetworkFee,
+            tacEstimatedGas: r.extra.tacEstimatedGas,
+            transactionLinker: result.transactionLinker,
+        }));
     }
 }

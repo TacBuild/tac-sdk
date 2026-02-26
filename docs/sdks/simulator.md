@@ -10,7 +10,17 @@
     - [Direct Instantiation](#direct-instantiation)
   - [Methods](#methods)
     - [`getSimulationInfo`](#getsimulationinfo)
+      - [**Purpose**](#purpose)
+      - [**Parameters**](#parameters)
+      - [**Returns** `ExecutionFeeEstimationResult`](#returns-executionfeeestimationresult)
     - [`getSimulationsInfo`](#getsimulationsinfo)
+      - [**Purpose**](#purpose-1)
+      - [**Parameters**](#parameters-1)
+      - [**Returns** `Promise<ExecutionFeeEstimationResult[]>`](#returns-promiseexecutionfeeestimationresult)
+    - [`estimateTONFee`](#estimatetonfee)
+      - [**Purpose**](#purpose-2)
+      - [**Parameters**](#parameters-2)
+      - [**Returns** `bigint`](#returns-bigint)
   - [Example Usage](#example-usage)
 
 ---
@@ -130,6 +140,27 @@ Simulates a list of cross-chain transactions for a given sender and provides fee
 #### **Returns** `Promise<ExecutionFeeEstimationResult[]>`
 
 Returns an array of [`ExecutionFeeEstimationResult`](./../models/structs.md#executionfeeestimationresult) objects, one for each input transaction in the same order.
+
+---
+
+### `estimateTONFee`
+
+```ts
+estimateTONFee(asset: Asset, params: GeneratePayloadParams): bigint
+```
+
+#### **Purpose**
+
+Estimates the TVM transaction fee required for processing a single asset in cross-chain operations. This method calculates fees for the complete transaction pipeline for one asset, including wallet interactions, token transfers/burns, proxy contracts, and cross-chain layer.
+
+#### **Parameters**
+
+- **`asset`**: An [`Asset`](./assets.md) instance representing the token/NFT to process.
+- **`params`**: [`GeneratePayloadParams`](./../models/structs.md#generatepayloadparams) object containing payload generation parameters including excess receiver, EVM data, and fee parameters.
+
+#### **Returns** `bigint`
+
+Returns the estimated fee in nanotons (1 TON = 10^9 nanotons) for processing the provided asset.
 
 ---
 

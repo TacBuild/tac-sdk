@@ -1,6 +1,6 @@
 import 'dotenv/config';
 
-import { ConsoleLogger, EvmProxyMsg, Network, SDKParams, SenderFactory, startTracking, TacSdk } from '../src';
+import { ConsoleLogger, EvmProxyMsg, Network, SDKParams, SenderFactory, TacSdk } from '../src';
 
 const bridgeTonSawSender = async (amount: number) => {
     // create TacSdk
@@ -31,7 +31,7 @@ const bridgeTonSawSender = async (amount: number) => {
         { address: tacSdk.config.nativeTONAddress, amount: amount },
     ];
 
-    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets, { allowSimulationError: true });
+    const result = await tacSdk.sendCrossChainTransaction(evmProxyMsg, sender, assets, { waitOperationId: true });
 
     tacSdk.closeConnections();
 
@@ -43,9 +43,6 @@ async function main() {
         // send transaction
         const result = await bridgeTonSawSender(0.0012);
         console.log('Transaction successful:', result);
-
-        // start tracking transaction status
-        await startTracking(result, Network.TESTNET);
     } catch (error) {
         console.error('Error during transaction:', error);
     }

@@ -9,6 +9,7 @@ export {
     MetadataError,
     SettingError,
     TokenError,
+    TransactionError,
     WalletError,
 } from './errors';
 export {
@@ -19,6 +20,7 @@ export {
     evmAddressError,
     indexRequiredError,
     insufficientBalanceError,
+    insufficientFeeParamsError,
     invalidMethodNameError,
     missingDecimals,
     missingFeeParamsError,
@@ -32,6 +34,7 @@ export {
     simulationFetchError,
     statusFetchError,
     tvmAddressError,
+    txFinalizationError,
     unknownTokenTypeError,
     unknownWalletError,
     unsupportedFormatError,

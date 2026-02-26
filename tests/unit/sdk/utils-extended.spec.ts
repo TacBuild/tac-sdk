@@ -2,7 +2,7 @@ import { Address, beginCell } from '@ton/ton';
 import { ethers } from 'ethers';
 
 import type { Asset } from '../../../src';
-import { AssetType, ValidExecutors } from '../../../src';
+import { AssetType, Origin, ValidExecutors } from '../../../src';
 import * as Utils from '../../../src/sdk/Utils';
 
 // Mock the generateRandomNumberByTimestamp function
@@ -38,11 +38,12 @@ class FakeFTAsset implements Asset {
     constructor(
         public address: string,
         public rawAmount: bigint,
+        public origin: Origin,
         makeClone = true,
     ) {
         this.type = AssetType.FT;
         if (makeClone) {
-            this.clone = new FakeFTAsset(address, rawAmount, false);
+            this.clone = new FakeFTAsset(address, rawAmount, origin, false);
         } else {
             this.clone = this;
         }
@@ -50,16 +51,16 @@ class FakeFTAsset implements Asset {
     type: AssetType;
     clone: Asset;
     withAmount(): Asset {
-        return new FakeFTAsset(this.address, this.rawAmount);
+        return new FakeFTAsset(this.address, this.rawAmount, this.origin);
     }
     withRawAmount(amount: bigint): Asset {
-        return new FakeFTAsset(this.address, amount);
+        return new FakeFTAsset(this.address, amount, this.origin);
     }
     addAmount(): Asset {
-        return new FakeFTAsset(this.address, this.rawAmount);
+        return new FakeFTAsset(this.address, this.rawAmount, this.origin);
     }
     addRawAmount(amount: bigint): Asset {
-        return new FakeFTAsset(this.address, this.rawAmount + amount);
+        return new FakeFTAsset(this.address, this.rawAmount + amount, this.origin);
     }
     async getEVMAddress(): Promise<string> {
         return `evm-${this.address || 'ton'}`;
@@ -67,7 +68,7 @@ class FakeFTAsset implements Asset {
     async getTVMAddress(): Promise<string> {
         return this.address;
     }
-    async generatePayload(): Promise<never> {
+    generatePayload(): never {
         throw new Error('not used in tests');
     }
     async checkCanBeTransferredBy(): Promise<void> {
@@ -81,7 +82,7 @@ class FakeFTAsset implements Asset {
 class FakeNFTAsset extends FakeFTAsset {
     addresses = { index: 5n };
     constructor(address: string, makeClone = true) {
-        super(address, 1n, false);
+        super(address, 1n, Origin.TON, false);
         this.type = AssetType.NFT;
         if (makeClone) {
             this.clone = new FakeNFTAsset(address, false);
@@ -191,9 +192,9 @@ describe('Utils helpers', () => {
     });
 
     it('aggregateTokens and mapAssetsToTonAssets normalize asset collections', () => {
-        const tonAsset = new FakeFTAsset('', 5n);
-        const jettonA1 = new FakeFTAsset('jettonA', 10n);
-        const jettonA2 = new FakeFTAsset('jettonA', 15n);
+        const tonAsset = new FakeFTAsset('', 5n, Origin.TON);
+        const jettonA1 = new FakeFTAsset('jettonA', 10n, Origin.TON);
+        const jettonA2 = new FakeFTAsset('jettonA', 15n, Origin.TON);
         const nft = new FakeNFTAsset('nft1');
 
         const aggregated = aggregateTokens([tonAsset, jettonA1, jettonA2, nft]);

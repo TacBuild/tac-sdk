@@ -1,3 +1,4 @@
+import { Origin } from '../structs/Struct';
 import {
     AddressError,
     BitError,
@@ -12,6 +13,7 @@ import {
     PrepareMessageGroupError,
     SettingError,
     TokenError,
+    TransactionError,
     WalletError,
 } from './errors';
 
@@ -61,8 +63,85 @@ export const prepareMessageGroupError = (isBocSizeValid: boolean, isDepthValid: 
 
 export const noValidGroupFoundError = new NoValidGroupFoundError('Failed to prepare valid message group', 116);
 
-export const allEndpointsFailedError = (inner: unknown) =>
-    new FetchError('All endpoints failed, last err: ' + (inner as Error).message, 117, inner);
+function extractEndpoint(message: string): string | undefined {
+    const match = message.match(/https?:\/\/\S+/i);
+    if (!match) {
+        return undefined;
+    }
+    return match[0].replace(/[),.;]+$/, '');
+}
+
+function extractResponseMessage(data: unknown, includeFullTrace: boolean): string | undefined {
+    if (typeof data === 'string' && data.length > 0) {
+        const isHtml = data.includes('<!doctype html>') || data.includes('<html');
+        if (isHtml && !includeFullTrace) {
+            return '[HTML response]';
+        }
+        return data;
+    }
+    if (!data || typeof data !== 'object') {
+        return undefined;
+    }
+
+    const payload = data as Record<string, unknown>;
+    if (typeof payload.message === 'string' && payload.message.length > 0) {
+        return payload.message;
+    }
+    if (typeof payload.error === 'string' && payload.error.length > 0) {
+        return payload.error;
+    }
+
+    return undefined;
+}
+
+function buildInnerErrorSummary(inner: unknown, includeFullTrace: boolean): string {
+    if (inner && typeof inner === 'object') {
+        const err = inner as {
+            message?: unknown;
+            innerMessage?: unknown;
+            status?: unknown;
+            httpStatus?: unknown;
+            response?: {
+                status?: unknown;
+                data?: unknown;
+            };
+        };
+        const parts: string[] = [];
+        const responseMessage = extractResponseMessage(err.response?.data, includeFullTrace);
+        const httpStatus = [err.httpStatus, err.status, err.response?.status].find(
+            (value) => typeof value === 'number',
+        );
+        const httpMessage =
+            typeof err.innerMessage === 'string' && err.innerMessage.length > 0 ? err.innerMessage : responseMessage;
+
+        if (typeof httpStatus === 'number') {
+            parts.push(`httpStatus=${httpStatus}`);
+        }
+        if (typeof httpMessage === 'string' && httpMessage.length > 0) {
+            parts.push(`httpMessage=${httpMessage}`);
+        }
+        if (typeof err.message === 'string' && err.message.length > 0) {
+            const endpoint = extractEndpoint(err.message);
+            if (endpoint) {
+                parts.push(`endpoint=${endpoint}`);
+            }
+        }
+        if (parts.length > 0) {
+            return parts.join(', ');
+        }
+    }
+
+    if (typeof inner === 'string' && inner.length > 0) {
+        return `message=${inner}`;
+    }
+
+    return 'message=unknown error';
+}
+
+export const allEndpointsFailedError = (inner: unknown, includeInnerStack = false) =>
+    new FetchError(`All endpoints failed, last err: ${buildInnerErrorSummary(inner, includeInnerStack)}`, 117, inner, {
+        includeInnerStack,
+    });
 
 export const allContractOpenerFailedError = (inner: unknown) =>
     new FetchError('All contract opener failed', 118, inner);
@@ -113,3 +192,16 @@ export const convertCurrencyNegativeOrZeroValueError = new FormatError(
     'Value cannot be negative or zero for currency conversion',
     132,
 );
+
+export const unknownAssetOriginError = (origin: Origin) => new TokenError(`Unknown asset origin: ${origin}`, 133);
+
+export const gasPriceFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`Failed to fetch gas price: ${msg}`, 134, inner);
+
+export const txFinalizationError = (msg: string) => new TransactionError(`Transaction failed: ${msg}`, 135);
+
+export const insufficientFeeParamsError = (feeName: string, provided: bigint, required: bigint) =>
+    new FormatError(
+        `Provided ${feeName} (${provided}) is lower than required (${required}). Set shouldValidateFees: false to bypass.`,
+        136,
+    );

@@ -39,9 +39,14 @@ export class LiteSequencerClient implements ILiteSequencerClient {
         this.httpClient = httpClient;
     }
 
+    private getRequestLabel(method: 'GET' | 'POST', path: string): string {
+        return `${method} ${new URL(path, this.endpoint).toString()}`;
+    }
+
     async getOperationIdByTransactionHash(transactionHash: string): Promise<string> {
         const isEthHash = /^0x[a-fA-F0-9]{64}$/.test(transactionHash);
         const path = isEthHash ? 'tac/operation-id' : 'ton/operation-id';
+        const requestLabel = this.getRequestLabel('GET', path);
 
         try {
             if (isEthHash) {
@@ -59,30 +64,32 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                 return response.data.response || '';
             }
         } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((error as any)?.response?.status === 404) {
                 return '';
             }
-            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw operationFetchError(`request ${requestLabel} failed to complete request`, error);
         }
     }
 
     async getOperationType(operationId: string): Promise<OperationType> {
+        const path = 'operation-type';
+        const requestLabel = this.getRequestLabel('GET', path);
         try {
-            const response = await this.httpClient.get<OperationTypeResponse>(
-                new URL('operation-type', this.endpoint).toString(),
-                {
-                    params: {
-                        operationId,
-                    },
+            const response = await this.httpClient.get<OperationTypeResponse>(new URL(path, this.endpoint).toString(), {
+                params: {
+                    operationId,
                 },
-            );
+            });
             return response.data.response || '';
         } catch (error) {
-            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw operationFetchError(`request ${requestLabel} failed to complete request`, error);
         }
     }
 
     async getOperationId(transactionLinker: TransactionLinker): Promise<string> {
+        const path = 'ton/operation-id';
+        const requestLabel = this.getRequestLabel('POST', path);
         const requestBody = {
             shardsKey: transactionLinker.shardsKey,
             caller: transactionLinker.caller,
@@ -92,15 +99,16 @@ export class LiteSequencerClient implements ILiteSequencerClient {
 
         try {
             const response = await this.httpClient.post<StringResponse>(
-                new URL('ton/operation-id', this.endpoint).toString(),
+                new URL(path, this.endpoint).toString(),
                 requestBody,
             );
             return response.data.response || '';
         } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((error as any)?.response?.status === 404) {
                 return '';
             }
-            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw operationFetchError(`request ${requestLabel} failed to complete request`, error);
         }
     }
 
@@ -109,6 +117,8 @@ export class LiteSequencerClient implements ILiteSequencerClient {
         caller: string,
         chunkSize: number = this.maxChunkSize,
     ): Promise<OperationIdsByShardsKey> {
+        const path = 'operation-ids-by-shards-keys';
+        const requestLabel = this.getRequestLabel('POST', path);
         if (!shardsKeys || shardsKeys.length === 0) {
             throw emptyArrayError('shardsKeys');
         }
@@ -118,7 +128,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                 shardsKeys,
                 async (chunk) => {
                     const response = await this.httpClient.post<OperationIdsByShardsKeyResponse>(
-                        new URL('operation-ids-by-shards-keys', this.endpoint).toString(),
+                        new URL(path, this.endpoint).toString(),
                         {
                             shardsKeys: chunk,
                             caller: caller,
@@ -131,7 +141,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
 
             return response.response;
         } catch (error) {
-            throw operationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw operationFetchError(`request ${requestLabel} failed to complete request`, error);
         }
     }
 
@@ -139,6 +149,8 @@ export class LiteSequencerClient implements ILiteSequencerClient {
         operationIds: string[],
         chunkSize: number = this.maxChunkSize,
     ): Promise<ExecutionStagesByOperationId> {
+        const path = 'stage-profiling';
+        const requestLabel = this.getRequestLabel('POST', path);
         if (!operationIds || operationIds.length === 0) {
             throw emptyArrayError('operationIds');
         }
@@ -148,7 +160,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                 operationIds,
                 async (chunk) => {
                     const response = await this.httpClient.post<StageProfilingResponse>(
-                        new URL('stage-profiling', this.endpoint).toString(),
+                        new URL(path, this.endpoint).toString(),
                         {
                             operationIds: chunk,
                         },
@@ -163,7 +175,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
 
             return response.response;
         } catch (error) {
-            throw profilingFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw profilingFetchError(`request ${requestLabel} failed to complete request`, error);
         }
     }
 
@@ -171,6 +183,8 @@ export class LiteSequencerClient implements ILiteSequencerClient {
         operationIds: string[],
         chunkSize: number = this.maxChunkSize,
     ): Promise<StatusInfosByOperationId> {
+        const path = 'status';
+        const requestLabel = this.getRequestLabel('POST', path);
         if (!operationIds || operationIds.length === 0) {
             throw emptyArrayError('operationIds');
         }
@@ -180,7 +194,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                 operationIds,
                 async (chunk) => {
                     const response = await this.httpClient.post<StatusesResponse>(
-                        new URL('status', this.endpoint).toString(),
+                        new URL(path, this.endpoint).toString(),
                         {
                             operationIds: chunk,
                         },
@@ -195,11 +209,13 @@ export class LiteSequencerClient implements ILiteSequencerClient {
 
             return response.response;
         } catch (error) {
-            throw statusFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw statusFetchError(`request ${requestLabel} failed to complete request`, error);
         }
     }
 
     async convertCurrency(params: ConvertCurrencyParams): Promise<ConvertedCurrencyResult> {
+        const path = 'convert_currency';
+        const requestLabel = this.getRequestLabel('POST', path);
         try {
             const payload = {
                 currency: params.currency,
@@ -207,7 +223,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
             } as const;
 
             const response = await this.httpClient.post<ConvertCurrencyResponse>(
-                new URL('convert_currency', this.endpoint).toString(),
+                new URL(path, this.endpoint).toString(),
                 payload,
                 {
                     transformResponse: [toCamelCaseTransformer],
@@ -233,14 +249,16 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                 },
             };
         } catch (error) {
-            throw convertCurrencyFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw convertCurrencyFetchError(`request ${requestLabel} failed to complete request`, error);
         }
     }
 
     async simulateTACMessage(params: TACSimulationParams): Promise<TACSimulationResult> {
+        const path = 'tac/simulator/simulate-message';
+        const requestLabel = this.getRequestLabel('POST', path);
         try {
             const response = await this.httpClient.post<TACSimulationResponse>(
-                new URL('tac/simulator/simulate-message', this.endpoint).toString(),
+                new URL(path, this.endpoint).toString(),
                 params,
                 {
                     transformResponse: [toCamelCaseTransformer],
@@ -249,14 +267,16 @@ export class LiteSequencerClient implements ILiteSequencerClient {
 
             return response.data.response;
         } catch (error) {
-            throw simulationFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw simulationFetchError(`request ${requestLabel} failed to complete request`, error);
         }
     }
 
     async getTVMExecutorFee(params: GetTVMExecutorFeeParams): Promise<SuggestedTVMExecutorFee> {
+        const path = '/ton/calculator/ton-executor-fee';
+        const requestLabel = this.getRequestLabel('POST', path);
         try {
             const response = await this.httpClient.post<SuggestedTVMExecutorFeeResponse>(
-                new URL('/ton/calculator/ton-executor-fee', this.endpoint).toString(),
+                new URL(path, this.endpoint).toString(),
                 params,
                 {
                     transformResponse: [toCamelCaseTransformer],
@@ -265,7 +285,7 @@ export class LiteSequencerClient implements ILiteSequencerClient {
 
             return response.data.response;
         } catch (error) {
-            throw getTONFeeInfoFetchError(`endpoint ${this.endpoint} failed to complete request`, error);
+            throw getTONFeeInfoFetchError(`request ${requestLabel} failed to complete request`, error);
         }
     }
 

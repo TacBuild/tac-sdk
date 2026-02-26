@@ -1,6 +1,6 @@
 import type { Cell } from '@ton/ton';
 
-import { AssetType, FeeParams } from '../structs/Struct';
+import { AssetType, GeneratePayloadParams, Origin } from '../structs/Struct';
 
 export interface Asset {
     // Address of the token on the blockchain
@@ -11,9 +11,12 @@ export interface Asset {
     rawAmount: bigint;
     // Clone to create new token with the same parameters
     clone: Asset;
+    // Origin of the token
+    origin: Origin;
     /**
      * Returns a new asset instance with the specified transfer amount in human-readable units.
      * Does not mutate the current asset instance.
+     * For FT assets, this applies TEP-526 scaling automatically if supported by the token.
      * @param amount Amount in human units (e.g., 1.5 TON). Decimals are resolved during asset creation.
      * @returns A new Asset reflecting the requested amount.
      */
@@ -21,6 +24,7 @@ export interface Asset {
     /**
      * Returns a new asset instance with the specified transfer amount in raw base units.
      * Does not mutate the current asset instance.
+     * No TEP-526 scaling is applied - sets the raw onchain amount directly.
      * @param rawAmount Amount in raw base units (bigint).
      * @returns A new Asset reflecting the requested raw amount.
      */
@@ -28,6 +32,7 @@ export interface Asset {
     /**
      * Increases the transfer amount by the specified value (human-readable units) and returns a new asset instance.
      * Does not mutate the current asset instance.
+     * For FT assets, this applies TEP-526 scaling automatically if supported by the token.
      * @param amount Amount in human units (e.g., 1.5 TON). Decimals are resolved during asset creation.
      * @returns A new Asset with the increased amount.
      */
@@ -35,6 +40,7 @@ export interface Asset {
     /**
      * Increases the transfer amount by the specified raw base units and returns a new asset instance.
      * Does not mutate the current asset instance.
+     * No TEP-526 scaling is applied - adds to the raw onchain amount directly.
      * @param rawAmount Amount in raw base units (bigint).
      * @returns A new Asset with the increased amount in raw units.
      */
@@ -59,15 +65,9 @@ export interface Asset {
      * @param params.crossChainTonAmount Optional TON amount to transfer cross-chain with the message.
      * @param params.forwardFeeTonAmount Optional TON amount used to cover forwarding fees on TON.
      * @param params.feeParams Optional fee parameters to fine-tune execution costs.
-     * @returns Promise that resolves to a Cell containing the encoded payload.
+     * @returns Cell containing the encoded payload.
      */
-    generatePayload(params: {
-        excessReceiver: string;
-        evmData: Cell;
-        crossChainTonAmount?: bigint;
-        forwardFeeTonAmount?: bigint;
-        feeParams?: FeeParams;
-    }): Promise<Cell>;
+    generatePayload(params: GeneratePayloadParams): Cell;
     /**
      * Validates whether the specified user is allowed to transfer this asset.
      * Implementations should throw if the transfer is not permitted (e.g., frozen asset, missing wallet, insufficient permissions).

@@ -2,7 +2,9 @@
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'node',
+    roots: ['<rootDir>/src', '<rootDir>/tests'],
     testPathIgnorePatterns: ['/node_modules/', '/dist/', '/artifacts/'],
+    modulePathIgnorePatterns: ['<rootDir>/artifacts/'],
     moduleNameMapper: {
         '^axios$': require.resolve('axios'),
     },

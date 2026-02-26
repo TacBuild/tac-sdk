@@ -242,7 +242,7 @@ describe('TacSDK', () => {
             const mnemonic: string[] = await mnemonicNew(24, '');
 
             const rawSender = await SenderFactory.getSender({
-                network: Network.TESTNET,
+                network: Network.DEV,
                 version,
                 mnemonic: mnemonic.join(' '),
             });
@@ -277,6 +277,7 @@ describe('TacSDK', () => {
                 from: address(rawSender.getSenderAddress()),
                 to: crossChainLayer.address,
                 success: true,
+                exitCode: 0,
                 op: CrossChainLayerOpCodes.anyone_tvmMsgToEVM,
             });
 
