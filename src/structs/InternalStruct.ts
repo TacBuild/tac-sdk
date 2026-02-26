@@ -1,4 +1,4 @@
-import { Cell } from '@ton/ton';
+import { Address, Cell } from '@ton/ton';
 import { AbstractProvider, ethers } from 'ethers';
 
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
@@ -18,6 +18,10 @@ export type ShardMessage = {
     address: string;
     value: bigint;
     payload: Cell;
+    extra: {
+        tonNetworkFee: bigint;
+        tacEstimatedGas?: bigint;
+    };
 };
 
 export type ShardTransaction = {
@@ -47,6 +51,8 @@ export type InternalTONParams = {
     jettonWalletCode: Cell;
     nftItemCode: Cell;
     nftCollectionCode: Cell;
+    feesParams: TONFeesParams;
+    contractFeeUsageParams: ContractFeeUsageParams;
 };
 
 export type InternalTACParams = {
@@ -87,6 +93,7 @@ export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogInd
 
 export interface SendResult {
     success: boolean;
+    boc: string;
     result?: unknown;
     error?: Error;
     lastMessageIndex?: number;
@@ -95,11 +102,11 @@ export interface SendResult {
 export type ToncenterTransaction = {
     description: {
         aborted: boolean;
-        action: {
+        action?: {
             resultCode: number;
             success: boolean;
         };
-        computePh: {
+        computePh?: {
             exitCode: number;
             success: boolean;
         };
@@ -109,6 +116,7 @@ export type ToncenterTransaction = {
     inMsg: {
         hash: string;
         opcode: string;
+        value: string;
     };
     outMsgs: {
         hash: string;
@@ -116,8 +124,10 @@ export type ToncenterTransaction = {
 };
 
 export type TransactionDepth = {
+    address?: Address;
     hash: string;
     depth: number;
+    hashType?: 'unknown' | 'in' | 'out';
 };
 
 export type AdjacentTransactionsResponse = {
@@ -126,7 +136,7 @@ export type AdjacentTransactionsResponse = {
 
 export type TxFinalizerConfig = {
     urlBuilder: (hash: string) => string;
-    authorization: { header: string; value: string };
+    authorization?: { header: string; value: string };
 };
 
 export type USDPriceInfoRaw = {
@@ -141,4 +151,93 @@ export type ConvertedCurrencyRawResult = {
     currency: CurrencyType;
     tacPrice: USDPriceInfoRaw;
     tonPrice: USDPriceInfoRaw;
+};
+
+export type TONFeesParams = {
+    accountBitPrice: number;
+    accountCellPrice: number;
+    lumpPrice: number;
+    gasPrice: number;
+    firstFrac: number;
+    ihrPriceFactor: number;
+    msgBitPrice: number;
+    msgCellPrice: number;
+};
+
+export type ContractFeeUsageParams = {
+    crossChainLayer: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            tvmMsgToEvm: number;
+        };
+    };
+    jettonWallet: {
+        accountBits: number;
+        accountCells: number;
+        estimatedAccountBits: number;
+        estimatedAccountCells: number;
+        initStateBits: number;
+        initStateCells: number;
+        gas: {
+            internalTransfer: number;
+            receive: number;
+            burn: number;
+            estimatedSendTransfer: number;
+            estimatedReceiveTransfer: number;
+        };
+    };
+    jettonProxy: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            ownershipAssigned: number;
+            transferNotification: number;
+            errorNotification: number;
+        };
+    };
+    jettonMinter: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            burnNotification: number;
+            mintAfterError: number;
+        };
+    };
+    nftItem: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            send: number;
+            burn: number;
+            errorNotification: number;
+        };
+    };
+    nftProxy: {
+        accountBits: number;
+        accountCells: number;
+        gas: {
+            ownershipAssigned: number;
+            errorNotification: number;
+        };
+    };
+};
+
+export type TransactionFeeCalculationStep = {
+    accountBits: number;
+    accountCells: number;
+    gasUsed: number;
+    msgBits: number;
+    msgCells: number;
+    timeDelta: number;
+};
+
+export type TONFeeCalculationParams = TransactionFeeCalculationStep & TONFeesParams;
+
+export type TacGasPriceResponse = {
+    gasPrices: {
+        average: number;
+        fast: number;
+        slow: number;
+    };
 };

@@ -1,5 +1,6 @@
 import { indexRequiredError, unknownTokenTypeError } from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
+import { TON_BURN_ADDRESS } from '../sdk/Consts';
 import {
     AssetFromFTArg,
     AssetFromNFTCollectionArg,
@@ -19,7 +20,11 @@ export class AssetFactory {
         configuration: IConfiguration,
         token: AssetFromFTArg | AssetFromNFTCollectionArg | AssetFromNFTItemArg,
     ): Promise<Asset> {
-        if (token.address === '' || token.address === configuration.nativeTONAddress) {
+        if (
+            token.address === '' ||
+            token.address === configuration.nativeTONAddress ||
+            token.address === TON_BURN_ADDRESS
+        ) {
             if (token.tokenType !== AssetType.FT)
                 throw unknownTokenTypeError(token.address, 'detected TON, but token type is not FT');
             return TON.create(configuration);
@@ -46,7 +51,12 @@ export class AssetFactory {
 
     static async createFTAsset(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<Asset> {
         const ton = TON.create(configuration);
-        if (address === configuration.nativeTONAddress || address === '' || address === (await ton.getEVMAddress())) {
+        if (
+            address === configuration.nativeTONAddress ||
+            address === '' ||
+            address === (await ton.getEVMAddress()) ||
+            address === TON_BURN_ADDRESS
+        ) {
             return ton;
         }
 

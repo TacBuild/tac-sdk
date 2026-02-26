@@ -1,6 +1,5 @@
 import { toNano } from '@ton/ton';
 
-export const TRANSACTION_TON_AMOUNT = toNano(0.55);
 export const JETTON_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.2);
 export const NFT_TRANSFER_FORWARD_TON_AMOUNT = toNano(0.3);
 
@@ -19,6 +18,32 @@ export const TON_SYMBOL = 'TON';
 export const TAC_SYMBOL = 'TAC';
 
 export const FIFTEEN_MINUTES = 15 * 60 * 1000;
+export const ONE_YEAR_SECONDS = 365 * 24 * 3600;
 
 export const TON_DECIMALS = 9;
 export const TAC_DECIMALS = 18;
+
+export const FIVE_MINUTES = 5 * 60 * 1000;
+export const MINUTE = 60 * 1000;
+
+export const TON_BURN_ADDRESS = 'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c';
+
+export const DEFAULT_HTTP_CLIENT_TIMEOUT_MS = 30000;
+export const DEFAULT_RETRY_MAX_COUNT = 5;
+export const DEFAULT_RETRY_DELAY_MS = 1000;
+
+export const DEFAULT_WAIT_TIMEOUT_MS = 300000; // 5 minutes
+export const DEFAULT_WAIT_MAX_ATTEMPTS = 30;
+export const DEFAULT_WAIT_DELAY_MS = 10000; // 10 seconds
+
+export const DEFAULT_FIND_TX_LIMIT = 100;
+export const DEFAULT_MAX_SCANNED_TRANSACTIONS = 100;
+export const DEFAULT_FIND_TX_ARCHIVAL = true;
+export const DEFAULT_FIND_TX_MAX_DEPTH = 10;
+export const DEFAULT_RETRY_ON_NOT_FOUND = true;
+export const DEFAULT_RETRY_ON_NOT_FOUND_RETRIES = 10;
+export const DEFAULT_RETRY_ON_NOT_FOUND_DELAY_MS = 5000;
+export const IGNORE_MSG_VALUE_1_NANO = 1n;
+export const IGNORE_OPCODE = [
+    0xd53276db, // Excess
+];

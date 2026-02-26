@@ -1,25 +1,22 @@
-import { TonClient } from '@ton/ton';
-
-import { AssetFactory, AssetType, Network, TacSdk } from '../../src';
+import { AssetFactory, AssetType, Network, TacSdk, tonClientOpenerByUrl } from '../../src';
 
 async function main() {
+    const contractOpener = tonClientOpenerByUrl('https://rp.mainnet.tac.build/api/v2/jsonRPC');
     const sdk = await TacSdk.create({
-        network: Network.TESTNET,
+        network: Network.MAINNET,
         delay: 1,
         TONParams: {
-            contractOpener: new TonClient({
-                endpoint: 'http://toncenter.turin.tac.build/jsonRPC',
-                // apiKey: "your_api_key"
-            }),
+            contractOpener,
         },
     });
 
-    const token = await AssetFactory.from(sdk.config, {
-        address: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
-        tokenType: AssetType.FT,
-    });
+    // const token = await AssetFactory.from(sdk.config, {
+    //     address: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+    //     tokenType: AssetType.FT,
+    // });
 
-    console.log(await token.getEVMAddress());
+    // console.log(await token.getEVMAddress());
+    console.log(await  contractOpener.getConfig());
 }
 
 main();

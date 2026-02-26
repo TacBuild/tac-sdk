@@ -56,13 +56,23 @@ export class BatchSender implements SenderAbstraction {
         for (const group of groups) {
             try {
                 const result = await this.sendGroup(group, contractOpener);
+                // Extract BoC if it's a string, or from sandbox result
+                let externalMsgBoc: string = '';
+                if (typeof result === 'string') {
+                    externalMsgBoc = result;
+                } else if (result?.result) {
+                    externalMsgBoc = result.result;
+                }
+
                 results.push({
+                    boc: externalMsgBoc,
                     success: true,
                     result,
                     lastMessageIndex: currentMessageIndex + group.length - 1,
                 });
             } catch (error) {
                 results.push({
+                    boc: '',
                     success: false,
                     error: error as Error,
                     lastMessageIndex: currentMessageIndex - 1,
@@ -119,7 +129,10 @@ export class BatchSender implements SenderAbstraction {
         return groups;
     }
 
-    private async sendGroup(messages: MessageRelaxed[], contractOpener: ContractOpener): Promise<unknown> {
+    private async sendGroup(
+        messages: MessageRelaxed[],
+        contractOpener: ContractOpener,
+    ): Promise<string | { result: string }> {
         const walletContract = contractOpener.open(this.wallet);
 
         let createdAt = HighloadWalletV3.generateCreatedAt();
@@ -158,7 +171,16 @@ export class BatchSender implements SenderAbstraction {
         }
 
         const result = await this.sendGroup(messages, contractOpener);
+        // Extract BoC if it's a string, or from sandbox result
+        let externalMsgBoc: string = '';
+        if (typeof result === 'string') {
+            externalMsgBoc = result;
+        } else if (result?.result) {
+            externalMsgBoc = result.result;
+        }
+
         return {
+            boc: externalMsgBoc,
             success: true,
             result,
             lastMessageIndex: shardTransaction.messages.length - 1,

@@ -320,13 +320,13 @@ export class NFT implements Asset {
         return this.address.toString();
     }
 
-    async generatePayload(params: {
+    generatePayload(params: {
         excessReceiver: string;
         evmData: Cell;
         crossChainTonAmount?: bigint;
         forwardFeeTonAmount?: bigint;
         feeParams?: FeeParams;
-    }): Promise<Cell> {
+    }): Cell {
         const { excessReceiver, evmData, crossChainTonAmount = 0n, forwardFeeTonAmount = 0n, feeParams } = params;
 
         const opType = this.origin === Origin.TAC ? AssetOpType.NFT_BURN : AssetOpType.NFT_TRANSFER;

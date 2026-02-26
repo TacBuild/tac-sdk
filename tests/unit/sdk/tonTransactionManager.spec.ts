@@ -1,5 +1,6 @@
 import {
     AssetType,
+    insufficientFeeParamsError,
     missingFeeParamsError,
     missingGasLimitError,
     missingTvmExecutorFeeError,
@@ -38,7 +39,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
 
     it('throws when required fee params are missing in withoutSimulation mode', async () => {
         await expect(
-            (manager as any).buildFeeParams(
+            manager.buildFeeParams(
                 { withoutSimulation: true },
                 { evmTargetAddress: '0xTarget' },
                 {} as never,
@@ -49,7 +50,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
 
     it('throws when tvmExecutorFee not provided for round trip', async () => {
         await expect(
-            (manager as any).buildFeeParams(
+            manager.buildFeeParams(
                 { withoutSimulation: true, protocolFee: 1n, evmExecutorFee: 2n, isRoundTrip: true },
                 { evmTargetAddress: '0xTarget' },
                 {} as never,
@@ -60,7 +61,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
 
     it('throws when gas limit is missing for manual mode', async () => {
         await expect(
-            (manager as any).buildFeeParams(
+            manager.buildFeeParams(
                 { withoutSimulation: true, protocolFee: 1n, evmExecutorFee: 2n, tvmExecutorFee: 3n },
                 { evmTargetAddress: '0xTarget' },
                 {} as never,
@@ -70,7 +71,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
     });
 
     it('returns provided values when withoutSimulation data is complete', async () => {
-        const result = await (manager as any).buildFeeParams(
+        const result = await manager.buildFeeParams(
             {
                 withoutSimulation: true,
                 protocolFee: 1n,
@@ -104,7 +105,7 @@ describe('TONTransactionManager.buildFeeParams', () => {
         });
 
         const evmProxyMsg = { evmTargetAddress: '0xTarget' } as { evmTargetAddress: string; gasLimit?: bigint };
-        const result = await (manager as any).buildFeeParams(
+        const result = await manager.buildFeeParams(
             {},
             evmProxyMsg,
             {} as never,
@@ -122,6 +123,72 @@ describe('TONTransactionManager.buildFeeParams', () => {
             tvmExecutorFee: 30n,
             gasLimit: 40n,
             isRoundTrip: true,
+            evmEstimatedGas: undefined,
+        });
+    });
+
+    it('throws when explicit fee params are lower than suggested', async () => {
+        simulator.getSimulationInfo.mockResolvedValue({
+            feeParams: {
+                protocolFee: 10n,
+                evmExecutorFee: 20n,
+                tvmExecutorFee: 30n,
+                gasLimit: 40n,
+                isRoundTrip: true,
+            },
+            simulation: {
+                simulationStatus: true,
+                estimatedGas: 123n,
+            },
+        });
+
+        const evmProxyMsg = { evmTargetAddress: '0xTarget' } as { evmTargetAddress: string; gasLimit?: bigint };
+        await expect(
+            manager.buildFeeParams(
+                { evmExecutorFee: 5n },
+                evmProxyMsg,
+                {} as never,
+                {
+                    evmProxyMsg: { evmTargetAddress: '0xTarget' },
+                    assets: [{ type: AssetType.FT }],
+                } as never,
+            ),
+        ).rejects.toThrow(insufficientFeeParamsError('evmExecutorFee', 5n, 20n).message);
+    });
+
+    it('allows explicit lower fees when shouldValidateFees is false', async () => {
+        simulator.getSimulationInfo.mockResolvedValue({
+            feeParams: {
+                protocolFee: 10n,
+                evmExecutorFee: 20n,
+                tvmExecutorFee: 30n,
+                gasLimit: 40n,
+                isRoundTrip: true,
+            },
+            simulation: {
+                simulationStatus: true,
+                estimatedGas: 123n,
+            },
+        });
+
+        const evmProxyMsg = { evmTargetAddress: '0xTarget' } as { evmTargetAddress: string; gasLimit?: bigint };
+        const result = await manager.buildFeeParams(
+            { evmExecutorFee: 5n, shouldValidateFees: false },
+            evmProxyMsg,
+            {} as never,
+            {
+                evmProxyMsg: { evmTargetAddress: '0xTarget' },
+                assets: [{ type: AssetType.FT }],
+            } as never,
+        );
+
+        expect(result).toEqual({
+            protocolFee: 10n,
+            evmExecutorFee: 5n,
+            tvmExecutorFee: 30n,
+            gasLimit: 40n,
+            isRoundTrip: true,
+            evmEstimatedGas: 123n,
         });
     });
 });

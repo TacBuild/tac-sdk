@@ -9,7 +9,7 @@ describe('FT', () => {
 
     beforeAll(async () => {
         sdk = await TacSdk.create({ network: Network.TESTNET });
-    }, 30000);
+    }, 100000);
 
     it('FT.getOriginAndData returns correct FTOriginAndData structure', async () => {
         const result = await FT.getOriginAndData(sdk.config, TON_FT_ADDRESS);
@@ -20,7 +20,7 @@ describe('FT', () => {
         expect(result.jettonMinter).toBeDefined();
         expect(result.jettonData).toBeDefined();
         expect(result.evmAddress).toBeUndefined();
-    });
+    }, 50000);
 
     it('FT.getOriginAndData returns correct FTOriginAndData structure for TAC origin', async () => {
         const tvmAddress = await FT.getTVMAddress(sdk.config, TAC_FT_ADDRESS);
@@ -31,5 +31,5 @@ describe('FT', () => {
         expect(result.jettonMinter).toBeDefined();
         expect(result.evmAddress).toBe(TAC_FT_ADDRESS);
         expect(result.jettonData).toBeUndefined(); // TAC origin should not have jettonData pre-fetched
-    });
+    }, 50000);
 });

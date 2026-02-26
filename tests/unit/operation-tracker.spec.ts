@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
-import { ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } from '../../src';
+import { FetchError, ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } from '../../src';
 import {
     AssetType,
     BlockchainType,
@@ -360,6 +360,10 @@ describe('OperationTracker', () => {
 
             expect(result).toEqual(expectedStatus);
             expect(mockClients[0].getOperationStatuses).toHaveBeenCalledWith([operationId]);
+            expect(mockLogger.debug).not.toHaveBeenCalledWith('Operation status retrieved successfully');
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `operation status resolved stage=${StageName.EXECUTED_IN_TAC} success=true`,
+            );
         });
 
         it('should throw error if no operation status found', async () => {
@@ -370,6 +374,55 @@ describe('OperationTracker', () => {
 
             await expect(operationTracker.getOperationStatus(operationId)).rejects.toThrow();
             expect(mockLogger.warn).toHaveBeenCalledWith(`No operation status for operationId=${operationId}`);
+        });
+
+        it('should log pending one-liner for intermediate status while waiting', async () => {
+            const operationId = 'op123';
+            const pendingStatus: StatusInfo = {
+                stage: StageName.INCLUDED_IN_TON_CONSENSUS,
+                success: true,
+                timestamp: Date.now(),
+                transactions: [
+                    {
+                        hash: '0x69d97176890b6968837c20ff9fff36d8791e5108cb0a8bb366da13db6bd556ab',
+                        blockchainType: BlockchainType.TON,
+                    },
+                ],
+                note: null,
+            };
+            const finalStatus: StatusInfo = {
+                stage: StageName.EXECUTED_IN_TON,
+                success: true,
+                timestamp: Date.now(),
+                transactions: [
+                    {
+                        hash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                        blockchainType: BlockchainType.TON,
+                    },
+                ],
+                note: null,
+            };
+
+            mockClients[0].getOperationStatuses
+                .mockResolvedValueOnce({ [operationId]: pendingStatus })
+                .mockResolvedValueOnce({ [operationId]: finalStatus });
+
+            const waitOptions: WaitOptions<StatusInfo> = {
+                timeout: 1000,
+                maxAttempts: 5,
+                delay: 1,
+                logger: mockLogger,
+                successCheck: (status) => status.stage === StageName.EXECUTED_IN_TON,
+            };
+
+            const result = await operationTracker.getOperationStatus(operationId, waitOptions);
+            expect(result).toEqual(finalStatus);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                '[OperationTracker: Getting operation status] pending attempt=1/5 stage=includedInTONConsensus success=true tx=0x69d97176890b6968837c20ff9fff36d8791e5108cb0a8bb366da13db6bd556ab retry_in=1ms',
+            );
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `operation status resolved stage=${StageName.EXECUTED_IN_TON} success=true`,
+            );
         });
     });
 
@@ -759,13 +812,67 @@ describe('OperationTracker', () => {
                 ],
                 tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
             };
-            const error = new Error('Simulation error');
+            const error = Object.assign(new Error('Simulation error'), { response: { status: 422 } });
 
             mockClients[0].simulateTACMessage.mockRejectedValue(error);
             mockClients[1].simulateTACMessage.mockRejectedValue(error);
 
-            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow();
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow(FetchError);
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toMatchObject({
+                errorCode: 117,
+                httpStatus: 422,
+                innerErrorName: 'Error',
+                innerMessage: 'Simulation error',
+            });
             expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to simulate TAC message');
+        });
+
+        it('should include http status and response message when all endpoints fail', async () => {
+            const params = {
+                tacCallParams: {
+                    arguments: '0xabcdef',
+                    methodName: 'transfer',
+                    target: '0x1234567890123456789012345678901234567890',
+                },
+                shardsKey: '12345',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+            };
+            const error = Object.assign(
+                new Error(
+                    'failed to fetch simulate tac msg: request POST http://localhost:8090/tac/simulator/simulate-message failed to complete request',
+                ),
+                {
+                name: 'AxiosError',
+                response: {
+                    status: 422,
+                    data: {
+                        errorCode: 9001,
+                        message: 'Bad TAC payload',
+                    },
+                },
+                },
+            );
+
+            mockClients[0].simulateTACMessage.mockRejectedValue(error);
+            mockClients[1].simulateTACMessage.mockRejectedValue(error);
+
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toMatchObject({
+                errorCode: 117,
+                httpStatus: 422,
+                innerMessage: 'Bad TAC payload',
+            });
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow('httpStatus=422');
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow('httpMessage=Bad TAC payload');
+            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow(
+                'endpoint=http://localhost:8090/tac/simulator/simulate-message',
+            );
         });
 
         it('should use waitUntilSuccess when wait options provided', async () => {
@@ -813,6 +920,47 @@ describe('OperationTracker', () => {
             const result = await operationTracker.simulateTACMessage(params, waitOptions);
 
             expect(result).toBe(expectedResult);
+        });
+
+        it('should include inner stack when waitOptions.includeErrorTrace is true', async () => {
+            const params = {
+                tacCallParams: {
+                    arguments: '0xabcdef',
+                    methodName: 'transfer',
+                    target: '0x1234567890123456789012345678901234567890',
+                },
+                shardsKey: '12345',
+                tonAssets: [
+                    {
+                        amount: '1000000000',
+                        tokenAddress: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+                        assetType: AssetType.FT,
+                    },
+                ],
+                tonCaller: 'EQCsQSo54ajAorOfDUAM-RPdDJgs0obqyrNSEtvbjB7hh2oK',
+            };
+            const error = Object.assign(new Error('Simulation error with stack'), { response: { status: 500 } });
+
+            mockClients[0].simulateTACMessage.mockRejectedValue(error);
+            mockClients[1].simulateTACMessage.mockRejectedValue(error);
+
+            await expect(
+                operationTracker.simulateTACMessage(params, {
+                    includeErrorTrace: true,
+                    maxAttempts: 1,
+                }),
+            ).rejects.toMatchObject({
+                errorCode: 117,
+                httpStatus: 500,
+                innerMessage: 'Simulation error with stack',
+            });
+
+            await expect(
+                operationTracker.simulateTACMessage(params, {
+                    includeErrorTrace: true,
+                    maxAttempts: 1,
+                }),
+            ).rejects.toHaveProperty('innerStack');
         });
     });
 

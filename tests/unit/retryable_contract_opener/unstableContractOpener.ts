@@ -1,16 +1,20 @@
 import { Blockchain, SandboxContract } from '@ton/sandbox';
-import { Address, Cell, Contract } from '@ton/ton';
+import { Address, Cell, Contract, Transaction } from '@ton/ton';
 
-import { ContractOpener, ContractState } from '../../../src';
+import { ContractState } from '../../../src';
+import { BaseContractOpener } from '../../../src';
+import { AddressInformation } from '../../../src/structs/Struct';
 
-export class UnstableContractOpener implements ContractOpener {
+export class UnstableContractOpener extends BaseContractOpener {
     public callCounts = new Map<string, number>();
 
     constructor(
         private name: string,
         private blockchain: Blockchain,
         private failsBeforeSuccess: number = 0,
-    ) {}
+    ) {
+        super();
+    }
 
     open<T extends Contract>(contract: T): SandboxContract<T> {
         return new Proxy(this.blockchain.openContract(contract), {
@@ -65,6 +69,18 @@ export class UnstableContractOpener implements ContractOpener {
             state: type === 'uninit' ? 'uninitialized' : type || 'uninitialized',
             code: code?.toBoc() || null,
         };
+    }
+
+    async getTransactions(): Promise<Transaction[]> {
+        throw new Error('getTransactions not implemented for UnstableContractOpener');
+    }
+
+    async getAddressInformation(): Promise<AddressInformation> {
+        throw new Error('getAddressInformation not implemented for UnstableContractOpener');
+    }
+
+    async getConfig(): Promise<string> {
+        return this.blockchain.config.toBoc().toString('base64');
     }
 
     closeConnections(): void {}

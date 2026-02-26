@@ -1,10 +1,12 @@
 import { SandboxContract } from '@ton/sandbox';
-import { OpenedContract } from '@ton/ton';
+import { Cell, OpenedContract } from '@ton/ton';
 import { AbstractProvider } from 'ethers';
 
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
 import type { Asset, ContractOpener, ILogger } from '../interfaces';
+import { DEFAULT_WAIT_DELAY_MS, DEFAULT_WAIT_MAX_ATTEMPTS, DEFAULT_WAIT_TIMEOUT_MS } from '../sdk/Consts';
+import { SendResult } from './InternalStruct';
 
 export type ContractState = {
     balance: bigint;
@@ -98,6 +100,12 @@ export type SDKParams = {
      * URLs of lite sequencers
      */
     customLiteSequencerEndpoints?: string[];
+
+    /**
+     * Whether SDK logger should be passed to TON contract opener(s).
+     * Default: true
+     */
+    passLoggerToOpeners?: boolean;
 };
 
 export enum AssetType {
@@ -126,7 +134,6 @@ export type EvmProxyMsg = {
     methodName?: string;
     encodedParameters?: string;
     gasLimit?: bigint;
-    [key: string]: unknown;
 };
 
 export type TransactionLinker = {
@@ -134,7 +141,7 @@ export type TransactionLinker = {
     shardCount: number;
     shardsKey: string;
     timestamp: number;
-    sendTransactionResult?: unknown;
+    sendTransactionResult?: SendResult;
 };
 
 export type TransactionLinkerWithOperationId = TransactionLinker & {
@@ -333,10 +340,27 @@ export type FeeParams = {
     protocolFee: bigint;
     evmExecutorFee: bigint;
     tvmExecutorFee: bigint;
+    evmEstimatedGas?: bigint;
 };
+
+export type evmDataBuilder = (
+    transactionLinker: TransactionLinker,
+    evmProxyMsg: EvmProxyMsg,
+    validExecutors: ValidExecutors,
+) => Cell;
 
 export type CrossChainTransactionOptions = {
     allowSimulationError?: boolean;
+    /**
+     * If true, ensures TON transaction execution is validated before waiting for operation id.
+     * @default true
+     */
+    ensureTxExecuted?: boolean;
+    /**
+     * If true, validates explicitly provided fee params against suggested values.
+     * @default true
+     */
+    shouldValidateFees?: boolean;
     isRoundTrip?: boolean;
     protocolFee?: bigint;
     evmValidExecutors?: string[];
@@ -348,9 +372,13 @@ export type CrossChainTransactionOptions = {
     validateAssetsBalance?: boolean;
     waitOperationId?: boolean;
     waitOptions?: WaitOptions<string>;
+    evmDataBuilder?: evmDataBuilder;
 };
 
-export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions'>;
+export type BatchCrossChainTransactionOptions = Omit<
+    CrossChainTransactionOptions,
+    'waitOperationId' | 'waitOptions' | 'ensureTxExecuted'
+>;
 
 export type CrossChainTransactionsOptions = {
     waitOperationIds?: boolean;
@@ -390,17 +418,17 @@ export type BatchCrossChainTxWithAssetLike = Omit<BatchCrossChainTx, 'assets'> &
 export interface WaitOptions<T = unknown, TContext = unknown> {
     /**
      * Timeout in milliseconds
-     * @default 300000 (5 minutes)
+     * @default 30000 (5 minutes)
      */
     timeout?: number;
     /**
      * Maximum number of attempts
-     * @default 30
+     * @default 10
      */
     maxAttempts?: number;
     /**
      * Delay between attempts in milliseconds
-     * @default 10000 (10 seconds)
+     * @default 1000 (1 seconds)
      */
     delay?: number;
     /**
@@ -422,12 +450,17 @@ export interface WaitOptions<T = unknown, TContext = unknown> {
      * Receives both the result and optional context with additional parameters
      */
     onSuccess?: (result: T, context?: TContext) => Promise<void> | void;
+    /**
+     * Include underlying error stack trace in FetchError (innerStack)
+     * @default false
+     */
+    includeErrorTrace?: boolean;
 }
 
 export const defaultWaitOptions: WaitOptions = {
-    timeout: 300000,
-    maxAttempts: 30,
-    delay: 10000,
+    timeout: DEFAULT_WAIT_TIMEOUT_MS,
+    maxAttempts: DEFAULT_WAIT_MAX_ATTEMPTS,
+    delay: DEFAULT_WAIT_DELAY_MS,
 };
 
 export enum Origin {
@@ -488,4 +521,179 @@ export type FTOriginAndData = {
     jettonMinter: OpenedContract<JettonMinter> | SandboxContract<JettonMinter>;
     evmAddress?: string;
     jettonData?: JettonMinterData;
+};
+
+export type CrossChainPayloadResult = {
+    body: Cell;
+    destinationAddress: string;
+    tonAmount: bigint;
+    tonNetworkFee: bigint;
+    tacEstimatedGas?: bigint;
+    transactionLinker: TransactionLinker;
+};
+
+export type GeneratePayloadParams = {
+    excessReceiver: string;
+    evmData: Cell;
+    crossChainTonAmount?: bigint;
+    forwardFeeTonAmount?: bigint;
+    feeParams?: FeeParams;
+};
+
+export type TacGasPrice = {
+    average: number;
+    fast: number;
+    slow: number;
+};
+
+/**
+ * Parameters for tracking and validating transaction trees
+ */
+export type TrackTransactionTreeParams = {
+    /**
+     * Maximum number of transactions to fetch per pagination request
+     * @default 100
+     */
+    limit?: number;
+
+    /**
+     * Maximum depth to traverse in the transaction tree, inclusive (prevents infinite loops)
+     * @default 10
+     */
+    maxDepth?: number;
+
+    /**
+     * Maximum number of transactions to scan while searching by hash in account history.
+     * Prevents excessive full-history scans on high-activity accounts.
+     * @default 100
+     */
+    maxScannedTransactions?: number;
+
+    /**
+     * List of operation codes (opcodes) to skip for extra checks.
+     * Core phase validation is still applied.
+     * @default [ 0xd53276db ] // Excess
+     */
+    ignoreOpcodeList?: number[];
+
+    /**
+     * Direction to search the transaction tree:
+     * - 'forward': only search children (outgoing messages)
+     * - 'backward': only search parents (incoming messages)
+     * - 'both': search in both directions (default)
+     * @default 'both'
+     */
+    direction?: 'forward' | 'backward' | 'both';
+
+    /**
+     * Retry transaction lookup when `not_found` error occurs.
+     * Useful when transaction indexing has delays or when transactions appear gradually.
+     * @default true
+     */
+    retryOnNotFound?: boolean;
+
+    /**
+     * Delay in milliseconds between retry attempts for transaction lookup
+     * @default 5000
+     */
+    retryDelayMs?: number;
+
+    /**
+     * Number of retry attempts for transaction lookup
+     * @default 10
+     */
+    retries?: number;
+};
+
+/**
+ * Details about a transaction validation error
+ */
+export type TransactionValidationError = {
+    /**
+     * Base64-encoded hash of the failed transaction (or the searched hash if not found)
+     */
+    txHash: string;
+
+    /**
+     * Exit code from the compute phase, or 'N/A' if compute phase is missing
+     */
+    exitCode: number | 'N/A';
+
+    /**
+     * Result code from the action phase, or 'N/A' if action phase is missing
+     */
+    resultCode: number | 'N/A';
+
+    /**
+     * Reason for validation failure:
+     * - 'aborted': default: transaction was aborted
+     * - 'compute_phase_missing': compute phase is missing
+     * - 'compute_phase_failed': compute phase failed (exitCode !== 0)
+     * - 'action_phase_failed': action phase failed (resultCode !== 0)
+     * - 'not_found': transaction or message hash not found during traversal
+     */
+    reason: 'aborted' | 'compute_phase_missing' | 'compute_phase_failed' | 'action_phase_failed' | 'not_found';
+
+    /**
+     * Address where the lookup was performed (for reason: 'not_found')
+     */
+    address?: string;
+
+    /**
+     * Hash type used in lookup (for reason: 'not_found')
+     */
+    hashType?: 'unknown' | 'in' | 'out';
+};
+
+/**
+ * Result of transaction tree tracking and validation
+ */
+export type TrackTransactionTreeResult = {
+    /**
+     * Whether all transactions in the tree passed validation
+     */
+    success: boolean;
+
+    /**
+     * Count of unique transactions checked during traversal
+     */
+    checkedCount?: number;
+
+    /**
+     * Details about the first validation error encountered (if any)
+     */
+    error?: TransactionValidationError;
+};
+
+export type GetTransactionsOptions = {
+    /** Maximum number of transactions to retrieve */
+    limit?: number;
+    /** Logical time of the transaction to start from */
+    lt?: string;
+    /** Hash of the transaction to start from */
+    hash?: string;
+    /** Logical time of the transaction to end at */
+    to_lt?: string;
+    /** Whether to include the starting transaction in the results */
+    inclusive?: boolean;
+    /** Whether to search in archival nodes for historical data */
+    archival?: boolean;
+    /** Request timeout in milliseconds */
+    timeoutMs?: number;
+    /** Delay between retry attempts in milliseconds */
+    retryDelayMs?: number;
+    /** Number of retry attempts */
+    retries?: number;
+    /** Internal scan guard: maximum transactions to inspect while traversing history */
+    maxScannedTransactions?: number;
+};
+
+export type AddressInformation = {
+    /** Information about the last transaction of the address */
+    lastTransaction: {
+        /** Logical time of the last transaction */
+        lt: string;
+        /** Hash of the last transaction */
+        hash: string;
+    };
 };

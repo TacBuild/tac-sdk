@@ -1,5 +1,5 @@
 import { testnet } from '../../../artifacts';
-import { Configuration, Network, TacSdk } from '../../../src';
+import { Configuration, Network, NoopLogger, TacSdk } from '../../../src';
 import * as Utils from '../../../src/sdk/Utils';
 
 const configMock = {
@@ -14,6 +14,7 @@ const configMock = {
     getTrustedTONExecutors: ['EQExec'],
     closeConnections: jest.fn(),
     isContractDeployedOnTVM: jest.fn().mockResolvedValue(true),
+    logger: {} as never,
 };
 
 const operationTrackerInstance = {
@@ -74,7 +75,7 @@ describe('TacSdk factory and delegation', () => {
     it('creates SDK with correct configuration for selected network', async () => {
         const sdk = await TacSdk.create({ network: Network.TESTNET, delay: 5 });
 
-        expect(mockConfigCreate).toHaveBeenCalledWith(Network.TESTNET, testnet, undefined, undefined, undefined, 5);
+        expect(mockConfigCreate).toHaveBeenCalledWith(Network.TESTNET, testnet, undefined, undefined, undefined, 5, new NoopLogger());
         expect(sdk.nativeTONAddress).toBe('EQNative');
     });
 
