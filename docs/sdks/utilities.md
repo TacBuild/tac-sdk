@@ -48,7 +48,7 @@ If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 import { TonIndexerTxFinalizer, ConsoleLogger } from '@tonappchain/sdk';
 
 const finalizer = new TonIndexerTxFinalizer({
-  urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
+  urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}`,
   authorization: { header: 'X-API-Key', value: 'your-api-key' }
 }, new ConsoleLogger());
 
@@ -107,7 +107,7 @@ If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 import { TonIndexerTxFinalizer, ConsoleLogger } from '@tonappchain/sdk';
 
 const finalizer = new TonIndexerTxFinalizer({
-  urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
+  urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}`,
   authorization: { header: 'X-API-Key', value: 'your-api-key' }
 }, new ConsoleLogger());
 
@@ -217,7 +217,7 @@ new TonIndexerTxFinalizer(
 #### Example
 ```ts
 const finalizer = new TonIndexerTxFinalizer({
-  urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}&direction=out`,
+  urlBuilder: (hash) => `https://testnet.toncenter.com/api/v3/adjacentTransactions?hash=${encodeURIComponent(hash)}`,
   authorization: { header: 'X-API-Key', value: 'your-api-key' }
 }, new ConsoleLogger());
 
