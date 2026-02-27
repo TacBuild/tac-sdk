@@ -589,6 +589,22 @@ export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
 Maps shard keys to their corresponding operation IDs, allowing efficient lookup of operations by shard identifier.
 
+### `TransactionTreeDirection (Enum)`
+
+```typescript
+export enum TransactionTreeDirection {
+    FORWARD = 'forward',
+    BACKWARD = 'backward',
+    BOTH = 'both',
+}
+```
+
+Defines the direction to search the transaction tree.
+
+- **`FORWARD`**: Only search children (outgoing messages) (default).
+- **`BACKWARD`**: Only search parents (incoming messages).
+- **`BOTH`**: Search in both directions.
+
 ### `TrackTransactionTreeParams (Type)`
 
 ```typescript
@@ -597,7 +613,10 @@ export type TrackTransactionTreeParams = {
     maxDepth?: number;
     maxScannedTransactions?: number;
     ignoreOpcodeList?: number[];
-    direction?: 'forward' | 'backward' | 'both';
+    direction?: TransactionTreeDirection;
+    retryOnNotFound?: boolean;
+    retryDelayMs?: number;
+    retries?: number;
 };
 ```
 
@@ -607,10 +626,10 @@ Parameters for tracking and validating transaction trees.
 - **`maxDepth`** *(optional)*: Maximum depth to traverse in the transaction tree, inclusive (depth 0 is the root). Default: 10.
 - **`maxScannedTransactions`** *(optional)*: Maximum number of transactions to scan while searching by hash in account history. Default: 100.
 - **`ignoreOpcodeList`** *(optional)*: List of operation codes (opcodes) that mark transactions as skippable for extra checks. Phase validation is still applied. Default: `[0xd53276db]` (excess message).
-- **`direction`** *(optional)*: Direction to search the transaction tree:
-  - `'forward'`: only search children (outgoing messages)
-  - `'backward'`: only search parents (incoming messages)
-  - `'both'`: search in both directions (default)
+- **`direction`** *(optional)*: Direction to search the transaction tree from the [`TransactionTreeDirection`](#transactiontreedirection-enum) enum. Default: `FORWARD`.
+- **`retryOnNotFound`** *(optional)*: Retry transaction lookup when `not_found` error occurs. Default: true.
+- **`retryDelayMs`** *(optional)*: Delay in milliseconds between retry attempts for transaction lookup. Default: 5000.
+- **`retries`** *(optional)*: Number of retry attempts for transaction lookup. Default: 10.
 
 ### `TransactionValidationError (Type)`
 

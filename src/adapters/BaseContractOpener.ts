@@ -21,6 +21,7 @@ import {
     ContractState,
     TrackTransactionTreeParams,
     TrackTransactionTreeResult,
+    TransactionTreeDirection,
     TransactionValidationError,
 } from '../structs/Struct';
 
@@ -437,7 +438,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
             ignoreOpcodeList: IGNORE_OPCODE,
             limit: DEFAULT_FIND_TX_LIMIT,
-            direction: 'both',
+            direction: TransactionTreeDirection.FORWARD,
             retryOnNotFound: DEFAULT_RETRY_ON_NOT_FOUND,
         },
     ): Promise<void> {
@@ -469,7 +470,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
             ignoreOpcodeList: IGNORE_OPCODE,
             limit: DEFAULT_FIND_TX_LIMIT,
-            direction: 'both',
+            direction: TransactionTreeDirection.FORWARD,
             retryOnNotFound: DEFAULT_RETRY_ON_NOT_FOUND,
         },
     ): Promise<TrackTransactionTreeResult> {
@@ -478,7 +479,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             ignoreOpcodeList = IGNORE_OPCODE,
             limit = DEFAULT_FIND_TX_LIMIT,
             maxScannedTransactions = DEFAULT_MAX_SCANNED_TRANSACTIONS,
-            direction = 'both',
+            direction = TransactionTreeDirection.FORWARD,
             retryOnNotFound = DEFAULT_RETRY_ON_NOT_FOUND,
             retryDelayMs,
             retries,
@@ -544,7 +545,10 @@ export abstract class BaseContractOpener implements ContractOpener {
 
             // Add adjacent transactions to queue
             if (currentDepth < maxDepth) {
-                if ((direction === 'forward' || direction === 'both') && tx.outMessages.size > 0) {
+                if (
+                    (direction === TransactionTreeDirection.FORWARD || direction === TransactionTreeDirection.BOTH) &&
+                    tx.outMessages.size > 0
+                ) {
                     for (const msg of tx.outMessages.values()) {
                         const dst = msg.info.dest;
                         if (!dst || dst instanceof ExternalAddress) continue;
@@ -559,7 +563,10 @@ export abstract class BaseContractOpener implements ContractOpener {
                 }
 
                 // Backward: add parent (incoming message source)
-                if ((direction === 'backward' || direction === 'both') && tx.inMessage?.info.type === 'internal') {
+                if (
+                    (direction === TransactionTreeDirection.BACKWARD || direction === TransactionTreeDirection.BOTH) &&
+                    tx.inMessage?.info.type === 'internal'
+                ) {
                     queue.push({
                         hash: beginCell().store(storeMessage(tx.inMessage)).endCell().hash().toString('base64'),
                         address: tx.inMessage.info.src,

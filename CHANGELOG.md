@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- New `TransactionTreeDirection` enum for transaction tree traversal options: `FORWARD`, `BACKWARD`, `BOTH`.
+
+### Changed
+- Default transaction tree traversal direction in `BaseContractOpener` changed to `TransactionTreeDirection.FORWARD`.
+
 ## [0.7.2] - 2026-02-26
 
 ### Added

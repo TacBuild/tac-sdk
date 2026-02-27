@@ -132,6 +132,10 @@ Validates the entire transaction tree using BFS (breadth-first search) algorithm
   - `maxDepth?: number` - Maximum tree depth to traverse, inclusive (depth 0 is the root, default: 10)
   - `maxScannedTransactions?: number` - Maximum number of transactions scanned in account history during hash lookup (default: 100)
   - `ignoreOpcodeList?: number[]` - Opcodes that mark transactions as skippable for extra checks (phase validation still applies, default: [0xd53276db])
+  - `direction?: TransactionTreeDirection` - Search direction (default: `FORWARD`)
+  - `retryOnNotFound?: boolean` - Retry transaction lookup if not found (default: `true`)
+  - `retryDelayMs?: number` - Delay between retry attempts (default: `5000`)
+  - `retries?: number` - Number of retry attempts (default: `10`)
 
 **Returns:** `Promise<void>` - Resolves if all transactions successful, throws error otherwise
 

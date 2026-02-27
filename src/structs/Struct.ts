@@ -546,6 +546,12 @@ export type TacGasPrice = {
     slow: number;
 };
 
+export enum TransactionTreeDirection {
+    FORWARD = 'forward',
+    BACKWARD = 'backward',
+    BOTH = 'both',
+}
+
 /**
  * Parameters for tracking and validating transaction trees
  */
@@ -580,10 +586,10 @@ export type TrackTransactionTreeParams = {
      * Direction to search the transaction tree:
      * - 'forward': only search children (outgoing messages)
      * - 'backward': only search parents (incoming messages)
-     * - 'both': search in both directions (default)
-     * @default 'both'
+     * - 'both': search in both directions
+     * @default 'forward'
      */
-    direction?: 'forward' | 'backward' | 'both';
+    direction?: TransactionTreeDirection;
 
     /**
      * Retry transaction lookup when `not_found` error occurs.
