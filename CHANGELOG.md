@@ -6,9 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - New `TransactionTreeDirection` enum for transaction tree traversal options: `FORWARD`, `BACKWARD`, `BOTH`.
+- NFT TEP-64 metadata helpers in `ContentUtils`: `readNFTMetadata`, `buildNFTOnchainMetadata`, and `buildNFTOffChainMetadata`.
 
 ### Changed
 - Default transaction tree traversal direction in `BaseContractOpener` changed to `TransactionTreeDirection.FORWARD`.
+- `ContentUtils` now parses TEP-64 `semi-chain` metadata, supports `chunked` content serialization, and correctly reads NFT off-chain content returned by collection `get_nft_content()`.
+- Jetton metadata parsing now supports TEP-64 `amount_style` and `render_type` fields.
 
 ## [0.7.2] - 2026-02-26
 

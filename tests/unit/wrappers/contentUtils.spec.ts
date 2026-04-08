@@ -1,14 +1,20 @@
-import { beginCell } from '@ton/ton';
+import { createHash } from 'crypto';
+
+import { beginCell, Dictionary } from '@ton/ton';
 import axios from 'axios';
 
 import {
+    buildNFTOffChainMetadata,
+    buildNFTOnchainMetadata,
     buildJettonOffChainMetadata,
     buildJettonOnchainMetadata,
     JettonMetadata,
+    NFTMetadata,
     OFFCHAIN_CONTENT_PREFIX,
     ONCHAIN_CONTENT_PREFIX,
     readJettonMetadata,
-} from '../../../src';
+    readNFTMetadata,
+} from '../../../src/wrappers/ContentUtils';
 
 // Mock axios
 jest.mock('axios');
@@ -35,6 +41,21 @@ describe('ContentUtils', () => {
 
             expect(prefix).toBe(OFFCHAIN_CONTENT_PREFIX);
             expect(slice.remainingBits).toBe(0);
+        });
+
+        it('stores long off-chain URI across references', async () => {
+            const longUri = `https://example.com/${'path/'.repeat(40)}metadata.json`;
+            mockedAxios.get.mockResolvedValueOnce({ data: { name: 'Long URI Token' } });
+
+            const result = buildJettonOffChainMetadata(longUri);
+            const slice = result.beginParse();
+
+            expect(slice.loadUint(8)).toBe(OFFCHAIN_CONTENT_PREFIX);
+            expect(slice.remainingRefs).toBe(1);
+
+            const metadata = await readJettonMetadata(result);
+            expect(metadata.contentUri).toBe(longUri);
+            expect(metadata.metadata).toEqual({ name: 'Long URI Token' });
         });
     });
 
@@ -82,6 +103,23 @@ describe('ContentUtils', () => {
 
             expect(() => buildJettonOnchainMetadata(invalidMetadata)).toThrow('Unsupported onchain key');
         });
+
+        it('supports TEP-64 jetton display fields', async () => {
+            const metadata: JettonMetadata = {
+                amount_style: '%',
+                name: 'Display Token',
+                render_type: 'game',
+                symbol: 'DSP',
+            };
+
+            const result = await readJettonMetadata(buildJettonOnchainMetadata(metadata));
+
+            expect(result.metadata).toMatchObject({
+                amount_style: '%',
+                render_type: 'game',
+                symbol: 'DSP',
+            });
+        });
     });
 
     describe('readJettonMetadata', () => {
@@ -108,9 +146,42 @@ describe('ContentUtils', () => {
             const result = await readJettonMetadata(onChainCell);
 
             expect(result.persistenceType).toBe('onchain');
-            expect(result.metadata.name).toBe('Test Token');
-            expect(result.metadata.symbol).toBe('TEST');
-            expect(result.metadata.description).toBe('A test token');
+            expect(result.metadata?.name).toBe('Test Token');
+            expect(result.metadata?.symbol).toBe('TEST');
+            expect(result.metadata?.description).toBe('A test token');
+        });
+
+        it('merges semi-chain metadata with on-chain precedence', async () => {
+            mockedAxios.get.mockResolvedValueOnce({
+                data: {
+                    decimals: 6,
+                    description: 'Off-chain description',
+                    image: 'https://example.com/offchain.png',
+                    name: 'Off-chain name',
+                    symbol: 'OFF',
+                },
+            });
+
+            const onchainCell = buildJettonOnchainMetadata({
+                decimals: '9',
+                description: 'On-chain description',
+                name: 'On-chain name',
+                symbol: 'ON',
+                uri: 'https://example.com/metadata.json',
+            });
+
+            const result = await readJettonMetadata(onchainCell);
+
+            expect(result.persistenceType).toBe('semichain_private_domain');
+            expect(result.contentUri).toBe('https://example.com/metadata.json');
+            expect(result.metadata).toMatchObject({
+                decimals: '9',
+                description: 'On-chain description',
+                image: 'https://example.com/offchain.png',
+                name: 'On-chain name',
+                symbol: 'ON',
+                uri: 'https://example.com/metadata.json',
+            });
         });
 
         it('reads off-chain metadata from HTTP URL', async () => {
@@ -170,6 +241,77 @@ describe('ContentUtils', () => {
             await expect(readJettonMetadata(invalidCell)).rejects.toThrow(
                 'Unexpected wrappers metadata content prefix',
             );
+        });
+
+        it('reads chunked on-chain values', async () => {
+            const nameHash = createHash('sha256').update('name').digest();
+            const chunks = Dictionary.empty(Dictionary.Keys.Uint(32), Dictionary.Values.Cell());
+
+            chunks.set(0, beginCell().storeUint(0, 8).storeBuffer(Buffer.from('Chunked ')).endCell());
+            chunks.set(1, beginCell().storeUint(0, 8).storeBuffer(Buffer.from('Token')).endCell());
+
+            const values = Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
+            values.set(nameHash, beginCell().storeUint(1, 8).storeDict(chunks).endCell());
+
+            const content = beginCell()
+                .storeUint(ONCHAIN_CONTENT_PREFIX, 8)
+                .storeDict(values, Dictionary.Keys.Buffer(32), Dictionary.Values.Cell())
+                .endCell();
+
+            const result = await readJettonMetadata(content);
+
+            expect(result.metadata?.name).toBe('Chunked Token');
+        });
+    });
+
+    describe('NFT metadata', () => {
+        it('reads NFT on-chain metadata correctly', async () => {
+            const metadata: NFTMetadata = {
+                description: 'NFT description',
+                image: 'https://example.com/nft.png',
+                name: 'NFT #1',
+            };
+
+            const result = await readNFTMetadata(buildNFTOnchainMetadata(metadata));
+
+            expect(result.persistenceType).toBe('onchain');
+            expect(result.metadata).toMatchObject(metadata);
+        });
+
+        it('reads NFT full off-chain content returned by collection get_nft_content', async () => {
+            mockedAxios.get.mockResolvedValueOnce({
+                data: {
+                    attributes: [],
+                    content_url: 'https://example.com/video.mp4',
+                    name: 'NFT #42',
+                },
+            });
+
+            const individualContent = beginCell().storeBuffer(Buffer.from('42.json', 'ascii')).endCell();
+            const nftContent = beginCell()
+                .storeUint(OFFCHAIN_CONTENT_PREFIX, 8)
+                .storeBuffer(Buffer.from('https://example.com/nft/', 'ascii'))
+                .storeRef(individualContent)
+                .endCell();
+
+            const result = await readNFTMetadata(nftContent);
+
+            expect(result.persistenceType).toBe('offchain_private_domain');
+            expect(result.contentUri).toBe('https://example.com/nft/42.json');
+            expect(result.metadata).toEqual({
+                attributes: [],
+                content_url: 'https://example.com/video.mp4',
+                name: 'NFT #42',
+            });
+        });
+
+        it('builds NFT off-chain metadata cells', () => {
+            const contentUri = 'https://example.com/nft/1.json';
+            const result = buildNFTOffChainMetadata(contentUri);
+            const slice = result.beginParse();
+
+            expect(slice.loadUint(8)).toBe(OFFCHAIN_CONTENT_PREFIX);
+            expect(slice.loadBuffer(slice.remainingBits / 8).toString('ascii')).toBe(contentUri);
         });
     });
 

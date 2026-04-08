@@ -9,6 +9,10 @@
   - [AssetFactory Class](#assetfactory-class)
     - [Static Methods](#static-methods)
       - [`from`](#from)
+  - [Metadata Utilities](#metadata-utilities)
+    - [`readJettonMetadata`](#readjettonmetadata)
+    - [`readNFTMetadata`](#readnftmetadata)
+    - [Metadata Builders](#metadata-builders)
   - [FT Class](#ft-class)
     - [Creating Instances](#creating-instances)
     - [Core Methods](#core-methods)
@@ -139,6 +143,56 @@ Creates an asset instance from the given parameters. This method handles address
 
 ---
 
+## Metadata Utilities
+
+The SDK exports TEP-64 helpers from `ContentUtils` for working with TON metadata cells directly.
+
+These helpers support:
+- Jetton metadata encoded according to TEP-64/TEP-74
+- NFT metadata encoded according to TEP-64/TEP-62
+- `onchain`, `offchain`, and `semi-chain` layouts
+
+### `readJettonMetadata`
+
+```ts
+readJettonMetadata(contentCell: Cell): Promise<JettonExtendedMetadata>
+```
+
+Parses a Jetton metadata cell according to TEP-64.
+
+Supported layouts:
+- on-chain dictionary
+- off-chain URI, including `ipfs://`
+- semi-chain metadata via on-chain `uri`
+
+For semi-chain metadata, the SDK merges off-chain JSON with on-chain fields and gives precedence to on-chain values on collisions, following TEP-64.
+
+### `readNFTMetadata`
+
+```ts
+readNFTMetadata(contentCell: Cell): Promise<NFTExtendedMetadata>
+```
+
+Parses NFT metadata according to TEP-64.
+
+Use it when you already have a full NFT content cell, for example:
+- collection-less NFT item content from `get_nft_data()`
+- full content returned by collection `get_nft_content()`
+- collection or item metadata stored on-chain, off-chain, or semi-chain
+
+### Metadata Builders
+
+```ts
+buildJettonOnchainMetadata(data: JettonMetadata): Cell
+buildJettonOffChainMetadata(contentUri: string): Cell
+buildNFTOnchainMetadata(data: NFTMetadata): Cell
+buildNFTOffChainMetadata(contentUri: string): Cell
+```
+
+Builds TEP-64 metadata cells for Jettons and NFTs.
+
+---
+
 ## FT Class
 
 `FT` represents fungible tokens (Jettons) on the TON network. It implements the `Asset` interface and provides methods for fungible token-specific operations.
@@ -150,7 +204,7 @@ static fromAddress(configuration: IConfiguration, address: TVMAddress | EVMAddre
 ```
 
 Creates a new FT instance by TVM or EVM address. Origin is detected automatically and decimals are retrieved based on token type:
-- **TON origin tokens**: Decimals retrieved from jetton metadata
+- **TON origin tokens**: Decimals retrieved from Jetton TEP-64 metadata, including `onchain`, `offchain`, and `semi-chain` layouts
 - **TAC origin tokens**: 
   - Native tokens: Uses 18 decimals
   - ERC20 contracts: Decimals retrieved from ERC20 contract, with fallback to jetton metadata if unavailable
@@ -290,7 +344,7 @@ getDecimals(): Promise<number>
 
 Gets the number of decimal places for this Jetton. The retrieval method depends on the token's origin:
 
-- **TON-origin tokens**: Reads decimals from Jetton metadata (defaults to 9 if not specified)
+- **TON-origin tokens**: Reads decimals from Jetton TEP-64 metadata (defaults to 9 if not specified). For `semi-chain` metadata, on-chain values override off-chain values.
 - **TAC-origin tokens**: 
   - Native TAC tokens: Returns 18 (standard for native blockchain tokens)
   - ERC20 tokens: Fetches decimals from the ERC20 contract's `decimals()` method
@@ -542,7 +596,9 @@ Retrieves NFT item data from the contract at the given address.
 - `configuration`: SDK configuration instance
 - `itemAddress`: NFT item contract address (TVM format)
 
-**Returns:** Promise resolving to NFT item data including index, collection address, and owner
+**Returns:** Promise resolving to NFT item data including index, collection address, owner, and item content
+
+For collection-based NFTs, `content` returned by `get_nft_data()` is usually the individual item content, not the final merged metadata. To parse full metadata, first obtain the full content cell from the collection's `get_nft_content()` and then call `readNFTMetadata()`.
 
 #### `getCollectionData`
 
@@ -556,7 +612,7 @@ Retrieves NFT collection data from the contract at the given address.
 - `configuration`: SDK configuration instance
 - `collectionAddress`: NFT collection contract address (TVM format)
 
-**Returns:** Promise resolving to NFT collection data including metadata and owner
+**Returns:** Promise resolving to NFT collection data including collection metadata and owner
 
 #### `getOrigin`
 
@@ -616,7 +672,7 @@ getItemData(): Promise<NFTItemData>
 
 Gets data for this specific NFT item.
 
-**Returns:** Promise resolving to NFT item data including index, collection address, and owner
+**Returns:** Promise resolving to NFT item data including index, collection address, owner, and item content
 
 #### `getCollectionData`
 
@@ -626,7 +682,7 @@ getCollectionData(): Promise<CollectionData>
 
 Gets data for the NFT collection this item belongs to.
 
-**Returns:** Promise resolving to NFT collection data including metadata and owner
+**Returns:** Promise resolving to NFT collection data including collection metadata and owner
 
 #### `getUserBalance`
 

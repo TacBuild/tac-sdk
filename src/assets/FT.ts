@@ -211,19 +211,18 @@ export class FT implements Asset {
                 throw missingJettonDataError;
             }
             const metadata = await readJettonMetadata(jettonData.content);
-            const decimalsRaw = metadata.metadata.decimals ?? TON_DECIMALS;
+            const decimalsRaw = metadata.metadata?.decimals ?? TON_DECIMALS;
             if (decimalsRaw === undefined) {
                 throw missingDecimals;
             }
             decimals = Number(decimalsRaw);
         } else {
-            if (isEthereumAddress(address)) {
-                finalEvmAddress = address;
-            } else {
-                finalEvmAddress = cachedEvmAddress || (await jettonMinter.getEVMTokenAddress());
-            }
+            const resolvedEvmAddress = isEthereumAddress(address)
+                ? address
+                : cachedEvmAddress ?? (await jettonMinter.getEVMTokenAddress());
 
-            decimals = await this.getTACDecimals(configuration, finalEvmAddress);
+            finalEvmAddress = resolvedEvmAddress;
+            decimals = await this.getTACDecimals(configuration, resolvedEvmAddress);
         }
 
         const token = new FT(tvmAddress, origin, configuration, decimals);
@@ -330,21 +329,23 @@ export class FT implements Asset {
         }
 
         const tokenAddressString = this._tvmAddress.toString({ bounceable: true });
+        let evmAddress: string;
 
         if (this.origin === Origin.TON) {
-            this._evmAddress = await this._configuration.TACParams.tokenUtils.computeAddress(tokenAddressString);
+            evmAddress = await this._configuration.TACParams.tokenUtils.computeAddress(tokenAddressString);
         } else if (this.origin === Origin.TAC) {
             const givenMinter = this._configuration.TONParams.contractOpener.open(
                 this._configuration.artifacts.ton.wrappers.JettonMinter.createFromAddress(
                     Address.parse(tokenAddressString),
                 ),
             );
-            this._evmAddress = await givenMinter.getEVMTokenAddress();
+            evmAddress = await givenMinter.getEVMTokenAddress();
         } else {
             throw unknownTokenTypeError(tokenAddressString, 'Token origin is neither TON nor TAC');
         }
 
-        return this._evmAddress;
+        this._evmAddress = evmAddress;
+        return evmAddress;
     }
 
     async getTVMAddress(): Promise<string> {
