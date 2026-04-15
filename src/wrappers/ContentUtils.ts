@@ -3,6 +3,7 @@ import { beginCell, Builder, Cell, Dictionary, Slice } from '@ton/ton';
 import axios from 'axios';
 
 import { notMultiplyOf8Error, prefixError, unsupportedFormatError, unsupportedKeyError } from '../errors';
+import { MetadataPersistenceType, OffchainMetadataResult, ReadMetadataResult } from '../structs/InternalStruct';
 
 export const ONCHAIN_CONTENT_PREFIX = 0x00;
 export const OFFCHAIN_CONTENT_PREFIX = 0x01;
@@ -52,7 +53,7 @@ export interface NFTMetadata extends MetadataRecord<NFTMetadataKeys> {
 }
 
 type ExtendedMetadata<TKey extends string> = {
-    persistenceType: persistenceType;
+    persistenceType: MetadataPersistenceType;
     metadata: MetadataRecord<TKey> | null;
     contentUri?: string;
 };
@@ -228,11 +229,7 @@ function normalizeContentUri(contentUri: string) {
     };
 }
 
-async function fetchOffchainMetadata(contentUri: string): Promise<{
-    metadata: MetadataRecord | null;
-    isIpfs: boolean;
-    contentUri: string;
-}> {
+async function fetchOffchainMetadata(contentUri: string): Promise<OffchainMetadataResult<MetadataRecord>> {
     const normalized = normalizeContentUri(contentUri);
 
     try {
@@ -256,11 +253,7 @@ async function fetchOffchainMetadata(contentUri: string): Promise<{
     }
 }
 
-async function parseOffchainMetadata(contentSlice: Slice): Promise<{
-    metadata: MetadataRecord | null;
-    isIpfs: boolean;
-    contentUri: string;
-}> {
+async function parseOffchainMetadata(contentSlice: Slice): Promise<OffchainMetadataResult<MetadataRecord>> {
     const contentUri = readSnakeData(contentSlice, false).toString('ascii');
     return fetchOffchainMetadata(contentUri);
 }
@@ -268,7 +261,7 @@ async function parseOffchainMetadata(contentSlice: Slice): Promise<{
 async function readMetadata<TKey extends string>(
     contentCell: Cell,
     metadataSpec: MetadataSpec<TKey>,
-): Promise<ExtendedMetadata<TKey> & { isJettonDeployerFaultyOnChainData?: boolean }> {
+): Promise<ReadMetadataResult<MetadataRecord<TKey>>> {
     if (contentCell.bits.length <= 0) {
         return {
             contentUri: undefined,
@@ -356,13 +349,7 @@ export function buildNFTOnchainMetadata(data: NFTMetadata) {
     return buildOnchainMetadata(data, nftOnChainMetadataSpec);
 }
 
-export type persistenceType =
-    | 'none'
-    | 'onchain'
-    | 'offchain_private_domain'
-    | 'offchain_ipfs'
-    | 'semichain_private_domain'
-    | 'semichain_ipfs';
+export type persistenceType = MetadataPersistenceType;
 
 export async function readJettonMetadata(contentCell: Cell): Promise<JettonExtendedMetadata> {
     const metadata = await readMetadata(contentCell, jettonOnChainMetadataSpec);

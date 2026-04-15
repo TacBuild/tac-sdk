@@ -15,8 +15,10 @@ import {
     AssetType,
     defaultWaitOptions,
     EvmProxyMsg,
+    ExecutionStages,
     FeeParams,
     NFTAddressType,
+    OperationType,
     TONAsset,
     TransactionLinker,
     ValidExecutors,
@@ -539,4 +541,8 @@ export function recurisivelyCollectCellStats(cell: Cell): { bits: number; cells:
         cells += stats.cells;
     }
     return { bits, cells };
+}
+
+export function isFinalProfiling(profilingData: ExecutionStages): boolean {
+    return profilingData.operationType !== OperationType.PENDING && profilingData.operationType !== OperationType.UNKNOWN;
 }

@@ -2,7 +2,7 @@ import { Wallet } from 'ethers';
 
 import { dev, mainnet, testnet } from '../../artifacts';
 import { JettonMinterData, NFTItemData } from '../../artifacts/tonTypes';
-import { AssetFactory, FT, NFT } from '../assets';
+import { AssetFactory, FT, NFT, TAC, TON } from '../assets';
 import {
     Asset,
     ContractOpener,
@@ -24,6 +24,7 @@ import {
     AssetType,
     BatchCrossChainTx,
     BatchCrossChainTxWithAssetLike,
+    BridgeTokensToTONOptions,
     CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
@@ -35,6 +36,7 @@ import {
     NFTAddressType,
     SDKParams,
     SuggestedTVMExecutorFee,
+    TACCrossChainTransactionResult,
     TacGasPrice,
     TACSimulationParams,
     TACSimulationResult,
@@ -188,6 +190,22 @@ export class TacSdk implements ITacSDK {
         return this.tonTransactionManager.sendCrossChainTransaction(evmProxyMsg, sender, tx);
     }
 
+    async sendCrossChainTransactionToTON(
+        signer: Wallet,
+        tonTarget: string,
+        assets?: AssetLike[],
+        options?: BridgeTokensToTONOptions,
+    ): Promise<TACCrossChainTransactionResult> {
+        const normalizedAssets = await normalizeAssets(this.config, assets);
+
+        return this.tacTransactionManager.sendCrossChainTransactionToTON(
+            signer,
+            tonTarget,
+            normalizedAssets,
+            options,
+        );
+    }
+
     async sendCrossChainTransactions(
         sender: SenderAbstraction,
         txs: BatchCrossChainTxWithAssetLike[],
@@ -238,7 +256,7 @@ export class TacSdk implements ITacSDK {
     }
 
     // Asset methods
-    async getAsset(args: AssetFromFTArg): Promise<FT>;
+    async getAsset(args: AssetFromFTArg): Promise<FT | TAC | TON>;
     async getAsset(args: AssetFromNFTCollectionArg): Promise<NFT>;
     async getAsset(args: AssetFromNFTItemArg): Promise<NFT>;
     async getAsset(args: AssetFromFTArg | AssetFromNFTCollectionArg | AssetFromNFTItemArg): Promise<Asset> {

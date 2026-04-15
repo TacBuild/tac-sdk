@@ -34,6 +34,7 @@ const tonManagerInstance = {
 
 const tacManagerInstance = {
     bridgeTokensToTON: jest.fn().mockResolvedValue('0xbridge'),
+    sendCrossChainTransactionToTON: jest.fn().mockResolvedValue({ txHash: '0xbridge', operationId: 'op-1' }),
 };
 
 jest.mock('../../../src/sdk/Configuration', () => ({
@@ -75,7 +76,16 @@ describe('TacSdk factory and delegation', () => {
     it('creates SDK with correct configuration for selected network', async () => {
         const sdk = await TacSdk.create({ network: Network.TESTNET, delay: 5 });
 
-        expect(mockConfigCreate).toHaveBeenCalledWith(Network.TESTNET, testnet, undefined, undefined, undefined, 5, new NoopLogger());
+        expect(mockConfigCreate).toHaveBeenCalledWith(
+            Network.TESTNET,
+            testnet,
+            undefined,
+            undefined,
+            undefined,
+            5,
+            new NoopLogger(),
+            true,
+        );
         expect(sdk.nativeTONAddress).toBe('EQNative');
     });
 
@@ -90,6 +100,29 @@ describe('TacSdk factory and delegation', () => {
             'exec',
         ]);
         expect(result).toBe('0xbridge');
+    });
+
+    it('normalizes assets before sendCrossChainTransactionToTON and delegates to TAC manager', async () => {
+        const sdk = await TacSdk.create({ network: Network.TESTNET });
+        const signer = { address: '0xSigner' } as never;
+        const options = {
+            tvmExecutorFee: 1n,
+            tvmValidExecutors: ['exec'],
+            waitOperationId: false,
+            waitOptions: { maxAttempts: 1 },
+            finalizationWaitOptions: { maxAttempts: 3 },
+        };
+
+        const result = await sdk.sendCrossChainTransactionToTON(signer, 'EQTarget', ['rawAsset'] as never, options);
+
+        expect(normalizeAssetsSpy).toHaveBeenCalledWith(configMock, ['rawAsset']);
+        expect(tacManagerInstance.sendCrossChainTransactionToTON).toHaveBeenCalledWith(
+            signer,
+            'EQTarget',
+            ['normalized'],
+            options,
+        );
+        expect(result).toEqual({ txHash: '0xbridge', operationId: 'op-1' });
     });
 
     it('normalizes assets before sending a cross-chain transaction batch', async () => {

@@ -1,9 +1,12 @@
 import {
     AssetType,
+    ExecutionStages,
     insufficientFeeParamsError,
     missingFeeParamsError,
     missingGasLimitError,
     missingTvmExecutorFeeError,
+    OperationType,
+    TON,
     TONTransactionManager,
 } from '../../../src';
 
@@ -190,5 +193,223 @@ describe('TONTransactionManager.buildFeeParams', () => {
             isRoundTrip: true,
             evmEstimatedGas: 123n,
         });
+    });
+});
+
+describe('TONTransactionManager.sendCrossChainTransaction', () => {
+    let stageProfilingResult: ExecutionStages;
+
+    const simulator = {
+        estimateTONFee: jest.fn(),
+    };
+
+    const operationTracker = {
+        getOperationId: jest.fn(),
+        getOperationType: jest.fn(),
+        getStageProfiling: jest.fn(),
+    };
+
+    const contractOpener = {
+        trackTransactionTree: jest.fn(),
+    };
+
+    const config = {
+        network: 'testnet',
+        TONParams: {
+            contractOpener,
+            crossChainLayerAddress: 'EQCrossChainLayer',
+        },
+    };
+
+    const logger = {
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    };
+
+    const sender = {
+        getSenderAddress: jest.fn().mockReturnValue('EQSender'),
+        sendShardTransaction: jest.fn().mockResolvedValue({
+            success: true,
+            boc: '',
+        }),
+    };
+
+    const manager = new TONTransactionManager(
+        config as never,
+        simulator as never,
+        operationTracker as never,
+        logger as never,
+    );
+
+    const prepareCrossChainTransactionSpy = jest.spyOn(manager as never, 'prepareCrossChainTransaction' as never);
+    const checkBalanceSpy = jest.spyOn(TON, 'checkBalance').mockResolvedValue(undefined);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        stageProfilingResult = {
+            operationType: OperationType.TON_TAC,
+            metaInfo: {},
+            executedInTON: {
+                exists: false,
+                stageData: null,
+            },
+        } as never;
+        operationTracker.getStageProfiling.mockImplementation(
+            async (
+                _operationId: string,
+                waitOptions?: { onSuccess?: (profilingData: ExecutionStages) => Promise<void> | void },
+            ) => {
+                await waitOptions?.onSuccess?.(stageProfilingResult);
+                return stageProfilingResult;
+            },
+        );
+    });
+
+    afterAll(() => {
+        prepareCrossChainTransactionSpy.mockRestore();
+        checkBalanceSpy.mockRestore();
+    });
+
+    it('waits for generic finalization and validates TON transaction tree from profiling', async () => {
+        const transactionLinker = {
+            caller: 'EQSender',
+            shardCount: 1,
+            shardsKey: '123',
+            timestamp: 456,
+        };
+
+        prepareCrossChainTransactionSpy.mockResolvedValue({
+            transaction: {
+                validUntil: 1,
+                messages: [],
+                network: 'testnet',
+            },
+            transactionLinker,
+        } as never);
+        operationTracker.getOperationId.mockResolvedValue('op-1');
+        operationTracker.getOperationType.mockResolvedValue(OperationType.TON_TAC_TON);
+        stageProfilingResult = {
+            operationType: OperationType.TON_TAC_TON,
+            metaInfo: {},
+            executedInTON: {
+                exists: true,
+                stageData: {
+                    success: true,
+                    timestamp: 1,
+                    transactions: [{ hash: 'tx-1', blockchainType: 'TON' }],
+                    note: null,
+                },
+            },
+        } as never;
+
+        const result = await manager.sendCrossChainTransaction(
+            { evmTargetAddress: '0xTarget' } as never,
+            sender as never,
+            {
+                options: {
+                    ensureTxExecuted: false,
+                    finalizationWaitOptions: {
+                        maxAttempts: 2,
+                        delay: 10,
+                        context: {
+                            trackTransactionTreeOptions: { maxDepth: 5 },
+                        },
+                    },
+                },
+            } as never,
+        );
+
+        expect(result.operationId).toBe('op-1');
+        expect(checkBalanceSpy).toHaveBeenCalled();
+        expect(operationTracker.getOperationId).toHaveBeenCalledWith(
+            transactionLinker,
+            expect.objectContaining({ logger }),
+        );
+        expect(operationTracker.getOperationType).not.toHaveBeenCalled();
+        expect(operationTracker.getStageProfiling).toHaveBeenCalledWith(
+            'op-1',
+            expect.objectContaining({
+                logger,
+                maxAttempts: 2,
+                delay: 10,
+                successCheck: expect.any(Function),
+                context: {
+                    trackTransactionTreeOptions: { maxDepth: 5 },
+                },
+            }),
+        );
+        expect(contractOpener.trackTransactionTree).toHaveBeenCalledWith('EQCrossChainLayer', 'tx-1');
+    });
+
+    it('completes generic finalization even when executedInTON stage is absent', async () => {
+        prepareCrossChainTransactionSpy.mockResolvedValue({
+            transaction: {
+                validUntil: 1,
+                messages: [],
+                network: 'testnet',
+            },
+            transactionLinker: {
+                caller: 'EQSender',
+                shardCount: 1,
+                shardsKey: '123',
+                timestamp: 456,
+            },
+        } as never);
+        operationTracker.getOperationId.mockResolvedValue('op-1');
+        await manager.sendCrossChainTransaction(
+            { evmTargetAddress: '0xTarget' } as never,
+            sender as never,
+            {
+                options: {
+                    ensureTxExecuted: false,
+                    finalizationWaitOptions: {},
+                },
+            } as never,
+        );
+
+        expect(operationTracker.getOperationType).not.toHaveBeenCalled();
+        expect(operationTracker.getStageProfiling).toHaveBeenCalledWith(
+            'op-1',
+            expect.objectContaining({
+                logger,
+                successCheck: expect.any(Function),
+            }),
+        );
+        expect(contractOpener.trackTransactionTree).not.toHaveBeenCalled();
+    });
+
+    it('skips full finalization when waitFinalization is false', async () => {
+        prepareCrossChainTransactionSpy.mockResolvedValue({
+            transaction: {
+                validUntil: 1,
+                messages: [],
+                network: 'testnet',
+            },
+            transactionLinker: {
+                caller: 'EQSender',
+                shardCount: 1,
+                shardsKey: '123',
+                timestamp: 456,
+            },
+        } as never);
+        operationTracker.getOperationId.mockResolvedValue('op-1');
+
+        await manager.sendCrossChainTransaction(
+            { evmTargetAddress: '0xTarget' } as never,
+            sender as never,
+            {
+                options: {
+                    ensureTxExecuted: false,
+                    waitFinalization: false,
+                },
+            } as never,
+        );
+
+        expect(operationTracker.getOperationId).toHaveBeenCalled();
+        expect(operationTracker.getOperationType).not.toHaveBeenCalled();
+        expect(operationTracker.getStageProfiling).not.toHaveBeenCalled();
+        expect(contractOpener.trackTransactionTree).not.toHaveBeenCalled();
     });
 });

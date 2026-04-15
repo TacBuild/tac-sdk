@@ -3,7 +3,7 @@ import { fromNano, internal, MessageRelaxed, SendMode } from '@ton/ton';
 import { noValidGroupFoundError, prepareMessageGroupError } from '../errors/instances';
 import type { Asset, ContractOpener, SenderAbstraction } from '../interfaces';
 import { MAX_EXT_MSG_SIZE, MAX_HIGHLOAD_GROUP_MSG_NUM, MAX_MSG_DEPTH } from '../sdk/Consts';
-import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
+import type { SendGroupTransferResult, SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 import { HighloadWalletV3 } from '../wrappers/HighloadWalletV3';
 
@@ -132,7 +132,7 @@ export class BatchSender implements SenderAbstraction {
     private async sendGroup(
         messages: MessageRelaxed[],
         contractOpener: ContractOpener,
-    ): Promise<string | { result: string }> {
+    ): Promise<SendGroupTransferResult> {
         const walletContract = contractOpener.open(this.wallet);
 
         let createdAt = HighloadWalletV3.generateCreatedAt();

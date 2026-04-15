@@ -5,6 +5,7 @@ import { TransactionError } from '../errors';
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener, ILogger } from '../interfaces';
 import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS, DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT } from '../sdk/Consts';
+import { RetryableOperationResult } from '../structs/InternalStruct';
 import {
     AddressInformation,
     ContractState,
@@ -240,7 +241,7 @@ export class RetryableContractOpener implements ContractOpener {
     private async executeWithFallback<T>(
         operation: (config: OpenerConfig) => Promise<T>,
         options: ExecuteWithFallbackOptions = {},
-    ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+    ): Promise<RetryableOperationResult<T>> {
         const { useRetries = true, shouldFallbackOnError, operationName = 'operation' } = options;
         let lastError: Error | undefined;
 
@@ -291,7 +292,7 @@ export class RetryableContractOpener implements ContractOpener {
 
     private async trySingleAttempt<T>(
         operation: () => Promise<T>,
-    ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+    ): Promise<RetryableOperationResult<T>> {
         try {
             const data = await operation();
             return { success: true, data };
@@ -304,7 +305,7 @@ export class RetryableContractOpener implements ContractOpener {
         operation: () => Promise<T>,
         config: OpenerConfig,
         operationContext = 'operation',
-    ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+    ): Promise<RetryableOperationResult<T>> {
         let lastError: Error | undefined;
 
         for (let attempt = 0; attempt <= config.retries; attempt++) {

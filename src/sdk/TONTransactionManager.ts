@@ -2,15 +2,17 @@ import { Cell, loadMessage } from '@ton/ton';
 
 import { FT, NFT, TON } from '../assets';
 import {
+    executedInTONStageFailedError,
     insufficientFeeParamsError,
     missingFeeParamsError,
     missingGasLimitError,
     missingTvmExecutorFeeError,
+    operationIdRequiredForFinalizationError,
 } from '../errors';
 import { sendCrossChainTransactionFailedError } from '../errors/instances';
 import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator, ITONTransactionManager } from '../interfaces';
 import { getMockSender, type SenderAbstraction } from '../sender';
-import { ShardMessage, ShardTransaction } from '../structs/InternalStruct';
+import { PreparedCrossChainTransaction, ShardMessage } from '../structs/InternalStruct';
 import {
     BatchCrossChainTx,
     CrossChainPayloadResult,
@@ -18,6 +20,7 @@ import {
     CrossChainTransactionsOptions,
     CrosschainTx,
     EvmProxyMsg,
+    ExecutionStages,
     FeeParams,
     GeneratePayloadParams,
     OperationIdsByShardsKey,
@@ -27,7 +30,6 @@ import {
     WaitOptions,
 } from '../structs/Struct';
 import {
-    DEFAULT_FIND_TX_MAX_DEPTH,
     FIFTEEN_MINUTES,
     JETTON_TRANSFER_FORWARD_TON_AMOUNT,
     NFT_TRANSFER_FORWARD_TON_AMOUNT,
@@ -38,7 +40,7 @@ import {
     buildEvmDataCell,
     formatObjectForLogging,
     generateTransactionLinker,
-    getNormalizedExtMessageHash,
+    getNormalizedExtMessageHash, isFinalProfiling,
 } from './Utils';
 import { Validator } from './Validator';
 
@@ -134,7 +136,7 @@ export class TONTransactionManager implements ITONTransactionManager {
         assets?: Asset[],
         options?: CrossChainTransactionOptions,
         skipAssetsBalanceValidation: boolean = false,
-    ): Promise<{ transaction: ShardTransaction; transactionLinker: TransactionLinker }> {
+    ): Promise<PreparedCrossChainTransaction> {
         this.logger.debug('Preparing cross-chain transaction');
         const caller = sender.getSenderAddress();
         const {
@@ -142,9 +144,10 @@ export class TONTransactionManager implements ITONTransactionManager {
             isRoundTrip = undefined,
             calculateRollbackFee = true,
             validateAssetsBalance = true,
+            evmValidExecutors = [],
+            tvmValidExecutors = [],
             evmDataBuilder = buildEvmDataCell,
         } = options || {};
-        const { evmValidExecutors = [], tvmValidExecutors = [] } = options || {};
 
         Validator.validateEVMAddress(evmProxyMsg.evmTargetAddress);
         const aggregatedData = aggregateTokens(assets);
@@ -307,20 +310,17 @@ export class TONTransactionManager implements ITONTransactionManager {
             return { sendTransactionResult, ...transactionLinker };
         }
 
-        const waitOptions = tx.options?.waitOptions ?? {};
         const ensureTxExecuted = tx.options?.ensureTxExecuted ?? true;
-
         if (ensureTxExecuted && sendTransactionResult.boc) {
             const hash = getNormalizedExtMessageHash(
                 loadMessage(Cell.fromBase64(sendTransactionResult.boc).beginParse()),
             );
             this.logger.info(`Tracking transaction tree for hash: ${hash}`);
-            await this.config.TONParams.contractOpener.trackTransactionTree(sender.getSenderAddress(), hash, {
-                maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
-            });
+            await this.config.TONParams.contractOpener.trackTransactionTree(sender.getSenderAddress(), hash);
             this.logger.info(`Transaction tree successful`);
         }
 
+        const waitOptions = tx.options?.waitOptions ?? {};
         waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);
         waitOptions.logger = waitOptions.logger ?? this.logger;
 
@@ -330,6 +330,37 @@ export class TONTransactionManager implements ITONTransactionManager {
                 this.logger.error(`Error while waiting for operation ID: ${error}`);
                 return undefined;
             });
+
+        const shouldWaitForFinalization = tx.options?.waitFinalization ?? true;
+        if (!shouldWaitForFinalization) {
+            return { sendTransactionResult, ...transactionLinker };
+        }
+
+        if (!operationId) {
+            throw operationIdRequiredForFinalizationError;
+        }
+
+        const finalizationWaitOptions = tx.options?.finalizationWaitOptions ?? {};
+        finalizationWaitOptions.successCheck = finalizationWaitOptions.successCheck ?? isFinalProfiling;
+        finalizationWaitOptions.logger = finalizationWaitOptions.logger ?? this.logger;
+        finalizationWaitOptions.onSuccess =
+            finalizationWaitOptions.onSuccess ??
+            (async (profilingData: ExecutionStages) => {
+                const stage = profilingData.executedInTON;
+                if (!stage.exists) {
+                    return;
+                }
+
+                if (!stage.stageData?.success) {
+                    throw executedInTONStageFailedError;
+                }
+
+                for (const transaction of stage.stageData?.transactions ?? []) {
+                    await this.config.TONParams.contractOpener.trackTransactionTree(this.config.TONParams.crossChainLayerAddress, transaction.hash);
+                }
+            });
+
+        await this.operationTracker.getStageProfiling(operationId, finalizationWaitOptions);
 
         return { sendTransactionResult, operationId, ...transactionLinker };
     }

@@ -1,12 +1,15 @@
 import { Address, beginCell, Cell } from '@ton/ton';
+import { ethers } from 'ethers';
 
+import { IERC20WithDecimals } from '../../artifacts/tacTypes';
 import { insufficientBalanceError } from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
 import { TON_SYMBOL } from '../sdk/Consts';
 import { calculateRawAmount, generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
+import { Validator } from '../sdk/Validator';
 import type { SenderAbstraction } from '../sender';
 import type { ShardTransaction } from '../structs/InternalStruct';
-import { AssetType, FeeParams, Origin } from '../structs/Struct';
+import { AssetType, BlockchainType, FeeParams, Origin } from '../structs/Struct';
 
 export class TON implements Asset {
     readonly address: string;
@@ -120,14 +123,28 @@ export class TON implements Asset {
         }
     }
 
-    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
-        const balance = await this.getUserBalance(userAddress);
-        if (balance < this._rawAmount) {
+    async checkCanBeTransferredBy(
+        userAddress: string,
+        blockchainType: BlockchainType = BlockchainType.TON,
+    ): Promise<void> {
+        if ((await this.getBalanceOf(userAddress, blockchainType)) < this._rawAmount) {
             throw insufficientBalanceError(TON_SYMBOL);
         }
     }
 
-    async getBalanceOf(userAddress: string): Promise<bigint> {
-        return this.getUserBalance(userAddress);
+    async getBalanceOf(userAddress: string, blockchainType: BlockchainType = BlockchainType.TON): Promise<bigint> {
+        if (blockchainType === BlockchainType.TON) {
+            Validator.validateTVMAddress(userAddress);
+            return this.getUserBalance(userAddress);
+        }
+
+        Validator.validateEVMAddress(userAddress);
+        const token = new ethers.Contract(
+            await this.getEVMAddress(),
+            this._config.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
+            this._config.TACParams.provider,
+        ) as unknown as IERC20WithDecimals;
+
+        return token.balanceOf(userAddress);
     }
 }

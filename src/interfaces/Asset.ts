@@ -1,6 +1,6 @@
 import type { Cell } from '@ton/ton';
 
-import { AssetType, GeneratePayloadParams, Origin } from '../structs/Struct';
+import { AssetType, BlockchainType, GeneratePayloadParams, Origin } from '../structs/Struct';
 
 export interface Asset {
     // Address of the token on the blockchain
@@ -71,14 +71,19 @@ export interface Asset {
     /**
      * Validates whether the specified user is allowed to transfer this asset.
      * Implementations should throw if the transfer is not permitted (e.g., frozen asset, missing wallet, insufficient permissions).
-     * @param userAddress TVM address of the user attempting to transfer the asset.
+     * @param userAddress User address on the selected blockchain.
+     * @param blockchainType Blockchain where the transferability should be checked. Defaults to TON.
      * @returns Promise that resolves if transfer is allowed; rejects with an error otherwise.
      */
-    checkCanBeTransferredBy(userAddress: string): Promise<void>;
+    checkCanBeTransferredBy(userAddress: string, blockchainType?: BlockchainType): Promise<void>;
     /**
-     * Retrieves the current balance of this asset for the given user address.
-     * @param userAddress TVM address of the user.
+     * Retrieves the current balance of this asset for the given user address on the selected blockchain.
+     * For NFTs, implementations should return 1n when the user owns the token and 0n otherwise.
+     * Implementations must validate the address format according to the selected blockchain:
+     * TVM address for TON, EVM address for TAC.
+     * @param userAddress User address on the selected blockchain.
+     * @param blockchainType Blockchain where the balance should be read. Defaults to TON.
      * @returns Promise that resolves to the balance in raw base units (bigint).
      */
-    getBalanceOf(userAddress: string): Promise<bigint>;
+    getBalanceOf(userAddress: string, blockchainType?: BlockchainType): Promise<bigint>;
 }

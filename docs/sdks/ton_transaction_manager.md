@@ -90,6 +90,8 @@ Sends a single cross-chain transaction from TON to TAC. This method prepares the
   - **`options.waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending
   - **`options.ensureTxExecuted`** *(optional, default: true)*: Whether to validate TON transaction execution before waiting for operation ID
   - **`options.waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for operation tracking customization
+  - **`options.waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID
+  - **`options.finalizationWaitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for final operation type polling, profiling fetch, and optional TON transaction tree validation
 
 ### **Returns** [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type)
 

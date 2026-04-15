@@ -14,10 +14,14 @@ export {
 } from './errors';
 export {
     allEndpointsFailedError,
+    blockGasLimitFetchError,
     emptyArrayError,
     emptyContractError,
     emptySettingError,
+    estimatedGasExceedsBlockGasLimitError,
     evmAddressError,
+    executedInTONStageFailedError,
+    gasPriceFetchError,
     indexRequiredError,
     insufficientBalanceError,
     insufficientFeeParamsError,
@@ -29,6 +33,7 @@ export {
     missingTvmExecutorFeeError,
     notMultiplyOf8Error,
     operationFetchError,
+    operationIdRequiredForFinalizationError,
     prefixError,
     profilingFetchError,
     simulationFetchError,

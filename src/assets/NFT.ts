@@ -2,7 +2,7 @@ import { SandboxContract } from '@ton/sandbox';
 import { Address, address, beginCell, Cell, fromNano, OpenedContract } from '@ton/ton';
 import { ethers, isAddress as isEthereumAddress } from 'ethers';
 
-import { ICrossChainLayerERC721 } from '../../artifacts/tacTypes';
+import { ICrossChainLayerERC721, IERC721 } from '../../artifacts/tacTypes';
 import { NFTCollection, NFTCollectionData, NFTItemData } from '../../artifacts/tonTypes';
 import { ContractError, emptyContractError, insufficientBalanceError } from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
@@ -10,7 +10,7 @@ import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import { generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { AssetType, EVMAddress, FeeParams, Origin, TVMAddress } from '../structs/Struct';
+import { AssetType, BlockchainType, EVMAddress, FeeParams, Origin, TVMAddress } from '../structs/Struct';
 export class NFT implements Asset {
     private readonly _addresses: {
         item: TVMAddress;
@@ -363,14 +363,29 @@ export class NFT implements Asset {
         return !!nftData.ownerAddress?.equals(Address.parse(userAddress));
     }
 
-    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
-        if (!(await this.isOwnedBy(userAddress))) {
+    async checkCanBeTransferredBy(
+        userAddress: string,
+        blockchainType: BlockchainType = BlockchainType.TON,
+    ): Promise<void> {
+        if ((await this.getBalanceOf(userAddress, blockchainType)) < 1n) {
             throw insufficientBalanceError(this.address.toString());
         }
     }
 
-    async getBalanceOf(userAddress: string): Promise<bigint> {
-        return (await this.isOwnedBy(userAddress)) ? 1n : 0n;
+    async getBalanceOf(userAddress: string, blockchainType: BlockchainType = BlockchainType.TON): Promise<bigint> {
+        if (blockchainType === BlockchainType.TON) {
+            Validator.validateTVMAddress(userAddress);
+            return (await this.isOwnedBy(userAddress)) ? 1n : 0n;
+        }
+
+        Validator.validateEVMAddress(userAddress);
+        const nft = new ethers.Contract(
+            await this.getEVMAddress(),
+            this._configuration.artifacts.tac.compilationArtifacts.IERC721.abi,
+            this._configuration.TACParams.provider,
+        ) as unknown as IERC721;
+
+        return (await nft.ownerOf(this._addresses.index)).toLowerCase() === userAddress.toLowerCase() ? 1n : 0n;
     }
 
     private getBurnPayload(

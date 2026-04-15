@@ -26,6 +26,7 @@ import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
 import {
     AssetType,
+    BlockchainType,
     EVMAddress,
     FeeParams,
     FTOriginAndData,
@@ -440,12 +441,36 @@ export class FT implements Asset {
         }
     }
 
-    async checkCanBeTransferredBy(userAddress: string): Promise<void> {
-        await this.checkBalance(userAddress);
+    async checkCanBeTransferredBy(
+        userAddress: string,
+        blockchainType: BlockchainType = BlockchainType.TON,
+    ): Promise<void> {
+        if ((await this.getBalanceOf(userAddress, blockchainType)) < this._transferAmount) {
+            throw insufficientBalanceError(this._tvmAddress.toString());
+        }
     }
 
-    async getBalanceOf(userAddress: string): Promise<bigint> {
-        return this.getUserBalance(userAddress);
+    async getBalanceOf(userAddress: string, blockchainType: BlockchainType = BlockchainType.TON): Promise<bigint> {
+        if (blockchainType === BlockchainType.TON) {
+            Validator.validateTVMAddress(userAddress);
+            return this.getUserBalance(userAddress);
+        }
+
+        Validator.validateEVMAddress(userAddress);
+        const evmAddress = await this.getEVMAddress();
+        const nativeTACAddress = await this._configuration.nativeTACAddress();
+
+        if (evmAddress === nativeTACAddress) {
+            return this._configuration.TACParams.provider.getBalance(userAddress);
+        }
+
+        const erc20Token = new ethers.Contract(
+            evmAddress,
+            this._configuration.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
+            this._configuration.TACParams.provider,
+        ) as unknown as IERC20WithDecimals;
+
+        return erc20Token.balanceOf(userAddress);
     }
 
     private getTransferPayload(

@@ -12,6 +12,7 @@ import {
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
     TACSimulationResult,
+    TransactionLinker,
 } from './Struct';
 
 export type ShardMessage = {
@@ -28,6 +29,17 @@ export type ShardTransaction = {
     validUntil: number;
     messages: ShardMessage[];
     network: Network;
+};
+
+export type PreparedCrossChainTransaction = {
+    transaction: ShardTransaction;
+    transactionLinker: TransactionLinker;
+};
+
+export type PreparedBridgeTokensToTON = {
+    crossChainLayerAddress: string;
+    outMessagePayload: ethers.BytesLike;
+    totalValue: bigint;
 };
 
 export enum AssetOpType {
@@ -98,6 +110,37 @@ export interface SendResult {
     error?: Error;
     lastMessageIndex?: number;
 }
+
+export type SendGroupTransferResult = string | { result: string };
+
+export type SendBatchTransferResult = string | void | { result: string | void };
+
+export type RetryableOperationResult<T> = {
+    success: boolean;
+    data?: T;
+    lastError?: Error;
+};
+
+export type MetadataPersistenceType =
+    | 'none'
+    | 'onchain'
+    | 'offchain_private_domain'
+    | 'offchain_ipfs'
+    | 'semichain_private_domain'
+    | 'semichain_ipfs';
+
+export type OffchainMetadataResult<TMetadata = unknown> = {
+    metadata: TMetadata | null;
+    isIpfs: boolean;
+    contentUri: string;
+};
+
+export type ReadMetadataResult<TMetadata = unknown> = {
+    persistenceType: MetadataPersistenceType;
+    metadata: TMetadata | null;
+    contentUri?: string;
+    isJettonDeployerFaultyOnChainData?: boolean;
+};
 
 export type ToncenterTransaction = {
     description: {

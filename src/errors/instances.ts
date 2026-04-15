@@ -205,3 +205,23 @@ export const insufficientFeeParamsError = (feeName: string, provided: bigint, re
         `Provided ${feeName} (${provided}) is lower than required (${required}). Set shouldValidateFees: false to bypass.`,
         136,
     );
+
+export const operationIdRequiredForFinalizationError = new TransactionError(
+    'Operation ID is required to wait for operation finalization',
+    137,
+);
+
+export const executedInTONStageFailedError = new TransactionError('executedInTON stage failed', 138);
+
+export const blockGasLimitFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`Failed to fetch latest block gas limit: ${msg}`, 139, inner);
+
+export const estimatedGasExceedsBlockGasLimitError = (
+    txName: string,
+    estimatedGas: bigint,
+    blockGasLimit: bigint,
+) =>
+    new TransactionError(
+        `Estimated gas for ${txName} (${estimatedGas}) exceeds current TAC block gas limit (${blockGasLimit})`,
+        140,
+    );

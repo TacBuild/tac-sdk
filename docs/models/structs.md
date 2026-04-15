@@ -26,6 +26,7 @@ This file documents the primary data structures (types and interfaces often refe
 ### Transaction Tracking
 - [`TransactionLinker`](#transactionlinker-type)
 - [`TransactionLinkerWithOperationId`](#transactionlinkerwithoperationid-type)
+- [`TACCrossChainTransactionResult`](#taccrosschaintransactionresult-type)
 - [`OperationIds`](#operationids-type)
 - [`OperationIdsByShardsKey`](#operationidsbyshardskey-type)
 - [`TrackTransactionTreeParams`](#tracktransactiontreeparams-type)
@@ -326,73 +327,82 @@ export type CrossChainTransactionOptions = {
     validateAssetsBalance?: boolean;
     waitOperationId?: boolean;
     waitOptions?: WaitOptions<string>;
+    waitFinalization?: boolean;
+    finalizationWaitOptions?: WaitOptions<ExecutionStages>;
     evmDataBuilder?: evmDataBuilder;
 };
 ```
 
 - **allowSimulationError** *(optional)*:  
-  If true, transaction simulation phase is skipped.  
+  If true, the SDK does not abort when TAC simulation returns an unsuccessful result. Instead it returns partial fee data together with the failed simulation result, so the caller can inspect it and decide whether to proceed.  
   **Default**: false
 
 - **ensureTxExecuted** *(optional)*:  
-  If true, validates TON transaction execution before waiting for operation ID.  
+  If true, the SDK validates the initial TON transaction tree immediately after sending the external message and before waiting for operation ID. Use this to fail early when the outgoing TON transaction itself did not execute successfully.  
   **Default**: true
 
 - **shouldValidateFees** *(optional)*:  
-  If true, validates explicitly provided fee params against suggested values.  
+  If true, explicitly provided fee values are checked against the simulated suggestion. Disable this only when you intentionally want to send with custom fees that may be lower than the recommended values.  
   **Default**: true
 
 - **isRoundTrip** *(optional)*:  
-  Indicates whether the transaction involves a round-trip execution (e.g., a return message from TAC to TON).  
+  Forces the SDK to treat the operation as round-trip TON -> TAC -> TON. If omitted, the SDK derives this automatically from attached assets and simulation output.  
   **Default**: will be determined by simulation. 
 
 - **protocolFee** *(optional)*:  
-  An optional override for the protocol fee in bigint. If not specified, the SDK calculates this automatically based on network parameters.
+  Explicit override for the protocol fee in `bigint`. Usually you do not need to set this manually; it is filled from simulation or chain configuration.
 
 - **evmValidExecutors** *(optional)*:  
-  A list of EVM executor addresses that are allowed to execute this transaction on the TAC.
+  Whitelist of TAC-side executor addresses allowed to execute the TAC part of the operation. If omitted, the SDK uses trusted executors from configuration.
 
 - **evmExecutorFee** *(optional)*:  
-  Fee in bigint to be paid (in TON token) to the executor on the EVM side for executing the transaction.
+  Explicit fee paid to the TAC-side executor. Usually this comes from simulation; set it manually only when you intentionally override fee estimation.
 
 - **tvmValidExecutors** *(optional)*:  
-  A list of TVM (TON) executor addresses that are authorized to execute the message on the TON network.
+  Whitelist of TON-side executor addresses allowed to execute the TON part of the operation. If omitted, the SDK uses trusted executors from configuration.
 
 - **tvmExecutorFee** *(optional)*:  
-  Fee in bigint to be paid (in TON token) to the executor on the TON side.
+  Explicit fee paid to the TON-side executor for round-trip operations. In manual mode this must be provided when `withoutSimulation` is true and `isRoundTrip` is true.
 
 - **calculateRollbackFee** *(optional)*:  
-  Whether to calculate rollback fee during simulation.  
-  **Default**: false
+  Controls whether rollback fee is included during TAC simulation. Leave enabled unless you deliberately want estimation without rollback costs.  
+  **Default**: true
 
 - **withoutSimulation** *(optional)*:  
-  If true, skips the simulation phase entirely.  
+  If true, skips simulation entirely and uses only manually provided fee values. In this mode you must provide `protocolFee`, `evmExecutorFee`, and `evmProxyMsg.gasLimit`; if `isRoundTrip` is true, `tvmExecutorFee` must also be provided.  
   **Default**: false
 
 - **validateAssetsBalance** *(optional)*:  
-  If true, validates that the sender has sufficient balance for the specified assets before sending the transaction.  
+  If true, checks that the sender owns or holds enough assets before building and sending the transaction. Disable only if you already validated balances externally or want to skip this extra check.  
   **Default**: true
 
 - **waitOperationId** *(optional)*:  
-  If true, waits for operation ID after sending the transaction. When false, the transaction is sent without waiting for operation tracking information.  
+  If true, waits until the sequencer exposes the operation ID after the TON transaction is sent. Disable it when you only need the raw send result and do not want tracker polling.  
   **Default**: true
 
 - **waitOptions** *(optional)*:  
   Custom waiting configuration for operation ID resolution. See [`WaitOptions`](#waitoptions-interface) for available options.  
   **Default**: `{}`
 
+- **waitFinalization** *(optional)*:  
+  If true, continues after operation ID resolution and waits for the operation to reach a final type, then fetches profiling and validates the TON transaction tree for `executedInTON` transactions when they exist.  
+  **Default**: true
+
+- **finalizationWaitOptions** *(optional)*:  
+  Waiting configuration for the finalization stage after operation ID resolution. This controls retries, delay, logger, `successCheck`, `onSuccess`, and profiling post-processing.
+
 - **evmDataBuilder** *(optional)*:  
-  Custom function to build the EVM data cell.
+  Custom function that builds the EVM data cell embedded into the TON message. Override it only for advanced integrations that need non-standard TAC header encoding.
   **Default**: `buildEvmDataCell`
 
 ### `BatchCrossChainTransactionOptions`
 A restricted version of CrossChainTransactionOptions for use in batch operations.
 
 ```ts
-export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions' | 'ensureTxExecuted'>;
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'>;
 ```
 
-This type excludes `waitOperationId`, `waitOptions`, and `ensureTxExecuted` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
+This type excludes `waitOperationId`, `waitOptions`, `ensureTxExecuted`, `waitFinalization`, and `finalizationWaitOptions` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
 
 ### `CrossChainTransactionsOptions`
 Configuration options for batch cross-chain transaction operations.
@@ -411,6 +421,47 @@ export type CrossChainTransactionsOptions = {
 - **waitOptions** *(optional)*:  
   Custom waiting configuration for operation IDs resolution in batch operations. See [`WaitOptions`](#waitoptions-interface) for available options.  
   **Default**: `{}`
+
+### `BridgeTokensToTONOptions`
+Configuration options for TAC -> TON bridge operations initiated from the EVM side.
+
+```ts
+export type BridgeTokensToTONOptions = {
+    tvmExecutorFee?: bigint;
+    tvmValidExecutors?: string[];
+    validateAssetsBalance?: boolean;
+    waitOperationId?: boolean;
+    waitOptions?: WaitOptions<string>;
+    waitFinalization?: boolean;
+    finalizationWaitOptions?: WaitOptions<ExecutionStages>;
+};
+```
+
+- **tvmExecutorFee** *(optional)*:  
+  Explicit TON-side executor fee. If omitted, the SDK requests a suggestion from `OperationTracker.getTVMExecutorFee()`.
+
+- **tvmValidExecutors** *(optional)*:  
+  Optional whitelist of allowed TVM executors. Used both for fee estimation and in the outgoing TAC -> TON message.
+
+- **validateAssetsBalance** *(optional)*:  
+  If true, validates balances or ownership of non-native TAC assets before approvals and sending. Native `TAC` amount is still covered separately by the overall TAC balance sufficiency check.  
+  **Default**: true
+
+- **waitOperationId** *(optional)*:  
+  If true, waits for operation ID after sending the TAC -> TON transaction. When false, tracking is skipped unless full finalization is enabled.  
+  **Default**: true
+
+- **waitOptions** *(optional)*:  
+  Shared waiting configuration for internal tracker calls in `sendCrossChainTransactionToTON`. Retry settings are reused for operation ID resolution by transaction hash. Callbacks and `successCheck` apply only to operation ID resolution.
+
+- **waitFinalization** *(optional)*:  
+  If true, waits for full operation finalization similarly to `startTracking`: resolves profiling and validates the TON transaction tree for `EXECUTED_IN_TON` transactions when they exist. Used by `sendCrossChainTransactionToTON` only.  
+  **Default**: true
+
+- **finalizationWaitOptions** *(optional)*:  
+  Waiting configuration for the finalization stage after operation ID resolution. Used by `sendCrossChainTransactionToTON` only.
+
+`sendCrossChainTransactionToTON` still requires additional TAC balance outside the bridged native `TAC` asset amount so the signer can pay TAC gas and bridge fees. For this high-level flow the SDK requires TAC provider EIP-1559 fee data, can validate balances or ownership of non-native TAC assets, takes provider gas estimates as-is, validates them against the latest TAC block gas limit, and checks the worst-case upfront TAC balance before sending.
 
 ### `CrosschainTx`
 
@@ -568,6 +619,20 @@ export type TransactionLinkerWithOperationId = TransactionLinker & {
 ```
 
 This structure is extended version of `TransactionLinker` with `operationId` field that is retrieved automatically by `TacSDK` when sending crosschain transaction.
+
+### `TACCrossChainTransactionResult (Type)`
+
+```typescript
+export type TACCrossChainTransactionResult = {
+    txHash: string;
+    operationId?: string;
+};
+```
+
+Result of `sendCrossChainTransactionToTON`.
+
+- **`txHash`**: TAC transaction hash submitted to `CrossChainLayer`.
+- **`operationId`** *(optional)*: Resolved cross-chain operation id when waiting was enabled and succeeded.
 
 ### `OperationIds (Type)`
 
