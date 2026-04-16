@@ -21,9 +21,6 @@ All notable changes to this project will be documented in this file.
 - Jetton metadata parsing now supports TEP-64 `amount_style` and `render_type` fields.
 - `OperationTracker.getSimplifiedOperationStatus` now prefers `v2` route/finalization data and falls back to `v1` endpoints when `v2` is unavailable.
 
-### Fixed
-- Retryable TON transaction-tree tracking now fails over between underlying contract openers immediately instead of spending retry budget on a single broken endpoint.
-
 ## [0.7.2] - 2026-02-26
 
 ### Added

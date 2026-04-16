@@ -202,7 +202,6 @@ export class RetryableContractOpener implements ContractOpener {
         const result = await this.executeWithFallback(
             async (config) => config.opener.trackTransactionTree(address, hash, params),
             {
-                useRetries: false,
                 shouldFallbackOnError: (error) => this.isTransportError(error),
                 operationName: 'trackTransactionTree',
             },
@@ -224,7 +223,6 @@ export class RetryableContractOpener implements ContractOpener {
         const result = await this.executeWithFallback(
             async (config) => config.opener.trackTransactionTreeWithResult(address, hash, params),
             {
-                useRetries: false,
                 shouldFallbackOnError: (error) => this.isTransportError(error),
                 operationName: 'trackTransactionTreeWithResult',
             },
