@@ -46,6 +46,13 @@ export enum OperationType {
     UNKNOWN = 'UNKNOWN',
 }
 
+export type OperationTypeV2 = OperationType.TON_TAC_TON | OperationType.TON_TAC | OperationType.TAC_TON;
+
+export enum OperationExecutionStatus {
+    SUCCESS = 'success',
+    FAILED = 'failed',
+}
+
 export type TACParams = {
     /**
      * Provider for TAC side. Use your own provider for tests or to increase ratelimit
@@ -284,7 +291,21 @@ export type ExecutionStages = {
     metaInfo: MetaInfo;
 } & Record<StageName, ProfilingStageData>;
 
+export type OperationTypeV2Info = {
+    operationType: OperationTypeV2;
+    finalized: boolean;
+};
+
+export type ExecutionStagesV2 = {
+    operationType: OperationTypeV2;
+    metaInfo: MetaInfo;
+    finalized: boolean;
+    status: OperationExecutionStatus;
+    rollback: boolean;
+} & Record<StageName, ProfilingStageData>;
+
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
+export type ExecutionStagesV2ByOperationId = Record<string, ExecutionStagesV2>;
 
 export type StatusInfosByOperationId = Record<string, StatusInfo>;
 

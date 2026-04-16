@@ -2,9 +2,11 @@ import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
     OperationType,
+    OperationTypeV2Info,
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
     TACSimulationParams,
@@ -15,6 +17,8 @@ import {
 export interface ILiteSequencerClient {
     /** Retrieves the operation type by id. */
     getOperationType(operationId: string): Promise<OperationType>;
+    /** Retrieves the v2 operation route/finalization state by id. */
+    getOperationTypeV2(operationId: string): Promise<OperationTypeV2Info>;
     /** Resolves operation id by a transaction linker. */
     getOperationId(transactionLinker: TransactionLinker): Promise<string>;
     /** Resolves operation id by the originating transaction hash. */
@@ -36,6 +40,12 @@ export interface ILiteSequencerClient {
      * @param chunkSize Optional batching size.
      */
     getStageProfilings(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesByOperationId>;
+    /**
+     * Fetches stage profiling v2 data for a set of operation ids.
+     * @param operationIds Operation ids to get profiling for.
+     * @param chunkSize Optional batching size.
+     */
+    getStageProfilingsV2(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesV2ByOperationId>;
     /**
      * Fetches statuses for a set of operation ids.
      * @param operationIds Operation ids to get statuses for.

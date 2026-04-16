@@ -3,9 +3,12 @@ import {
     ConvertedCurrencyResult,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2,
+    ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
     OperationType,
+    OperationTypeV2Info,
     SimplifiedStatuses,
     StatusInfo,
     StatusInfosByOperationId,
@@ -23,6 +26,15 @@ export interface IOperationTracker {
      * @param waitOptions Optional waiting and polling settings. Pass `null` to disable retries and use a single attempt.
      */
     getOperationType(operationId: string, waitOptions?: WaitOptions<OperationType> | null): Promise<OperationType>;
+    /**
+     * Returns the v2 operation route and finalized flag for the given id.
+     * @param operationId Operation identifier.
+     * @param waitOptions Optional waiting and polling settings. Pass `null` to disable retries and use a single attempt.
+     */
+    getOperationTypeV2(
+        operationId: string,
+        waitOptions?: WaitOptions<OperationTypeV2Info> | null,
+    ): Promise<OperationTypeV2Info>;
     /**
      * Resolves an operation id for the given transaction linker, optionally waiting until available.
      * @param transactionLinker Reference to originating transaction across chains.
@@ -65,6 +77,26 @@ export interface IOperationTracker {
         waitOptions?: WaitOptions<ExecutionStagesByOperationId> | null,
         chunkSize?: number,
     ): Promise<ExecutionStagesByOperationId>;
+    /**
+     * Gets detailed v2 stage profiling for a single operation, including finalized/status/rollback fields.
+     * @param operationId Operation identifier.
+     * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
+     */
+    getStageProfilingV2(
+        operationId: string,
+        waitOptions?: WaitOptions<ExecutionStagesV2> | null,
+    ): Promise<ExecutionStagesV2>;
+    /**
+     * Gets v2 stage profiling for multiple operations in bulk.
+     * @param operationIds Operation identifiers.
+     * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
+     * @param chunkSize Optional batching size for requests.
+     */
+    getStageProfilingsV2(
+        operationIds: string[],
+        waitOptions?: WaitOptions<ExecutionStagesV2ByOperationId> | null,
+        chunkSize?: number,
+    ): Promise<ExecutionStagesV2ByOperationId>;
     /**
      * Gets statuses for multiple operations.
      * @param operationIds Operation identifiers.

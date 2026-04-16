@@ -58,6 +58,8 @@ The TAC SDK enables you to create frontends that:
   - [`constructor`](./docs/sdks/operation_tracker.md#constructor): Creates a tracker instance.
   - [`getOperationId`](./docs/sdks/operation_tracker.md#getoperationid): Retrieves the Operation ID from a `TransactionLinker`.
   - [`getStageProfiling`](./docs/sdks/operation_tracker.md#getstageprofiling): Gets detailed timing and status for all stages of an operation.
+  - [`getStageProfilingV2`](./docs/sdks/operation_tracker.md#getstageprofilingv2): Gets stage profiling with `finalized`, `status`, and `rollback`.
+  - [`getOperationTypeV2`](./docs/sdks/operation_tracker.md#getoperationtypev2): Gets the operation type plus `finalized`.
   - [`getSimplifiedOperationStatus`](./docs/sdks/operation_tracker.md#getsimplifiedoperationstatus): Gets a simplified overall status (Pending, Successful, Failed, Not Found).
   - *(See file for more...)*
 
@@ -81,7 +83,9 @@ The TAC SDK enables you to create frontends that:
 - **[`Enums`](./docs/models/enums.md)**: Key enumerations used by the SDK.
   - [`Network`](./docs/models/enums.md#network): `TESTNET` or `MAINNET`.
   - [`SimplifiedStatuses`](./docs/models/enums.md#simplifiedstatuses): `PENDING`, `FAILED`, `SUCCESSFUL`, `OPERATION_ID_NOT_FOUND`.
-  - [`OperationType`](./docs/models/enums.md#operationtype): Detailed operation types (`PENDING`, `TON_TAC_TON`, `ROLLBACK`, etc.).
+  - [`OperationType`](./docs/models/enums.md#operationtype): Detailed operation type.
+  - [`OperationTypeV2`](./docs/models/enums.md#operationtypev2): Operation type used by `getOperationTypeV2`.
+  - [`OperationExecutionStatus`](./docs/models/enums.md#operationexecutionstatus): Top-level operation status (`success` / `failed`).
   - [`StageName`](./docs/models/enums.md#stagename): Identifiers for tracking stages (`COLLECTED_IN_TAC`, `EXECUTED_IN_TAC`, etc.).
 
 - **[`Structs`](./docs/models/structs.md)**: Core data structures.

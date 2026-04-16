@@ -6,9 +6,11 @@ import { ContractOpener } from '../interfaces';
 import {
     CurrencyType,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2ByOperationId,
     Network,
     OperationIdsByShardsKey,
     OperationType,
+    OperationTypeV2Info,
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
     TACSimulationResult,
@@ -84,11 +86,15 @@ export type StringResponse = ResponseBase<string>;
 
 export type OperationTypeResponse = ResponseBase<OperationType>;
 
+export type OperationTypeV2Response = ResponseBase<OperationTypeV2Info>;
+
 export type StatusesResponse = ResponseBase<StatusInfosByOperationId>;
 
 export type OperationIdsByShardsKeyResponse = ResponseBase<OperationIdsByShardsKey>;
 
 export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
+
+export type StageProfilingV2Response = ResponseBase<ExecutionStagesV2ByOperationId>;
 
 export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
 

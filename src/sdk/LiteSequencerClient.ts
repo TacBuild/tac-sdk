@@ -6,7 +6,9 @@ import {
     OperationIdsByShardsKeyResponse,
     OperationIdWithLogIndexResponse,
     OperationTypeResponse,
+    OperationTypeV2Response,
     StageProfilingResponse,
+    StageProfilingV2Response,
     StatusesResponse,
     StringResponse,
     SuggestedTVMExecutorFeeResponse,
@@ -16,9 +18,11 @@ import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
     OperationType,
+    OperationTypeV2Info,
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
     TACSimulationParams,
@@ -82,6 +86,25 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                 },
             });
             return response.data.response || '';
+        } catch (error) {
+            throw operationFetchError(`request ${requestLabel} failed to complete request`, error);
+        }
+    }
+
+    async getOperationTypeV2(operationId: string): Promise<OperationTypeV2Info> {
+        const path = 'v2/operation-type';
+        const requestLabel = this.getRequestLabel('GET', path);
+        try {
+            const response = await this.httpClient.get<OperationTypeV2Response>(
+                new URL(path, this.endpoint).toString(),
+                {
+                    params: {
+                        operationId,
+                    },
+                    transformResponse: [toCamelCaseTransformer],
+                },
+            );
+            return response.data.response;
         } catch (error) {
             throw operationFetchError(`request ${requestLabel} failed to complete request`, error);
         }
@@ -160,6 +183,40 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                 operationIds,
                 async (chunk) => {
                     const response = await this.httpClient.post<StageProfilingResponse>(
+                        new URL(path, this.endpoint).toString(),
+                        {
+                            operationIds: chunk,
+                        },
+                        {
+                            transformResponse: [toCamelCaseTransformer],
+                        },
+                    );
+                    return response.data;
+                },
+                chunkSize,
+            );
+
+            return response.response;
+        } catch (error) {
+            throw profilingFetchError(`request ${requestLabel} failed to complete request`, error);
+        }
+    }
+
+    async getStageProfilingsV2(
+        operationIds: string[],
+        chunkSize: number = this.maxChunkSize,
+    ): Promise<ExecutionStagesV2ByOperationId> {
+        const path = 'v2/stage-profiling';
+        const requestLabel = this.getRequestLabel('POST', path);
+        if (!operationIds || operationIds.length === 0) {
+            throw emptyArrayError('operationIds');
+        }
+
+        try {
+            const response = await this.processChunkedRequest<StageProfilingV2Response>(
+                operationIds,
+                async (chunk) => {
+                    const response = await this.httpClient.post<StageProfilingV2Response>(
                         new URL(path, this.endpoint).toString(),
                         {
                             operationIds: chunk,

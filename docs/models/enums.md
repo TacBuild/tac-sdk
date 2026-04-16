@@ -73,6 +73,39 @@ function getOpDescription(opType: OperationType): string {
 }
 ```
 
+This enum includes both route classifications and intermediate or terminal tracker states.
+
+## `OperationTypeV2`
+
+Operation types returned by `OperationTracker.getOperationTypeV2` and included in `ExecutionStagesV2`.
+
+- **`TON_TAC = 'TON-TAC'`**: An operation originating on TON and executing on TAC.
+- **`TAC_TON = 'TAC-TON'`**: An operation originating on TAC and executing on TON.
+- **`TON_TAC_TON = 'TON-TAC-TON'`**: A round-trip operation originating on TON, executing on TAC, and finalizing back on TON.
+
+```ts
+export type OperationTypeV2 =
+  | OperationType.TON_TAC
+  | OperationType.TAC_TON
+  | OperationType.TON_TAC_TON;
+```
+
+This type describes only the operation route. Terminality is exposed separately through `finalized`.
+
+## `OperationExecutionStatus`
+
+Top-level operation status returned inside `ExecutionStagesV2`.
+
+- **`SUCCESS = 'success'`**: No failed stage has been observed in the existing stage set.
+- **`FAILED = 'failed'`**: At least one existing stage is marked with `success = false`.
+
+```ts
+export enum OperationExecutionStatus {
+    SUCCESS = 'success',
+    FAILED = 'failed',
+}
+```
+
 ## `StageName`
 
 Identifiers for the different stages tracked in the `ExecutionStages` object returned by operation tracking methods.

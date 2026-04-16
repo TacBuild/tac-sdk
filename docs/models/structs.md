@@ -48,8 +48,11 @@ This file documents the primary data structures (types and interfaces often refe
 - [`StageData`](#stagedata)
 - [`StatusInfo`](#statusinfo)
 - [`ProfilingStageData`](#profilingstagedata)
+- [`OperationTypeV2Info`](#operationtypev2info)
 - [`ExecutionStages`](#executionstages)
+- [`ExecutionStagesV2`](#executionstagesv2)
 - [`ExecutionStagesByOperationId`](#executionstagesbyoperationid)
+- [`ExecutionStagesV2ByOperationId`](#executionstagesv2byoperationid)
 - [`StatusInfosByOperationId`](#statusinfosbyoperationid)
 - [`WaitOptions`](#waitoptions-interface)
 
@@ -1100,6 +1103,20 @@ Provides profiling information for a specific stage.
 - **`exists`**: Indicates whether profiling data exists for the stage.
 - **`stageData`** *(optional)*: Detailed data of the stage. `null` if none.
 
+### `OperationTypeV2Info`
+
+```typescript
+export type OperationTypeV2Info = {
+    operationType: OperationTypeV2;
+    finalized: boolean;
+};
+```
+
+Represents the response from `GET /v2/operation-type`.
+
+- **`operationType`**: Route-only operation type (`TON-TAC`, `TAC-TON`, or `TON-TAC-TON`).
+- **`finalized`**: Whether the operation has reached a terminal state.
+
 
 ### `ExecutionStages`
 
@@ -1115,6 +1132,27 @@ Represents the profiling data for all execution stages within an operation.
 - [`StageName`](./enums.md#stagename)
 - [`OperationType`](./enums.md#operationtype)
 
+### `ExecutionStagesV2`
+
+```typescript
+export type ExecutionStagesV2 = {
+  operationType: OperationTypeV2;
+  metaInfo: MetaInfo;
+  finalized: boolean;
+  status: OperationExecutionStatus;
+  rollback: boolean;
+} & Record<StageName, ProfilingStageData>;
+```
+
+Represents the profiling data for all execution stages within an operation.
+
+- **`operationType`**: Route-only operation type.
+- **`metaInfo`**: Metadata associated with the operation.
+- **`finalized`**: Whether the operation has reached a terminal state.
+- **`status`**: High-level status derived from stage outcomes.
+- **`rollback`**: Whether the operation is or has been processed through the rollback branch.
+- **Stage fields**: Per-stage profiling entries such as `collectedInTAC`, `includedInTACConsensus`, `executedInTAC`, `collectedInTON`, `includedInTONConsensus`, and `executedInTON`.
+
 ### `ExecutionStagesByOperationId`
 
 ```typescript
@@ -1122,6 +1160,14 @@ export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
 ```
 
 Maps each `operationId` to its respective `executionStages`.
+
+### `ExecutionStagesV2ByOperationId`
+
+```typescript
+export type ExecutionStagesV2ByOperationId = Record<string, ExecutionStagesV2>;
+```
+
+Maps each `operationId` to its respective execution stages.
 
 
 ### `StatusInfosByOperationId`
