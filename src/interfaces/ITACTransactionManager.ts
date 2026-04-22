@@ -1,6 +1,6 @@
 import { Wallet } from 'ethers';
 
-import { BridgeTokensToTONOptions, TACCrossChainTransactionResult } from '../structs/Struct';
+import { CrossChainTransactionToTONOptions, TACCrossChainTransactionResult } from '../structs/Struct';
 import { Asset } from './Asset';
 
 export interface ITACTransactionManager {
@@ -21,7 +21,7 @@ export interface ITACTransactionManager {
         signer: Wallet,
         tonTarget: string,
         assets?: Asset[],
-        options?: BridgeTokensToTONOptions,
+        options?: CrossChainTransactionToTONOptions,
     ): Promise<TACCrossChainTransactionResult>;
 
     /**

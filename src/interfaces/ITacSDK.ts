@@ -9,7 +9,7 @@ import {
     AssetFromNFTItemArg,
     AssetLike,
     BatchCrossChainTxWithAssetLike,
-    BridgeTokensToTONOptions,
+    CrossChainTransactionToTONOptions,
     CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
@@ -58,8 +58,8 @@ export interface ITacSDK {
 
     // Connection management
     /**
-     * Closes any underlying network connections, clients, or subscriptions established by the SDK.
-     * Implementations should be idempotent and safe to call multiple times.
+     * Closes TON liteclient connections.
+     * Use only with LiteClientOpener.
      */
     closeConnections(): unknown;
 
@@ -168,7 +168,7 @@ export interface ITacSDK {
         signer: Wallet,
         tonTarget: string,
         assets?: AssetLike[],
-        options?: BridgeTokensToTONOptions,
+        options?: CrossChainTransactionToTONOptions,
     ): Promise<TACCrossChainTransactionResult>;
     /**
      * Sends multiple cross-chain transactions in one batch and optionally waits for tracking info.

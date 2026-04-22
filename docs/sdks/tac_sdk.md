@@ -530,7 +530,7 @@ sendCrossChainTransactionToTON(
   signer: Wallet,
   tonTarget: string,
   assets?: AssetLike[],
-  options?: BridgeTokensToTONOptions
+  options?: CrossChainTransactionToTONOptions
 ): Promise<TACCrossChainTransactionResult>
 ```
 
@@ -543,7 +543,7 @@ The sender must still keep additional TAC balance for TAC gas and bridge fees on
 - **`signer`**: An `ethers.Wallet` instance for signing the transaction on the TAC chain.
 - **`tonTarget`**: The target address on the TON network where the assets should be received.
 - **`assets`** *(optional)*: An array of `AssetLike` objects specifying the TAC-side assets to bridge. Native `TAC` asset amount is converted into the transaction `value` automatically.
-- **`options`** *(optional)*: [`BridgeTokensToTONOptions`](./../models/structs.md#bridgetokenstotonoptions) struct. This includes:
+- **`options`** *(optional)*: [`CrossChainTransactionToTONOptions`](./../models/structs.md#crosschaintransactiontotonoptions) struct. This includes:
   - **`tvmExecutorFee`** *(optional)*: Explicit TON-side executor fee. If omitted, `bridgeTokensToTON()` calculates a suggested fee during sending.
   - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
   - **`validateAssetsBalance`** *(optional, default: true)*: Whether to validate balances or ownership of non-native TAC assets before approvals and sending.
@@ -699,4 +699,4 @@ The gas prices are fetched from the TAC blockchain explorer API and can be used 
 closeConnections(): unknown
 ```
 
-Closes underlying TON and TAC connections.
+Closes underlying TON liteclient connections. Use only with LiteClientOpener.

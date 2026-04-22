@@ -24,7 +24,7 @@ import {
     AssetType,
     BatchCrossChainTx,
     BatchCrossChainTxWithAssetLike,
-    BridgeTokensToTONOptions,
+    CrossChainTransactionToTONOptions,
     CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
@@ -194,7 +194,7 @@ export class TacSdk implements ITacSDK {
         signer: Wallet,
         tonTarget: string,
         assets?: AssetLike[],
-        options?: BridgeTokensToTONOptions,
+        options?: CrossChainTransactionToTONOptions,
     ): Promise<TACCrossChainTransactionResult> {
         const normalizedAssets = await normalizeAssets(this.config, assets);
 

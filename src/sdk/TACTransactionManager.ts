@@ -15,7 +15,7 @@ import { PreparedBridgeTokensToTON } from '../structs/InternalStruct';
 import {
     AssetType,
     BlockchainType,
-    BridgeTokensToTONOptions,
+    CrossChainTransactionToTONOptions,
     ExecutionStages,
     Origin,
     TACCrossChainTransactionResult,
@@ -74,7 +74,6 @@ export class TACTransactionManager implements ITACTransactionManager {
             tvmExecutorFee = BigInt(suggestedFee.inTAC);
         }
 
-        const crossChainLayerAddress = await this.config.TACParams.crossChainLayer.getAddress();
         const protocolFee = await this.config.TACParams.crossChainLayer.getProtocolFee();
         const shardsKey = BigInt(Math.round(Math.random() * SHARDS_KEY_RANDOM_RANGE));
 
@@ -112,7 +111,6 @@ export class TACTransactionManager implements ITACTransactionManager {
         };
 
         return {
-            crossChainLayerAddress,
             outMessagePayload: this.config.artifacts.tac.utils.encodeOutMessageV1(outMessage),
             totalValue: value + BigInt(outMessage.tvmProtocolFee) + BigInt(outMessage.tvmExecutorFee),
         };
@@ -125,6 +123,7 @@ export class TACTransactionManager implements ITACTransactionManager {
         transactionParams: ethers.Overrides = {},
     ): Promise<void> {
         const evmAddress = await asset.getEVMAddress();
+        const hasTransactionParams = Object.keys(transactionParams).length > 0;
 
         if (asset.type === AssetType.FT) {
             this.logger.debug(`Approving FT ${evmAddress} for ${spenderAddress}`);
@@ -133,7 +132,9 @@ export class TACTransactionManager implements ITACTransactionManager {
                 this.config.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
                 this.config.TACParams.provider,
             ) as unknown as IERC20WithDecimals;
-            const tx = await contract.connect(signer).approve(spenderAddress, asset.rawAmount, transactionParams);
+            const tx = hasTransactionParams
+                ? await contract.connect(signer).approve(spenderAddress, asset.rawAmount, transactionParams)
+                : await contract.connect(signer).approve(spenderAddress, asset.rawAmount);
             await tx.wait();
         } else {
             this.logger.debug(`Approving NFT ${evmAddress} for ${spenderAddress}`);
@@ -142,9 +143,9 @@ export class TACTransactionManager implements ITACTransactionManager {
                 this.config.artifacts.tac.compilationArtifacts.IERC721.abi,
                 this.config.TACParams.provider,
             ) as unknown as IERC721;
-            const tx = await contract
-                .connect(signer)
-                .approve(spenderAddress, (asset as NFT).addresses.index, transactionParams);
+            const tx = hasTransactionParams
+                ? await contract.connect(signer).approve(spenderAddress, (asset as NFT).addresses.index, transactionParams)
+                : await contract.connect(signer).approve(spenderAddress, (asset as NFT).addresses.index);
             await tx.wait();
         }
 
@@ -155,7 +156,7 @@ export class TACTransactionManager implements ITACTransactionManager {
         signer: Wallet,
         tonTarget: string,
         assets: Asset[] = [],
-        options?: BridgeTokensToTONOptions,
+        options?: CrossChainTransactionToTONOptions,
     ): Promise<TACCrossChainTransactionResult> {
         const signerAddress = signer.address;
         const nativeTACAsset = await AssetFactory.from(this.config, {
@@ -166,14 +167,18 @@ export class TACTransactionManager implements ITACTransactionManager {
         const bridgeAssets: Asset[] = [];
 
         for (const asset of assets) {
-            if (asset.origin === Origin.TAC && asset.type === AssetType.FT && asset.address === nativeTACAsset.address) {
+            if (
+                asset.origin === Origin.TAC &&
+                asset.type === AssetType.FT &&
+                asset.address === nativeTACAsset.address
+            ) {
                 value += asset.rawAmount;
                 continue;
             }
 
             bridgeAssets.push(asset);
         }
-
+        const crossChainLayerAddress = await this.config.TACParams.crossChainLayer.getAddress();
         const preparedBridge = await this.prepareBridgeTokensToTON(
             value,
             tonTarget,
@@ -188,11 +193,9 @@ export class TACTransactionManager implements ITACTransactionManager {
             throw gasPriceFetchError('TAC provider did not return maxFeePerGas');
         }
 
-        const latestBlock = await this.config.TACParams.provider
-            .getBlock('latest')
-            .catch((error) => {
-                throw blockGasLimitFetchError('provider failed to return latest block', error);
-            });
+        const latestBlock = await this.config.TACParams.provider.getBlock('latest').catch((error) => {
+            throw blockGasLimitFetchError('provider failed to return latest block', error);
+        });
         const blockGasLimit = latestBlock?.gasLimit;
 
         if (blockGasLimit === null || blockGasLimit === undefined) {
@@ -225,7 +228,7 @@ export class TACTransactionManager implements ITACTransactionManager {
                 ) as unknown as IERC20WithDecimals;
                 estimatedGas = await contract
                     .connect(signer)
-                    .approve.estimateGas(preparedBridge.crossChainLayerAddress, asset.rawAmount, transactionParams);
+                    .approve.estimateGas(crossChainLayerAddress, asset.rawAmount, transactionParams);
             } else {
                 const contract = new ethers.Contract(
                     await asset.getEVMAddress(),
@@ -234,7 +237,7 @@ export class TACTransactionManager implements ITACTransactionManager {
                 ) as unknown as IERC721;
                 estimatedGas = await contract
                     .connect(signer)
-                    .approve.estimateGas(preparedBridge.crossChainLayerAddress, (asset as NFT).addresses.index, transactionParams);
+                    .approve.estimateGas(crossChainLayerAddress, (asset as NFT).addresses.index, transactionParams);
             }
 
             if (estimatedGas > blockGasLimit) {
@@ -262,15 +265,10 @@ export class TACTransactionManager implements ITACTransactionManager {
         }
 
         for (const approval of approvalPlans) {
-            await this.approveAsset(
-                approval.asset,
-                signer,
-                preparedBridge.crossChainLayerAddress,
-                {
-                    ...transactionParams,
-                    gasLimit: approval.gasLimit,
-                },
-            );
+            await this.approveAsset(approval.asset, signer, crossChainLayerAddress, {
+                ...transactionParams,
+                gasLimit: approval.gasLimit,
+            });
         }
 
         const tx = await this.config.TACParams.crossChainLayer
@@ -345,7 +343,12 @@ export class TACTransactionManager implements ITACTransactionManager {
         tvmValidExecutors?: string[],
     ): Promise<string> {
         this.logger.debug('Bridging tokens to TON');
-        const { crossChainLayerAddress, outMessagePayload, totalValue } = await this.prepareBridgeTokensToTON(
+        Validator.validateTVMAddress(tonTarget);
+        Validator.validateTVMAddresses(tvmValidExecutors);
+
+        const crossChainLayerAddress = await this.config.TACParams.crossChainLayer.getAddress();
+
+        const { outMessagePayload, totalValue } = await this.prepareBridgeTokensToTON(
             value,
             tonTarget,
             assets,

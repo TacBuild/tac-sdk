@@ -425,11 +425,11 @@ export type CrossChainTransactionsOptions = {
   Custom waiting configuration for operation IDs resolution in batch operations. See [`WaitOptions`](#waitoptions-interface) for available options.  
   **Default**: `{}`
 
-### `BridgeTokensToTONOptions`
+### `CrossChainTransactionToTONOptions`
 Configuration options for TAC -> TON bridge operations initiated from the EVM side.
 
 ```ts
-export type BridgeTokensToTONOptions = {
+export type CrossChainTransactionToTONOptions = {
     tvmExecutorFee?: bigint;
     tvmValidExecutors?: string[];
     validateAssetsBalance?: boolean;

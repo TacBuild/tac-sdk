@@ -57,7 +57,7 @@ async sendCrossChainTransactionToTON(
   signer: Wallet,
   tonTarget: string,
   assets?: Asset[],
-  options?: BridgeTokensToTONOptions
+  options?: CrossChainTransactionToTONOptions
 ): Promise<TACCrossChainTransactionResult>
 ```
 
@@ -72,7 +72,7 @@ The signer must still hold extra TAC balance for TAC gas and bridge fees on top 
 - **`signer`**: Ethers Wallet used to sign the EVM transaction
 - **`tonTarget`**: Recipient TVM address on TON blockchain
 - **`assets`** *(optional)*: List of TAC assets to include in the bridge. Native TAC can be included here as a `TAC` asset.
-- **`options`** *(optional)*: `BridgeTokensToTONOptions` object with:
+- **`options`** *(optional)*: `CrossChainTransactionToTONOptions` object with:
   - **`tvmExecutorFee`** *(optional)*: Explicit TON-side executor fee
   - **`tvmValidExecutors`** *(optional)*: Whitelist of allowed TVM executors
   - **`validateAssetsBalance`** *(optional, default: true)*: Whether to validate balances or ownership of non-native TAC assets before approvals and sending

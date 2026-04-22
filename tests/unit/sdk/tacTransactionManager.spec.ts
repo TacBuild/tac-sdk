@@ -116,6 +116,9 @@ describe('TACTransactionManager', () => {
         operationTracker.getTVMExecutorFee.mockResolvedValue({ inTAC: '33', inTON: '0' });
         operationTracker.getOperationIdByTransactionHash.mockResolvedValue('op-bridge');
         operationTracker.getOperationType.mockResolvedValue(OperationType.TAC_TON);
+        crossChainLayer.getProtocolFee.mockResolvedValue(5n);
+        erc20Approve.mockResolvedValue({ wait: jest.fn().mockResolvedValue(undefined) });
+        erc721Approve.mockResolvedValue({ wait: jest.fn().mockResolvedValue(undefined) });
         stageProfilingResult = {
             operationType: OperationType.TAC_TON,
             metaInfo: {},
@@ -194,8 +197,8 @@ describe('TACTransactionManager', () => {
 
         expect(result).toBe('0xhash');
         expect(tvmValidatorSpy).toHaveBeenCalled();
-        expect(erc20Approve).toHaveBeenCalledWith('0xCrossChainLayer', 10n, {});
-        expect(erc721Approve).toHaveBeenCalledWith('0xCrossChainLayer', 7n, {});
+        expect(erc20Approve).toHaveBeenCalledWith('0xCrossChainLayer', 10n);
+        expect(erc721Approve).toHaveBeenCalledWith('0xCrossChainLayer', 7n);
         expect(operationTracker.getTVMExecutorFee).toHaveBeenCalledWith(
             {
                 feeSymbol: 'TAC',
@@ -212,6 +215,38 @@ describe('TACTransactionManager', () => {
         expect(provider.getFeeData).not.toHaveBeenCalled();
         expect(provider.getBalance).not.toHaveBeenCalled();
         expect(crossChainLayerSend).toHaveBeenCalledWith(1n, 'encoded', { value: 63n });
+    });
+
+    it('reads protocol fee after approvals in direct bridge flow', async () => {
+        const manager = new TACTransactionManager(config as never, operationTracker as never, logger as never);
+        const prepareBridgeSpy = jest.spyOn(manager as never, 'prepareBridgeTokensToTON');
+        const ftAsset = {
+            address: 'EQFTAsset',
+            type: AssetType.FT,
+            origin: Origin.TAC,
+            rawAmount: 10n,
+            getEVMAddress: jest.fn().mockResolvedValue('0xFT'),
+            checkCanBeTransferredBy: jest.fn().mockResolvedValue(undefined),
+        } as unknown as Asset;
+
+        let protocolFeeValue = 5n;
+        crossChainLayer.getProtocolFee.mockImplementation(async () => protocolFeeValue);
+        erc20Approve.mockImplementation(async () => {
+            protocolFeeValue = 9n;
+            return {
+                wait: jest.fn().mockResolvedValue(undefined),
+            };
+        });
+
+        await manager.bridgeTokensToTON(
+            signer,
+            25n,
+            'EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N',
+            [ftAsset] as never,
+        );
+
+        expect(erc20Approve).toHaveBeenCalledWith('0xCrossChainLayer', 10n);
+        expect(erc20Approve.mock.invocationCallOrder[0]).toBeLessThan(prepareBridgeSpy.mock.invocationCallOrder[0]);
     });
 
     it('uses custom executors in direct bridge call', async () => {

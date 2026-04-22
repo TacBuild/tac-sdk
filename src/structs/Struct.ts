@@ -496,7 +496,7 @@ export type CrossChainTransactionsOptions = {
     waitOptions?: WaitOptions<OperationIdsByShardsKey>;
 };
 
-export type BridgeTokensToTONOptions = {
+export type CrossChainTransactionToTONOptions = {
     /**
      * Optional explicit TON-side executor fee.
      * When omitted, the SDK calls OperationTracker.getTVMExecutorFee().

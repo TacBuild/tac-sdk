@@ -39,7 +39,6 @@ export type PreparedCrossChainTransaction = {
 };
 
 export type PreparedBridgeTokensToTON = {
-    crossChainLayerAddress: string;
     outMessagePayload: ethers.BytesLike;
     totalValue: bigint;
 };
