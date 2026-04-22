@@ -33,7 +33,7 @@ import { AxiosHttpClient } from './AxiosHttpClient';
 import { toCamelCaseTransformer } from './Utils';
 
 export class LiteSequencerClient implements ILiteSequencerClient {
-    private readonly endpoint: string;
+    readonly endpoint: string;
     private readonly maxChunkSize: number;
     private readonly httpClient: IHttpClient;
 

@@ -220,7 +220,7 @@ export class FT implements Asset {
         } else {
             const resolvedEvmAddress = isEthereumAddress(address)
                 ? address
-                : cachedEvmAddress ?? (await jettonMinter.getEVMTokenAddress());
+                : (cachedEvmAddress ?? (await jettonMinter.getEVMTokenAddress()));
 
             finalEvmAddress = resolvedEvmAddress;
             decimals = await this.getTACDecimals(configuration, resolvedEvmAddress);

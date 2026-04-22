@@ -544,5 +544,7 @@ export function recurisivelyCollectCellStats(cell: Cell): { bits: number; cells:
 }
 
 export function isFinalProfiling(profilingData: ExecutionStages): boolean {
-    return profilingData.operationType !== OperationType.PENDING && profilingData.operationType !== OperationType.UNKNOWN;
+    return (
+        profilingData.operationType !== OperationType.PENDING && profilingData.operationType !== OperationType.UNKNOWN
+    );
 }

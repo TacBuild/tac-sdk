@@ -144,7 +144,9 @@ export class TACTransactionManager implements ITACTransactionManager {
                 this.config.TACParams.provider,
             ) as unknown as IERC721;
             const tx = hasTransactionParams
-                ? await contract.connect(signer).approve(spenderAddress, (asset as NFT).addresses.index, transactionParams)
+                ? await contract
+                      .connect(signer)
+                      .approve(spenderAddress, (asset as NFT).addresses.index, transactionParams)
                 : await contract.connect(signer).approve(spenderAddress, (asset as NFT).addresses.index);
             await tx.wait();
         }

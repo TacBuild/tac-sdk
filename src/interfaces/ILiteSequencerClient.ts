@@ -15,6 +15,9 @@ import {
 } from '../structs/Struct';
 
 export interface ILiteSequencerClient {
+    /** Base URL of the lite sequencer endpoint used by this client. */
+    readonly endpoint: string;
+
     /** Retrieves the operation type by id. */
     getOperationType(operationId: string): Promise<OperationType>;
     /** Retrieves the v2 operation route/finalization state by id. */

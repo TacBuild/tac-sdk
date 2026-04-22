@@ -36,6 +36,8 @@ class MockLogger implements ILogger {
 }
 
 class MockLiteSequencerClient implements ILiteSequencerClient {
+    constructor(readonly endpoint: string) {}
+
     getOperationType = jest.fn<ILiteSequencerClient['getOperationType']>();
     getOperationTypeV2 = jest.fn<ILiteSequencerClient['getOperationTypeV2']>();
     getOperationId = jest.fn<ILiteSequencerClient['getOperationId']>();
@@ -53,7 +55,7 @@ class MockLiteSequencerClientFactory implements ILiteSequencerClientFactory {
     private clients: MockLiteSequencerClient[] = [];
 
     createClients(endpoints: string[]): ILiteSequencerClient[] {
-        this.clients = endpoints.map(() => new MockLiteSequencerClient());
+        this.clients = endpoints.map((endpoint) => new MockLiteSequencerClient(endpoint));
         return this.clients;
     }
 
@@ -590,114 +592,58 @@ describe('OperationTracker', () => {
             expect(mockLogger.warn).toHaveBeenCalledWith('Operation ID not found');
         });
 
-        it('should return PENDING for non-finalized v2 operation', async () => {
+        it('should return PENDING for pending operation type', async () => {
             const operationId = 'op123';
             mockClients[0].getOperationId.mockResolvedValue(operationId);
-            mockClients[0].getOperationTypeV2.mockResolvedValue({
-                operationType: OperationType.TON_TAC,
-                finalized: false,
-            });
+            mockClients[0].getOperationType.mockResolvedValue(OperationType.PENDING);
 
             const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
 
             expect(result).toBe(SimplifiedStatuses.PENDING);
+            expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
         });
 
-        it('should return FAILED for finalized failed v2 operation', async () => {
+        it('should return PENDING for unknown operation type', async () => {
             const operationId = 'op123';
             mockClients[0].getOperationId.mockResolvedValue(operationId);
-            mockClients[0].getOperationTypeV2.mockResolvedValue({
-                operationType: OperationType.TON_TAC_TON,
-                finalized: true,
-            });
-            mockClients[0].getStageProfilingsV2.mockResolvedValue({
-                [operationId]: {
-                    operationType: OperationType.TON_TAC_TON,
-                    metaInfo: {} as ExecutionStagesV2['metaInfo'],
-                    finalized: true,
-                    status: OperationExecutionStatus.FAILED,
-                    rollback: false,
-                    [StageName.COLLECTED_IN_TAC]: { exists: true, stageData: null },
-                    [StageName.INCLUDED_IN_TAC_CONSENSUS]: { exists: true, stageData: null },
-                    [StageName.EXECUTED_IN_TAC]: { exists: true, stageData: null },
-                    [StageName.COLLECTED_IN_TON]: { exists: false, stageData: null },
-                    [StageName.INCLUDED_IN_TON_CONSENSUS]: { exists: false, stageData: null },
-                    [StageName.EXECUTED_IN_TON]: { exists: false, stageData: null },
-                },
-            });
-
-            const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
-
-            expect(result).toBe(SimplifiedStatuses.FAILED);
-        });
-
-        it('should return FAILED for rollback v2 operation', async () => {
-            const operationId = 'op123';
-            mockClients[0].getOperationId.mockResolvedValue(operationId);
-            mockClients[0].getOperationTypeV2.mockResolvedValue({
-                operationType: OperationType.TON_TAC_TON,
-                finalized: true,
-            });
-            mockClients[0].getStageProfilingsV2.mockResolvedValue({
-                [operationId]: {
-                    operationType: OperationType.TON_TAC_TON,
-                    metaInfo: {} as ExecutionStagesV2['metaInfo'],
-                    finalized: true,
-                    status: OperationExecutionStatus.SUCCESS,
-                    rollback: true,
-                    [StageName.COLLECTED_IN_TAC]: { exists: true, stageData: null },
-                    [StageName.INCLUDED_IN_TAC_CONSENSUS]: { exists: true, stageData: null },
-                    [StageName.EXECUTED_IN_TAC]: { exists: true, stageData: null },
-                    [StageName.COLLECTED_IN_TON]: { exists: true, stageData: null },
-                    [StageName.INCLUDED_IN_TON_CONSENSUS]: { exists: true, stageData: null },
-                    [StageName.EXECUTED_IN_TON]: { exists: true, stageData: null },
-                },
-            });
-
-            const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
-
-            expect(result).toBe(SimplifiedStatuses.FAILED);
-        });
-
-        it('should return SUCCESSFUL for finalized successful v2 operation', async () => {
-            const operationId = 'op123';
-            mockClients[0].getOperationId.mockResolvedValue(operationId);
-            mockClients[0].getOperationTypeV2.mockResolvedValue({
-                operationType: OperationType.TON_TAC_TON,
-                finalized: true,
-            });
-            mockClients[0].getStageProfilingsV2.mockResolvedValue({
-                [operationId]: {
-                    operationType: OperationType.TON_TAC_TON,
-                    metaInfo: {} as ExecutionStagesV2['metaInfo'],
-                    finalized: true,
-                    status: OperationExecutionStatus.SUCCESS,
-                    rollback: false,
-                    [StageName.COLLECTED_IN_TAC]: { exists: true, stageData: null },
-                    [StageName.INCLUDED_IN_TAC_CONSENSUS]: { exists: true, stageData: null },
-                    [StageName.EXECUTED_IN_TAC]: { exists: true, stageData: null },
-                    [StageName.COLLECTED_IN_TON]: { exists: true, stageData: null },
-                    [StageName.INCLUDED_IN_TON_CONSENSUS]: { exists: true, stageData: null },
-                    [StageName.EXECUTED_IN_TON]: { exists: true, stageData: null },
-                },
-            });
-
-            const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
-
-            expect(result).toBe(SimplifiedStatuses.SUCCESSFUL);
-        });
-
-        it('should fallback to v1 operation type when v2 route is unavailable', async () => {
-            const operationId = 'op123';
-            const notFoundError = Object.assign(new Error('Not Found'), { response: { status: 404 } });
-            mockClients[0].getOperationId.mockResolvedValue(operationId);
-            mockClients[0].getOperationTypeV2.mockRejectedValue(notFoundError);
-            mockClients[1].getOperationTypeV2.mockRejectedValue(notFoundError);
             mockClients[0].getOperationType.mockResolvedValue(OperationType.UNKNOWN);
 
             const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
 
             expect(result).toBe(SimplifiedStatuses.PENDING);
+            expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
+        });
+
+        it('should return FAILED for rollback operation type', async () => {
+            const operationId = 'op123';
+            mockClients[0].getOperationId.mockResolvedValue(operationId);
+            mockClients[0].getOperationType.mockResolvedValue(OperationType.ROLLBACK);
+
+            const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
+
+            expect(result).toBe(SimplifiedStatuses.FAILED);
+            expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
+        });
+
+        it('should return SUCCESSFUL for TON-TAC operation type', async () => {
+            const operationId = 'op123';
+            mockClients[0].getOperationId.mockResolvedValue(operationId);
+            mockClients[0].getOperationType.mockResolvedValue(OperationType.TON_TAC);
+
+            const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
+
+            expect(result).toBe(SimplifiedStatuses.SUCCESSFUL);
+            expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
+        });
+
+        it('should return SUCCESSFUL for TON-TAC-TON operation type', async () => {
+            const operationId = 'op123';
+            mockClients[0].getOperationId.mockResolvedValue(operationId);
+            mockClients[0].getOperationType.mockResolvedValue(OperationType.TON_TAC_TON);
+
+            const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
+
+            expect(result).toBe(SimplifiedStatuses.SUCCESSFUL);
             expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
         });
     });

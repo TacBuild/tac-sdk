@@ -484,11 +484,7 @@ export type CrossChainTransactionOptions = {
 
 export type BatchCrossChainTransactionOptions = Omit<
     CrossChainTransactionOptions,
-    | 'waitOperationId'
-    | 'waitOptions'
-    | 'ensureTxExecuted'
-    | 'waitFinalization'
-    | 'finalizationWaitOptions'
+    'waitOperationId' | 'waitOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'
 >;
 
 export type CrossChainTransactionsOptions = {

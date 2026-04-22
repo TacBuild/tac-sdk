@@ -290,9 +290,7 @@ export class RetryableContractOpener implements ContractOpener {
         return { success: false, lastError };
     }
 
-    private async trySingleAttempt<T>(
-        operation: () => Promise<T>,
-    ): Promise<RetryableOperationResult<T>> {
+    private async trySingleAttempt<T>(operation: () => Promise<T>): Promise<RetryableOperationResult<T>> {
         try {
             const data = await operation();
             return { success: true, data };

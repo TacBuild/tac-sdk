@@ -29,18 +29,15 @@ import {
     ValidExecutors,
     WaitOptions,
 } from '../structs/Struct';
-import {
-    FIFTEEN_MINUTES,
-    JETTON_TRANSFER_FORWARD_TON_AMOUNT,
-    NFT_TRANSFER_FORWARD_TON_AMOUNT,
-} from './Consts';
+import { FIFTEEN_MINUTES, JETTON_TRANSFER_FORWARD_TON_AMOUNT, NFT_TRANSFER_FORWARD_TON_AMOUNT } from './Consts';
 import { NoopLogger } from './Logger';
 import {
     aggregateTokens,
     buildEvmDataCell,
     formatObjectForLogging,
     generateTransactionLinker,
-    getNormalizedExtMessageHash, isFinalProfiling,
+    getNormalizedExtMessageHash,
+    isFinalProfiling,
 } from './Utils';
 import { Validator } from './Validator';
 
@@ -356,7 +353,10 @@ export class TONTransactionManager implements ITONTransactionManager {
                 }
 
                 for (const transaction of stage.stageData?.transactions ?? []) {
-                    await this.config.TONParams.contractOpener.trackTransactionTree(this.config.TONParams.crossChainLayerAddress, transaction.hash);
+                    await this.config.TONParams.contractOpener.trackTransactionTree(
+                        this.config.TONParams.crossChainLayerAddress,
+                        transaction.hash,
+                    );
                 }
             });
 

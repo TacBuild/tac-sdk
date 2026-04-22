@@ -24,10 +24,10 @@ import {
     AssetType,
     BatchCrossChainTx,
     BatchCrossChainTxWithAssetLike,
-    CrossChainTransactionToTONOptions,
     CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
+    CrossChainTransactionToTONOptions,
     CrosschainTx,
     EVMAddress,
     EvmProxyMsg,
@@ -198,12 +198,7 @@ export class TacSdk implements ITacSDK {
     ): Promise<TACCrossChainTransactionResult> {
         const normalizedAssets = await normalizeAssets(this.config, assets);
 
-        return this.tacTransactionManager.sendCrossChainTransactionToTON(
-            signer,
-            tonTarget,
-            normalizedAssets,
-            options,
-        );
+        return this.tacTransactionManager.sendCrossChainTransactionToTON(signer, tonTarget, normalizedAssets, options);
     }
 
     async sendCrossChainTransactions(

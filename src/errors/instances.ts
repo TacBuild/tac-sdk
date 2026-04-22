@@ -216,11 +216,7 @@ export const executedInTONStageFailedError = new TransactionError('executedInTON
 export const blockGasLimitFetchError = (msg: string, inner?: unknown) =>
     new FetchError(`Failed to fetch latest block gas limit: ${msg}`, 139, inner);
 
-export const estimatedGasExceedsBlockGasLimitError = (
-    txName: string,
-    estimatedGas: bigint,
-    blockGasLimit: bigint,
-) =>
+export const estimatedGasExceedsBlockGasLimitError = (txName: string, estimatedGas: bigint, blockGasLimit: bigint) =>
     new TransactionError(
         `Estimated gas for ${txName} (${estimatedGas}) exceeds current TAC block gas limit (${blockGasLimit})`,
         140,
