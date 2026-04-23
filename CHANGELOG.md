@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file.
 - NFT TEP-64 metadata helpers in `ContentUtils`: `readNFTMetadata`, `buildNFTOnchainMetadata`, and `buildNFTOffChainMetadata`.
 - `v2` Lite Sequencer support in `LiteSequencerClient` / `OperationTracker`: `getOperationTypeV2`, `getStageProfilingV2`, and `getStageProfilingsV2`.
 - New tracker models for `v2` responses: `OperationTypeV2`, `OperationExecutionStatus`, `OperationTypeV2Info`, `ExecutionStagesV2`, and `ExecutionStagesV2ByOperationId`.
+- `ToncenterV3Indexer` and `IToncenterV3Indexer` for indexed TON transaction lookup and traversal across a linked chain of TON transactions.
+- New `TacSdk` helpers for resolving operation ids from TON-side inputs: `getOperationIdByTonTransactionHash(...)` and `getOperationIdByTonTransactionBoc(...)`.
 
 ### Changed
 - `sendCrossChainTransaction()` and `sendCrossChainTransactionToTON()` now support full-operation finalization waiting by default: final profiling fetch plus TON transaction tree validation for `executedInTON` transactions when present.
