@@ -106,7 +106,7 @@ export type OperationIdWithLogIndex = {
     logIndex: number;
 };
 
-export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogIndex>;
+export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogIndex[]>;
 
 export interface SendResult {
     success: boolean;

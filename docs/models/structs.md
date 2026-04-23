@@ -128,7 +128,7 @@ export type TONParams = {
 }
 ```
 TON Parameters for SDK:
-- **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that combines TonClient (TAC endpoint), orbsOpener4, and orbsOpener as fallbacks. Provide your own opener primarily for tests or custom setups.
+- **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that combines TonClient (TAC endpoint), `orbsOpener`, and `orbsOpener4` as fallbacks on non-DEV networks, with exponential backoff between retries. Provide your own opener primarily for tests or custom setups.
 - **`settingsAddress`** (optional): TON settings contract address. Needed to retrieve protocol data. Set for tests only.
 - **`txFinalizer`** (optional): TxFinalizer for tracking transaction tree. Used for advanced transaction tracking and verification.
 
@@ -205,10 +205,13 @@ export interface OpenerConfig {
     opener: ContractOpener;
     retries: number;
     retryDelay: number;
+    maxRetryDelay?: number;
+    retryBackoffMultiplier?: number;
 }
 
 export class RetryableContractOpener implements ContractOpener {
-    constructor(openerConfigs: OpenerConfig[]);
+    constructor(openerConfigs: OpenerConfig[], logger?: ILogger);
+    setLogger(logger: ILogger): void;
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
     getContractState(address: Address): Promise<ContractState>;
     closeConnections(): void;
@@ -221,9 +224,13 @@ A resilient implementation of ContractOpener that provides retry capabilities an
 - **`openerConfigs`**: An array of `OpenerConfig` objects, each containing:
   - **`opener`**: A ContractOpener instance.
   - **`retries`**: Number of retry attempts for failed operations.
-  - **`retryDelay`**: Delay in milliseconds between retry attempts.
+  - **`retryDelay`**: Base delay in milliseconds between retry attempts.
+  - **`maxRetryDelay`** *(optional)*: Maximum exponential backoff delay in milliseconds.
+  - **`retryBackoffMultiplier`** *(optional)*: Backoff multiplier applied after each failed retry.
+- **`logger`** *(optional)*: Logger passed to the wrapper and propagated to all wrapped openers.
 
 #### **Methods**
+- **`setLogger(logger: ILogger)`**: Updates the logger on the wrapper and all nested openers.
 - **`open<T extends Contract>(src: T)`**: Opens a contract with retry capabilities. If the primary opener fails, it will automatically retry using the configured retry policy.
 - **`getContractState(address: Address)`**: Retrieves contract state with retry capabilities. If the primary opener fails, it will try alternative openers according to the configured retry policy.
 - **`closeConnections()`**: Closes all connections across all configured openers.
@@ -231,21 +238,29 @@ A resilient implementation of ContractOpener that provides retry capabilities an
 #### **Helper Functions**
 ```typescript
 export async function createDefaultRetryableOpener(
-    artifacts: typeof testnet | typeof mainnet,
-    maxRetries = 3,
+    tonRpcEndpoint: string,
+    networkType: Network,
+    maxRetries = 5,
     retryDelay = 1000,
-): Promise<ContractOpener>
+    logger?: ILogger,
+): Promise<RetryableContractOpener>
 ```
 
 Creates a default RetryableContractOpener with multiple fallback providers:
-- **`artifacts`**: Network artifacts (testnet or mainnet).
-- **`maxRetries`** *(optional)*: Maximum number of retry attempts. Default is *3*.
-- **`retryDelay`** *(optional)*: Delay in milliseconds between retry attempts. Default is *1000*.
+- **`tonRpcEndpoint`**: Base TON RPC endpoint used to construct the primary `TonClientOpener`.
+- **`networkType`**: Target network (`MAINNET`, `TESTNET`, or `DEV`).
+- **`maxRetries`** *(optional)*: Maximum number of retry attempts. Default is *5*.
+- **`retryDelay`** *(optional)*: Base delay in milliseconds between retry attempts. Default is *1000*.
+- **`logger`** *(optional)*: Logger propagated to the wrapper and nested openers.
 
 Returns a RetryableContractOpener configured with:
 1. TonClient by TAC (primary)
-2. orbsOpener4 (first fallback)
-3. orbsOpener (second fallback)
+2. orbsOpener (first fallback on non-DEV networks)
+3. orbsOpener4 (second fallback on non-DEV networks)
+
+Each configured opener also receives SDK defaults for exponential backoff:
+- **`maxRetryDelay`**: `DEFAULT_RETRY_MAX_DELAY_MS`
+- **`retryBackoffMultiplier`**: `DEFAULT_RETRY_BACKOFF_MULTIPLIER`
 
 This function provides a convenient way to create a robust contract opener with sensible defaults for production use.
 

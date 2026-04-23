@@ -60,7 +60,11 @@ export class LiteSequencerClient implements ILiteSequencerClient {
                         params: { transactionHash },
                     },
                 );
-                return response.data.response?.operationId || '';
+                const operationResponse = response.data.response;
+                if (operationResponse.length > 0) {
+                    return operationResponse[0].operationId;
+                }
+                return '';
             } else {
                 const response = await this.httpClient.get<StringResponse>(new URL(path, this.endpoint).toString(), {
                     params: { transactionHash },
