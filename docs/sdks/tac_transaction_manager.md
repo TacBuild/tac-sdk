@@ -65,7 +65,7 @@ async sendCrossChainTransactionToTON(
 
 Sends a TAC -> TON transaction and optionally waits for tracker data. Native TAC should be passed as a `TAC` asset inside `assets`; the manager extracts it into the transaction `value` automatically.
 
-The signer must still hold extra TAC balance for TAC gas and bridge fees on top of the bridged native TAC amount. Before sending, the manager requires TAC EIP-1559 fee data from the provider, can validate balances or ownership of non-native TAC assets, uses provider gas estimates as-is, validates those estimates against the latest TAC block gas limit, computes the worst-case upfront TAC balance requirement, and only then submits approvals plus the bridge message.
+The signer must still hold extra TAC balance for TAC gas and bridge fees on top of the bridged native TAC amount. Before sending, the manager requires TAC EIP-1559 fee data from the provider, can validate balances or ownership of non-native TAC assets, uses provider gas estimates as-is, validates those estimates against the latest TAC block gas limit, first estimates approval gas and checks TAC balance for approvals, submits approvals, and only then estimates the bridge message and checks the remaining TAC balance before sending it.
 
 ### **Parameters**
 

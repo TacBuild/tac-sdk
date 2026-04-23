@@ -157,7 +157,8 @@ export interface ITacSDK {
      * the bridged native TAC amount. The SDK requires EIP-1559 fee data from the TAC provider, can
      * validate balances / ownership of non-native TAC assets, uses provider gas estimates as-is,
      * validates those estimates against the latest TAC block gas limit,
-     * computes the worst-case upfront TAC balance requirement, and only then submits the TAC transactions.
+     * first estimates approval gas and checks TAC balance for approvals, submits approvals,
+     * then estimates the bridge message and checks the remaining TAC balance before sending it.
      * @param signer Ethers Wallet used to sign EVM transaction on TAC side.
      * @param tonTarget Recipient TVM address on TON.
      * @param assets Optional list of TAC assets to include in the bridge transaction.

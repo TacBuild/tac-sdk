@@ -304,6 +304,36 @@ describe('TACTransactionManager', () => {
         expect(crossChainLayerSend).not.toHaveBeenCalled();
     });
 
+    it('throws before approvals when signer does not have enough TAC for approval gas', async () => {
+        const manager = new TACTransactionManager(config as never, operationTracker as never, logger as never);
+        const wrappedFtAsset = {
+            address: 'EQWrappedTACAsset',
+            type: AssetType.FT,
+            origin: Origin.TON,
+            rawAmount: 10n,
+            getEVMAddress: jest.fn().mockResolvedValue('0xFT'),
+            checkCanBeTransferredBy: jest.fn().mockResolvedValue(undefined),
+        } as unknown as Asset;
+
+        provider.getBalance.mockResolvedValue(9n);
+
+        await expect(
+            manager.sendCrossChainTransactionToTON(
+                signer,
+                'EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N',
+                [wrappedFtAsset] as never,
+                {
+                    waitOperationId: false,
+                    waitFinalization: false,
+                },
+            ),
+        ).rejects.toThrow('Insufficient balance of TAC');
+
+        expect(erc20Approve).not.toHaveBeenCalled();
+        expect(crossChainLayerSend.estimateGas).not.toHaveBeenCalled();
+        expect(crossChainLayerSend).not.toHaveBeenCalled();
+    });
+
     it('supports operation tracking and finalization via sendCrossChainTransactionToTON', async () => {
         const manager = new TACTransactionManager(config as never, operationTracker as never, logger as never);
         const nativeTacAsset = {
@@ -354,6 +384,9 @@ describe('TACTransactionManager', () => {
             10n,
             expect.objectContaining({ maxFeePerGas: 1n, maxPriorityFeePerGas: 0n, gasLimit: 10n }),
         );
+        expect(erc20Approve.mock.invocationCallOrder[0]).toBeLessThan(
+            crossChainLayerSend.estimateGas.mock.invocationCallOrder[0],
+        );
         expect(wrappedFtAsset.checkCanBeTransferredBy).toHaveBeenCalledWith('0xSigner', BlockchainType.TAC);
         expect(operationTracker.getOperationIdByTransactionHash).toHaveBeenCalledWith(
             '0xhash',
@@ -375,6 +408,56 @@ describe('TACTransactionManager', () => {
             'encoded',
             expect.objectContaining({ value: 63n, maxFeePerGas: 1n, maxPriorityFeePerGas: 0n, gasLimit: 30n }),
         );
+    });
+
+    it('estimates sendMessage only after approvals and re-checks TAC balance afterwards', async () => {
+        const manager = new TACTransactionManager(config as never, operationTracker as never, logger as never);
+        const wrappedFtAsset = {
+            address: 'EQWrappedTACAsset',
+            type: AssetType.FT,
+            origin: Origin.TON,
+            rawAmount: 10n,
+            getEVMAddress: jest.fn().mockResolvedValue('0xFT'),
+            checkCanBeTransferredBy: jest.fn().mockResolvedValue(undefined),
+        } as unknown as Asset;
+
+        let approvalCompleted = false;
+        erc20Approve.mockImplementation(async () => {
+            approvalCompleted = true;
+            return { wait: jest.fn().mockResolvedValue(undefined) };
+        });
+        crossChainLayerSend.estimateGas.mockImplementation(async () => {
+            if (!approvalCompleted) {
+                throw new Error('sendMessage estimated before approvals');
+            }
+
+            return 30n;
+        });
+        provider.getBalance.mockResolvedValueOnce(10n).mockResolvedValueOnce(67n);
+
+        await expect(
+            manager.sendCrossChainTransactionToTON(
+                signer,
+                'EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N',
+                [wrappedFtAsset] as never,
+                {
+                    waitOperationId: false,
+                    waitFinalization: false,
+                },
+            ),
+        ).rejects.toThrow('Insufficient balance of TAC');
+
+        expect(erc20Approve).toHaveBeenCalledWith(
+            '0xCrossChainLayer',
+            10n,
+            expect.objectContaining({ maxFeePerGas: 1n, maxPriorityFeePerGas: 0n, gasLimit: 10n }),
+        );
+        expect(crossChainLayerSend.estimateGas).toHaveBeenCalledWith(
+            1n,
+            'encoded',
+            expect.objectContaining({ value: 38n, maxFeePerGas: 1n, maxPriorityFeePerGas: 0n }),
+        );
+        expect(crossChainLayerSend).not.toHaveBeenCalled();
     });
 
     it('treats only TAC-origin native FT asset as value in sendCrossChainTransactionToTON', async () => {

@@ -536,7 +536,7 @@ sendCrossChainTransactionToTON(
 
 Sends a TAC -> TON transaction and, unlike `bridgeTokensToTON`, can additionally resolve `operationId` and wait for finalization. Native TAC must be passed inside `assets` as a `TAC` asset; there is no separate `value` argument.
 
-The sender must still keep additional TAC balance for TAC gas and bridge fees on top of the bridged native TAC amount. Before sending, the SDK requires TAC EIP-1559 fee data from the provider, can validate balances or ownership of non-native TAC assets, uses provider gas estimates as-is, validates those estimates against the latest TAC block gas limit, computes the worst-case upfront TAC balance requirement, and then submits approvals plus the bridge message.
+The sender must still keep additional TAC balance for TAC gas and bridge fees on top of the bridged native TAC amount. Before sending, the SDK requires TAC EIP-1559 fee data from the provider, can validate balances or ownership of non-native TAC assets, uses provider gas estimates as-is, validates those estimates against the latest TAC block gas limit, first estimates approval gas and checks TAC balance for approvals, submits approvals, and only then estimates the bridge message and checks the remaining TAC balance before sending it.
 
 #### **Parameters**
 

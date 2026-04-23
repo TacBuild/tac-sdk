@@ -479,7 +479,7 @@ export type CrossChainTransactionToTONOptions = {
 - **finalizationWaitOptions** *(optional)*:  
   Waiting configuration for the finalization stage after operation ID resolution. Used by `sendCrossChainTransactionToTON` only.
 
-`sendCrossChainTransactionToTON` still requires additional TAC balance outside the bridged native `TAC` asset amount so the signer can pay TAC gas and bridge fees. For this high-level flow the SDK requires TAC provider EIP-1559 fee data, can validate balances or ownership of non-native TAC assets, takes provider gas estimates as-is, validates them against the latest TAC block gas limit, and checks the worst-case upfront TAC balance before sending.
+`sendCrossChainTransactionToTON` still requires additional TAC balance outside the bridged native `TAC` asset amount so the signer can pay TAC gas and bridge fees. For this high-level flow the SDK requires TAC provider EIP-1559 fee data, can validate balances or ownership of non-native TAC assets, takes provider gas estimates as-is, validates them against the latest TAC block gas limit, first estimates approval gas and checks TAC balance for approvals, then submits approvals, estimates the bridge message, and checks the remaining TAC balance before sending it.
 
 ### `CrosschainTx`
 

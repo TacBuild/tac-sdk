@@ -154,6 +154,35 @@ export class TACTransactionManager implements ITACTransactionManager {
         this.logger.debug(`Approved ${evmAddress} for ${spenderAddress}`);
     }
 
+    private async estimateApprovalGas(
+        asset: Asset,
+        signer: Wallet,
+        spenderAddress: string,
+        transactionParams: ethers.Overrides = {},
+    ): Promise<bigint> {
+        const evmAddress = await asset.getEVMAddress();
+
+        if (asset.type === AssetType.FT) {
+            const contract = new ethers.Contract(
+                evmAddress,
+                this.config.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
+                this.config.TACParams.provider,
+            ) as unknown as IERC20WithDecimals;
+
+            return contract.connect(signer).approve.estimateGas(spenderAddress, asset.rawAmount, transactionParams);
+        }
+
+        const contract = new ethers.Contract(
+            evmAddress,
+            this.config.artifacts.tac.compilationArtifacts.IERC721.abi,
+            this.config.TACParams.provider,
+        ) as unknown as IERC721;
+
+        return contract
+            .connect(signer)
+            .approve.estimateGas(spenderAddress, (asset as NFT).addresses.index, transactionParams);
+    }
+
     async sendCrossChainTransactionToTON(
         signer: Wallet,
         tonTarget: string,
@@ -216,38 +245,30 @@ export class TACTransactionManager implements ITACTransactionManager {
             );
         }
 
-        let requiredBalance = preparedBridge.totalValue;
+        let requiredApprovalBalance = 0n;
         const approvalPlans: Array<{ asset: Asset; gasLimit: bigint }> = [];
 
         for (const asset of bridgeAssets) {
-            let estimatedGas: bigint;
-
-            if (asset.type === AssetType.FT) {
-                const contract = new ethers.Contract(
-                    await asset.getEVMAddress(),
-                    this.config.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
-                    this.config.TACParams.provider,
-                ) as unknown as IERC20WithDecimals;
-                estimatedGas = await contract
-                    .connect(signer)
-                    .approve.estimateGas(crossChainLayerAddress, asset.rawAmount, transactionParams);
-            } else {
-                const contract = new ethers.Contract(
-                    await asset.getEVMAddress(),
-                    this.config.artifacts.tac.compilationArtifacts.IERC721.abi,
-                    this.config.TACParams.provider,
-                ) as unknown as IERC721;
-                estimatedGas = await contract
-                    .connect(signer)
-                    .approve.estimateGas(crossChainLayerAddress, (asset as NFT).addresses.index, transactionParams);
-            }
+            const estimatedGas = await this.estimateApprovalGas(asset, signer, crossChainLayerAddress, transactionParams);
 
             if (estimatedGas > blockGasLimit) {
                 throw estimatedGasExceedsBlockGasLimitError('approve', estimatedGas, blockGasLimit);
             }
 
-            requiredBalance += estimatedGas * maxFeePerGas;
+            requiredApprovalBalance += estimatedGas * maxFeePerGas;
             approvalPlans.push({ asset, gasLimit: estimatedGas });
+        }
+
+        const approvalBalance = await this.config.TACParams.provider.getBalance(signer.address);
+        if (approvalBalance < requiredApprovalBalance) {
+            throw insufficientBalanceError(TAC_SYMBOL);
+        }
+
+        for (const approval of approvalPlans) {
+            await this.approveAsset(approval.asset, signer, crossChainLayerAddress, {
+                ...transactionParams,
+                gasLimit: approval.gasLimit,
+            });
         }
 
         const sendMessageGas = await this.config.TACParams.crossChainLayer
@@ -259,18 +280,11 @@ export class TACTransactionManager implements ITACTransactionManager {
         if (sendMessageGas > blockGasLimit) {
             throw estimatedGasExceedsBlockGasLimitError('sendMessage', sendMessageGas, blockGasLimit);
         }
-        requiredBalance += sendMessageGas * maxFeePerGas;
 
-        const balance = await this.config.TACParams.provider.getBalance(signer.address);
-        if (balance < requiredBalance) {
+        const requiredSendMessageBalance = preparedBridge.totalValue + sendMessageGas * maxFeePerGas;
+        const sendMessageBalance = await this.config.TACParams.provider.getBalance(signer.address);
+        if (sendMessageBalance < requiredSendMessageBalance) {
             throw insufficientBalanceError(TAC_SYMBOL);
-        }
-
-        for (const approval of approvalPlans) {
-            await this.approveAsset(approval.asset, signer, crossChainLayerAddress, {
-                ...transactionParams,
-                gasLimit: approval.gasLimit,
-            });
         }
 
         const tx = await this.config.TACParams.crossChainLayer
