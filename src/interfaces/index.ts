@@ -10,6 +10,7 @@ export * from './ISimulator';
 export * from './ITacExplorerClient';
 export * from './ITacSDK';
 export * from './ITACTransactionManager';
+export * from './IToncenterV3Indexer';
 export * from './ITONTransactionManager';
 export * from './SenderAbstraction';
 export * from './WalletInstanse';

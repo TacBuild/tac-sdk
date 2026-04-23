@@ -80,6 +80,24 @@ export class LiteSequencerClient implements ILiteSequencerClient {
         }
     }
 
+    async getOperationIdByTonTransactionHash(transactionHash: string): Promise<string> {
+        const path = 'ton/operation-id';
+        const requestLabel = this.getRequestLabel('GET', path);
+
+        try {
+            const response = await this.httpClient.get<StringResponse>(new URL(path, this.endpoint).toString(), {
+                params: { transactionHash },
+            });
+            return response.data.response || '';
+        } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if ((error as any)?.response?.status === 404) {
+                return '';
+            }
+            throw operationFetchError(`request ${requestLabel} failed to complete request`, error);
+        }
+    }
+
     async getOperationType(operationId: string): Promise<OperationType> {
         const path = 'operation-type';
         const requestLabel = this.getRequestLabel('GET', path);

@@ -104,6 +104,23 @@ describe('LiteSequencerClient', () => {
         });
     });
 
+    it('uses the TON endpoint explicitly for TON hashes in hex format', async () => {
+        const tonHexHash = `0x${'b'.repeat(64)}`;
+
+        httpClient.getMock.mockResolvedValue(
+            createResponse({
+                response: 'ton-operation-id-explicit',
+            }),
+        );
+
+        const result = await client.getOperationIdByTonTransactionHash(tonHexHash);
+
+        expect(result).toBe('ton-operation-id-explicit');
+        expect(httpClient.getMock).toHaveBeenCalledWith('https://sequencer.example/ton/operation-id', {
+            params: { transactionHash: tonHexHash },
+        });
+    });
+
     it('wraps non-404 ETH errors into FetchError', async () => {
         httpClient.getMock.mockRejectedValue({
             message: 'Request failed',

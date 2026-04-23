@@ -4,7 +4,7 @@ import { sha256_sync } from 'ton-crypto';
 
 import type { FT, NFT, TON } from '../assets';
 import { AssetFactory } from '../assets';
-import { invalidMethodNameError, TokenError, zeroRawAmountError } from '../errors';
+import { externalInMessageRequiredError,invalidMethodNameError, TokenError, zeroRawAmountError } from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import {
@@ -495,7 +495,7 @@ function decodeBase64Like(input: string): Buffer | null {
 
 export function getNormalizedExtMessageHash(message: Message): string {
     if (message.info.type !== 'external-in') {
-        throw new Error(`Message must be "external-in", got ${message.info.type}`);
+        throw externalInMessageRequiredError(message.info.type);
     }
 
     const info = {

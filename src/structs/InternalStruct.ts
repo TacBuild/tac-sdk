@@ -14,6 +14,7 @@ import {
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
     TACSimulationResult,
+    ToncenterV3IndexedTransaction,
     TransactionLinker,
 } from './Struct';
 
@@ -180,6 +181,14 @@ export type TransactionDepth = {
 
 export type AdjacentTransactionsResponse = {
     transactions: ToncenterTransaction[];
+};
+
+export type TonAdjacentTransactionsResponse = {
+    transactions: ToncenterV3IndexedTransaction[];
+};
+
+export type ToncenterV3TransactionsResponse = {
+    transactions: ToncenterV3IndexedTransaction[];
 };
 
 export type TxFinalizerConfig = {

@@ -24,8 +24,10 @@ export interface ILiteSequencerClient {
     getOperationTypeV2(operationId: string): Promise<OperationTypeV2Info>;
     /** Resolves operation id by a transaction linker. */
     getOperationId(transactionLinker: TransactionLinker): Promise<string>;
-    /** Resolves operation id by the originating transaction hash. */
+    /** Resolves operation id by the originating transaction hash (from ccl event in TON and TAC). */
     getOperationIdByTransactionHash(transactionHash: string): Promise<string>;
+    /** Resolves operation id by the originating transaction hash (from ccl event in TON). */
+    getOperationIdByTonTransactionHash(transactionHash: string): Promise<string>;
     /**
      * Resolves operation ids for multiple shard keys.
      * @param shardsKeys Shard keys to query.

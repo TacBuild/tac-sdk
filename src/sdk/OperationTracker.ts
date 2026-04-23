@@ -87,6 +87,32 @@ export class OperationTracker implements IOperationTracker {
               );
     }
 
+    async getOperationIdByTonTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string> {
+        const requestFn = async (): Promise<string> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const id = await client.getOperationIdByTonTransactionHash(transactionHash);
+                    return id;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation ID by TON transaction hash ${formatObjectForLogging(transactionHash)}`,
+              );
+    }
+
     async getOperationType(
         operationId: string,
         waitOptions?: WaitOptions<OperationType> | null,

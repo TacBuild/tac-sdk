@@ -16,6 +16,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`RetryableContractOpener`](#retryablecontractopener-class)
 - [`GetTransactionsOptions`](#gettransactionsoptions-type)
 - [`AddressInformation`](#addressinformation-type)
+- [`ToncenterV3IndexedTransaction`](#toncenterv3indexedtransaction-type)
 
 ### Crosschain Transaction
 - [`EvmProxyMsg`](#evmproxymsg-type)
@@ -123,14 +124,14 @@ Parameters for SDK:
 ```typescript
 export type TONParams = {
     contractOpener?: ContractOpener;
+    tonIndexer?: IToncenterV3Indexer;
     settingsAddress?: string;
-    txFinalizer?: ITxFinalizer;
 }
 ```
 TON Parameters for SDK:
 - **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that combines TonClient (TAC endpoint), `orbsOpener`, and `orbsOpener4` as fallbacks on non-DEV networks, with exponential backoff between retries. Provide your own opener primarily for tests or custom setups.
+- **`tonIndexer`** (optional): Indexed TON lookup client used to resolve any TON transaction hash from a linked TON transaction chain and find the `crossChainLayer` transaction that the sequencer would collect as a TVM event. Provide your own implementation for tests or custom indexed backends.
 - **`settingsAddress`** (optional): TON settings contract address. Needed to retrieve protocol data. Set for tests only.
-- **`txFinalizer`** (optional): TxFinalizer for tracking transaction tree. Used for advanced transaction tracking and verification.
 
 ### `TACParams (Type)`
 ```typescript
@@ -306,6 +307,44 @@ Contains information about an address on the TON blockchain.
 - **`lastTransaction`**: Information about the most recent transaction of the address.
   - **`lt`**: Logical time of the last transaction.
   - **`hash`**: Hash of the last transaction in base64 format.
+
+### `ToncenterV3IndexedTransaction (Type)`
+
+```typescript
+export type ToncenterV3IndexedTransaction = {
+    account: string;
+    hash: string;
+    traceId?: string;
+    inMsg?: {
+        source?: string | null;
+        destination?: string | null;
+        opcode?: string | null;
+        messageContent?: {
+            body?: string | null;
+        } | null;
+    } | null;
+    outMsgs: Array<{
+        destination?: string | null;
+        messageContent?: {
+            body?: string | null;
+        } | null;
+    }>;
+};
+```
+
+Indexed transaction returned by Toncenter v3 `/transactions` and `/adjacentTransactions` endpoints.
+
+- **`account`**: Account address where the transaction was indexed.
+- **`hash`**: Indexed TON transaction hash returned by Toncenter v3.
+- **`traceId`** *(optional)*: Trace identifier when present in the indexed response.
+- **`inMsg`** *(optional)*: Incoming message data used to detect whether the transaction matches the same TVM event rules as the sequencer collector.
+  - **`source`** *(optional)*: Incoming message source address.
+  - **`destination`** *(optional)*: Incoming message destination address.
+  - **`opcode`** *(optional)*: Opcode reported by Toncenter v3 for the incoming message.
+  - **`messageContent.body`** *(optional)*: Incoming message body as a base64 BOC.
+- **`outMsgs`**: Outgoing messages of the transaction.
+  - **`destination`** *(optional)*: Destination address. `null` means the message is an external outbound log message.
+  - **`messageContent.body`** *(optional)*: Outgoing message body as a base64 BOC.
 
 
 ### `EvmProxyMsg (Type)`

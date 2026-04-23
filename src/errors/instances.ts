@@ -221,3 +221,12 @@ export const estimatedGasExceedsBlockGasLimitError = (txName: string, estimatedG
         `Estimated gas for ${txName} (${estimatedGas}) exceeds current TAC block gas limit (${blockGasLimit})`,
         140,
     );
+
+export const invalidTonExternalMessageBocError = (reason?: string) =>
+    new FormatError(
+        `Invalid external TON message BOC${reason ? `: ${reason}` : ''}`,
+        141,
+    );
+
+export const externalInMessageRequiredError = (actualType: string) =>
+    new FormatError(`Expected external-in TON message, got ${actualType}`, 142);

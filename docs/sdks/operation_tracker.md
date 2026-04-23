@@ -18,6 +18,7 @@
   - [Tracking by Transaction Link](#tracking-by-transaction-link)
     - [`getOperationId`](#getoperationid)
     - [`getOperationIdByTransactionHash`](#getoperationidbytransactionhash)
+    - [`getOperationIdByTonTransactionHash`](#getoperationidbytontransactionhash)
     - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
   - [Detailed Operation Info](#detailed-operation-info)
     - [`getOperationStatus`](#getoperationstatus)
@@ -113,6 +114,7 @@ Interface that defines the operations supported by sequencer clients:
 - `getOperationTypeV2(operationId: string): Promise<OperationTypeV2Info>`
 - `getOperationId(transactionLinker: TransactionLinker): Promise<string>`
 - `getOperationIdByTransactionHash(transactionHash: string): Promise<string>`
+- `getOperationIdByTonTransactionHash(transactionHash: string): Promise<string>`
 - `getOperationIdsByShardsKeys(shardsKeys: string[], caller: string, chunkSize?: number): Promise<OperationIdsByShardsKey>`
 - `getStageProfilings(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesByOperationId>`
 - `getStageProfilingsV2(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesV2ByOperationId>`
@@ -266,6 +268,27 @@ Fetches the cross-chain `operationId` by a transaction hash. The hash can be eit
 **Returns:** Operation ID string (empty string if not found)
 
 **Note:** Returns an empty string if the operation ID has not been assigned yet. Use `waitOptions` with a custom `successCheck` to wait for a non-empty result.
+
+---
+
+### `getOperationIdByTonTransactionHash`
+
+```ts
+getOperationIdByTonTransactionHash(
+    transactionHash: string,
+    waitOptions?: WaitOptions<string>
+): Promise<string>
+```
+
+Fetches the cross-chain `operationId` by an exact TON transaction hash that already belongs to the `crossChainLayer` route.
+
+**Parameters:**
+- `transactionHash`: exact TON transaction hash to send to the sequencer TON route
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** Operation ID string (empty string if not found)
+
+**Note:** This method does not resolve arbitrary TON hashes from a transaction chain. For that flow, use [`TacSdk.getOperationIdByTonTransactionHash(...)`](./tac_sdk.md#getoperationidbytontransactionhash).
 
 ---
 

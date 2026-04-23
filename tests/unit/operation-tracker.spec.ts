@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
-import { FetchError, ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } from '../../src';
+import {
+    FetchError,
+    ILiteSequencerClient,
+    ILiteSequencerClientFactory,
+    OperationTracker,
+} from '../../src';
 import {
     AssetType,
     BlockchainType,
@@ -42,6 +47,7 @@ class MockLiteSequencerClient implements ILiteSequencerClient {
     getOperationTypeV2 = jest.fn<ILiteSequencerClient['getOperationTypeV2']>();
     getOperationId = jest.fn<ILiteSequencerClient['getOperationId']>();
     getOperationIdByTransactionHash = jest.fn<ILiteSequencerClient['getOperationIdByTransactionHash']>();
+    getOperationIdByTonTransactionHash = jest.fn<ILiteSequencerClient['getOperationIdByTonTransactionHash']>();
     getOperationIdsByShardsKeys = jest.fn<ILiteSequencerClient['getOperationIdsByShardsKeys']>();
     getStageProfilings = jest.fn<ILiteSequencerClient['getStageProfilings']>();
     getStageProfilingsV2 = jest.fn<ILiteSequencerClient['getStageProfilingsV2']>();
@@ -80,7 +86,6 @@ describe('OperationTracker', () => {
     beforeEach(() => {
         mockLogger = new MockLogger();
         mockClientFactory = new MockLiteSequencerClientFactory();
-
         operationTracker = new OperationTracker(
             Network.TESTNET,
             ['http://localhost:3000', 'http://localhost:3001'],
@@ -863,6 +868,46 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getOperationIdByTransactionHash(transactionHash, waitOptions);
 
             expect(result).toBe(expectedId);
+        });
+    });
+
+    describe('getOperationIdByTonTransactionHash', () => {
+        it('should get operation ID via explicit TON sequencer route', async () => {
+            const transactionHash = '0xfaec7a40ea38b99b5701472f5d00e84ca6633c38b3ebee2826ff693834406352';
+            const expectedId = 'op-ton-123';
+
+            mockClients[0].getOperationIdByTonTransactionHash.mockResolvedValue(expectedId);
+
+            const result = await operationTracker.getOperationIdByTonTransactionHash(transactionHash);
+
+            expect(result).toBe(expectedId);
+            expect(mockClients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledWith(transactionHash);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation ID by TON transaction hash "${transactionHash}"] Success (attempt 1/30)`,
+            );
+        });
+
+        it('should return empty string when sequencer has no TON operation ID', async () => {
+            const transactionHash = '0xfaec7a40ea38b99b5701472f5d00e84ca6633c38b3ebee2826ff693834406352';
+            mockClients[0].getOperationIdByTonTransactionHash.mockResolvedValue('');
+
+            const result = await operationTracker.getOperationIdByTonTransactionHash(transactionHash);
+
+            expect(result).toBe('');
+            expect(mockClients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledWith(transactionHash);
+        });
+
+        it('should retry on second client when the first TON sequencer endpoint fails', async () => {
+            const transactionHash = '0xfaec7a40ea38b99b5701472f5d00e84ca6633c38b3ebee2826ff693834406352';
+            const expectedId = 'op-ton-456';
+            mockClients[0].getOperationIdByTonTransactionHash.mockRejectedValue(new Error('Network error'));
+            mockClients[1].getOperationIdByTonTransactionHash.mockResolvedValue(expectedId);
+
+            const result = await operationTracker.getOperationIdByTonTransactionHash(transactionHash);
+
+            expect(result).toBe(expectedId);
+            expect(mockClients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledTimes(1);
+            expect(mockClients[1].getOperationIdByTonTransactionHash).toHaveBeenCalledTimes(1);
         });
     });
 

@@ -26,6 +26,7 @@ import {
     TransactionLinkerWithOperationId,
     TVMAddress,
     UserWalletBalanceExtended,
+    WaitOptions,
 } from '../structs/Struct';
 import { Asset } from './Asset';
 import { ContractOpener } from './ContractOpener';
@@ -183,6 +184,31 @@ export interface ITacSDK {
         txs: BatchCrossChainTxWithAssetLike[],
         options?: CrossChainTransactionsOptions,
     ): Promise<TransactionLinkerWithOperationId[]>;
+
+    /**
+     * Resolves operation id by any TON hash from a linked chain of TON transactions.
+     * The SDK first resolves indexed TON transaction context, traverses adjacent TON transactions
+     * until it finds the crossChainLayer transaction that the sequencer would collect as a TVM event,
+     * and only then queries the sequencer with that exact transaction hash.
+     * @param transactionHash Any TON transaction hash from the relevant linked chain of TON transactions.
+     * @param waitOptions Optional waiting settings for the final sequencer lookup. Pass `null` to disable retries.
+     * @returns Promise resolving to operation id, or empty string when the sequencer-collected crossChainLayer event transaction is not found.
+     */
+    getOperationIdByTonTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string>;
+
+    /**
+     * Resolves operation id by the BOC of an external TON message that was sent to the blockchain.
+     * The SDK derives the normalized external-in message hash from the BOC, finds the root TON transaction
+     * that processed that external message through the configured contract opener, and then reuses the same
+     * linked chain of TON transactions lookup as `getOperationIdByTonTransactionHash(...)`.
+     * @param boc BOC of the external TON message that was sent to the blockchain.
+     * @param waitOptions Optional waiting settings for the final sequencer lookup. Pass `null` to disable retries.
+     * @returns Promise resolving to operation id, or empty string when the sequencer-collected crossChainLayer event transaction is not found.
+     */
+    getOperationIdByTonTransactionBoc(boc: string, waitOptions?: WaitOptions<string> | null): Promise<string>;
 
     // Bridge methods
     /**

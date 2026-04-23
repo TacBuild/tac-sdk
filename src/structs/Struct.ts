@@ -4,7 +4,7 @@ import { AbstractProvider } from 'ethers';
 
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
-import type { Asset, ContractOpener, ILogger } from '../interfaces';
+import type { Asset, ContractOpener, ILogger, IToncenterV3Indexer } from '../interfaces';
 import { DEFAULT_WAIT_DELAY_MS, DEFAULT_WAIT_MAX_ATTEMPTS, DEFAULT_WAIT_TIMEOUT_MS } from '../sdk/Consts';
 import { SendResult } from './InternalStruct';
 
@@ -75,6 +75,12 @@ export type TONParams = {
      * Provider for TON side. Use your own provider for tests or to increase ratelimit
      */
     contractOpener?: ContractOpener;
+
+    /**
+     * Indexed Toncenter v3 client used to resolve TON transaction context by hash.
+     * Use your own implementation for tests or custom indexed backends.
+     */
+    tonIndexer?: IToncenterV3Indexer;
 
     /**
      * Address of TON settings contract. Use only for tests.
@@ -219,6 +225,57 @@ export type StageData = {
 
 export type StatusInfo = StageData & {
     stage: StageName;
+};
+
+/**
+ * Indexed transaction returned by Toncenter v3 `/transactions` and `/adjacentTransactions` endpoints.
+ */
+export type ToncenterV3IndexedTransaction = {
+    /** Account address that owns the transaction. */
+    account: string;
+    /** Indexed TON transaction hash. */
+    hash: string;
+    /** Optional trace identifier returned by Toncenter v3. */
+    traceId?: string;
+    /** Incoming message of the indexed transaction, when present in the response. */
+    inMsg?: {
+        /** Message source address. */
+        source?: string | null;
+        /** Message destination address. */
+        destination?: string | null;
+        /** Opcode reported by Toncenter v3 for the incoming message. */
+        opcode?: string | null;
+        /** Raw message content returned by Toncenter v3. */
+        messageContent?: {
+            /** BOC-encoded message body in base64 form. */
+            body?: string | null;
+        } | null;
+    } | null;
+    /** Outgoing messages of the indexed transaction. */
+    outMsgs: Array<{
+        /** Message destination address. `null` means external outbound log message. */
+        destination?: string | null;
+        /** Raw message content returned by Toncenter v3. */
+        messageContent?: {
+            /** BOC-encoded message body in base64 form. */
+            body?: string | null;
+        } | null;
+    }>;
+};
+
+/**
+ * Traversal settings for indexed search through a linked TON transaction chain in Toncenter v3.
+ */
+export type ToncenterV3TraversalParams = {
+    /**
+     * Maximum traversal depth from the starting transaction in the linked TON transaction chain.
+     */
+    maxDepth?: number;
+
+    /**
+     * Maximum number of unique indexed transactions to inspect.
+     */
+    maxScannedTransactions?: number;
 };
 
 export type ProfilingStageData = {

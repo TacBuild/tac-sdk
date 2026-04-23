@@ -48,6 +48,15 @@ export interface IOperationTracker {
      */
     getOperationIdByTransactionHash(transactionHash: string, waitOptions?: WaitOptions<string> | null): Promise<string>;
     /**
+     * Resolves an operation id by a TON transaction hash, optionally waiting until available.
+     * @param transactionHash Exact TON crossChainLayer transaction hash.
+     * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
+     */
+    getOperationIdByTonTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string>;
+    /**
      * Resolves operation ids by shard keys for a particular caller, with optional batching and waiting.
      * @param shardsKeys List of shard keys.
      * @param caller Human-readable identifier of the caller (for tracing/limits).
