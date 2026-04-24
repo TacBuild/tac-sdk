@@ -370,6 +370,11 @@ export type OperationIds = {
     operationIds: string[];
 };
 
+export type OperationIdWithLogIndex = {
+    operationId: string;
+    logIndex: number;
+};
+
 export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
 export type TACSimulationResult = {

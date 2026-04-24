@@ -7,6 +7,7 @@ import {
     ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
     OperationTypeV2Info,
     SimplifiedStatuses,
@@ -41,6 +42,15 @@ export interface IOperationTracker {
      * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
      */
     getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string> | null): Promise<string>;
+    /**
+     * Resolves TAC operation ids with log indexes by TAC transaction hash, optionally waiting until available.
+     * @param transactionHash Hash of the originating TAC transaction.
+     * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
+     */
+    getOperationIdByTacTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<OperationIdWithLogIndex[]> | null,
+    ): Promise<OperationIdWithLogIndex[]>;
     /**
      * Resolves an operation id by a transaction hash, optionally waiting until available.
      * @param transactionHash Hash of the originating transaction.

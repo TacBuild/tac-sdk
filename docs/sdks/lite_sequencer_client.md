@@ -93,6 +93,18 @@ Fetches the crosschain operation ID based on a transaction hash. The client auto
 
 ---
 
+### Operation IDs by TAC Transaction Hash
+
+```ts
+getOperationIdByTacTransactionHash(transactionHash: string): Promise<OperationIdWithLogIndex[]>
+```
+
+Fetches TAC crosschain operation IDs for a TAC transaction hash from the explicit TAC sequencer route.
+
+**Returns:** [`OperationIdWithLogIndex[]`](./../models/structs.md#operationidwithlogindex-type) - Array of operation IDs with log indexes, or an empty array if not found (404)
+
+---
+
 ### Operation IDs by Shards Keys
 
 ```ts

@@ -9,6 +9,7 @@ import {
     ExecutionStagesV2ByOperationId,
     Network,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
     OperationTypeV2Info,
     StatusInfosByOperationId,
@@ -101,11 +102,6 @@ export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
 export type SuggestedTVMExecutorFeeResponse = ResponseBase<SuggestedTVMExecutorFee>;
 
 export type ConvertCurrencyResponse = ResponseBase<ConvertedCurrencyRawResult>;
-
-export type OperationIdWithLogIndex = {
-    operationId: string;
-    logIndex: number;
-};
 
 export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogIndex[]>;
 

@@ -21,6 +21,7 @@ import {
     ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
     OperationTypeV2Info,
     StatusInfosByOperationId,
@@ -47,37 +48,35 @@ export class LiteSequencerClient implements ILiteSequencerClient {
         return `${method} ${new URL(path, this.endpoint).toString()}`;
     }
 
-    async getOperationIdByTransactionHash(transactionHash: string): Promise<string> {
-        const isEthHash = /^0x[a-fA-F0-9]{64}$/.test(transactionHash);
-        const path = isEthHash ? 'tac/operation-id' : 'ton/operation-id';
+    async getOperationIdByTacTransactionHash(transactionHash: string): Promise<OperationIdWithLogIndex[]> {
+        const path = 'tac/operation-id';
         const requestLabel = this.getRequestLabel('GET', path);
 
         try {
-            if (isEthHash) {
-                const response = await this.httpClient.get<OperationIdWithLogIndexResponse>(
-                    new URL(path, this.endpoint).toString(),
-                    {
-                        params: { transactionHash },
-                    },
-                );
-                const operationResponse = response.data.response;
-                if (operationResponse.length > 0) {
-                    return operationResponse[0].operationId;
-                }
-                return '';
-            } else {
-                const response = await this.httpClient.get<StringResponse>(new URL(path, this.endpoint).toString(), {
+            const response = await this.httpClient.get<OperationIdWithLogIndexResponse>(
+                new URL(path, this.endpoint).toString(),
+                {
                     params: { transactionHash },
-                });
-                return response.data.response || '';
-            }
+                },
+            );
+            return response.data.response || [];
         } catch (error) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if ((error as any)?.response?.status === 404) {
-                return '';
+                return [];
             }
             throw operationFetchError(`request ${requestLabel} failed to complete request`, error);
         }
+    }
+
+    async getOperationIdByTransactionHash(transactionHash: string): Promise<string> {
+        const isEthHash = /^0x[a-fA-F0-9]{64}$/.test(transactionHash);
+        if (isEthHash) {
+            const operationResponse = await this.getOperationIdByTacTransactionHash(transactionHash);
+            return operationResponse[0]?.operationId || '';
+        }
+
+        return this.getOperationIdByTonTransactionHash(transactionHash);
     }
 
     async getOperationIdByTonTransactionHash(transactionHash: string): Promise<string> {

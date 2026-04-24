@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 
-import { FetchError, IHttpClient, LiteSequencerClient } from '../../../src';
+import { FetchError, IHttpClient, LiteSequencerClient, OperationIdWithLogIndex } from '../../../src';
 
 class MockHttpClient implements IHttpClient {
     readonly getMock = jest.fn<(url: string, config?: AxiosRequestConfig) => Promise<AxiosResponse<unknown>>>();
@@ -48,6 +48,25 @@ describe('LiteSequencerClient', () => {
         const result = await client.getOperationIdByTransactionHash(ethHash);
 
         expect(result).toBe('op-first');
+        expect(httpClient.getMock).toHaveBeenCalledWith('https://sequencer.example/tac/operation-id', {
+            params: { transactionHash: ethHash },
+        });
+    });
+
+    it('returns TAC operation IDs with log indexes for explicit TAC route', async () => {
+        const expectedResult: OperationIdWithLogIndex[] = [
+            { operationId: 'op-first', logIndex: 12 },
+            { operationId: 'op-second', logIndex: 3 },
+        ];
+        httpClient.getMock.mockResolvedValue(
+            createResponse({
+                response: expectedResult,
+            }),
+        );
+
+        const result = await client.getOperationIdByTacTransactionHash(ethHash);
+
+        expect(result).toEqual(expectedResult);
         expect(httpClient.getMock).toHaveBeenCalledWith('https://sequencer.example/tac/operation-id', {
             params: { transactionHash: ethHash },
         });

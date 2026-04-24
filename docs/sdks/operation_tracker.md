@@ -17,6 +17,7 @@
   - [Waiting for Results](#waiting-for-results)
   - [Tracking by Transaction Link](#tracking-by-transaction-link)
     - [`getOperationId`](#getoperationid)
+    - [`getOperationIdByTacTransactionHash`](#getoperationidbytactransactionhash)
     - [`getOperationIdByTransactionHash`](#getoperationidbytransactionhash)
     - [`getOperationIdByTonTransactionHash`](#getoperationidbytontransactionhash)
     - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
@@ -113,6 +114,7 @@ Interface that defines the operations supported by sequencer clients:
 - `getOperationType(operationId: string): Promise<OperationType>`
 - `getOperationTypeV2(operationId: string): Promise<OperationTypeV2Info>`
 - `getOperationId(transactionLinker: TransactionLinker): Promise<string>`
+- `getOperationIdByTacTransactionHash(transactionHash: string): Promise<OperationIdWithLogIndex[]>`
 - `getOperationIdByTransactionHash(transactionHash: string): Promise<string>`
 - `getOperationIdByTonTransactionHash(transactionHash: string): Promise<string>`
 - `getOperationIdsByShardsKeys(shardsKeys: string[], caller: string, chunkSize?: number): Promise<OperationIdsByShardsKey>`
@@ -247,6 +249,27 @@ Fetches the cross-chain `operationId` based on a transaction linker. Tries each 
 **Returns:** Operation ID string (empty string if not found)
 
 **Note:** Returns an empty string if the operation ID has not been assigned yet. Use `waitOptions` with a custom `successCheck` to wait for a non-empty result.
+
+---
+
+### `getOperationIdByTacTransactionHash`
+
+```ts
+getOperationIdByTacTransactionHash(
+    transactionHash: string,
+    waitOptions?: WaitOptions<OperationIdWithLogIndex[]>
+): Promise<OperationIdWithLogIndex[]>
+```
+
+Fetches TAC-side cross-chain operation IDs by a TAC transaction hash using the explicit TAC sequencer route.
+
+**Parameters:**
+- `transactionHash`: TAC transaction hash
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`OperationIdWithLogIndex[]`](./../models/structs.md#operationidwithlogindex-type)
+
+**Note:** Returns an empty array if the operation IDs have not been assigned yet. Use `waitOptions` with a custom `successCheck`, for example `(items) => items.length > 0`, if you want to wait for at least one result.
 
 ---
 

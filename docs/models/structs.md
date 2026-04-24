@@ -29,6 +29,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`TransactionLinkerWithOperationId`](#transactionlinkerwithoperationid-type)
 - [`TACCrossChainTransactionResult`](#taccrosschaintransactionresult-type)
 - [`OperationIds`](#operationids-type)
+- [`OperationIdWithLogIndex`](#operationidwithlogindex-type)
 - [`OperationIdsByShardsKey`](#operationidsbyshardskey-type)
 - [`TrackTransactionTreeParams`](#tracktransactiontreeparams-type)
 - [`TransactionValidationError`](#transactionvalidationerror-type)
@@ -702,6 +703,20 @@ export type OperationIds = {
 Contains a collection of operation identifiers for tracking multiple operations.
 
 - **`operationIds`**: Array of operation ID strings for tracking crosschain operations.
+
+### `OperationIdWithLogIndex (Type)`
+
+```typescript
+export type OperationIdWithLogIndex = {
+    operationId: string;
+    logIndex: number;
+};
+```
+
+Describes a TAC sequencer lookup result for a single emitted log.
+
+- **`operationId`**: Cross-chain operation ID associated with the TAC transaction log.
+- **`logIndex`**: Log index of the event inside the TAC transaction receipt.
 
 ### `OperationIdsByShardsKey (Type)`
 

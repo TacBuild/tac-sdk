@@ -12,6 +12,7 @@ import {
     GetTVMExecutorFeeParams,
     Network,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
     OperationTypeV2Info,
     SimplifiedStatuses,
@@ -84,6 +85,32 @@ export class OperationTracker implements IOperationTracker {
                   { logger: this.logger, ...waitOptions },
                   requestFn,
                   `OperationTracker: Getting operation ID by transaction hash ${formatObjectForLogging(transactionHash)}`,
+              );
+    }
+
+    async getOperationIdByTacTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<OperationIdWithLogIndex[]> | null,
+    ): Promise<OperationIdWithLogIndex[]> {
+        const requestFn = async (): Promise<OperationIdWithLogIndex[]> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const ids = await client.getOperationIdByTacTransactionHash(transactionHash);
+                    return ids;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation IDs by TAC transaction hash ${formatObjectForLogging(transactionHash)}`,
               );
     }
 

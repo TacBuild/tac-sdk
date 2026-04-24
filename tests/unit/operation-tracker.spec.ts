@@ -20,6 +20,7 @@ import {
     Network,
     OperationExecutionStatus,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
     OperationTypeV2Info,
     SimplifiedStatuses,
@@ -46,6 +47,7 @@ class MockLiteSequencerClient implements ILiteSequencerClient {
     getOperationType = jest.fn<ILiteSequencerClient['getOperationType']>();
     getOperationTypeV2 = jest.fn<ILiteSequencerClient['getOperationTypeV2']>();
     getOperationId = jest.fn<ILiteSequencerClient['getOperationId']>();
+    getOperationIdByTacTransactionHash = jest.fn<ILiteSequencerClient['getOperationIdByTacTransactionHash']>();
     getOperationIdByTransactionHash = jest.fn<ILiteSequencerClient['getOperationIdByTransactionHash']>();
     getOperationIdByTonTransactionHash = jest.fn<ILiteSequencerClient['getOperationIdByTonTransactionHash']>();
     getOperationIdsByShardsKeys = jest.fn<ILiteSequencerClient['getOperationIdsByShardsKeys']>();
@@ -868,6 +870,68 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getOperationIdByTransactionHash(transactionHash, waitOptions);
 
             expect(result).toBe(expectedId);
+        });
+    });
+
+    describe('getOperationIdByTacTransactionHash', () => {
+        it('should successfully get TAC operation IDs with log indexes by transaction hash', async () => {
+            const transactionHash = '0x123abc';
+            const expectedIds: OperationIdWithLogIndex[] = [
+                { operationId: 'op456', logIndex: 2 },
+                { operationId: 'op789', logIndex: 7 },
+            ];
+
+            mockClients[0].getOperationIdByTacTransactionHash.mockResolvedValue(expectedIds);
+
+            const result = await operationTracker.getOperationIdByTacTransactionHash(transactionHash);
+
+            expect(result).toEqual(expectedIds);
+            expect(mockClients[0].getOperationIdByTacTransactionHash).toHaveBeenCalledWith(transactionHash);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation IDs by TAC transaction hash "${transactionHash}"] Success (attempt 1/30)`,
+            );
+        });
+
+        it('should handle empty TAC operation id arrays', async () => {
+            const transactionHash = '0x123abc';
+
+            mockClients[0].getOperationIdByTacTransactionHash.mockResolvedValue([]);
+
+            const result = await operationTracker.getOperationIdByTacTransactionHash(transactionHash);
+
+            expect(result).toEqual([]);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation IDs by TAC transaction hash "${transactionHash}"] Success (attempt 1/30)`,
+            );
+        });
+
+        it('should retry on second client if first TAC route fails', async () => {
+            const transactionHash = '0x123abc';
+            const expectedIds: OperationIdWithLogIndex[] = [{ operationId: 'op456', logIndex: 2 }];
+
+            mockClients[0].getOperationIdByTacTransactionHash.mockRejectedValue(new Error('Network error'));
+            mockClients[1].getOperationIdByTacTransactionHash.mockResolvedValue(expectedIds);
+
+            const result = await operationTracker.getOperationIdByTacTransactionHash(transactionHash);
+
+            expect(result).toEqual(expectedIds);
+            expect(mockClients[0].getOperationIdByTacTransactionHash).toHaveBeenCalledWith(transactionHash);
+            expect(mockClients[1].getOperationIdByTacTransactionHash).toHaveBeenCalledWith(transactionHash);
+        });
+
+        it('should throw error if all TAC endpoints fail', async () => {
+            const transactionHash = '0x123abc';
+            const error = new Error('Network error');
+
+            mockClients[0].getOperationIdByTacTransactionHash.mockRejectedValue(error);
+            mockClients[1].getOperationIdByTacTransactionHash.mockRejectedValue(error);
+
+            await expect(
+                operationTracker.getOperationIdByTacTransactionHash(transactionHash, immediateWaitOptions),
+            ).rejects.toThrow();
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation IDs by TAC transaction hash "${transactionHash}"] Max attempts (1) reached`,
+            );
         });
     });
 
