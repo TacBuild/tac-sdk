@@ -7,6 +7,7 @@ import { Asset, IConfiguration, ILogger, IOperationTracker, ISimulator } from '.
 import type { SenderAbstraction } from '../sender';
 import { TONFeeCalculationParams, TransactionFeeCalculationStep } from '../structs/InternalStruct';
 import {
+    AssetFeeMode,
     AssetType,
     CrosschainTx,
     ExecutionFeeEstimationResult,
@@ -14,6 +15,15 @@ import {
     GeneratePayloadParams,
     Origin,
 } from '../structs/Struct';
+import {
+    JETTON_TRANSFER_FORWARD_TON_AMOUNT,
+    LEGACY_FORWARD_FEE_ESTIMATE_DENOMINATOR,
+    LEGACY_FORWARD_FEE_ESTIMATE_NUMERATOR,
+    LEGACY_JETTON_TRANSFER_BASE_OUTBOUND_MESSAGE_COUNT,
+    LEGACY_JETTON_TRANSFER_WITH_FORWARD_OUTBOUND_MESSAGE_COUNT,
+    LEGACY_JETTON_WALLET_TRANSFER_GAS_AND_STORAGE,
+    LEGACY_STRICTLY_GREATER_THAN_FEE_EPSILON,
+} from './Consts';
 import {
     createCrossChainLayerTvmMsgToEvmStep,
     createErrorNotificationGasStep,
@@ -183,6 +193,37 @@ export class Simulator implements ISimulator {
         );
     }
 
+    private calculateMessageForwardFee(msgBits: number, msgCells: number): bigint {
+        const { lumpPrice, msgBitPrice, msgCellPrice } = this.config.TONParams.feesParams;
+        const msgFwdFees = lumpPrice + Math.ceil((msgBitPrice * msgBits + msgCellPrice * msgCells) / FIXED_POINT_SHIFT);
+
+        return BigInt(msgFwdFees);
+    }
+
+    private calculateLegacyJettonTransferNetworkFee(
+        params: GeneratePayloadParams,
+        msgBits: number,
+        msgCells: number,
+    ): bigint {
+        const forwardTonAmount =
+            JETTON_TRANSFER_FORWARD_TON_AMOUNT +
+            (params.forwardFeeTonAmount ?? 0n) +
+            (params.crossChainTonAmount ?? 0n);
+        const outboundMessageCount =
+            forwardTonAmount > 0n
+                ? LEGACY_JETTON_TRANSFER_WITH_FORWARD_OUTBOUND_MESSAGE_COUNT
+                : LEGACY_JETTON_TRANSFER_BASE_OUTBOUND_MESSAGE_COUNT;
+        const inboundForwardFee =
+            (this.calculateMessageForwardFee(msgBits, msgCells) * LEGACY_FORWARD_FEE_ESTIMATE_NUMERATOR) /
+            LEGACY_FORWARD_FEE_ESTIMATE_DENOMINATOR;
+
+        return (
+            outboundMessageCount * inboundForwardFee +
+            LEGACY_JETTON_WALLET_TRANSFER_GAS_AND_STORAGE +
+            LEGACY_STRICTLY_GREATER_THAN_FEE_EPSILON
+        );
+    }
+
     private calculateTONCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
             createCrossChainLayerTvmMsgToEvmStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
@@ -199,6 +240,17 @@ export class Simulator implements ISimulator {
             createEstimatedSendTransferGasStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
             createEstimatedReceiveTransferGasStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
         ]);
+    }
+
+    private calculateLegacyJettonTransferCrosschainFee(
+        params: GeneratePayloadParams,
+        msgBits: number,
+        msgCells: number,
+    ): bigint {
+        const dynamicFee = this.calculateJettonTransferCrosschainFee(msgBits, msgCells);
+        const legacyNetworkFee = this.calculateLegacyJettonTransferNetworkFee(params, msgBits, msgCells);
+
+        return dynamicFee > legacyNetworkFee ? dynamicFee : legacyNetworkFee;
     }
 
     private calculateJettonBurnCrosschainFee(msgBits: number, msgCells: number): bigint {
@@ -240,6 +292,9 @@ export class Simulator implements ISimulator {
                 }
                 if (asset.origin === Origin.TON) {
                     // Pipeline: wallet -> jetton wallet -> jetton wallet -> jetton proxy -> ccl -> log
+                    if (asset.feeMode === AssetFeeMode.LEGACY) {
+                        return this.calculateLegacyJettonTransferCrosschainFee(params, msgBits, msgCells);
+                    }
                     return this.calculateJettonTransferCrosschainFee(msgBits, msgCells);
                 }
                 if (asset.origin === Origin.TAC) {

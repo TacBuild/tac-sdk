@@ -681,6 +681,12 @@ export enum Origin {
     TAC = 'TAC',
 }
 
+export enum AssetFeeMode {
+    TAC_ORIGINAL = 'TAC_ORIGINAL',
+    LEGACY = 'LEGACY',
+    DYNAMIC = 'DYNAMIC',
+}
+
 export type TVMAddress = string;
 export type EVMAddress = string;
 

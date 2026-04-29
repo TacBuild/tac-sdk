@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Native `TAC` asset wrapper plus TAC-aware balance/transfer checks: `Asset.getBalanceOf(user, blockchainType)` and `checkCanBeTransferredBy(user, blockchainType)`.
 - High-level TAC -> TON sending flow: `sendCrossChainTransactionToTON()` with `TACCrossChainTransactionResult`, optional `operationId` waiting, balance validation, and finalization support.
+- `AssetFeeMode` and `Asset.feeMode` for TON-side fee estimation modes: `TAC_ORIGINAL`, `LEGACY`, and `DYNAMIC`.
 - New `TransactionTreeDirection` enum for transaction tree traversal options: `FORWARD`, `BACKWARD`, `BOTH`.
 - NFT TEP-64 metadata helpers in `ContentUtils`: `readNFTMetadata`, `buildNFTOnchainMetadata`, and `buildNFTOffChainMetadata`.
 - `v2` Lite Sequencer support in `LiteSequencerClient` / `OperationTracker`: `getOperationTypeV2`, `getStageProfilingV2`, and `getStageProfilingsV2`.
@@ -18,6 +19,7 @@ All notable changes to this project will be documented in this file.
 - `sendCrossChainTransaction()` and `sendCrossChainTransactionToTON()` now support full-operation finalization waiting by default: final profiling fetch plus TON transaction tree validation for `executedInTON` transactions when present.
 - `bridgeTokensToTON()` stays a low-level send-only TAC -> TON method; production-oriented gas / balance prechecks and operation finalization live in `sendCrossChainTransactionToTON()`.
 - Asset factory logic now recognizes native TAC as a dedicated asset type, while `getFT()` remains FT-only.
+- TON-origin FT fee estimation now detects legacy Jetton wallet code and applies the original Jetton wallet hardcoded transfer threshold for legacy assets; dynamic Jettons and TAC-origin assets keep the dynamic calculation path.
 - Default transaction tree traversal direction in `BaseContractOpener` changed to `TransactionTreeDirection.FORWARD`.
 - `ContentUtils` now parses TEP-64 `semi-chain` metadata, supports `chunked` content serialization, and correctly reads NFT off-chain content returned by collection `get_nft_content()`.
 - Jetton metadata parsing now supports TEP-64 `amount_style` and `render_type` fields.

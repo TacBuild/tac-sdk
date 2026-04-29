@@ -4,7 +4,7 @@ import { sha256_sync } from 'ton-crypto';
 
 import type { FT, NFT, TON } from '../assets';
 import { AssetFactory } from '../assets';
-import { externalInMessageRequiredError,invalidMethodNameError, TokenError, zeroRawAmountError } from '../errors';
+import { externalInMessageRequiredError, invalidMethodNameError, TokenError, zeroRawAmountError } from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import {

@@ -3,12 +3,13 @@ import type { Cell } from '@ton/ton';
 import { insufficientBalanceError } from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
 import { Validator } from '../sdk/Validator';
-import { AssetType, BlockchainType, GeneratePayloadParams, Origin } from '../structs/Struct';
+import { AssetFeeMode, AssetType, BlockchainType, GeneratePayloadParams, Origin } from '../structs/Struct';
 import { FT } from './FT';
 
 export class TAC implements Asset {
     readonly type: AssetType = AssetType.FT;
     readonly origin: Origin = Origin.TAC;
+    readonly feeMode: AssetFeeMode = AssetFeeMode.TAC_ORIGINAL;
 
     private constructor(
         private readonly _configuration: IConfiguration,
