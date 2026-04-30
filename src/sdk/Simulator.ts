@@ -16,13 +16,18 @@ import {
     Origin,
 } from '../structs/Struct';
 import {
+    FIXED_POINT_SHIFT,
     JETTON_TRANSFER_FORWARD_TON_AMOUNT,
     LEGACY_FORWARD_FEE_ESTIMATE_DENOMINATOR,
     LEGACY_FORWARD_FEE_ESTIMATE_NUMERATOR,
     LEGACY_JETTON_TRANSFER_BASE_OUTBOUND_MESSAGE_COUNT,
     LEGACY_JETTON_TRANSFER_WITH_FORWARD_OUTBOUND_MESSAGE_COUNT,
     LEGACY_JETTON_WALLET_TRANSFER_GAS_AND_STORAGE,
+    LEGACY_NFT_ITEM_MIN_TONS_FOR_STORAGE,
+    LEGACY_NFT_TRANSFER_BASE_OUTBOUND_MESSAGE_COUNT,
+    LEGACY_NFT_TRANSFER_WITH_FORWARD_OUTBOUND_MESSAGE_COUNT,
     LEGACY_STRICTLY_GREATER_THAN_FEE_EPSILON,
+    NFT_TRANSFER_FORWARD_TON_AMOUNT,
 } from './Consts';
 import {
     createCrossChainLayerTvmMsgToEvmStep,
@@ -40,7 +45,6 @@ import {
     createNftItemSendStep,
     createNftProxyErrorNotificationStep,
     createNftProxyOwnershipAssignedStep,
-    FIXED_POINT_SHIFT,
 } from './Fees';
 import { NoopLogger } from './Logger';
 import {
@@ -253,6 +257,37 @@ export class Simulator implements ISimulator {
         return dynamicFee > legacyNetworkFee ? dynamicFee : legacyNetworkFee;
     }
 
+    private calculateLegacyNftTransferNetworkFee(
+        params: GeneratePayloadParams,
+        msgBits: number,
+        msgCells: number,
+    ): bigint {
+        const forwardTonAmount =
+            NFT_TRANSFER_FORWARD_TON_AMOUNT +
+            (params.forwardFeeTonAmount ?? 0n) +
+            (params.crossChainTonAmount ?? 0n);
+        const outboundMessageCount =
+            forwardTonAmount > 0n
+                ? LEGACY_NFT_TRANSFER_WITH_FORWARD_OUTBOUND_MESSAGE_COUNT
+                : LEGACY_NFT_TRANSFER_BASE_OUTBOUND_MESSAGE_COUNT;
+        const inboundForwardFee =
+            (this.calculateMessageForwardFee(msgBits, msgCells) * LEGACY_FORWARD_FEE_ESTIMATE_NUMERATOR) /
+            LEGACY_FORWARD_FEE_ESTIMATE_DENOMINATOR;
+
+        return outboundMessageCount * inboundForwardFee + LEGACY_NFT_ITEM_MIN_TONS_FOR_STORAGE;
+    }
+
+    private calculateLegacyNftTransferCrosschainFee(
+        params: GeneratePayloadParams,
+        msgBits: number,
+        msgCells: number,
+    ): bigint {
+        const dynamicFee = this.calculateNftTransferCrosschainFee(msgBits, msgCells);
+        const legacyNetworkFee = this.calculateLegacyNftTransferNetworkFee(params, msgBits, msgCells);
+
+        return dynamicFee > legacyNetworkFee ? dynamicFee : legacyNetworkFee;
+    }
+
     private calculateJettonBurnCrosschainFee(msgBits: number, msgCells: number): bigint {
         return this.calculateTransactionPipeline([
             createJettonWalletBurnStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
@@ -306,6 +341,9 @@ export class Simulator implements ISimulator {
             case AssetType.NFT:
                 if (asset.origin === Origin.TON) {
                     // Pipeline: wallet -> nft item -> nft proxy -> ccl -> log
+                    if (asset.feeMode === AssetFeeMode.LEGACY) {
+                        return this.calculateLegacyNftTransferCrosschainFee(params, msgBits, msgCells);
+                    }
                     return this.calculateNftTransferCrosschainFee(msgBits, msgCells);
                 }
                 if (asset.origin === Origin.TAC) {

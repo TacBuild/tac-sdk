@@ -268,7 +268,7 @@ export class NFT implements Asset {
     }
 
     private static resolveFeeMode(origin: Origin): AssetFeeMode {
-        return origin === Origin.TAC ? AssetFeeMode.TAC_ORIGINAL : AssetFeeMode.DYNAMIC;
+        return origin === Origin.TAC ? AssetFeeMode.TAC_ORIGINAL : AssetFeeMode.LEGACY;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

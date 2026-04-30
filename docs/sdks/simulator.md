@@ -153,7 +153,7 @@ estimateTONFee(asset: Asset, params: GeneratePayloadParams): bigint
 
 Estimates the TVM transaction fee required for processing a single asset in cross-chain operations. This method calculates fees for the complete transaction pipeline for one asset, including wallet interactions, token transfers/burns, proxy contracts, and cross-chain layer.
 
-For TON-origin Jettons with `asset.feeMode === AssetFeeMode.LEGACY`, the estimator also applies the original TON Jetton wallet hardcoded transfer threshold and returns the larger value between the legacy-safe threshold and the dynamic pipeline estimate. Native TON and dynamic Jettons use the dynamic calculation path.
+For TON-origin assets with `asset.feeMode === AssetFeeMode.LEGACY`, the estimator also applies the original TON token-contract hardcoded transfer threshold and returns the larger value between the legacy-safe threshold and the dynamic pipeline estimate. Native TON, dynamic Jettons, and TAC-origin NFTs use the dynamic/TAC calculation path.
 
 #### **Parameters**
 

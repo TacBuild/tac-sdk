@@ -122,8 +122,8 @@ The `Asset` interface defines the contract for all token implementations in the 
 
 Every asset exposes `feeMode` so the SDK can choose the same TON-side fee path as the sequencer and contracts:
 - `TAC_ORIGINAL`: TAC-origin wrapped assets.
-- `DYNAMIC`: Native TON, TON-origin NFTs, and TON-origin Jettons whose wallet code hash is listed in `DYNAMIC_JETTON_WALLET_CODE_HASHES`.
-- `LEGACY`: Other TON-origin Jettons. For these assets the simulator includes the original TON Jetton wallet hardcoded transfer threshold (`min_tons_for_storage`, `gas_consumption`, and the strict `>` margin) and uses the larger value between that threshold and the dynamic estimate.
+- `DYNAMIC`: Native TON and TON-origin Jettons whose wallet code hash is listed in `DYNAMIC_JETTON_WALLET_CODE_HASHES`.
+- `LEGACY`: Standard TON-origin NFTs and other TON-origin Jettons. For these assets the simulator includes the original TON token-contract hardcoded transfer threshold and uses the larger value between that threshold and the dynamic estimate.
 
 ---
 

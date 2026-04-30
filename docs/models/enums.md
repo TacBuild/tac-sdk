@@ -212,7 +212,7 @@ export enum Origin {
 Represents the TON-side fee calculation mode assigned to an asset.
 
 - `TAC_ORIGINAL = 'TAC_ORIGINAL'`: Asset was originally issued on TAC and uses TAC-origin fee versioning.
-- `LEGACY = 'LEGACY'`: TON-origin FT whose Jetton wallet follows the original TON token-contract hardcoded fee checks.
+- `LEGACY = 'LEGACY'`: TON-origin asset that follows original TON token-contract hardcoded fee checks.
 - `DYNAMIC = 'DYNAMIC'`: Asset can use the current dynamic TON fee calculation path.
 
 ```ts

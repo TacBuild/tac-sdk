@@ -19,7 +19,7 @@ All notable changes to this project will be documented in this file.
 - `sendCrossChainTransaction()` and `sendCrossChainTransactionToTON()` now support full-operation finalization waiting by default: final profiling fetch plus TON transaction tree validation for `executedInTON` transactions when present.
 - `bridgeTokensToTON()` stays a low-level send-only TAC -> TON method; production-oriented gas / balance prechecks and operation finalization live in `sendCrossChainTransactionToTON()`.
 - Asset factory logic now recognizes native TAC as a dedicated asset type, while `getFT()` remains FT-only.
-- TON-origin FT fee estimation now detects legacy Jetton wallet code and applies the original Jetton wallet hardcoded transfer threshold for legacy assets; dynamic Jettons and TAC-origin assets keep the dynamic calculation path.
+- TON-origin fee estimation now detects legacy Jetton wallet code, treats standard TON NFTs as legacy, and applies the original token-contract hardcoded transfer thresholds for legacy assets; dynamic Jettons and TAC-origin assets keep the dynamic calculation path.
 - Default transaction tree traversal direction in `BaseContractOpener` changed to `TransactionTreeDirection.FORWARD`.
 - `ContentUtils` now parses TEP-64 `semi-chain` metadata, supports `chunked` content serialization, and correctly reads NFT off-chain content returned by collection `get_nft_content()`.
 - Jetton metadata parsing now supports TEP-64 `amount_style` and `render_type` fields.
