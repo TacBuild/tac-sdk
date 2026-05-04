@@ -15,9 +15,7 @@ export interface IConfiguration {
     readonly liteSequencerEndpoints: string[];
     /** Native TON coin master address for the configured network. */
     readonly nativeTONAddress: string;
-    /**
-     * Returns the native TAC token (Jetton master) address for the configured network.
-     */
+    /** Returns the native TAC coin address on the TAC chain for the configured network. */
     nativeTACAddress(): Promise<string>;
     /** Whitelisted EVM (TAC) executor addresses considered trusted. */
     readonly getTrustedTACExecutors: string[];

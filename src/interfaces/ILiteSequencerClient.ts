@@ -2,9 +2,12 @@ import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
+    OperationTypeV2Info,
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
     TACSimulationParams,
@@ -13,12 +16,21 @@ import {
 } from '../structs/Struct';
 
 export interface ILiteSequencerClient {
+    /** Base URL of the lite sequencer endpoint used by this client. */
+    readonly endpoint: string;
+
     /** Retrieves the operation type by id. */
     getOperationType(operationId: string): Promise<OperationType>;
+    /** Retrieves the v2 operation route/finalization state by id. */
+    getOperationTypeV2(operationId: string): Promise<OperationTypeV2Info>;
     /** Resolves operation id by a transaction linker. */
     getOperationId(transactionLinker: TransactionLinker): Promise<string>;
-    /** Resolves operation id by the originating transaction hash. */
+    /** Resolves TAC operation ids with log indexes by TAC transaction hash. */
+    getOperationIdByTacTransactionHash(transactionHash: string): Promise<OperationIdWithLogIndex[]>;
+    /** Resolves operation id by the originating transaction hash (from ccl event in TON and TAC). */
     getOperationIdByTransactionHash(transactionHash: string): Promise<string>;
+    /** Resolves operation id by the originating transaction hash (from ccl event in TON). */
+    getOperationIdByTonTransactionHash(transactionHash: string): Promise<string>;
     /**
      * Resolves operation ids for multiple shard keys.
      * @param shardsKeys Shard keys to query.
@@ -36,6 +48,12 @@ export interface ILiteSequencerClient {
      * @param chunkSize Optional batching size.
      */
     getStageProfilings(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesByOperationId>;
+    /**
+     * Fetches stage profiling v2 data for a set of operation ids.
+     * @param operationIds Operation ids to get profiling for.
+     * @param chunkSize Optional batching size.
+     */
+    getStageProfilingsV2(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesV2ByOperationId>;
     /**
      * Fetches statuses for a set of operation ids.
      * @param operationIds Operation ids to get statuses for.

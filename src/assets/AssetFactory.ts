@@ -13,6 +13,7 @@ import {
 import { AssetCache } from './AssetCache';
 import { FT } from './FT';
 import { NFT } from './NFT';
+import { TAC } from './TAC';
 import { TON } from './TON';
 
 export class AssetFactory {
@@ -49,7 +50,10 @@ export class AssetFactory {
         return asset;
     }
 
-    static async createFTAsset(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<Asset> {
+    static async createFTAsset(
+        configuration: IConfiguration,
+        address: TVMAddress | EVMAddress,
+    ): Promise<FT | TAC | TON> {
         const ton = TON.create(configuration);
         if (
             address === configuration.nativeTONAddress ||
@@ -58,6 +62,10 @@ export class AssetFactory {
             address === TON_BURN_ADDRESS
         ) {
             return ton;
+        }
+
+        if (address === (await configuration.nativeTACAddress())) {
+            return TAC.create(configuration);
         }
 
         return FT.fromAddress(configuration, address);

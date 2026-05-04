@@ -474,9 +474,27 @@ import { RetryableContractOpener, ConsoleLogger } from '@tonappchain/sdk';
 
 const opener = new RetryableContractOpener(
   [
-    { opener: await orbsOpener4(network), retries: 5, retryDelay: 1000 },
-    { opener: await orbsOpener(network), retries: 5, retryDelay: 1000 },
-    { opener: tonClientOpener(client), retries: 3, retryDelay: 500 },
+    {
+      opener: tonClientOpener(client),
+      retries: 3,
+      retryDelay: 500,
+      maxRetryDelay: 5000,
+      retryBackoffMultiplier: 2,
+    },
+    {
+      opener: await orbsOpener(network),
+      retries: 5,
+      retryDelay: 1000,
+      maxRetryDelay: 30000,
+      retryBackoffMultiplier: 3,
+    },
+    {
+      opener: await orbsOpener4(network),
+      retries: 5,
+      retryDelay: 1000,
+      maxRetryDelay: 30000,
+      retryBackoffMultiplier: 3,
+    },
   ],
   new ConsoleLogger()  // optional logger
 );
@@ -487,15 +505,46 @@ const tx = await opener.getTransactionByHash(address, hash);
 
 **Features:**
 - Automatic retry on failure with configurable attempts
+- Exponential backoff per opener with an upper delay cap
 - Falls back to next opener if all retries fail
-- Configurable retry count and delay per opener
+- Configurable retry count, base delay, max delay, and backoff multiplier per opener
+- Stops fallback early for transaction validation and contract execution errors
 - Optional logger integration for debugging
 - Transparent operation - same interface as regular openers
 
 **Configuration:**
 - `opener`: The ContractOpener instance to use
 - `retries`: Number of retry attempts before falling back
-- `retryDelay`: Delay in milliseconds between retries
+- `retryDelay`: Base delay in milliseconds between retries
+- `maxRetryDelay?`: Maximum delay in milliseconds for exponential backoff
+- `retryBackoffMultiplier?`: Backoff multiplier applied after each failed retry
+
+The retry delay for attempt `n` is calculated as:
+
+```ts
+Math.min(retryDelay * retryBackoffMultiplier ** n, maxRetryDelay)
+```
+
+If `setLogger(logger)` is called later, the logger is also propagated to all wrapped openers.
+
+**Default factory:**
+```ts
+import { ConsoleLogger, createDefaultRetryableOpener, Network } from '@tonappchain/sdk';
+
+const opener = await createDefaultRetryableOpener(
+  'https://toncenter.example/',
+  Network.MAINNET,
+  5,
+  1000,
+  new ConsoleLogger(),
+);
+```
+
+`createDefaultRetryableOpener(...)` configures:
+- `TonClientOpener` against the provided TAC TON RPC endpoint as the primary opener
+- `orbsOpener` as the first fallback on non-DEV networks
+- `orbsOpener4` as the second fallback on non-DEV networks
+- exponential backoff using SDK defaults for `maxRetryDelay` and `retryBackoffMultiplier`
 
 ---
 
@@ -551,6 +600,15 @@ Gets HTTP V4 endpoint from Orbs network with retry logic. Used internally by `Or
 Common constants used by openers (from `src/sdk/Consts.ts`):
 
 ```ts
+// HTTP timeout for TON RPC based openers
+export const DEFAULT_HTTP_CLIENT_TIMEOUT_MS = 30000;
+
+// Retry defaults used by RetryableContractOpener
+export const DEFAULT_RETRY_MAX_COUNT = 5;
+export const DEFAULT_RETRY_DELAY_MS = 1000;
+export const DEFAULT_RETRY_MAX_DELAY_MS = 30000;
+export const DEFAULT_RETRY_BACKOFF_MULTIPLIER = 3;
+
 // Maximum depth for transaction tree traversal
 export const DEFAULT_FIND_TX_MAX_DEPTH = 10;
 
@@ -702,9 +760,27 @@ await opener.trackTransactionTree(address, hash);
 2. **Configure Multiple Openers as Fallbacks**
    ```ts
    const opener = new RetryableContractOpener([
-     { opener: await orbsOpener4(network), retries: 5, retryDelay: 1000 },
-     { opener: await orbsOpener(network), retries: 5, retryDelay: 1000 },
-     { opener: tonClientOpener(tonCenterClient), retries: 3, retryDelay: 500 },
+     {
+       opener: tonClientOpener(tonCenterClient),
+       retries: 3,
+       retryDelay: 500,
+       maxRetryDelay: 5000,
+       retryBackoffMultiplier: 2,
+     },
+     {
+       opener: await orbsOpener(network),
+       retries: 5,
+       retryDelay: 1000,
+       maxRetryDelay: 30000,
+       retryBackoffMultiplier: 3,
+     },
+     {
+       opener: await orbsOpener4(network),
+       retries: 5,
+       retryDelay: 1000,
+       maxRetryDelay: 30000,
+       retryBackoffMultiplier: 3,
+     },
    ]);
    ```
 

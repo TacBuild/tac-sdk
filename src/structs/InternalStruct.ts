@@ -6,12 +6,17 @@ import { ContractOpener } from '../interfaces';
 import {
     CurrencyType,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2ByOperationId,
     Network,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
+    OperationTypeV2Info,
     StatusInfosByOperationId,
     SuggestedTVMExecutorFee,
     TACSimulationResult,
+    ToncenterV3IndexedTransaction,
+    TransactionLinker,
 } from './Struct';
 
 export type ShardMessage = {
@@ -28,6 +33,16 @@ export type ShardTransaction = {
     validUntil: number;
     messages: ShardMessage[];
     network: Network;
+};
+
+export type PreparedCrossChainTransaction = {
+    transaction: ShardTransaction;
+    transactionLinker: TransactionLinker;
+};
+
+export type PreparedBridgeTokensToTON = {
+    outMessagePayload: ethers.BytesLike;
+    totalValue: bigint;
 };
 
 export enum AssetOpType {
@@ -72,11 +87,15 @@ export type StringResponse = ResponseBase<string>;
 
 export type OperationTypeResponse = ResponseBase<OperationType>;
 
+export type OperationTypeV2Response = ResponseBase<OperationTypeV2Info>;
+
 export type StatusesResponse = ResponseBase<StatusInfosByOperationId>;
 
 export type OperationIdsByShardsKeyResponse = ResponseBase<OperationIdsByShardsKey>;
 
 export type StageProfilingResponse = ResponseBase<ExecutionStagesByOperationId>;
+
+export type StageProfilingV2Response = ResponseBase<ExecutionStagesV2ByOperationId>;
 
 export type TACSimulationResponse = ResponseBase<TACSimulationResult>;
 
@@ -84,12 +103,7 @@ export type SuggestedTVMExecutorFeeResponse = ResponseBase<SuggestedTVMExecutorF
 
 export type ConvertCurrencyResponse = ResponseBase<ConvertedCurrencyRawResult>;
 
-export type OperationIdWithLogIndex = {
-    operationId: string;
-    logIndex: number;
-};
-
-export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogIndex>;
+export type OperationIdWithLogIndexResponse = ResponseBase<OperationIdWithLogIndex[]>;
 
 export interface SendResult {
     success: boolean;
@@ -98,6 +112,37 @@ export interface SendResult {
     error?: Error;
     lastMessageIndex?: number;
 }
+
+export type SendGroupTransferResult = string | { result: string };
+
+export type SendBatchTransferResult = string | void | { result: string | void };
+
+export type RetryableOperationResult<T> = {
+    success: boolean;
+    data?: T;
+    lastError?: Error;
+};
+
+export type MetadataPersistenceType =
+    | 'none'
+    | 'onchain'
+    | 'offchain_private_domain'
+    | 'offchain_ipfs'
+    | 'semichain_private_domain'
+    | 'semichain_ipfs';
+
+export type OffchainMetadataResult<TMetadata = unknown> = {
+    metadata: TMetadata | null;
+    isIpfs: boolean;
+    contentUri: string;
+};
+
+export type ReadMetadataResult<TMetadata = unknown> = {
+    persistenceType: MetadataPersistenceType;
+    metadata: TMetadata | null;
+    contentUri?: string;
+    isJettonDeployerFaultyOnChainData?: boolean;
+};
 
 export type ToncenterTransaction = {
     description: {
@@ -132,6 +177,14 @@ export type TransactionDepth = {
 
 export type AdjacentTransactionsResponse = {
     transactions: ToncenterTransaction[];
+};
+
+export type TonAdjacentTransactionsResponse = {
+    transactions: ToncenterV3IndexedTransaction[];
+};
+
+export type ToncenterV3TransactionsResponse = {
+    transactions: ToncenterV3IndexedTransaction[];
 };
 
 export type TxFinalizerConfig = {

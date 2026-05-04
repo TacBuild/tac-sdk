@@ -5,10 +5,25 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Native `TAC` asset wrapper plus TAC-aware balance/transfer checks: `Asset.getBalanceOf(user, blockchainType)` and `checkCanBeTransferredBy(user, blockchainType)`.
+- High-level TAC -> TON sending flow: `sendCrossChainTransactionToTON()` with `TACCrossChainTransactionResult`, optional `operationId` waiting, balance validation, and finalization support.
+- `AssetFeeMode` and `Asset.feeMode` for TON-side fee estimation modes: `TAC_ORIGINAL`, `LEGACY`, and `DYNAMIC`.
 - New `TransactionTreeDirection` enum for transaction tree traversal options: `FORWARD`, `BACKWARD`, `BOTH`.
+- NFT TEP-64 metadata helpers in `ContentUtils`: `readNFTMetadata`, `buildNFTOnchainMetadata`, and `buildNFTOffChainMetadata`.
+- `v2` Lite Sequencer support in `LiteSequencerClient` / `OperationTracker`: `getOperationTypeV2`, `getStageProfilingV2`, and `getStageProfilingsV2`.
+- New tracker models for `v2` responses: `OperationTypeV2`, `OperationExecutionStatus`, `OperationTypeV2Info`, `ExecutionStagesV2`, and `ExecutionStagesV2ByOperationId`.
+- `ToncenterV3Indexer` and `IToncenterV3Indexer` for indexed TON transaction lookup and traversal across a linked chain of TON transactions.
+- New `TacSdk` helpers for resolving operation ids from TON-side inputs: `getOperationIdByTonTransactionHash(...)` and `getOperationIdByTonTransactionBoc(...)`.
 
 ### Changed
+- `sendCrossChainTransaction()` and `sendCrossChainTransactionToTON()` now support full-operation finalization waiting by default: final profiling fetch plus TON transaction tree validation for `executedInTON` transactions when present.
+- `bridgeTokensToTON()` stays a low-level send-only TAC -> TON method; production-oriented gas / balance prechecks and operation finalization live in `sendCrossChainTransactionToTON()`.
+- Asset factory logic now recognizes native TAC as a dedicated asset type, while `getFT()` remains FT-only.
+- TON-origin fee estimation now detects legacy Jetton wallet code, treats standard TON NFTs as legacy, and applies the original token-contract hardcoded transfer thresholds for legacy assets; dynamic Jettons and TAC-origin assets keep the dynamic calculation path.
 - Default transaction tree traversal direction in `BaseContractOpener` changed to `TransactionTreeDirection.FORWARD`.
+- `ContentUtils` now parses TEP-64 `semi-chain` metadata, supports `chunked` content serialization, and correctly reads NFT off-chain content returned by collection `get_nft_content()`.
+- Jetton metadata parsing now supports TEP-64 `amount_style` and `render_type` fields.
+- `OperationTracker.getSimplifiedOperationStatus` now prefers `v2` route/finalization data and falls back to `v1` endpoints when `v2` is unavailable.
 
 ## [0.7.2] - 2026-02-26
 

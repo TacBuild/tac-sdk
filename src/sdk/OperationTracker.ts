@@ -7,10 +7,14 @@ import {
     ConvertedCurrencyResult,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2,
+    ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
     Network,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
+    OperationTypeV2Info,
     SimplifiedStatuses,
     StatusInfo,
     StatusInfosByOperationId,
@@ -84,6 +88,58 @@ export class OperationTracker implements IOperationTracker {
               );
     }
 
+    async getOperationIdByTacTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<OperationIdWithLogIndex[]> | null,
+    ): Promise<OperationIdWithLogIndex[]> {
+        const requestFn = async (): Promise<OperationIdWithLogIndex[]> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const ids = await client.getOperationIdByTacTransactionHash(transactionHash);
+                    return ids;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation IDs by TAC transaction hash ${formatObjectForLogging(transactionHash)}`,
+              );
+    }
+
+    async getOperationIdByTonTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string> {
+        const requestFn = async (): Promise<string> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const id = await client.getOperationIdByTonTransactionHash(transactionHash);
+                    return id;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation ID by TON transaction hash ${formatObjectForLogging(transactionHash)}`,
+              );
+    }
+
     async getOperationType(
         operationId: string,
         waitOptions?: WaitOptions<OperationType> | null,
@@ -107,6 +163,32 @@ export class OperationTracker implements IOperationTracker {
                   { logger: this.logger, ...waitOptions },
                   requestFn,
                   `OperationTracker: Getting operation type for ${formatObjectForLogging(operationId)}`,
+              );
+    }
+
+    async getOperationTypeV2(
+        operationId: string,
+        waitOptions?: WaitOptions<OperationTypeV2Info> | null,
+    ): Promise<OperationTypeV2Info> {
+        const requestFn = async (): Promise<OperationTypeV2Info> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const type = await client.getOperationTypeV2(operationId);
+                    return type;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation type v2 for ${formatObjectForLogging(operationId)}`,
               );
     }
 
@@ -220,6 +302,64 @@ export class OperationTracker implements IOperationTracker {
                   { logger: this.logger, ...waitOptions },
                   requestFn,
                   `OperationTracker: Getting stage profilings for operations: ${operationIds.join(', ')} chunkSize=${chunkSize}`,
+              );
+    }
+
+    async getStageProfilingV2(
+        operationId: string,
+        waitOptions?: WaitOptions<ExecutionStagesV2> | null,
+    ): Promise<ExecutionStagesV2> {
+        const requestFn = async (): Promise<ExecutionStagesV2> => {
+            let lastError: unknown;
+
+            for (const client of this.clients) {
+                try {
+                    const map = await client.getStageProfilingsV2([operationId]);
+                    const result = map[operationId];
+                    if (!result) {
+                        throw new Error(`No stageProfiling v2 data for operationId=${operationId}`);
+                    }
+                    return result;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting stage profiling v2 for operation ${operationId}`,
+              );
+    }
+
+    async getStageProfilingsV2(
+        operationIds: string[],
+        waitOptions?: WaitOptions<ExecutionStagesV2ByOperationId> | null,
+        chunkSize: number = 100,
+    ): Promise<ExecutionStagesV2ByOperationId> {
+        const requestFn = async (): Promise<ExecutionStagesV2ByOperationId> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const result = await client.getStageProfilingsV2(operationIds, chunkSize);
+                    return result;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting stage profilings v2 for operations: ${operationIds.join(', ')} chunkSize=${chunkSize}`,
               );
     }
 

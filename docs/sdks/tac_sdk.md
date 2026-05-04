@@ -57,6 +57,8 @@
       - [**Returns** `ExecutionFeeEstimationResult[]`](#returns-executionfeeestimationresult)
     - [`getTVMExecutorFeeInfo`](#gettvmexecutorfeeinfo)
       - [**Returns** `SuggestedTVMExecutorFee`](#returns-suggestedtvmexecutorfee)
+    - [`sendCrossChainTransactionToTON`](#sendcrosschaintransactiontoton)
+      - [**Returns** `Promise<TACCrossChainTransactionResult>`](#returns-promisetaccrosschaintransactionresult)
     - [`bridgeTokensToTON`](#bridgetokenstoton)
       - [**Parameters**](#parameters-6)
       - [**Returns** `Promise<string>`](#returns-promisestring)
@@ -69,6 +71,8 @@
       - [**Parameters**](#parameters-8)
       - [**Returns**](#returns-4)
       - [**Possible exceptions**](#possible-exceptions-1)
+    - [`getOperationIdByTonTransactionHash`](#getoperationidbytontransactionhash)
+    - [`getOperationIdByTonTransactionBoc`](#getoperationidbytontransactionboc)
     - [`getOperationTracker`](#getoperationtracker)
       - [**Purpose**](#purpose-4)
       - [**Returns**](#returns-5)
@@ -139,6 +143,8 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
   - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the transaction
   - **`ensureTxExecuted`** *(optional, default: true)*: Whether to validate TON transaction execution before waiting for operation ID
   - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation ID waiting behavior
+  - **`waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID
+  - **`finalizationWaitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for final operation type polling, profiling fetch, and optional TON transaction tree validation
 
 > **Note:** If you specify methodName and encodedParameters and don't specify assets this will mean sending any data (contract call) to evmTargetAddress.
 
@@ -282,12 +288,12 @@ for (const payload of payloads) {
 
 ```ts
 getAsset(args: AssetFromFTArg | AssetFromNFTItemArg | AssetFromNFTCollectionArg): Promise<Asset>
-getAsset(args: AssetFromFTArg): Promise<FT>
+getAsset(args: AssetFromFTArg): Promise<FT | TON | TAC>
 getAsset(args: AssetFromNFTItemArg): Promise<NFT>
 getAsset(args: AssetFromNFTCollectionArg): Promise<NFT>
 ```
 
-Creates an asset wrapper based on the provided arguments. If you pass FT params you get an FT, and for NFT item/collection you get an NFT. Addresses can be TVM or EVM; for EVM addresses the SDK resolves the paired TVM address automatically.
+Creates an asset wrapper based on the provided arguments. FT params resolve to `FT`, `TON`, or `TAC` for native assets, and NFT params resolve to `NFT`. Addresses can be TVM or EVM; for EVM addresses the SDK resolves the paired TVM address automatically.
 
 ### `getFT`
 
@@ -295,7 +301,8 @@ Creates an asset wrapper based on the provided arguments. If you pass FT params 
 getFT(address: TVMAddress | EVMAddress): Promise<FT>
 ```
 
-Returns a fungible token (Jetton) wrapper by its TVM or EVM address.
+Returns an `FT` wrapper by its TVM or EVM address.
+If you need dedicated native-asset wrappers, use `TON.create(config)` or `await TAC.create(config)` directly.
 
 ### `getNFT`
 
@@ -518,6 +525,40 @@ Note: The TON executor fee is determined as max(rollback_message, normal_executi
 
 ---
 
+### `sendCrossChainTransactionToTON`
+
+```ts
+sendCrossChainTransactionToTON(
+  signer: Wallet,
+  tonTarget: string,
+  assets?: AssetLike[],
+  options?: CrossChainTransactionToTONOptions
+): Promise<TACCrossChainTransactionResult>
+```
+
+Sends a TAC -> TON transaction and, unlike `bridgeTokensToTON`, can additionally resolve `operationId` and wait for finalization. Native TAC must be passed inside `assets` as a `TAC` asset; there is no separate `value` argument.
+
+The sender must still keep additional TAC balance for TAC gas and bridge fees on top of the bridged native TAC amount. Before sending, the SDK requires TAC EIP-1559 fee data from the provider, can validate balances or ownership of non-native TAC assets, uses provider gas estimates as-is, validates those estimates against the latest TAC block gas limit, first estimates approval gas and checks TAC balance for approvals, submits approvals, and only then estimates the bridge message and checks the remaining TAC balance before sending it.
+
+#### **Parameters**
+
+- **`signer`**: An `ethers.Wallet` instance for signing the transaction on the TAC chain.
+- **`tonTarget`**: The target address on the TON network where the assets should be received.
+- **`assets`** *(optional)*: An array of `AssetLike` objects specifying the TAC-side assets to bridge. Native `TAC` asset amount is converted into the transaction `value` automatically.
+- **`options`** *(optional)*: [`CrossChainTransactionToTONOptions`](./../models/structs.md#crosschaintransactiontotonoptions) struct. This includes:
+  - **`tvmExecutorFee`** *(optional)*: Explicit TON-side executor fee. If omitted, `bridgeTokensToTON()` calculates a suggested fee during sending.
+  - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
+  - **`validateAssetsBalance`** *(optional, default: true)*: Whether to validate balances or ownership of non-native TAC assets before approvals and sending.
+  - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the TAC -> TON transaction.
+  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) used for operation ID resolution by transaction hash.
+  - **`waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID.
+  - **`finalizationWaitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for profiling fetch and TON transaction tree validation during finalization.
+
+#### **Returns** `Promise<TACCrossChainTransactionResult>`
+  - Result object with `txHash` and optional `operationId`.
+
+---
+
 ### `bridgeTokensToTON`
 
 ```ts
@@ -531,7 +572,7 @@ bridgeTokensToTON(
 ): Promise<string>
 ```
 
-Initiates a bridge operation from TAC back to TON. This function handles the necessary approvals and sends a message to the CrossChainLayer contract on TAC to transfer native TAC coin and/or specified assets (Tokens/NFTs) to a target address on TON.
+Initiates a send-only bridge operation from TAC back to TON. This function handles approvals, fee calculation, and message submission to the TAC `CrossChainLayer` contract. If you also need `operationId` resolution, provider-backed TAC fee and gas-limit checks, or TAC balance prechecks, use `sendCrossChainTransactionToTON()`.
 
 **Note:** This function requires an `ethers.Wallet` instance connected to the TAC network to sign the transaction.
 
@@ -541,7 +582,7 @@ Initiates a bridge operation from TAC back to TON. This function handles the nec
 - **`value`**: The amount of native TAC coin (in wei) to bridge.
 - **`tonTarget`**: The target address on the TON network where the assets should be received.
 - **`assets`** *(optional)*: An array of `AssetLike` objects specifying the tokens or NFTs to bridge. Can be [`Asset`](./assets.md#asset-interface) instances or other asset-like objects.
-- **`tvmExecutorFee`** *(optional)*: The fee (in TON) to pay the TVM executor for processing the message on the TON side. If not provided, a suggested fee is calculated.
+- **`tvmExecutorFee`** *(optional)*: Explicit TON-side executor fee. If omitted, a suggested fee is calculated.
 - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
 
 #### **Returns** `Promise<string>`
@@ -583,6 +624,79 @@ Retrieves NFT data from the TVM chain for a given NFT item address.
 
 #### **Possible exceptions**
 - **`AddressError`**: If the provided address is invalid.
+
+---
+
+### `getOperationIdByTonTransactionHash`
+
+```ts
+getOperationIdByTonTransactionHash(
+  transactionHash: string,
+  waitOptions?: WaitOptions<string> | null,
+): Promise<string>
+```
+
+#### **Purpose**
+Resolves an `operationId` by any TON transaction hash from the same linked chain of TON transactions.
+
+The SDK:
+
+1. uses `ToncenterV3Indexer` to resolve indexed TON transaction context by hash
+2. uses `ToncenterV3Indexer` again to traverse adjacent indexed TON transactions in both directions through the same linked chain of TON transactions
+3. finds the `crossChainLayer` transaction that matches the same TVM event rules as the sequencer collector
+4. sends that exact TON transaction hash to the sequencer
+
+#### **Parameters**
+- **`transactionHash`**: Any TON transaction hash from the relevant linked chain of TON transactions.
+- **`waitOptions`** *(optional)*: Wait configuration for the final sequencer request. Pass `null` for a single attempt without retries.
+
+#### **Returns**
+`Promise<string>`
+- Returns the resolved operation id, or an empty string if the indexed transaction or `crossChainLayer` transaction was not found.
+
+#### **Example**
+
+```ts
+const operationId = await sdk.getOperationIdByTonTransactionHash(
+  '0xa41ac40e63cb9aa683fe4702d2fc358afa896877cb21582cc841db7a6d0556b2',
+  null,
+);
+```
+
+---
+
+### `getOperationIdByTonTransactionBoc`
+
+```ts
+getOperationIdByTonTransactionBoc(
+  boc: string,
+  waitOptions?: WaitOptions<string> | null,
+): Promise<string>
+```
+
+#### **Purpose**
+Resolves an `operationId` by the BOC of an external TON message that was sent to the blockchain.
+
+The SDK:
+
+1. parses the external message from the provided BOC
+2. derives the normalized external-in message hash from that BOC
+3. finds the TON transaction that processed that external message through the configured `contractOpener`
+4. reuses [`getOperationIdByTonTransactionHash(...)`](#getoperationidbytontransactionhash)
+
+#### **Parameters**
+- **`boc`**: BOC of the external TON message that was sent to the blockchain.
+- **`waitOptions`** *(optional)*: Wait configuration for the final sequencer request. Pass `null` for a single attempt without retries.
+
+#### **Returns**
+`Promise<string>`
+- Returns the resolved operation id, or an empty string if the sequencer-collected `crossChainLayer` transaction was not found.
+
+#### **Example**
+
+```ts
+const operationId = await sdk.getOperationIdByTonTransactionBoc(externalMessageBoc, null);
+```
 
 ---
 
@@ -660,4 +774,4 @@ The gas prices are fetched from the TAC blockchain explorer API and can be used 
 closeConnections(): unknown
 ```
 
-Closes underlying TON and TAC connections.
+Closes underlying TON liteclient connections. Use only with LiteClientOpener.

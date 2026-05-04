@@ -64,13 +64,11 @@ describe('BaseContractOpener root retry strategy', () => {
             address: Address,
             hash: string,
             hashType: 'unknown' | 'in' | 'out' | undefined,
-            limit: number,
-            maxScannedTransactions: number,
-            retryOnNotFound: boolean,
+            opts: GetTransactionsOptions,
             depth: number,
         ) => Promise<Transaction | null>;
 
-        return fn.call(opener, address, hash, 'unknown', 10, 100, true, 0);
+        return fn.call(opener, address, hash, 'unknown', { limit: 10, maxScannedTransactions: 100 }, 0);
     };
 
     it('captures baseline then searches immediately on first attempt', async () => {
@@ -83,7 +81,7 @@ describe('BaseContractOpener root retry strategy', () => {
 
         expect(result).toBe(tx);
         expect(searchMock).toHaveBeenCalledTimes(1);
-        expect(opener.addressInfoImpl).toHaveBeenCalledTimes(1);
+        expect(opener.addressInfoImpl).not.toHaveBeenCalled();
     });
 
     it('does not run extra searches when lt does not change', async () => {
@@ -97,8 +95,8 @@ describe('BaseContractOpener root retry strategy', () => {
         const result = await invokeFindRoot(opener, 'hash');
 
         expect(result).toBeNull();
-        expect(searchMock).toHaveBeenCalledTimes(1);
-        expect(opener.addressInfoImpl).toHaveBeenCalledTimes(60);
+        expect(searchMock).toHaveBeenCalledTimes(11);
+        expect(opener.addressInfoImpl).not.toHaveBeenCalled();
     });
 
     it('resumes searching when lt changes and finds transaction', async () => {
@@ -106,20 +104,6 @@ describe('BaseContractOpener root retry strategy', () => {
         const tx = {} as Transaction;
         const searchMock = jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(tx);
         setFindByHashType(opener, searchMock);
-
-        opener.addressInfoImpl
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '100', hash: Buffer.alloc(32, 1).toString('base64') },
-            })
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '100', hash: Buffer.alloc(32, 1).toString('base64') },
-            })
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '100', hash: Buffer.alloc(32, 1).toString('base64') },
-            })
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '101', hash: Buffer.alloc(32, 2).toString('base64') },
-            });
 
         const result = await invokeFindRoot(opener, 'hash');
 
@@ -132,14 +116,6 @@ describe('BaseContractOpener root retry strategy', () => {
         const tx = {} as Transaction;
         const searchMock = jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(tx);
         setFindByHashType(opener, searchMock);
-
-        opener.addressInfoImpl
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '100', hash: Buffer.alloc(32, 1).toString('base64') },
-            })
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '101', hash: Buffer.alloc(32, 2).toString('base64') },
-            });
 
         const result = await invokeFindRoot(opener, 'hash');
 

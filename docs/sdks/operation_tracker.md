@@ -17,7 +17,9 @@
   - [Waiting for Results](#waiting-for-results)
   - [Tracking by Transaction Link](#tracking-by-transaction-link)
     - [`getOperationId`](#getoperationid)
+    - [`getOperationIdByTacTransactionHash`](#getoperationidbytactransactionhash)
     - [`getOperationIdByTransactionHash`](#getoperationidbytransactionhash)
+    - [`getOperationIdByTonTransactionHash`](#getoperationidbytontransactionhash)
     - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
   - [Detailed Operation Info](#detailed-operation-info)
     - [`getOperationStatus`](#getoperationstatus)
@@ -25,8 +27,11 @@
   - [Execution Profiling](#execution-profiling)
     - [`getStageProfiling`](#getstageprofiling)
     - [`getStageProfilings`](#getstageprofilings)
+    - [`getStageProfilingV2`](#getstageprofilingv2)
+    - [`getStageProfilingsV2`](#getstageprofilingsv2)
   - [Other Metadata](#other-metadata)
     - [`getOperationType`](#getoperationtype)
+    - [`getOperationTypeV2`](#getoperationtypev2)
     - [`getOperationIdsByShardsKeys`](#getoperationidsbyshardskeys)
     - [`convertCurrency`](#convertcurrency)
     - [`simulateTACMessage`](#simulatetacmessage)
@@ -107,10 +112,14 @@ Factory interface for creating sequencer clients. The default implementation (`D
 #### `ILiteSequencerClient`
 Interface that defines the operations supported by sequencer clients:
 - `getOperationType(operationId: string): Promise<OperationType>`
+- `getOperationTypeV2(operationId: string): Promise<OperationTypeV2Info>`
 - `getOperationId(transactionLinker: TransactionLinker): Promise<string>`
+- `getOperationIdByTacTransactionHash(transactionHash: string): Promise<OperationIdWithLogIndex[]>`
 - `getOperationIdByTransactionHash(transactionHash: string): Promise<string>`
+- `getOperationIdByTonTransactionHash(transactionHash: string): Promise<string>`
 - `getOperationIdsByShardsKeys(shardsKeys: string[], caller: string, chunkSize?: number): Promise<OperationIdsByShardsKey>`
 - `getStageProfilings(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesByOperationId>`
+- `getStageProfilingsV2(operationIds: string[], chunkSize?: number): Promise<ExecutionStagesV2ByOperationId>`
 - `getOperationStatuses(operationIds: string[], chunkSize?: number): Promise<StatusInfosByOperationId>`
 
 ### Failover Strategy
@@ -243,6 +252,27 @@ Fetches the cross-chain `operationId` based on a transaction linker. Tries each 
 
 ---
 
+### `getOperationIdByTacTransactionHash`
+
+```ts
+getOperationIdByTacTransactionHash(
+    transactionHash: string,
+    waitOptions?: WaitOptions<OperationIdWithLogIndex[]>
+): Promise<OperationIdWithLogIndex[]>
+```
+
+Fetches TAC-side cross-chain operation IDs by a TAC transaction hash using the explicit TAC sequencer route.
+
+**Parameters:**
+- `transactionHash`: TAC transaction hash
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`OperationIdWithLogIndex[]`](./../models/structs.md#operationidwithlogindex-type)
+
+**Note:** Returns an empty array if the operation IDs have not been assigned yet. Use `waitOptions` with a custom `successCheck`, for example `(items) => items.length > 0`, if you want to wait for at least one result.
+
+---
+
 ### `getOperationIdByTransactionHash`
 
 ```ts
@@ -264,6 +294,27 @@ Fetches the cross-chain `operationId` by a transaction hash. The hash can be eit
 
 ---
 
+### `getOperationIdByTonTransactionHash`
+
+```ts
+getOperationIdByTonTransactionHash(
+    transactionHash: string,
+    waitOptions?: WaitOptions<string>
+): Promise<string>
+```
+
+Fetches the cross-chain `operationId` by an exact TON transaction hash that already belongs to the `crossChainLayer` route.
+
+**Parameters:**
+- `transactionHash`: exact TON transaction hash to send to the sequencer TON route
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** Operation ID string (empty string if not found)
+
+**Note:** This method does not resolve arbitrary TON hashes from a transaction chain. For that flow, use [`TacSdk.getOperationIdByTonTransactionHash(...)`](./tac_sdk.md#getoperationidbytontransactionhash).
+
+---
+
 ### `getSimplifiedOperationStatus`
 
 ```ts
@@ -279,15 +330,15 @@ Gets a simplified status for an operation based on its transaction linker. This 
 
 **Status Logic:**
 - `OPERATION_ID_NOT_FOUND`: Operation ID not yet assigned
-- `PENDING`: Operation type is PENDING or UNKNOWN
-- `FAILED`: Operation type is ROLLBACK
-- `SUCCESSFUL`: Operation completed successfully
+- `PENDING`: Operation is not yet finalized
+- `FAILED`: Operation has reached a terminal failed state or rollback path
+- `SUCCESSFUL`: Operation has reached a terminal successful state
 
 **Internal Process:**
 1. Fetches operation ID using the transaction linker
 2. If no operation ID, returns `OPERATION_ID_NOT_FOUND`
-3. Fetches operation type
-4. Maps operation type to simplified status
+3. Resolves tracker metadata for the operation
+4. Maps tracker data to simplified status
 
 ---
 
@@ -378,6 +429,48 @@ Retrieves execution stage profiling information for multiple operations. Process
 
 ---
 
+### `getStageProfilingV2`
+
+```ts
+getStageProfilingV2(
+    operationId: string,
+    waitOptions?: WaitOptions<ExecutionStagesV2>
+): Promise<ExecutionStagesV2>
+```
+
+Retrieves detailed execution stage information for a single operation.
+
+**Parameters:**
+- `operationId`: The operation ID to query
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`ExecutionStagesV2`](./../models/structs.md#executionstagesv2)
+
+**Note:** This response includes `finalized`, `status`, and `rollback` on the top level.
+
+---
+
+### `getStageProfilingsV2`
+
+```ts
+getStageProfilingsV2(
+    operationIds: string[],
+    waitOptions?: WaitOptions<ExecutionStagesV2ByOperationId>,
+    chunkSize?: number
+): Promise<ExecutionStagesV2ByOperationId>
+```
+
+Retrieves execution stage profiling information for multiple operations. Processes requests in chunks for better performance.
+
+**Parameters:**
+- `operationIds`: Array of operation IDs to query
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `chunkSize` *(optional)*: Number of items to process per request (default: 100)
+
+**Returns:** [`ExecutionStagesV2ByOperationId`](./../models/structs.md#executionstagesv2byoperationid)
+
+---
+
 ## Other Metadata
 
 ### `getOperationType`
@@ -396,6 +489,27 @@ Retrieves the operation type classification for a given operation ID.
 - `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`OperationType`](./../models/enums.md#operationtype)
+
+---
+
+### `getOperationTypeV2`
+
+```ts
+getOperationTypeV2(
+    operationId: string,
+    waitOptions?: WaitOptions<OperationTypeV2Info>
+): Promise<OperationTypeV2Info>
+```
+
+Retrieves the operation type and finalization state for a given operation ID.
+
+**Parameters:**
+- `operationId`: The operation ID to query
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+**Returns:** [`OperationTypeV2Info`](./../models/structs.md#operationtypev2info)
+
+**Note:** Use `finalized` to determine whether the operation is terminal.
 
 ---
 

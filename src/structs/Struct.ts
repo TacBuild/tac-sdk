@@ -4,7 +4,7 @@ import { AbstractProvider } from 'ethers';
 
 import { JettonMinter, JettonMinterData } from '../../artifacts/tonTypes';
 import type { FT, NFT } from '../assets';
-import type { Asset, ContractOpener, ILogger } from '../interfaces';
+import type { Asset, ContractOpener, ILogger, IToncenterV3Indexer } from '../interfaces';
 import { DEFAULT_WAIT_DELAY_MS, DEFAULT_WAIT_MAX_ATTEMPTS, DEFAULT_WAIT_TIMEOUT_MS } from '../sdk/Consts';
 import { SendResult } from './InternalStruct';
 
@@ -46,6 +46,13 @@ export enum OperationType {
     UNKNOWN = 'UNKNOWN',
 }
 
+export type OperationTypeV2 = OperationType.TON_TAC_TON | OperationType.TON_TAC | OperationType.TAC_TON;
+
+export enum OperationExecutionStatus {
+    SUCCESS = 'success',
+    FAILED = 'failed',
+}
+
 export type TACParams = {
     /**
      * Provider for TAC side. Use your own provider for tests or to increase ratelimit
@@ -68,6 +75,12 @@ export type TONParams = {
      * Provider for TON side. Use your own provider for tests or to increase ratelimit
      */
     contractOpener?: ContractOpener;
+
+    /**
+     * Indexed Toncenter v3 client used to resolve TON transaction context by hash.
+     * Use your own implementation for tests or custom indexed backends.
+     */
+    tonIndexer?: IToncenterV3Indexer;
 
     /**
      * Address of TON settings contract. Use only for tests.
@@ -148,6 +161,17 @@ export type TransactionLinkerWithOperationId = TransactionLinker & {
     operationId?: string;
 };
 
+export type TACCrossChainTransactionResult = {
+    /**
+     * Hash of the TAC transaction
+     */
+    txHash: string;
+    /**
+     * Crosschain operation id
+     */
+    operationId?: string;
+};
+
 export type TONAsset = {
     amount: string;
     tokenAddress: string;
@@ -201,6 +225,57 @@ export type StageData = {
 
 export type StatusInfo = StageData & {
     stage: StageName;
+};
+
+/**
+ * Indexed transaction returned by Toncenter v3 `/transactions` and `/adjacentTransactions` endpoints.
+ */
+export type ToncenterV3IndexedTransaction = {
+    /** Account address that owns the transaction. */
+    account: string;
+    /** Indexed TON transaction hash. */
+    hash: string;
+    /** Optional trace identifier returned by Toncenter v3. */
+    traceId?: string;
+    /** Incoming message of the indexed transaction, when present in the response. */
+    inMsg?: {
+        /** Message source address. */
+        source?: string | null;
+        /** Message destination address. */
+        destination?: string | null;
+        /** Opcode reported by Toncenter v3 for the incoming message. */
+        opcode?: string | null;
+        /** Raw message content returned by Toncenter v3. */
+        messageContent?: {
+            /** BOC-encoded message body in base64 form. */
+            body?: string | null;
+        } | null;
+    } | null;
+    /** Outgoing messages of the indexed transaction. */
+    outMsgs: Array<{
+        /** Message destination address. `null` means external outbound log message. */
+        destination?: string | null;
+        /** Raw message content returned by Toncenter v3. */
+        messageContent?: {
+            /** BOC-encoded message body in base64 form. */
+            body?: string | null;
+        } | null;
+    }>;
+};
+
+/**
+ * Traversal settings for indexed search through a linked TON transaction chain in Toncenter v3.
+ */
+export type ToncenterV3TraversalParams = {
+    /**
+     * Maximum traversal depth from the starting transaction in the linked TON transaction chain.
+     */
+    maxDepth?: number;
+
+    /**
+     * Maximum number of unique indexed transactions to inspect.
+     */
+    maxScannedTransactions?: number;
 };
 
 export type ProfilingStageData = {
@@ -273,12 +348,31 @@ export type ExecutionStages = {
     metaInfo: MetaInfo;
 } & Record<StageName, ProfilingStageData>;
 
+export type OperationTypeV2Info = {
+    operationType: OperationTypeV2;
+    finalized: boolean;
+};
+
+export type ExecutionStagesV2 = {
+    operationType: OperationTypeV2;
+    metaInfo: MetaInfo;
+    finalized: boolean;
+    status: OperationExecutionStatus;
+    rollback: boolean;
+} & Record<StageName, ProfilingStageData>;
+
 export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
+export type ExecutionStagesV2ByOperationId = Record<string, ExecutionStagesV2>;
 
 export type StatusInfosByOperationId = Record<string, StatusInfo>;
 
 export type OperationIds = {
     operationIds: string[];
+};
+
+export type OperationIdWithLogIndex = {
+    operationId: string;
+    logIndex: number;
 };
 
 export type OperationIdsByShardsKey = Record<string, OperationIds>;
@@ -350,39 +444,158 @@ export type evmDataBuilder = (
 ) => Cell;
 
 export type CrossChainTransactionOptions = {
+    /**
+     * Allows sending to continue even when TAC simulation returns an unsuccessful result.
+     * @default false
+     */
     allowSimulationError?: boolean;
     /**
-     * If true, ensures TON transaction execution is validated before waiting for operation id.
+     * If true, validates the initial TON transaction tree right after sending the external message.
+     * This checks that the outbound TON transaction was actually executed before the SDK starts
+     * waiting for cross-chain tracking data.
      * @default true
      */
     ensureTxExecuted?: boolean;
     /**
      * If true, validates explicitly provided fee params against suggested values.
+     * Disable only when you intentionally want to send with custom fees.
      * @default true
      */
     shouldValidateFees?: boolean;
+    /**
+     * Forces the SDK to treat the operation as round-trip TON -> TAC -> TON.
+     * When omitted, the SDK derives this automatically from simulation results and attached assets.
+     */
     isRoundTrip?: boolean;
+    /**
+     * Explicit override for the protocol fee included in the transaction.
+     * Normally this is taken from simulation or on-chain configuration.
+     */
     protocolFee?: bigint;
+    /**
+     * Optional whitelist of TAC-side executor addresses allowed to execute the TAC part of the operation.
+     * When omitted, trusted executors from SDK configuration are used.
+     */
     evmValidExecutors?: string[];
+    /**
+     * Explicit fee paid to the TAC-side executor.
+     * Normally this is filled from simulation unless you provide custom manual fee params.
+     */
     evmExecutorFee?: bigint;
+    /**
+     * Optional whitelist of TON-side executor addresses allowed to execute the TON part of the operation.
+     * When omitted, trusted executors from SDK configuration are used.
+     */
     tvmValidExecutors?: string[];
+    /**
+     * Explicit fee paid to the TON-side executor for round-trip operations.
+     * Required in manual mode when `withoutSimulation` is true and `isRoundTrip` is true.
+     */
     tvmExecutorFee?: bigint;
+    /**
+     * Controls whether rollback fee should be included in TAC simulation.
+     * Keep enabled unless you intentionally want estimation without rollback costs.
+     * @default true
+     */
     calculateRollbackFee?: boolean;
+    /**
+     * Skips simulation entirely and uses only manually provided fee params.
+     * In this mode you must provide `protocolFee`, `evmExecutorFee`, and `evmProxyMsg.gasLimit`.
+     * If `isRoundTrip` is true, `tvmExecutorFee` is also required.
+     * @default false
+     */
     withoutSimulation?: boolean;
+    /**
+     * If true, validates that the sender currently owns or holds enough assets before building
+     * the cross-chain transaction payloads.
+     * Disable only if you already validated balances externally or need to skip this network call.
+     * @default true
+     */
     validateAssetsBalance?: boolean;
+    /**
+     * If true, waits until the operation ID becomes available after sending the TON transaction.
+     * Disable when you only need the raw send result and do not want any tracker polling.
+     * @default true
+     */
     waitOperationId?: boolean;
+    /**
+     * Retry policy used while resolving the operation ID.
+     * Use this to control timeout, attempts, delay, logger, callbacks, and success criteria.
+     */
     waitOptions?: WaitOptions<string>;
+    /**
+     * If true, waits for full cross-chain finalization after the operation ID is known:
+     * the SDK waits for a final operation type, fetches stage profiling, and validates
+     * TON transaction trees for `executedInTON` transactions when they exist.
+     * @default true
+     */
+    waitFinalization?: boolean;
+    /**
+     * Wait options used to finalize the cross-chain operation after operationId resolution.
+     * Use this to configure retries, delay, logger, successCheck, and onSuccess callback
+     * for stage profiling retrieval and post-processing.
+     */
+    finalizationWaitOptions?: WaitOptions<ExecutionStages>;
+    /**
+     * Custom builder for the EVM payload cell embedded into the TON message.
+     * Override only for advanced integrations that need non-standard TAC header encoding.
+     * By default the SDK uses `buildEvmDataCell`.
+     */
     evmDataBuilder?: evmDataBuilder;
 };
 
 export type BatchCrossChainTransactionOptions = Omit<
     CrossChainTransactionOptions,
-    'waitOperationId' | 'waitOptions' | 'ensureTxExecuted'
+    'waitOperationId' | 'waitOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'
 >;
 
 export type CrossChainTransactionsOptions = {
     waitOperationIds?: boolean;
     waitOptions?: WaitOptions<OperationIdsByShardsKey>;
+};
+
+export type CrossChainTransactionToTONOptions = {
+    /**
+     * Optional explicit TON-side executor fee.
+     * When omitted, the SDK calls OperationTracker.getTVMExecutorFee().
+     */
+    tvmExecutorFee?: bigint;
+    /**
+     * Optional whitelist of allowed TVM executors.
+     * Used both for fee estimation and for the out message itself.
+     */
+    tvmValidExecutors?: string[];
+    /**
+     * If true, validates balances / ownership of non-native TAC assets before approvals and sending.
+     * Native TAC amount is still covered separately by the overall TAC balance sufficiency check.
+     * Disable only if you already validated balances externally or need to skip these RPC calls.
+     * @default true
+     */
+    validateAssetsBalance?: boolean;
+    /**
+     * If true, waits until the operation ID becomes available after sending the TON transaction.
+     * Disable when you only need the raw send result and do not want any tracker polling.
+     * @default true
+     */
+    waitOperationId?: boolean;
+    /**
+     * Retry policy used while resolving the operation ID.
+     * Use this to control timeout, attempts, delay, logger, callbacks, and success criteria.
+     */
+    waitOptions?: WaitOptions<string>;
+    /**
+     * Wait options used to finalize the cross-chain operation after operationId resolution.
+     * Use this to configure retries, delay, logger, successCheck, and onSuccess callback
+     * for stage profiling retrieval and post-processing.
+     */
+    waitFinalization?: boolean;
+    /**
+     * Wait options used to finalize the TAC->TON operation after operationId resolution.
+     * The SDK waits until the operation reaches a final operation type, fetches stage profiling,
+     * and, if profiling contains EXECUTED_IN_TON transactions, validates their TON transaction tree.
+     * This option is used only by sendCrossChainTransactionToTON and is ignored by bridgeTokensToTON.
+     */
+    finalizationWaitOptions?: WaitOptions<ExecutionStages>;
 };
 
 export type ExecutionFeeEstimationResult = {
@@ -466,6 +679,12 @@ export const defaultWaitOptions: WaitOptions = {
 export enum Origin {
     TON = 'TON',
     TAC = 'TAC',
+}
+
+export enum AssetFeeMode {
+    TAC_ORIGINAL = 'TAC_ORIGINAL',
+    LEGACY = 'LEGACY',
+    DYNAMIC = 'DYNAMIC',
 }
 
 export type TVMAddress = string;

@@ -8,6 +8,7 @@
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Constructor](#constructor)
+  - [`sendCrossChainTransactionToTON`](#sendcrosschaintransactiontoton)
   - [`bridgeTokensToTON`](#bridgetokenstoton)
   - [Integration with TacSdk](#integration-with-tacsdk)
   - [Example Usage](#example-usage)
@@ -49,6 +50,43 @@ Creates a TACTransactionManager instance with the required dependencies.
 
 ---
 
+## `sendCrossChainTransactionToTON`
+
+```typescript
+async sendCrossChainTransactionToTON(
+  signer: Wallet,
+  tonTarget: string,
+  assets?: Asset[],
+  options?: CrossChainTransactionToTONOptions
+): Promise<TACCrossChainTransactionResult>
+```
+
+### **Purpose**
+
+Sends a TAC -> TON transaction and optionally waits for tracker data. Native TAC should be passed as a `TAC` asset inside `assets`; the manager extracts it into the transaction `value` automatically.
+
+The signer must still hold extra TAC balance for TAC gas and bridge fees on top of the bridged native TAC amount. Before sending, the manager requires TAC EIP-1559 fee data from the provider, can validate balances or ownership of non-native TAC assets, uses provider gas estimates as-is, validates those estimates against the latest TAC block gas limit, first estimates approval gas and checks TAC balance for approvals, submits approvals, and only then estimates the bridge message and checks the remaining TAC balance before sending it.
+
+### **Parameters**
+
+- **`signer`**: Ethers Wallet used to sign the EVM transaction
+- **`tonTarget`**: Recipient TVM address on TON blockchain
+- **`assets`** *(optional)*: List of TAC assets to include in the bridge. Native TAC can be included here as a `TAC` asset.
+- **`options`** *(optional)*: `CrossChainTransactionToTONOptions` object with:
+  - **`tvmExecutorFee`** *(optional)*: Explicit TON-side executor fee
+  - **`tvmValidExecutors`** *(optional)*: Whitelist of allowed TVM executors
+  - **`validateAssetsBalance`** *(optional, default: true)*: Whether to validate balances or ownership of non-native TAC assets before approvals and sending
+  - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the TAC -> TON transaction
+  - **`waitOptions`** *(optional)*: Retry configuration for operation ID resolution by transaction hash
+  - **`waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID
+  - **`finalizationWaitOptions`** *(optional)*: Waiting configuration for profiling fetch and TON transaction tree validation
+
+### **Returns** `Promise<TACCrossChainTransactionResult>`
+
+Returns an object containing the TAC `txHash` and optional `operationId`.
+
+---
+
 ## `bridgeTokensToTON`
 
 ```typescript
@@ -64,7 +102,7 @@ async bridgeTokensToTON(
 
 ### **Purpose**
 
-Bridges native EVM value and optional assets to TON chain via executor. This method handles token approvals, fee calculations, and the complete bridge transaction process.
+Bridges native EVM value and optional assets to TON chain via executor. This method handles token approvals, fee calculations, and message submission only. If you also need `operationId` resolution, provider-backed TAC fee and gas-limit checks, or TAC balance prechecks, use `sendCrossChainTransactionToTON()`.
 
 ### **Parameters**
 
@@ -108,7 +146,7 @@ const txHash = await tacManager.bridgeTokensToTON(
 3. Calculates executor fee if not provided
 4. Approves all assets for the cross-chain layer contract
 5. Constructs and sends the bridge message
-6. Returns transaction hash for tracking
+6. Returns transaction hash for tracking or later manual querying
 
 ---
 
@@ -139,6 +177,13 @@ const txHash = await sdk.bridgeTokensToTON(
   "EQBx...", // TON recipient
   [tacAsset1, tacAsset2],
   BigInt("50000000") // executor fee
+);
+
+const tracked = await sdk.sendCrossChainTransactionToTON(
+  ethersWallet,
+  "EQBx...",
+  [nativeTacAsset, tacAsset1, tacAsset2],
+  { waitFinalization: true }
 );
 ```
 

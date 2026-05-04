@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
-import { FetchError, ILiteSequencerClient, ILiteSequencerClientFactory, OperationTracker } from '../../src';
+import {
+    FetchError,
+    ILiteSequencerClient,
+    ILiteSequencerClientFactory,
+    OperationTracker,
+} from '../../src';
 import {
     AssetType,
     BlockchainType,
@@ -9,10 +14,15 @@ import {
     CurrencyType,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2,
+    ExecutionStagesV2ByOperationId,
     ILogger,
     Network,
+    OperationExecutionStatus,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
+    OperationTypeV2Info,
     SimplifiedStatuses,
     StageName,
     StatusInfo,
@@ -32,11 +42,17 @@ class MockLogger implements ILogger {
 }
 
 class MockLiteSequencerClient implements ILiteSequencerClient {
+    constructor(readonly endpoint: string) {}
+
     getOperationType = jest.fn<ILiteSequencerClient['getOperationType']>();
+    getOperationTypeV2 = jest.fn<ILiteSequencerClient['getOperationTypeV2']>();
     getOperationId = jest.fn<ILiteSequencerClient['getOperationId']>();
+    getOperationIdByTacTransactionHash = jest.fn<ILiteSequencerClient['getOperationIdByTacTransactionHash']>();
     getOperationIdByTransactionHash = jest.fn<ILiteSequencerClient['getOperationIdByTransactionHash']>();
+    getOperationIdByTonTransactionHash = jest.fn<ILiteSequencerClient['getOperationIdByTonTransactionHash']>();
     getOperationIdsByShardsKeys = jest.fn<ILiteSequencerClient['getOperationIdsByShardsKeys']>();
     getStageProfilings = jest.fn<ILiteSequencerClient['getStageProfilings']>();
+    getStageProfilingsV2 = jest.fn<ILiteSequencerClient['getStageProfilingsV2']>();
     getOperationStatuses = jest.fn<ILiteSequencerClient['getOperationStatuses']>();
     convertCurrency = jest.fn<ILiteSequencerClient['convertCurrency']>();
     simulateTACMessage = jest.fn<ILiteSequencerClient['simulateTACMessage']>();
@@ -47,7 +63,7 @@ class MockLiteSequencerClientFactory implements ILiteSequencerClientFactory {
     private clients: MockLiteSequencerClient[] = [];
 
     createClients(endpoints: string[]): ILiteSequencerClient[] {
-        this.clients = endpoints.map(() => new MockLiteSequencerClient());
+        this.clients = endpoints.map((endpoint) => new MockLiteSequencerClient(endpoint));
         return this.clients;
     }
 
@@ -72,7 +88,6 @@ describe('OperationTracker', () => {
     beforeEach(() => {
         mockLogger = new MockLogger();
         mockClientFactory = new MockLiteSequencerClientFactory();
-
         operationTracker = new OperationTracker(
             Network.TESTNET,
             ['http://localhost:3000', 'http://localhost:3001'],
@@ -82,6 +97,12 @@ describe('OperationTracker', () => {
 
         mockClients = mockClientFactory.getClients();
     });
+
+    const immediateWaitOptions = {
+        timeout: 1000,
+        maxAttempts: 1,
+        delay: 1,
+    };
 
     describe('getOperationType', () => {
         it('should successfully get operation type', async () => {
@@ -94,8 +115,9 @@ describe('OperationTracker', () => {
 
             expect(result).toBe(expectedType);
             expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
-            expect(mockLogger.debug).toHaveBeenCalledWith(`Getting operation type for "${operationId}"`);
-            expect(mockLogger.debug).toHaveBeenCalledWith('Operation retrieved successfully');
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation type for "${operationId}"] Success (attempt 1/30)`,
+            );
         });
 
         it('should retry on second client if first fails', async () => {
@@ -110,7 +132,7 @@ describe('OperationTracker', () => {
             expect(result).toBe(expectedType);
             expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
             expect(mockClients[1].getOperationType).toHaveBeenCalledWith(operationId);
-            expect(mockLogger.warn).toHaveBeenCalledWith('Failed to get operationType using one of the endpoints');
+            expect(mockLogger.warn).not.toHaveBeenCalled();
         });
 
         it('should throw error if all endpoints fail', async () => {
@@ -120,8 +142,10 @@ describe('OperationTracker', () => {
             mockClients[0].getOperationType.mockRejectedValue(error);
             mockClients[1].getOperationType.mockRejectedValue(error);
 
-            await expect(operationTracker.getOperationType(operationId)).rejects.toThrow();
-            expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to get operation type');
+            await expect(operationTracker.getOperationType(operationId, immediateWaitOptions)).rejects.toThrow();
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                '[OperationTracker: Getting operation type for "op123"] Max attempts (1) reached',
+            );
         });
 
         it('should use waitUntilSuccess when wait options provided', async () => {
@@ -141,6 +165,43 @@ describe('OperationTracker', () => {
         });
     });
 
+    describe('getOperationTypeV2', () => {
+        it('should successfully get operation type v2', async () => {
+            const operationId = 'op123';
+            const expectedType: OperationTypeV2Info = {
+                operationType: OperationType.TON_TAC_TON,
+                finalized: true,
+            };
+
+            mockClients[0].getOperationTypeV2.mockResolvedValue(expectedType);
+
+            const result = await operationTracker.getOperationTypeV2(operationId);
+
+            expect(result).toEqual(expectedType);
+            expect(mockClients[0].getOperationTypeV2).toHaveBeenCalledWith(operationId);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation type v2 for "${operationId}"] Success (attempt 1/30)`,
+            );
+        });
+
+        it('should retry v2 operation type on second client if first fails', async () => {
+            const operationId = 'op123';
+            const expectedType: OperationTypeV2Info = {
+                operationType: OperationType.TON_TAC,
+                finalized: false,
+            };
+
+            mockClients[0].getOperationTypeV2.mockRejectedValue(new Error('Network error'));
+            mockClients[1].getOperationTypeV2.mockResolvedValue(expectedType);
+
+            const result = await operationTracker.getOperationTypeV2(operationId);
+
+            expect(result).toEqual(expectedType);
+            expect(mockClients[0].getOperationTypeV2).toHaveBeenCalledWith(operationId);
+            expect(mockClients[1].getOperationTypeV2).toHaveBeenCalledWith(operationId);
+        });
+    });
+
     describe('getOperationId', () => {
         it('should successfully get operation ID', async () => {
             const expectedId = 'op123';
@@ -151,7 +212,9 @@ describe('OperationTracker', () => {
 
             expect(result).toBe(expectedId);
             expect(mockClients[0].getOperationId).toHaveBeenCalledWith(sampleTransactionLinker);
-            expect(mockLogger.debug).toHaveBeenCalledWith('Operation ID retrieved successfully');
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation ID by transaction linker ${JSON.stringify(sampleTransactionLinker)}] Success (attempt 1/30)`,
+            );
         });
 
         it('should handle empty operation ID', async () => {
@@ -160,7 +223,9 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getOperationId(sampleTransactionLinker);
 
             expect(result).toBe('');
-            expect(mockLogger.debug).toHaveBeenCalledWith('Operation ID does not exist');
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation ID by transaction linker ${JSON.stringify(sampleTransactionLinker)}] Success (attempt 1/30)`,
+            );
         });
     });
 
@@ -334,8 +399,102 @@ describe('OperationTracker', () => {
 
             mockClients[0].getStageProfilings.mockResolvedValue(stageProfilings);
 
-            await expect(operationTracker.getStageProfiling(operationId)).rejects.toThrow();
-            expect(mockLogger.warn).toHaveBeenCalledWith(`No stageProfiling data for operationId=${operationId}`);
+            await expect(operationTracker.getStageProfiling(operationId, immediateWaitOptions)).rejects.toThrow(
+                'All endpoints failed',
+            );
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting stage profiling for operation ${operationId}] Max attempts (1) reached`,
+            );
+        });
+    });
+
+    describe('getStageProfilingV2', () => {
+        it('should successfully get stage profiling v2', async () => {
+            const operationId = 'op123';
+            const expectedStages: ExecutionStagesV2 = {
+                operationType: OperationType.TON_TAC_TON,
+                metaInfo: {
+                    initialCaller: {
+                        address: 'EQB123',
+                        blockchainType: BlockchainType.TON,
+                    },
+                    validExecutors: {
+                        tac: ['0x123'],
+                        ton: ['EQB123'],
+                    },
+                    feeInfo: {
+                        additionalFeeInfo: {
+                            attachedProtocolFee: '0.01',
+                            tokenFeeSymbol: TokenSymbol.TON_SYMBOL,
+                        },
+                        tac: {
+                            protocolFee: '0.1',
+                            executorFee: '0.05',
+                            tokenFeeSymbol: TokenSymbol.TAC_SYMBOL,
+                        },
+                        ton: {
+                            protocolFee: '0.1',
+                            executorFee: '0.05',
+                            tokenFeeSymbol: TokenSymbol.TON_SYMBOL,
+                        },
+                    },
+                    sentAssets: null,
+                    receivedAssets: null,
+                },
+                finalized: true,
+                status: OperationExecutionStatus.SUCCESS,
+                rollback: false,
+                [StageName.COLLECTED_IN_TAC]: {
+                    exists: true,
+                    stageData: {
+                        success: true,
+                        timestamp: Date.now(),
+                        transactions: null,
+                        note: null,
+                    },
+                },
+                [StageName.INCLUDED_IN_TAC_CONSENSUS]: {
+                    exists: true,
+                    stageData: {
+                        success: true,
+                        timestamp: Date.now(),
+                        transactions: null,
+                        note: null,
+                    },
+                },
+                [StageName.EXECUTED_IN_TAC]: {
+                    exists: true,
+                    stageData: {
+                        success: true,
+                        timestamp: Date.now(),
+                        transactions: null,
+                        note: null,
+                    },
+                },
+                [StageName.COLLECTED_IN_TON]: {
+                    exists: false,
+                    stageData: null,
+                },
+                [StageName.INCLUDED_IN_TON_CONSENSUS]: {
+                    exists: false,
+                    stageData: null,
+                },
+                [StageName.EXECUTED_IN_TON]: {
+                    exists: false,
+                    stageData: null,
+                },
+            };
+
+            const stageProfilings: ExecutionStagesV2ByOperationId = {
+                [operationId]: expectedStages,
+            };
+
+            mockClients[0].getStageProfilingsV2.mockResolvedValue(stageProfilings);
+
+            const result = await operationTracker.getStageProfilingV2(operationId);
+
+            expect(result).toEqual(expectedStages);
+            expect(mockClients[0].getStageProfilingsV2).toHaveBeenCalledWith([operationId]);
         });
     });
 
@@ -372,8 +531,12 @@ describe('OperationTracker', () => {
 
             mockClients[0].getOperationStatuses.mockResolvedValue(operationStatuses);
 
-            await expect(operationTracker.getOperationStatus(operationId)).rejects.toThrow();
-            expect(mockLogger.warn).toHaveBeenCalledWith(`No operation status for operationId=${operationId}`);
+            await expect(operationTracker.getOperationStatus(operationId, immediateWaitOptions)).rejects.toThrow(
+                'All endpoints failed',
+            );
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation status for "${operationId}"] Max attempts (1) reached`,
+            );
         });
 
         it('should log pending one-liner for intermediate status while waiting', async () => {
@@ -418,7 +581,7 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getOperationStatus(operationId, waitOptions);
             expect(result).toEqual(finalStatus);
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                '[OperationTracker: Getting operation status] pending attempt=1/5 stage=includedInTONConsensus success=true tx=0x69d97176890b6968837c20ff9fff36d8791e5108cb0a8bb366da13db6bd556ab retry_in=1ms',
+                '[OperationTracker: Getting operation status for "op123"] pending attempt=1/5 stage=includedInTONConsensus success=true tx=0x69d97176890b6968837c20ff9fff36d8791e5108cb0a8bb366da13db6bd556ab retry_in=1ms',
             );
             expect(mockLogger.debug).toHaveBeenCalledWith(
                 `operation status resolved stage=${StageName.EXECUTED_IN_TON} success=true`,
@@ -444,6 +607,7 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
 
             expect(result).toBe(SimplifiedStatuses.PENDING);
+            expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
         });
 
         it('should return PENDING for unknown operation type', async () => {
@@ -454,6 +618,7 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
 
             expect(result).toBe(SimplifiedStatuses.PENDING);
+            expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
         });
 
         it('should return FAILED for rollback operation type', async () => {
@@ -464,9 +629,21 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
 
             expect(result).toBe(SimplifiedStatuses.FAILED);
+            expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
         });
 
-        it('should return SUCCESSFUL for completed operation types', async () => {
+        it('should return SUCCESSFUL for TON-TAC operation type', async () => {
+            const operationId = 'op123';
+            mockClients[0].getOperationId.mockResolvedValue(operationId);
+            mockClients[0].getOperationType.mockResolvedValue(OperationType.TON_TAC);
+
+            const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
+
+            expect(result).toBe(SimplifiedStatuses.SUCCESSFUL);
+            expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
+        });
+
+        it('should return SUCCESSFUL for TON-TAC-TON operation type', async () => {
             const operationId = 'op123';
             mockClients[0].getOperationId.mockResolvedValue(operationId);
             mockClients[0].getOperationType.mockResolvedValue(OperationType.TON_TAC_TON);
@@ -474,6 +651,7 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getSimplifiedOperationStatus(sampleTransactionLinker);
 
             expect(result).toBe(SimplifiedStatuses.SUCCESSFUL);
+            expect(mockClients[0].getOperationType).toHaveBeenCalledWith(operationId);
         });
     });
 
@@ -532,9 +710,8 @@ describe('OperationTracker', () => {
             expect(result).toBe(expected);
             expect(mockClients[0].convertCurrency).toHaveBeenCalledWith(params);
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                `Converting currency: ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}`,
+                `[OperationTracker: Converting currency ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}] Success (attempt 1/30)`,
             );
-            expect(mockLogger.debug).toHaveBeenCalledWith('Conversion result retrieved successfully');
         });
 
         it('should retry on second client if first fails', async () => {
@@ -559,7 +736,7 @@ describe('OperationTracker', () => {
             expect(result).toBe(expected);
             expect(mockClients[0].convertCurrency).toHaveBeenCalledWith(params);
             expect(mockClients[1].convertCurrency).toHaveBeenCalledWith(params);
-            expect(mockLogger.warn).toHaveBeenCalledWith('Failed to convert currency using one of the endpoints');
+            expect(mockLogger.warn).not.toHaveBeenCalled();
         });
 
         it('should throw error if all endpoints fail', async () => {
@@ -572,8 +749,10 @@ describe('OperationTracker', () => {
             mockClients[0].convertCurrency.mockRejectedValue(error);
             mockClients[1].convertCurrency.mockRejectedValue(error);
 
-            await expect(operationTracker.convertCurrency(params)).rejects.toThrow();
-            expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to convert currency');
+            await expect(operationTracker.convertCurrency(params, immediateWaitOptions)).rejects.toThrow();
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Converting currency ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}] Max attempts (1) reached`,
+            );
         });
 
         it('should support waitOptions and still return result', async () => {
@@ -634,9 +813,8 @@ describe('OperationTracker', () => {
             expect(result).toBe(expectedId);
             expect(mockClients[0].getOperationIdByTransactionHash).toHaveBeenCalledWith(transactionHash);
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                `Getting operation ID for transactionHash: "${transactionHash}"`,
+                `[OperationTracker: Getting operation ID by transaction hash "${transactionHash}"] Success (attempt 1/30)`,
             );
-            expect(mockLogger.debug).toHaveBeenCalledWith('Operation ID retrieved successfully');
         });
 
         it('should handle empty operation ID by transaction hash', async () => {
@@ -647,7 +825,9 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getOperationIdByTransactionHash(transactionHash);
 
             expect(result).toBe('');
-            expect(mockLogger.debug).toHaveBeenCalledWith('Operation ID does not exist');
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation ID by transaction hash "${transactionHash}"] Success (attempt 1/30)`,
+            );
         });
 
         it('should retry on second client if first fails', async () => {
@@ -662,9 +842,7 @@ describe('OperationTracker', () => {
             expect(result).toBe(expectedId);
             expect(mockClients[0].getOperationIdByTransactionHash).toHaveBeenCalledWith(transactionHash);
             expect(mockClients[1].getOperationIdByTransactionHash).toHaveBeenCalledWith(transactionHash);
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                'Failed to get OperationId by transactionHash using one of the endpoints',
-            );
+            expect(mockLogger.warn).not.toHaveBeenCalled();
         });
 
         it('should throw error if all endpoints fail', async () => {
@@ -674,9 +852,11 @@ describe('OperationTracker', () => {
             mockClients[0].getOperationIdByTransactionHash.mockRejectedValue(error);
             mockClients[1].getOperationIdByTransactionHash.mockRejectedValue(error);
 
-            await expect(operationTracker.getOperationIdByTransactionHash(transactionHash)).rejects.toThrow();
-            expect(mockLogger.error).toHaveBeenCalledWith(
-                'All endpoints failed to get operation id by transactionHash',
+            await expect(
+                operationTracker.getOperationIdByTransactionHash(transactionHash, immediateWaitOptions),
+            ).rejects.toThrow();
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation ID by transaction hash "${transactionHash}"] Max attempts (1) reached`,
             );
         });
 
@@ -690,6 +870,108 @@ describe('OperationTracker', () => {
             const result = await operationTracker.getOperationIdByTransactionHash(transactionHash, waitOptions);
 
             expect(result).toBe(expectedId);
+        });
+    });
+
+    describe('getOperationIdByTacTransactionHash', () => {
+        it('should successfully get TAC operation IDs with log indexes by transaction hash', async () => {
+            const transactionHash = '0x123abc';
+            const expectedIds: OperationIdWithLogIndex[] = [
+                { operationId: 'op456', logIndex: 2 },
+                { operationId: 'op789', logIndex: 7 },
+            ];
+
+            mockClients[0].getOperationIdByTacTransactionHash.mockResolvedValue(expectedIds);
+
+            const result = await operationTracker.getOperationIdByTacTransactionHash(transactionHash);
+
+            expect(result).toEqual(expectedIds);
+            expect(mockClients[0].getOperationIdByTacTransactionHash).toHaveBeenCalledWith(transactionHash);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation IDs by TAC transaction hash "${transactionHash}"] Success (attempt 1/30)`,
+            );
+        });
+
+        it('should handle empty TAC operation id arrays', async () => {
+            const transactionHash = '0x123abc';
+
+            mockClients[0].getOperationIdByTacTransactionHash.mockResolvedValue([]);
+
+            const result = await operationTracker.getOperationIdByTacTransactionHash(transactionHash);
+
+            expect(result).toEqual([]);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation IDs by TAC transaction hash "${transactionHash}"] Success (attempt 1/30)`,
+            );
+        });
+
+        it('should retry on second client if first TAC route fails', async () => {
+            const transactionHash = '0x123abc';
+            const expectedIds: OperationIdWithLogIndex[] = [{ operationId: 'op456', logIndex: 2 }];
+
+            mockClients[0].getOperationIdByTacTransactionHash.mockRejectedValue(new Error('Network error'));
+            mockClients[1].getOperationIdByTacTransactionHash.mockResolvedValue(expectedIds);
+
+            const result = await operationTracker.getOperationIdByTacTransactionHash(transactionHash);
+
+            expect(result).toEqual(expectedIds);
+            expect(mockClients[0].getOperationIdByTacTransactionHash).toHaveBeenCalledWith(transactionHash);
+            expect(mockClients[1].getOperationIdByTacTransactionHash).toHaveBeenCalledWith(transactionHash);
+        });
+
+        it('should throw error if all TAC endpoints fail', async () => {
+            const transactionHash = '0x123abc';
+            const error = new Error('Network error');
+
+            mockClients[0].getOperationIdByTacTransactionHash.mockRejectedValue(error);
+            mockClients[1].getOperationIdByTacTransactionHash.mockRejectedValue(error);
+
+            await expect(
+                operationTracker.getOperationIdByTacTransactionHash(transactionHash, immediateWaitOptions),
+            ).rejects.toThrow();
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation IDs by TAC transaction hash "${transactionHash}"] Max attempts (1) reached`,
+            );
+        });
+    });
+
+    describe('getOperationIdByTonTransactionHash', () => {
+        it('should get operation ID via explicit TON sequencer route', async () => {
+            const transactionHash = '0xfaec7a40ea38b99b5701472f5d00e84ca6633c38b3ebee2826ff693834406352';
+            const expectedId = 'op-ton-123';
+
+            mockClients[0].getOperationIdByTonTransactionHash.mockResolvedValue(expectedId);
+
+            const result = await operationTracker.getOperationIdByTonTransactionHash(transactionHash);
+
+            expect(result).toBe(expectedId);
+            expect(mockClients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledWith(transactionHash);
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting operation ID by TON transaction hash "${transactionHash}"] Success (attempt 1/30)`,
+            );
+        });
+
+        it('should return empty string when sequencer has no TON operation ID', async () => {
+            const transactionHash = '0xfaec7a40ea38b99b5701472f5d00e84ca6633c38b3ebee2826ff693834406352';
+            mockClients[0].getOperationIdByTonTransactionHash.mockResolvedValue('');
+
+            const result = await operationTracker.getOperationIdByTonTransactionHash(transactionHash);
+
+            expect(result).toBe('');
+            expect(mockClients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledWith(transactionHash);
+        });
+
+        it('should retry on second client when the first TON sequencer endpoint fails', async () => {
+            const transactionHash = '0xfaec7a40ea38b99b5701472f5d00e84ca6633c38b3ebee2826ff693834406352';
+            const expectedId = 'op-ton-456';
+            mockClients[0].getOperationIdByTonTransactionHash.mockRejectedValue(new Error('Network error'));
+            mockClients[1].getOperationIdByTonTransactionHash.mockResolvedValue(expectedId);
+
+            const result = await operationTracker.getOperationIdByTonTransactionHash(transactionHash);
+
+            expect(result).toBe(expectedId);
+            expect(mockClients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledTimes(1);
+            expect(mockClients[1].getOperationIdByTonTransactionHash).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -740,9 +1022,8 @@ describe('OperationTracker', () => {
             expect(result).toBe(expectedResult);
             expect(mockClients[0].simulateTACMessage).toHaveBeenCalledWith(params);
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                `Simulating TAC message: ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}`,
+                `[OperationTracker: Simulating TAC message ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}] Success (attempt 1/30)`,
             );
-            expect(mockLogger.debug).toHaveBeenCalledWith('Simulation result retrieved successfully');
         });
 
         it('should retry on second client if first fails', async () => {
@@ -792,7 +1073,7 @@ describe('OperationTracker', () => {
             expect(result).toBe(expectedResult);
             expect(mockClients[0].simulateTACMessage).toHaveBeenCalledWith(params);
             expect(mockClients[1].simulateTACMessage).toHaveBeenCalledWith(params);
-            expect(mockLogger.warn).toHaveBeenCalledWith('Failed to simulate TAC message using one of the endpoints');
+            expect(mockLogger.warn).not.toHaveBeenCalled();
         });
 
         it('should throw error if all endpoints fail', async () => {
@@ -817,14 +1098,16 @@ describe('OperationTracker', () => {
             mockClients[0].simulateTACMessage.mockRejectedValue(error);
             mockClients[1].simulateTACMessage.mockRejectedValue(error);
 
-            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow(FetchError);
-            await expect(operationTracker.simulateTACMessage(params)).rejects.toMatchObject({
+            await expect(operationTracker.simulateTACMessage(params, immediateWaitOptions)).rejects.toThrow(FetchError);
+            await expect(operationTracker.simulateTACMessage(params, immediateWaitOptions)).rejects.toMatchObject({
                 errorCode: 117,
                 httpStatus: 422,
                 innerErrorName: 'Error',
                 innerMessage: 'Simulation error',
             });
-            expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to simulate TAC message');
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Simulating TAC message ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}] Max attempts (1) reached`,
+            );
         });
 
         it('should include http status and response message when all endpoints fail', async () => {
@@ -863,14 +1146,18 @@ describe('OperationTracker', () => {
             mockClients[0].simulateTACMessage.mockRejectedValue(error);
             mockClients[1].simulateTACMessage.mockRejectedValue(error);
 
-            await expect(operationTracker.simulateTACMessage(params)).rejects.toMatchObject({
+            await expect(operationTracker.simulateTACMessage(params, immediateWaitOptions)).rejects.toMatchObject({
                 errorCode: 117,
                 httpStatus: 422,
                 innerMessage: 'Bad TAC payload',
             });
-            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow('httpStatus=422');
-            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow('httpMessage=Bad TAC payload');
-            await expect(operationTracker.simulateTACMessage(params)).rejects.toThrow(
+            await expect(operationTracker.simulateTACMessage(params, immediateWaitOptions)).rejects.toThrow(
+                'httpStatus=422',
+            );
+            await expect(operationTracker.simulateTACMessage(params, immediateWaitOptions)).rejects.toThrow(
+                'httpMessage=Bad TAC payload',
+            );
+            await expect(operationTracker.simulateTACMessage(params, immediateWaitOptions)).rejects.toThrow(
                 'endpoint=http://localhost:8090/tac/simulator/simulate-message',
             );
         });
@@ -989,9 +1276,8 @@ describe('OperationTracker', () => {
             expect(result).toBe(expectedResult);
             expect(mockClients[0].getTVMExecutorFee).toHaveBeenCalledWith(params);
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                `get TVM executor fee: ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}`,
+                `[OperationTracker: Getting TVM executor fee ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}] Success (attempt 1/30)`,
             );
-            expect(mockLogger.debug).toHaveBeenCalledWith('Suggested TVM executor fee retrieved successfully');
         });
 
         it('should retry on second client if first fails', async () => {
@@ -1019,7 +1305,7 @@ describe('OperationTracker', () => {
             expect(result).toBe(expectedResult);
             expect(mockClients[0].getTVMExecutorFee).toHaveBeenCalledWith(params);
             expect(mockClients[1].getTVMExecutorFee).toHaveBeenCalledWith(params);
-            expect(mockLogger.warn).toHaveBeenCalledWith('Failed to get TVM executor fee using one of the endpoints');
+            expect(mockLogger.warn).not.toHaveBeenCalled();
         });
 
         it('should throw error if all endpoints fail', async () => {
@@ -1039,8 +1325,10 @@ describe('OperationTracker', () => {
             mockClients[0].getTVMExecutorFee.mockRejectedValue(error);
             mockClients[1].getTVMExecutorFee.mockRejectedValue(error);
 
-            await expect(operationTracker.getTVMExecutorFee(params)).rejects.toThrow();
-            expect(mockLogger.error).toHaveBeenCalledWith('All endpoints failed to get TVM executor fee');
+            await expect(operationTracker.getTVMExecutorFee(params, immediateWaitOptions)).rejects.toThrow();
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                `[OperationTracker: Getting TVM executor fee ${JSON.stringify(params, (k, v) => (typeof v === 'bigint' ? v.toString() : v))}] Max attempts (1) reached`,
+            );
         });
 
         it('should use waitUntilSuccess when wait options provided', async () => {

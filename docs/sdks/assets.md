@@ -9,6 +9,10 @@
   - [AssetFactory Class](#assetfactory-class)
     - [Static Methods](#static-methods)
       - [`from`](#from)
+  - [Metadata Utilities](#metadata-utilities)
+    - [`readJettonMetadata`](#readjettonmetadata)
+    - [`readNFTMetadata`](#readnftmetadata)
+    - [Metadata Builders](#metadata-builders)
   - [FT Class](#ft-class)
     - [Creating Instances](#creating-instances)
     - [Core Methods](#core-methods)
@@ -61,7 +65,7 @@
 
 ## Overview
 
-The assets module provides implementations for different types of assets in the TAC–TON cross-chain ecosystem. It includes classes for native TON coins, Jettons (fungible tokens), NFTs (non-fungible tokens), and utility functions for asset management.
+The assets module provides implementations for different types of assets in the TAC–TON cross-chain ecosystem. It includes classes for native TON coins, native TAC coins, Jettons (fungible tokens), NFTs (non-fungible tokens), and utility functions for asset management.
 
 All asset classes implement the `Asset` interface, providing a consistent API across different types.
 
@@ -73,6 +77,7 @@ All asset classes implement the `Asset` interface, providing a consistent API ac
 interface Asset {
   address: string;
   type: AssetType;
+  feeMode: AssetFeeMode;
   rawAmount: bigint;
   clone: Asset;
   withAmount(amount: number): Asset;
@@ -88,8 +93,8 @@ interface Asset {
     forwardFeeTonAmount?: bigint;
     feeParams?: FeeParams;
   }): Promise<Cell>;
-  checkCanBeTransferredBy(userAddress: string): Promise<void>;
-  getBalanceOf(userAddress: string): Promise<bigint>;
+  checkCanBeTransferredBy(userAddress: string, blockchainType?: BlockchainType): Promise<void>;
+  getBalanceOf(userAddress: string, blockchainType?: BlockchainType): Promise<bigint>;
 }
 ```
 
@@ -98,6 +103,7 @@ The `Asset` interface defines the contract for all token implementations in the 
 **Properties:**
 - `address`: Token address on the respective blockchain
 - `type`: Asset type (FT for fungible, NFT for non-fungible)
+- `feeMode`: TON-side fee calculation mode used by SDK estimators
 - `rawAmount`: Raw amount of the token (considering decimals)
 
 **Methods:**
@@ -109,8 +115,15 @@ The `Asset` interface defines the contract for all token implementations in the 
 - `getEVMAddress`: Gets the EVM address for the token
 - `getTVMAddress`: Gets the TVM address for the token
 - `generatePayload`: Generates cross-chain operation payload with unified object parameters
-- `checkCanBeTransferredBy`: Checks if the token can be transferred by the user (requires userAddress parameter)
-- `getBalanceOf`: Gets the balance of the token for the given user address
+- `checkCanBeTransferredBy`: Checks if the token can be transferred by the user on the selected blockchain. Defaults to TON and validates the address format according to the selected blockchain.
+- `getBalanceOf`: Gets the balance or ownership of the token for the given user address on the selected blockchain. Defaults to TON and validates the address format according to the selected blockchain.
+
+### Fee Calculation Mode
+
+Every asset exposes `feeMode` so the SDK can choose the same TON-side fee path as the sequencer and contracts:
+- `TAC_ORIGINAL`: TAC-origin wrapped assets.
+- `DYNAMIC`: Native TON and TON-origin Jettons whose wallet code hash is listed in `DYNAMIC_JETTON_WALLET_CODE_HASHES`.
+- `LEGACY`: Standard TON-origin NFTs and other TON-origin Jettons. For these assets the simulator includes the original TON token-contract hardcoded transfer threshold and uses the larger value between that threshold and the dynamic estimate.
 
 ---
 
@@ -133,9 +146,59 @@ Creates an asset instance from the given parameters. This method handles address
 
 **Parameters:**
 - `configuration`: SDK configuration
-- `token`: Asset configuration object. For NFTs, specify `addressType` (ITEM or COLLECTION). When using `COLLECTION`, `index` is required. For native TON, use `TON.create(config)` or pass `address: configuration.nativeTONAddress` with `tokenType: AssetType.FT`.
+- `token`: Asset configuration object. For NFTs, specify `addressType` (ITEM or COLLECTION). When using `COLLECTION`, `index` is required. For native TON, use `TON.create(config)` or pass `address: configuration.nativeTONAddress` with `tokenType: AssetType.FT`. For native TAC, use `await TAC.create(config)` or pass `address: await configuration.nativeTACAddress()` with `tokenType: AssetType.FT`.
 
 **Returns:** Promise resolving to an `Asset` instance
+
+---
+
+## Metadata Utilities
+
+The SDK exports TEP-64 helpers from `ContentUtils` for working with TON metadata cells directly.
+
+These helpers support:
+- Jetton metadata encoded according to TEP-64/TEP-74
+- NFT metadata encoded according to TEP-64/TEP-62
+- `onchain`, `offchain`, and `semi-chain` layouts
+
+### `readJettonMetadata`
+
+```ts
+readJettonMetadata(contentCell: Cell): Promise<JettonExtendedMetadata>
+```
+
+Parses a Jetton metadata cell according to TEP-64.
+
+Supported layouts:
+- on-chain dictionary
+- off-chain URI, including `ipfs://`
+- semi-chain metadata via on-chain `uri`
+
+For semi-chain metadata, the SDK merges off-chain JSON with on-chain fields and gives precedence to on-chain values on collisions, following TEP-64.
+
+### `readNFTMetadata`
+
+```ts
+readNFTMetadata(contentCell: Cell): Promise<NFTExtendedMetadata>
+```
+
+Parses NFT metadata according to TEP-64.
+
+Use it when you already have a full NFT content cell, for example:
+- collection-less NFT item content from `get_nft_data()`
+- full content returned by collection `get_nft_content()`
+- collection or item metadata stored on-chain, off-chain, or semi-chain
+
+### Metadata Builders
+
+```ts
+buildJettonOnchainMetadata(data: JettonMetadata): Cell
+buildJettonOffChainMetadata(contentUri: string): Cell
+buildNFTOnchainMetadata(data: NFTMetadata): Cell
+buildNFTOffChainMetadata(contentUri: string): Cell
+```
+
+Builds TEP-64 metadata cells for Jettons and NFTs.
 
 ---
 
@@ -150,7 +213,7 @@ static fromAddress(configuration: IConfiguration, address: TVMAddress | EVMAddre
 ```
 
 Creates a new FT instance by TVM or EVM address. Origin is detected automatically and decimals are retrieved based on token type:
-- **TON origin tokens**: Decimals retrieved from jetton metadata
+- **TON origin tokens**: Decimals retrieved from Jetton TEP-64 metadata, including `onchain`, `offchain`, and `semi-chain` layouts
 - **TAC origin tokens**: 
   - Native tokens: Uses 18 decimals
   - ERC20 contracts: Decimals retrieved from ERC20 contract, with fallback to jetton metadata if unavailable
@@ -159,6 +222,7 @@ Creates a new FT instance by TVM or EVM address. Origin is detected automaticall
 - `addresses`: Object containing token and optional EVM addresses
 - `address`: Main token address (TVM)
 - `origin`: Asset origin (TON or TAC)
+- `feeMode`: Fee calculation mode resolved from origin and Jetton wallet code hash
 - `type`: Always `AssetType.FT` for fungible tokens
 - `rawAmount`: Current token amount in raw onchain format (after TEP-526 scaling if applicable)
 - `clone`: Creates a copy of the token instance
@@ -290,7 +354,7 @@ getDecimals(): Promise<number>
 
 Gets the number of decimal places for this Jetton. The retrieval method depends on the token's origin:
 
-- **TON-origin tokens**: Reads decimals from Jetton metadata (defaults to 9 if not specified)
+- **TON-origin tokens**: Reads decimals from Jetton TEP-64 metadata (defaults to 9 if not specified). For `semi-chain` metadata, on-chain values override off-chain values.
 - **TAC-origin tokens**: 
   - Native TAC tokens: Returns 18 (standard for native blockchain tokens)
   - ERC20 tokens: Fetches decimals from the ERC20 contract's `decimals()` method
@@ -313,26 +377,28 @@ Checks if the user has sufficient balance for the specified amount.
 #### `checkCanBeTransferredBy`
 
 ```ts
-checkCanBeTransferredBy(userAddress: string): Promise<void>
+checkCanBeTransferredBy(userAddress: string, blockchainType?: BlockchainType): Promise<void>
 ```
 
 Checks if the token can be transferred by the user.
 
 **Parameters:**
 - `userAddress`: User's wallet address
+- `blockchainType` *(optional)*: Blockchain where transferability should be checked. Defaults to `BlockchainType.TON`
 
 **Throws:** `InsufficientBalanceError` if the token cannot be transferred
 
 #### `getBalanceOf`
 
 ```ts
-getBalanceOf(userAddress: string): Promise<bigint>
+getBalanceOf(userAddress: string, blockchainType?: BlockchainType): Promise<bigint>
 ```
 
 Gets the balance of the token for the given user address.
 
 **Parameters:**
 - `userAddress`: User's wallet address
+- `blockchainType` *(optional)*: Blockchain where the balance should be read. Defaults to `BlockchainType.TON`
 
 **Returns:** Raw balance amount
 
@@ -542,7 +608,9 @@ Retrieves NFT item data from the contract at the given address.
 - `configuration`: SDK configuration instance
 - `itemAddress`: NFT item contract address (TVM format)
 
-**Returns:** Promise resolving to NFT item data including index, collection address, and owner
+**Returns:** Promise resolving to NFT item data including index, collection address, owner, and item content
+
+For collection-based NFTs, `content` returned by `get_nft_data()` is usually the individual item content, not the final merged metadata. To parse full metadata, first obtain the full content cell from the collection's `get_nft_content()` and then call `readNFTMetadata()`.
 
 #### `getCollectionData`
 
@@ -556,7 +624,7 @@ Retrieves NFT collection data from the contract at the given address.
 - `configuration`: SDK configuration instance
 - `collectionAddress`: NFT collection contract address (TVM format)
 
-**Returns:** Promise resolving to NFT collection data including metadata and owner
+**Returns:** Promise resolving to NFT collection data including collection metadata and owner
 
 #### `getOrigin`
 
@@ -616,7 +684,7 @@ getItemData(): Promise<NFTItemData>
 
 Gets data for this specific NFT item.
 
-**Returns:** Promise resolving to NFT item data including index, collection address, and owner
+**Returns:** Promise resolving to NFT item data including index, collection address, owner, and item content
 
 #### `getCollectionData`
 
@@ -626,7 +694,7 @@ getCollectionData(): Promise<CollectionData>
 
 Gets data for the NFT collection this item belongs to.
 
-**Returns:** Promise resolving to NFT collection data including metadata and owner
+**Returns:** Promise resolving to NFT collection data including collection metadata and owner
 
 #### `getUserBalance`
 
@@ -657,26 +725,28 @@ Checks if the user is the owner of this NFT.
 #### `checkCanBeTransferredBy`
 
 ```ts
-checkCanBeTransferredBy(userAddress: string): Promise<void>
+checkCanBeTransferredBy(userAddress: string, blockchainType?: BlockchainType): Promise<void>
 ```
 
 Checks if the token can be transferred by the user.
 
 **Parameters:**
 - `userAddress`: User's wallet address
+- `blockchainType` *(optional)*: Blockchain where transferability should be checked. Defaults to `BlockchainType.TON`
 
 **Throws:** `InsufficientBalanceError` if the token cannot be transferred
 
 #### `getBalanceOf`
 
 ```ts
-getBalanceOf(userAddress: string): Promise<bigint>
+getBalanceOf(userAddress: string, blockchainType?: BlockchainType): Promise<bigint>
 ```
 
 Gets the balance of the token for the given user address.
 
 **Parameters:**
 - `userAddress`: User's wallet address
+- `blockchainType` *(optional)*: Blockchain where the balance should be read. Defaults to `BlockchainType.TON`
 
 **Returns:** Raw balance amount (0 or 1 for NFTs)
 
@@ -773,26 +843,28 @@ Gets the user's TON balance.
 #### `checkCanBeTransferredBy`
 
 ```ts
-checkCanBeTransferredBy(userAddress: string): Promise<void>
+checkCanBeTransferredBy(userAddress: string, blockchainType?: BlockchainType): Promise<void>
 ```
 
 Checks if the token can be transferred by the user.
 
 **Parameters:**
 - `userAddress`: User's wallet address
+- `blockchainType` *(optional)*: Blockchain where transferability should be checked. Defaults to `BlockchainType.TON`
 
 **Throws:** `InsufficientBalanceError` if the token cannot be transferred
 
 #### `getBalanceOf`
 
 ```ts
-getBalanceOf(userAddress: string): Promise<bigint>
+getBalanceOf(userAddress: string, blockchainType?: BlockchainType): Promise<bigint>
 ```
 
 Gets the balance of the token for the given user address.
 
 **Parameters:**
 - `userAddress`: User's wallet address
+- `blockchainType` *(optional)*: Blockchain where the balance should be read. Defaults to `BlockchainType.TON`
 
 **Returns:** Raw balance amount
 
@@ -818,10 +890,47 @@ Checks if the sender has sufficient TON balance for the given transactions.
 
 ---
 
+## TAC Class
+
+`TAC` represents the native TAC coin. It implements the `Asset` interface and keeps the native TAC balance on TAC aligned with the wrapped TAC-origin FT representation on TON.
+
+### Creating Instances
+
+```ts
+TAC.create(config: IConfiguration): Promise<TAC>
+```
+
+Creates a new TAC token instance with zero amount.
+
+**Parameters:**
+- `config`: SDK configuration
+
+**Properties:**
+- `address`: TVM wrapper address of native TAC
+- `type`: Always `AssetType.FT`
+- `origin`: Always `Origin.TAC`
+- `rawAmount`: Current TAC amount in wei
+
+### Core Methods
+
+#### `getBalanceOf`
+
+```ts
+getBalanceOf(userAddress: string, blockchainType?: BlockchainType): Promise<bigint>
+```
+
+Gets TAC balance on the selected blockchain:
+- On `BlockchainType.TAC`, returns the native TAC coin balance for the EVM address
+- On `BlockchainType.TON`, returns the wrapped TAC jetton balance for the TVM address
+
+This method validates the user address according to the selected blockchain.
+
+---
+
 ## Example Usage
 
 ```ts
-import { AssetFactory, FT, NFT, TON, Configuration, Network, AssetType, NFTAddressType } from "@tonappchain/sdk";
+import { AssetFactory, FT, NFT, TAC, TON, Configuration, Network, AssetType, NFTAddressType, BlockchainType } from "@tonappchain/sdk";
 import { testnet } from "@tonappchain/artifacts";
 
 // Create configuration
@@ -841,6 +950,10 @@ const nft = await AssetFactory.from(
 // Create native TON token
 const tonToken = TON.create(config);
 tonToken.withAmount(1.5); // Set amount to 1.5 TON
+
+// Create native TAC token
+const tacToken = await TAC.create(config);
+tacToken.withAmount(2); // Set amount to 2 TAC
 
 // Work with fungible tokens
 const jettonData = await FT.getJettonData(contractOpener, "EQ...");
@@ -871,6 +984,8 @@ const nftBalanceOf = await nft.getBalanceOf("EQ...");
 const tonBalance = await tonToken.getUserBalance("EQ...");
 const tonCanTransfer = await tonToken.checkCanBeTransferredBy("EQ...");
 const tonBalanceOf = await tonToken.getBalanceOf("EQ...");
+const tacBalanceOnTac = await tacToken.getBalanceOf("0x1234...", BlockchainType.TAC);
+const tacBalanceOnTon = await tacToken.getBalanceOf("EQ...", BlockchainType.TON);
 const payload = await tonToken.generatePayload({
     excessReceiver: "EQ...",
     evmData,
