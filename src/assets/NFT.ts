@@ -10,7 +10,7 @@ import { NFT_TRANSFER_FORWARD_TON_AMOUNT } from '../sdk/Consts';
 import { generateFeeData, generateRandomNumberByTimestamp } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
 import { AssetOpType } from '../structs/InternalStruct';
-import { AssetType, BlockchainType, EVMAddress, FeeParams, Origin, TVMAddress } from '../structs/Struct';
+import { AssetFeeMode, AssetType, BlockchainType, EVMAddress, FeeParams, Origin, TVMAddress } from '../structs/Struct';
 export class NFT implements Asset {
     private readonly _addresses: {
         item: TVMAddress;
@@ -20,6 +20,7 @@ export class NFT implements Asset {
     };
 
     readonly origin: Origin;
+    readonly feeMode: AssetFeeMode;
     readonly type: AssetType = AssetType.NFT;
 
     private _nftCollection: OpenedContract<NFTCollection> | SandboxContract<NFTCollection>;
@@ -231,10 +232,12 @@ export class NFT implements Asset {
         },
         origin: Origin,
         configuration: IConfiguration,
+        feeMode: AssetFeeMode = NFT.resolveFeeMode(origin),
     ) {
         this._addresses = nftAddress;
         this._configuration = configuration;
         this.origin = origin;
+        this.feeMode = feeMode;
 
         const NFTCollectionC = configuration.artifacts.ton.wrappers.NFTCollection;
 
@@ -261,7 +264,11 @@ export class NFT implements Asset {
     }
 
     get clone(): NFT {
-        return new NFT(this._addresses, this.origin, this._configuration);
+        return new NFT(this._addresses, this.origin, this._configuration, this.feeMode);
+    }
+
+    private static resolveFeeMode(origin: Origin): AssetFeeMode {
+        return origin === Origin.TAC ? AssetFeeMode.TAC_ORIGINAL : AssetFeeMode.LEGACY;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

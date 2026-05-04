@@ -1,8 +1,6 @@
 import { ContractFeeUsageParams, TransactionFeeCalculationStep } from '../structs/InternalStruct';
 import { ONE_YEAR_SECONDS } from './Consts';
 
-export const FIXED_POINT_SHIFT = 2 ** 16;
-
 /**
  * Default contract fee usage parameters used as fallback.
  */

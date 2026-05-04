@@ -1,6 +1,6 @@
 import type { Cell } from '@ton/ton';
 
-import { AssetType, BlockchainType, GeneratePayloadParams, Origin } from '../structs/Struct';
+import { AssetFeeMode, AssetType, BlockchainType, GeneratePayloadParams, Origin } from '../structs/Struct';
 
 export interface Asset {
     // Address of the token on the blockchain
@@ -13,6 +13,8 @@ export interface Asset {
     clone: Asset;
     // Origin of the token
     origin: Origin;
+    // Fee calculation mode used by TON-side fee estimators.
+    feeMode: AssetFeeMode;
     /**
      * Returns a new asset instance with the specified transfer amount in human-readable units.
      * Does not mutate the current asset instance.

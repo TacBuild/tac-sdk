@@ -77,6 +77,7 @@ All asset classes implement the `Asset` interface, providing a consistent API ac
 interface Asset {
   address: string;
   type: AssetType;
+  feeMode: AssetFeeMode;
   rawAmount: bigint;
   clone: Asset;
   withAmount(amount: number): Asset;
@@ -102,6 +103,7 @@ The `Asset` interface defines the contract for all token implementations in the 
 **Properties:**
 - `address`: Token address on the respective blockchain
 - `type`: Asset type (FT for fungible, NFT for non-fungible)
+- `feeMode`: TON-side fee calculation mode used by SDK estimators
 - `rawAmount`: Raw amount of the token (considering decimals)
 
 **Methods:**
@@ -115,6 +117,13 @@ The `Asset` interface defines the contract for all token implementations in the 
 - `generatePayload`: Generates cross-chain operation payload with unified object parameters
 - `checkCanBeTransferredBy`: Checks if the token can be transferred by the user on the selected blockchain. Defaults to TON and validates the address format according to the selected blockchain.
 - `getBalanceOf`: Gets the balance or ownership of the token for the given user address on the selected blockchain. Defaults to TON and validates the address format according to the selected blockchain.
+
+### Fee Calculation Mode
+
+Every asset exposes `feeMode` so the SDK can choose the same TON-side fee path as the sequencer and contracts:
+- `TAC_ORIGINAL`: TAC-origin wrapped assets.
+- `DYNAMIC`: Native TON and TON-origin Jettons whose wallet code hash is listed in `DYNAMIC_JETTON_WALLET_CODE_HASHES`.
+- `LEGACY`: Standard TON-origin NFTs and other TON-origin Jettons. For these assets the simulator includes the original TON token-contract hardcoded transfer threshold and uses the larger value between that threshold and the dynamic estimate.
 
 ---
 
@@ -213,6 +222,7 @@ Creates a new FT instance by TVM or EVM address. Origin is detected automaticall
 - `addresses`: Object containing token and optional EVM addresses
 - `address`: Main token address (TVM)
 - `origin`: Asset origin (TON or TAC)
+- `feeMode`: Fee calculation mode resolved from origin and Jetton wallet code hash
 - `type`: Always `AssetType.FT` for fungible tokens
 - `rawAmount`: Current token amount in raw onchain format (after TEP-526 scaling if applicable)
 - `clone`: Creates a copy of the token instance

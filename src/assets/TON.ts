@@ -9,11 +9,12 @@ import { calculateRawAmount, generateFeeData, generateRandomNumberByTimestamp } 
 import { Validator } from '../sdk/Validator';
 import type { SenderAbstraction } from '../sender';
 import type { ShardTransaction } from '../structs/InternalStruct';
-import { AssetType, BlockchainType, FeeParams, Origin } from '../structs/Struct';
+import { AssetFeeMode, AssetType, BlockchainType, FeeParams, Origin } from '../structs/Struct';
 
 export class TON implements Asset {
     readonly address: string;
     readonly type: AssetType = AssetType.FT;
+    readonly feeMode: AssetFeeMode = AssetFeeMode.DYNAMIC;
 
     private evmAddress: string;
     private _rawAmount: bigint;
