@@ -244,7 +244,6 @@ export type ContractFeeUsageParams = {
         accountBits: number;
         accountCells: number;
         gas: {
-            ownershipAssigned: number;
             transferNotification: number;
             errorNotification: number;
         };
@@ -260,6 +259,8 @@ export type ContractFeeUsageParams = {
     nftItem: {
         accountBits: number;
         accountCells: number;
+        estimatedAccountBits: number;
+        estimatedAccountCells: number;
         gas: {
             send: number;
             burn: number;

@@ -35,7 +35,7 @@ import {
     createEstimatedReceiveTransferGasStep,
     createEstimatedSendTransferGasStep,
     createJettonMinterBurnNotificationStep,
-    createJettonProxyOwnershipAssignedStep,
+    createJettonProxyTransferNotificationStep,
     createJettonWalletBurnStep,
     createJettonWalletInternalTransferStep,
     createJettonWalletReceiveStep,
@@ -238,7 +238,7 @@ export class Simulator implements ISimulator {
         return this.calculateTransactionPipeline([
             createJettonWalletInternalTransferStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
             createJettonWalletReceiveStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
-            createJettonProxyOwnershipAssignedStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
+            createJettonProxyTransferNotificationStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
             createCrossChainLayerTvmMsgToEvmStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
             createErrorNotificationGasStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
             createEstimatedSendTransferGasStep(this.config.TONParams.contractFeeUsageParams, msgBits, msgCells),
@@ -263,9 +263,7 @@ export class Simulator implements ISimulator {
         msgCells: number,
     ): bigint {
         const forwardTonAmount =
-            NFT_TRANSFER_FORWARD_TON_AMOUNT +
-            (params.forwardFeeTonAmount ?? 0n) +
-            (params.crossChainTonAmount ?? 0n);
+            NFT_TRANSFER_FORWARD_TON_AMOUNT + (params.forwardFeeTonAmount ?? 0n) + (params.crossChainTonAmount ?? 0n);
         const outboundMessageCount =
             forwardTonAmount > 0n
                 ? LEGACY_NFT_TRANSFER_WITH_FORWARD_OUTBOUND_MESSAGE_COUNT
