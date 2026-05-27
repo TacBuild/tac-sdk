@@ -1,7 +1,6 @@
 import { Address, beginCell, TonClient, Transaction } from '@ton/ton';
 
 import { TonClientOpener, TransactionTreeDirection } from '../../../src';
-import { GetTransactionsOptions } from '../../../src';
 
 type TonClientMock = {
     tryLocateResultTx: jest.Mock<Promise<Transaction>, [Address, Address, string]>;
@@ -22,18 +21,6 @@ describe('TonClientOpener archival tree lookup', () => {
             opener: new TonClientOpener(client as unknown as TonClient),
             client,
         };
-    };
-
-    const setFindByHashType = (
-        opener: TonClientOpener,
-        mock: (
-            address: Address,
-            hash: string,
-            hashType: 'unknown' | 'in' | 'out' | undefined,
-            opts: GetTransactionsOptions,
-        ) => Promise<Transaction | null>,
-    ) => {
-        Reflect.set(opener as object, 'findTransactionByHashType', mock);
     };
 
     const successfulTransaction = (
@@ -84,8 +71,8 @@ describe('TonClientOpener archival tree lookup', () => {
         const outMessage = createInternalMessage(address, childAddress, 456n);
         const rootTx = successfulTransaction(Buffer.alloc(32, 7), new Map([[0, outMessage]]));
         const childTx = successfulTransaction(Buffer.alloc(32, 8), new Map(), outMessage);
-        const searchMock = jest.fn().mockResolvedValue(rootTx);
-        setFindByHashType(opener, searchMock);
+        const getRootTx = jest.spyOn(opener, 'getTransactionByHash').mockResolvedValue(rootTx);
+        const getChildTxByHash = jest.spyOn(opener, 'getTransactionByInMsgHash').mockResolvedValue(null);
         client.tryLocateResultTx.mockResolvedValue(childTx);
 
         const result = await opener.trackTransactionTreeWithResult(
@@ -99,7 +86,8 @@ describe('TonClientOpener archival tree lookup', () => {
         );
 
         expect(result).toEqual({ success: true, checkedCount: 2 });
-        expect(searchMock).toHaveBeenCalledTimes(1);
+        expect(getRootTx).toHaveBeenCalledTimes(1);
+        expect(getChildTxByHash).not.toHaveBeenCalled();
         expect(client.tryLocateResultTx).toHaveBeenCalledTimes(1);
         expect(client.tryLocateResultTx.mock.calls[0][0].toString()).toBe(address.toString());
         expect(client.tryLocateResultTx.mock.calls[0][1].toString()).toBe(childAddress.toString());
@@ -112,8 +100,8 @@ describe('TonClientOpener archival tree lookup', () => {
         const rootTx = successfulTransaction(Buffer.alloc(32, 7), new Map([[0, outMessage]]));
         const mismatchedChildTx = successfulTransaction(Buffer.alloc(32, 8));
         const foundChildTx = successfulTransaction(Buffer.alloc(32, 9));
-        const searchMock = jest.fn().mockResolvedValueOnce(rootTx).mockResolvedValueOnce(foundChildTx);
-        setFindByHashType(opener, searchMock);
+        const getRootTx = jest.spyOn(opener, 'getTransactionByHash').mockResolvedValue(rootTx);
+        const getChildTxByHash = jest.spyOn(opener, 'getTransactionByInMsgHash').mockResolvedValue(foundChildTx);
         client.tryLocateResultTx.mockResolvedValue(mismatchedChildTx);
 
         const result = await opener.trackTransactionTreeWithResult(
@@ -127,8 +115,34 @@ describe('TonClientOpener archival tree lookup', () => {
         );
 
         expect(result).toEqual({ success: true, checkedCount: 2 });
+        expect(getRootTx).toHaveBeenCalledTimes(1);
         expect(client.tryLocateResultTx).toHaveBeenCalledTimes(1);
-        expect(searchMock).toHaveBeenCalledTimes(2);
+        expect(getChildTxByHash).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to hash lookup when Toncenter cannot locate a child transaction', async () => {
+        const { opener, client } = createOpener();
+        const outMessage = createInternalMessage(address, childAddress, 456n);
+        const rootTx = successfulTransaction(Buffer.alloc(32, 7), new Map([[0, outMessage]]));
+        const foundChildTx = successfulTransaction(Buffer.alloc(32, 9), new Map(), outMessage);
+        const getRootTx = jest.spyOn(opener, 'getTransactionByHash').mockResolvedValue(rootTx);
+        const getChildTxByHash = jest.spyOn(opener, 'getTransactionByInMsgHash').mockResolvedValue(foundChildTx);
+        client.tryLocateResultTx.mockRejectedValue(new Error('transaction was not found'));
+
+        const result = await opener.trackTransactionTreeWithResult(
+            address.toString(),
+            rootTx.hash().toString('base64'),
+            {
+                archival: true,
+                maxDepth: 1,
+                retryOnNotFound: false,
+            },
+        );
+
+        expect(result).toEqual({ success: true, checkedCount: 2 });
+        expect(getRootTx).toHaveBeenCalledTimes(1);
+        expect(client.tryLocateResultTx).toHaveBeenCalledTimes(1);
+        expect(getChildTxByHash).toHaveBeenCalledTimes(1);
     });
 
     it('uses Toncenter v2 source locate during archival backward tree traversal', async () => {
@@ -136,8 +150,8 @@ describe('TonClientOpener archival tree lookup', () => {
         const inMessage = createInternalMessage(childAddress, address, 789n);
         const rootTx = successfulTransaction(Buffer.alloc(32, 7), new Map(), inMessage);
         const parentTx = successfulTransaction(Buffer.alloc(32, 8), new Map([[0, inMessage]]));
-        const searchMock = jest.fn().mockResolvedValue(rootTx);
-        setFindByHashType(opener, searchMock);
+        const getRootTx = jest.spyOn(opener, 'getTransactionByHash').mockResolvedValue(rootTx);
+        const getParentTxByHash = jest.spyOn(opener, 'getTransactionByOutMsgHash').mockResolvedValue(null);
         client.tryLocateSourceTx.mockResolvedValue(parentTx);
 
         const result = await opener.trackTransactionTreeWithResult(
@@ -152,7 +166,8 @@ describe('TonClientOpener archival tree lookup', () => {
         );
 
         expect(result).toEqual({ success: true, checkedCount: 2 });
-        expect(searchMock).toHaveBeenCalledTimes(1);
+        expect(getRootTx).toHaveBeenCalledTimes(1);
+        expect(getParentTxByHash).not.toHaveBeenCalled();
         expect(client.tryLocateSourceTx).toHaveBeenCalledTimes(1);
         expect(client.tryLocateSourceTx.mock.calls[0][0].toString()).toBe(childAddress.toString());
         expect(client.tryLocateSourceTx.mock.calls[0][1].toString()).toBe(address.toString());
@@ -164,8 +179,8 @@ describe('TonClientOpener archival tree lookup', () => {
         const outMessage = createInternalMessage(address, childAddress, 456n);
         const rootTx = successfulTransaction(Buffer.alloc(32, 7), new Map([[0, outMessage]]));
         const childTx = successfulTransaction(Buffer.alloc(32, 8), new Map(), outMessage);
-        const searchMock = jest.fn().mockResolvedValueOnce(rootTx).mockResolvedValueOnce(childTx);
-        setFindByHashType(opener, searchMock);
+        const getRootTx = jest.spyOn(opener, 'getTransactionByHash').mockResolvedValue(rootTx);
+        const getChildTxByHash = jest.spyOn(opener, 'getTransactionByInMsgHash').mockResolvedValue(childTx);
 
         const result = await opener.trackTransactionTreeWithResult(
             address.toString(),
@@ -177,6 +192,8 @@ describe('TonClientOpener archival tree lookup', () => {
         );
 
         expect(result).toEqual({ success: true, checkedCount: 2 });
+        expect(getRootTx).toHaveBeenCalledTimes(1);
+        expect(getChildTxByHash).toHaveBeenCalledTimes(1);
         expect(client.tryLocateResultTx).not.toHaveBeenCalled();
         expect(client.tryLocateSourceTx).not.toHaveBeenCalled();
     });

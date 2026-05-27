@@ -1,5 +1,14 @@
 import { SandboxContract } from '@ton/sandbox';
-import { Address, beginCell, Contract, ExternalAddress, OpenedContract, storeMessage, Transaction } from '@ton/ton';
+import type { Message } from '@ton/ton';
+import {
+    Address,
+    beginCell,
+    Contract,
+    ExternalAddress,
+    OpenedContract,
+    storeMessage,
+    Transaction,
+} from '@ton/ton';
 
 import { txFinalizationError } from '../errors';
 import { ContractOpener, ILogger } from '../interfaces';
@@ -14,7 +23,7 @@ import {
     IGNORE_OPCODE,
 } from '../sdk/Consts';
 import { getNormalizedExtMessageHash, normalizeHashToBase64, sleep } from '../sdk/Utils';
-import { TransactionDepth } from '../structs/InternalStruct';
+import type { TransactionQueueItem } from '../structs/InternalStruct';
 import { AddressInformation, GetTransactionsOptions } from '../structs/Struct';
 import {
     ContractState,
@@ -376,13 +385,16 @@ export abstract class BaseContractOpener implements ContractOpener {
         hash: string,
         hashType: 'unknown' | 'in' | 'out' | undefined,
         opts: GetTransactionsOptions,
+        message?: Message,
     ): Promise<Transaction | null> {
+        const targetHash = message ? beginCell().store(storeMessage(message)).endCell().hash().toString('base64') : hash;
+
         if (hashType === 'in') {
-            return this.getTransactionByInMsgHash(address, hash, opts);
+            return this.getTransactionByInMsgHash(address, targetHash, opts);
         } else if (hashType === 'out') {
-            return this.getTransactionByOutMsgHash(address, hash, opts);
+            return this.getTransactionByOutMsgHash(address, targetHash, opts);
         } else {
-            return this.getTransactionByHash(address, hash, opts);
+            return this.getTransactionByHash(address, targetHash, opts);
         }
     }
 
@@ -395,12 +407,13 @@ export abstract class BaseContractOpener implements ContractOpener {
         hashType: 'unknown' | 'in' | 'out' | undefined,
         opts: GetTransactionsOptions,
         depth: number,
+        message?: Message,
     ): Promise<Transaction | null> {
         const retryDelayMs = opts.retryDelayMs ?? DEFAULT_RETRY_ON_NOT_FOUND_DELAY_MS;
         const maxRetries = opts.retries ?? DEFAULT_RETRY_ON_NOT_FOUND_RETRIES;
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            const tx = await this.findTransactionByHashType(address, hash, hashType, opts);
+            const tx = await this.findTransactionByHashType(address, hash, hashType, opts, message);
             if (tx) {
                 return tx;
             }
@@ -494,14 +507,21 @@ export abstract class BaseContractOpener implements ContractOpener {
         if (archival !== undefined) {
             searchOpts.archival = archival;
         }
-        const queue: TransactionDepth[] = [
+
+        const queue: TransactionQueueItem[] = [
             { address: parsedAddress, hash: normalizedRootHash, depth: 0, hashType: 'unknown' },
         ];
 
         while (queue.length > 0) {
-            const { hash: currentHash, depth: currentDepth, address: currentAddress, hashType } = queue.shift()!;
+            const {
+                hash: currentHash,
+                depth: currentDepth,
+                address: currentAddress,
+                hashType,
+                message,
+            } = queue.shift()!;
 
-            const visitedKey = `${currentAddress!.toString()}:${currentHash}:${hashType}`;
+            const visitedKey = `${currentAddress.toString()}:${currentHash}:${hashType}`;
             if (visitedSearchKeys.has(visitedKey)) continue;
             visitedSearchKeys.add(visitedKey);
 
@@ -511,17 +531,24 @@ export abstract class BaseContractOpener implements ContractOpener {
                     : searchOpts;
             const tx = retryOnNotFound
                 ? await this.findTransactionWithRetry(
-                      currentAddress!,
+                      currentAddress,
                       currentHash,
                       hashType,
                       currentSearchOpts,
                       currentDepth,
+                      message,
                   )
-                : await this.findTransactionByHashType(currentAddress!, currentHash, hashType, currentSearchOpts);
+                : await this.findTransactionByHashType(
+                      currentAddress,
+                      currentHash,
+                      hashType,
+                      currentSearchOpts,
+                      message,
+                  );
 
             if (!tx) {
                 this.logger?.debug(
-                    `Transaction not found for hash: ${currentHash} (address=${currentAddress?.toString()}, hashType=${hashType ?? 'unknown'})`,
+                    `Transaction not found for hash: ${currentHash} (address=${currentAddress.toString()}, hashType=${hashType})`,
                 );
                 return {
                     success: false,
@@ -531,8 +558,8 @@ export abstract class BaseContractOpener implements ContractOpener {
                         exitCode: 'N/A',
                         resultCode: 'N/A',
                         reason: 'not_found',
-                        address: currentAddress?.toString(),
-                        hashType: hashType ?? 'unknown',
+                        address: currentAddress.toString(),
+                        hashType,
                     },
                 };
             }
@@ -566,6 +593,7 @@ export abstract class BaseContractOpener implements ContractOpener {
                             address: dst,
                             depth: currentDepth + 1,
                             hashType: 'in',
+                            message: msg,
                         });
                     }
                 }
@@ -580,6 +608,7 @@ export abstract class BaseContractOpener implements ContractOpener {
                         address: tx.inMessage.info.src,
                         depth: currentDepth + 1,
                         hashType: 'out',
+                        message: tx.inMessage,
                     });
                 }
             }

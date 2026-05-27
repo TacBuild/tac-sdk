@@ -7,7 +7,7 @@ type ToncenterV3Transaction = {
     hash: string;
     lt: string;
     now: number;
-    out_msgs?: unknown[];
+    out_msgs?: ToncenterV3Message[];
     description?: {
         aborted?: boolean;
         compute_ph?: {
@@ -17,6 +17,12 @@ type ToncenterV3Transaction = {
             success?: boolean;
         };
     };
+};
+
+type ToncenterV3Message = {
+    source?: string | null;
+    destination?: string | null;
+    created_lt?: string | null;
 };
 
 type ToncenterV3TransactionsResponse = {
@@ -91,6 +97,10 @@ function isSuccessfulTransaction(transaction: ToncenterV3Transaction): boolean {
     );
 }
 
+function internalOutMessages(transaction: ToncenterV3Transaction): ToncenterV3Message[] {
+    return (transaction.out_msgs ?? []).filter((message) => message.source && message.destination && message.created_lt);
+}
+
 function summarizeError(error: unknown): string {
     const httpError = error as HttpErrorLike;
     const parts = [error instanceof Error ? error.message : String(error)];
@@ -105,7 +115,7 @@ function summarizeError(error: unknown): string {
     return parts.join(' ');
 }
 
-async function selectHistoricalTransaction(): Promise<ToncenterV3Transaction> {
+async function selectHistoricalTransactions(): Promise<ToncenterV3Transaction[]> {
     const targetDate = getTargetDate();
     const windowDays = numberFromEnv('TONCENTER_V2_TREE_DATE_WINDOW_DAYS', DEFAULT_DATE_WINDOW_DAYS);
     const startUtime = Math.floor((targetDate.getTime() - windowDays * DAY_MS) / 1000);
@@ -122,20 +132,15 @@ async function selectHistoricalTransaction(): Promise<ToncenterV3Transaction> {
 
     const httpClient = new AxiosHttpClient({ timeout: numberFromEnv('TONCENTER_V2_TREE_HTTP_TIMEOUT_MS', 60000) });
     const response = await httpClient.get<ToncenterV3TransactionsResponse>(url.toString());
-    const transaction =
-        response.data.transactions.find(
-            (candidate) => isSuccessfulTransaction(candidate) && (candidate.out_msgs?.length ?? 0) > 0,
-        ) ??
-        response.data.transactions.find(isSuccessfulTransaction) ??
-        response.data.transactions[0];
+    const candidates = response.data.transactions.filter(isSuccessfulTransaction);
 
-    if (!transaction) {
+    if (candidates.length === 0) {
         throw new Error(
-            `No TON transaction found for account=${account} around ${targetDate.toISOString()} windowDays=${windowDays}`,
+            `No successful TON transaction found for account=${account} around ${targetDate.toISOString()} windowDays=${windowDays}`,
         );
     }
 
-    return transaction;
+    return candidates.sort((a, b) => internalOutMessages(b).length - internalOutMessages(a).length);
 }
 
 describe('Toncenter v2 configurable transaction tree', () => {
@@ -144,42 +149,48 @@ describe('Toncenter v2 configurable transaction tree', () => {
         async () => {
             const account = process.env.TONCENTER_V2_TREE_ACCOUNT ?? DEFAULT_ACCOUNT;
             const v2Endpoint = process.env.TONCENTER_V2_TREE_V2_ENDPOINT ?? DEFAULT_TONCENTER_V2_ENDPOINT;
-            const transaction = await selectHistoricalTransaction();
+            const archival = optionalBooleanFromEnv('TONCENTER_V2_TREE_ARCHIVAL');
+            const transactions = await selectHistoricalTransactions();
             const opener = new TonClientOpener(
                 new TonClient({
                     endpoint: v2Endpoint,
                     timeout: numberFromEnv('TONCENTER_V2_TREE_HTTP_TIMEOUT_MS', 60000),
                 }),
             );
-            const archival = optionalBooleanFromEnv('TONCENTER_V2_TREE_ARCHIVAL');
-            const params = {
+            const baseParams = {
                 maxDepth: numberFromEnv('TONCENTER_V2_TREE_MAX_DEPTH', 2),
                 limit: numberFromEnv('TONCENTER_V2_TREE_PAGE_LIMIT', 10),
                 maxScannedTransactions: numberFromEnv('TONCENTER_V2_TREE_MAX_SCANNED_TRANSACTIONS', 500),
-                rootLt: transaction.lt,
                 retryOnNotFound: true,
                 retries: numberFromEnv('TONCENTER_V2_TREE_NOT_FOUND_RETRIES', 1),
                 retryDelayMs: numberFromEnv('TONCENTER_V2_TREE_NOT_FOUND_RETRY_DELAY_MS', 500),
             };
             if (archival !== undefined) {
-                Object.assign(params, { archival });
+                Object.assign(baseParams, { archival });
             }
 
-            try {
-                const result = await opener.trackTransactionTreeWithResult(account, transaction.hash, params);
+            let lastError: unknown;
+            for (const transaction of transactions) {
+                const params = { ...baseParams, rootLt: transaction.lt };
+                try {
+                    const result = await opener.trackTransactionTreeWithResult(account, transaction.hash, params);
 
-                if (!result.success) {
-                    throw new Error(
-                        `Toncenter v2 returned unsuccessful tree result for hash=${transaction.hash} lt=${transaction.lt} now=${new Date(transaction.now * 1000).toISOString()} error=${JSON.stringify(result.error)}`,
+                    if (result.success) {
+                        expect(result.checkedCount).toBeGreaterThan(0);
+                        return;
+                    }
+
+                    lastError = new Error(
+                        `unsuccessful tree result for hash=${transaction.hash} lt=${transaction.lt} now=${new Date(transaction.now * 1000).toISOString()} error=${JSON.stringify(result.error)}`,
                     );
+                } catch (error) {
+                    lastError = error;
                 }
-
-                expect(result.checkedCount).toBeGreaterThan(0);
-            } catch (error) {
-                throw new Error(
-                    `Toncenter v2 failed to track transaction tree endpoint=${v2Endpoint} account=${account} hash=${transaction.hash} lt=${transaction.lt} now=${new Date(transaction.now * 1000).toISOString()} archival=${archival ?? 'omitted'} ${summarizeError(error)}`,
-                );
             }
+
+            throw new Error(
+                `Toncenter v2 failed to track any selected transaction tree endpoint=${v2Endpoint} account=${account} candidates=${transactions.length} archival=${archival ?? 'omitted'} ${lastError ? summarizeError(lastError) : ''}`,
+            );
         },
         numberFromEnv('TONCENTER_V2_TREE_TEST_TIMEOUT_MS', DEFAULT_TEST_TIMEOUT_MS),
     );

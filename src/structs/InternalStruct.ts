@@ -1,4 +1,4 @@
-import { Address, Cell } from '@ton/ton';
+import type { Address, Cell, Message } from '@ton/ton';
 import { AbstractProvider, ethers } from 'ethers';
 
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
@@ -173,6 +173,14 @@ export type TransactionDepth = {
     hash: string;
     depth: number;
     hashType?: 'unknown' | 'in' | 'out';
+};
+
+export type TransactionQueueItem = {
+    address: Address;
+    hash: string;
+    depth: number;
+    hashType: 'unknown' | 'in' | 'out';
+    message?: Message;
 };
 
 export type AdjacentTransactionsResponse = {
