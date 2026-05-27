@@ -73,3 +73,4 @@ export const SHARDS_KEY_RANDOM_RANGE = 1e18;
 export const IGNORE_OPCODE = [
     0xd53276db, // Excess
 ];
+export const HTTP_NOT_FOUND_STATUS_CODE = 404;

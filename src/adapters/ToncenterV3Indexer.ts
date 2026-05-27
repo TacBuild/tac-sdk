@@ -3,12 +3,15 @@ import { Address } from '@ton/ton';
 import { operationFetchError } from '../errors';
 import { IHttpClient, IToncenterV3Indexer } from '../interfaces';
 import { AxiosHttpClient } from '../sdk/AxiosHttpClient';
-import { DEFAULT_FIND_TX_LIMIT, DEFAULT_FIND_TX_MAX_DEPTH, DEFAULT_MAX_SCANNED_TRANSACTIONS } from '../sdk/Consts';
+import {
+    DEFAULT_FIND_TX_LIMIT,
+    DEFAULT_FIND_TX_MAX_DEPTH,
+    DEFAULT_MAX_SCANNED_TRANSACTIONS,
+    HTTP_NOT_FOUND_STATUS_CODE,
+} from '../sdk/Consts';
 import { toCamelCaseTransformer } from '../sdk/Utils';
 import { TonAdjacentTransactionsResponse, ToncenterV3TransactionsResponse } from '../structs/InternalStruct';
 import { ToncenterV3IndexedTransaction, ToncenterV3TraversalParams } from '../structs/Struct';
-
-const HTTP_NOT_FOUND_STATUS_CODE = 404;
 
 /**
  * Thin Toncenter v3 indexer client for resolving indexed TON transaction context by hash and
