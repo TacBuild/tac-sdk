@@ -14,6 +14,7 @@
     - [Abstract Methods (Must be Implemented)](#abstract-methods-must-be-implemented)
   - [Opener Implementations](#opener-implementations)
     - [TonClientOpener](#tonclientopener)
+    - [ToncenterV3Opener](#toncenterv3opener)
     - [OrbsOpener](#orbsopener)
     - [OrbsOpener4](#orbsopener4)
     - [LiteClientOpener](#liteclientopener)
@@ -129,8 +130,11 @@ Validates the entire transaction tree using BFS (breadth-first search) algorithm
 - `address: string` - The contract address as string
 - `hash: string` - Root transaction hash to start validation from
 - `params?: TrackTransactionTreeParams` - Tracking parameters:
+  - `limit?: number` - Maximum number of transactions to fetch per pagination request (default: 100)
   - `maxDepth?: number` - Maximum tree depth to traverse, inclusive (depth 0 is the root, default: 10)
   - `maxScannedTransactions?: number` - Maximum number of transactions scanned in account history during hash lookup (default: 100)
+  - `archival?: boolean` - Search archival nodes for historical data when supported by the provider
+  - `rootLt?: string` - Logical time of the root transaction, used together with a root transaction hash to avoid scanning from latest history
   - `ignoreOpcodeList?: number[]` - Opcodes that mark transactions as skippable for extra checks (phase validation still applies, default: [0xd53276db])
   - `direction?: TransactionTreeDirection` - Search direction (default: `FORWARD`)
   - `retryOnNotFound?: boolean` - Retry transaction lookup if not found (default: `true`)
@@ -177,6 +181,7 @@ Validates the entire transaction tree using BFS algorithm and returns a result o
 ```ts
 {
   success: boolean;  // Whether all transactions passed validation
+  checkedCount?: number; // Count of unique transactions checked during traversal
   error?: TransactionValidationError;  // Details of first validation error (if any)
 }
 ```
@@ -309,6 +314,30 @@ const tx = await opener.getTransactionByHash(address, hash);
 - Direct HTTP access to TON blockchain
 - Simple configuration with endpoint URL
 - Synchronous instantiation (no async factory needed)
+
+---
+
+### ToncenterV3Opener
+
+TonClient-based opener that uses Toncenter v3 indexed endpoints for transaction tree validation. Regular contract calls still go through `TonClient`; only `trackTransactionTreeWithResult(...)` uses indexed v3 lookups.
+
+**Usage:**
+```ts
+import { TonClient } from '@ton/ton';
+import { ToncenterV3Indexer, ToncenterV3Opener } from '@tonappchain/sdk';
+
+const client = new TonClient({ endpoint: 'https://toncenter.com/api/v2/jsonRPC' });
+const indexer = new ToncenterV3Indexer('https://toncenter.com/api/v3');
+const opener = new ToncenterV3Opener(indexer, client);
+
+const result = await opener.trackTransactionTreeWithResult(address, hash);
+```
+
+**Features:**
+- Resolves the root transaction by transaction hash, incoming message hash, or outgoing message hash
+- Traverses indexed adjacent transactions using Toncenter v3 message hash links
+- Validates transaction compute and action phases from indexed Toncenter v3 transaction descriptions
+- Useful for historical transaction trees where latest-first account history scans are unreliable or too expensive
 
 ---
 
@@ -537,14 +566,18 @@ const opener = await createDefaultRetryableOpener(
   5,
   1000,
   new ConsoleLogger(),
+  'https://toncenter.com/api/v3',
 );
 ```
 
 `createDefaultRetryableOpener(...)` configures:
-- `TonClientOpener` against the provided TAC TON RPC endpoint as the primary opener
-- `orbsOpener` as the first fallback on non-DEV networks
-- `orbsOpener4` as the second fallback on non-DEV networks
+- `ToncenterV3Opener` first when a Toncenter v3 indexer endpoint is provided
+- `TonClientOpener` against the provided TAC TON RPC endpoint
+- `orbsOpener` as the next fallback on non-DEV networks
+- `orbsOpener4` as the final fallback on non-DEV networks
 - exponential backoff using SDK defaults for `maxRetryDelay` and `retryBackoffMultiplier`
+
+`TacSdk.create(...)` passes the network artifact `TONCENTER_V3_INDEXER_ENDPOINT` to this factory by default. Custom direct calls can omit the last argument to use only TonClient and Orbs-based openers.
 
 ---
 

@@ -105,6 +105,8 @@ Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](
 
 If `sdkParams.passLoggerToOpeners` is set to `false`, the SDK logger is not passed to TON contract opener(s). Default is `true`.
 
+By default, the SDK builds a [`RetryableContractOpener`](./contract_opener.md#retryablecontractopener) from network artifacts. When `TONCENTER_V3_INDEXER_ENDPOINT` is configured, indexed Toncenter v3 transaction tree validation is tried before the regular TonClient and Orbs-based openers.
+
 ---
 
 ## Core Functions
@@ -739,9 +741,11 @@ This method provides direct access to the explorer client if you need to use it 
 ```
 
 #### **Purpose**
-Returns the TON contract opener client instance used for querying blockchain data from contracts..
+Returns the TON contract opener client instance used for querying blockchain data from contracts.
 
 This method provides direct access to the contract opener if you need to use it independently or for advanced use cases.
+
+For default SDK configuration this is a [`RetryableContractOpener`](./contract_opener.md#retryablecontractopener). When the selected network artifacts include `TONCENTER_V3_INDEXER_ENDPOINT`, its first opener is the indexed [`ToncenterV3Opener`](./contract_opener.md#toncenterv3opener).
 
 #### **Returns**
 [`ContractOpener`](./contract_opener.md)

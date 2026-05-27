@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - `v2` Lite Sequencer support in `LiteSequencerClient` / `OperationTracker`: `getOperationTypeV2`, `getStageProfilingV2`, and `getStageProfilingsV2`.
 - New tracker models for `v2` responses: `OperationTypeV2`, `OperationExecutionStatus`, `OperationTypeV2Info`, `ExecutionStagesV2`, and `ExecutionStagesV2ByOperationId`.
 - `ToncenterV3Indexer` and `IToncenterV3Indexer` for indexed TON transaction lookup and traversal across a linked chain of TON transactions.
+- `ToncenterV3Opener` for indexed Toncenter v3 transaction tree validation.
 - New `TacSdk` helpers for resolving operation ids from TON-side inputs: `getOperationIdByTonTransactionHash(...)` and `getOperationIdByTonTransactionBoc(...)`.
 
 ### Changed
@@ -24,6 +25,8 @@ All notable changes to this project will be documented in this file.
 - `ContentUtils` now parses TEP-64 `semi-chain` metadata, supports `chunked` content serialization, and correctly reads NFT off-chain content returned by collection `get_nft_content()`.
 - Jetton metadata parsing now supports TEP-64 `amount_style` and `render_type` fields.
 - `OperationTracker.getSimplifiedOperationStatus` now prefers `v2` route/finalization data and falls back to `v1` endpoints when `v2` is unavailable.
+- Default `RetryableContractOpener` now tries `ToncenterV3Opener` first when a Toncenter v3 indexer endpoint is configured.
+- `ToncenterV3Indexer` now supports indexed incoming and outgoing message hash lookup.
 
 ## [0.7.2] - 2026-02-26
 

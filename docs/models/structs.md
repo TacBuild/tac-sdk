@@ -17,6 +17,7 @@ This file documents the primary data structures (types and interfaces often refe
 - [`GetTransactionsOptions`](#gettransactionsoptions-type)
 - [`AddressInformation`](#addressinformation-type)
 - [`ToncenterV3IndexedTransaction`](#toncenterv3indexedtransaction-type)
+- [`ToncenterV3TraversalParams`](#toncenterv3traversalparams-type)
 
 ### Crosschain Transaction
 - [`EvmProxyMsg`](#evmproxymsg-type)
@@ -130,7 +131,7 @@ export type TONParams = {
 }
 ```
 TON Parameters for SDK:
-- **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that combines TonClient (TAC endpoint), `orbsOpener`, and `orbsOpener4` as fallbacks on non-DEV networks, with exponential backoff between retries. Provide your own opener primarily for tests or custom setups.
+- **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that uses `ToncenterV3Opener` first when the network artifact provides `TONCENTER_V3_INDEXER_ENDPOINT`, then TonClient (TAC endpoint), `orbsOpener`, and `orbsOpener4` as fallbacks on non-DEV networks, with exponential backoff between retries. Provide your own opener primarily for tests or custom setups.
 - **`tonIndexer`** (optional): Indexed TON lookup client used to resolve any TON transaction hash from a linked TON transaction chain and find the `crossChainLayer` transaction that the sequencer would collect as a TVM event. Provide your own implementation for tests or custom indexed backends.
 - **`settingsAddress`** (optional): TON settings contract address. Needed to retrieve protocol data. Set for tests only.
 
@@ -245,6 +246,7 @@ export async function createDefaultRetryableOpener(
     maxRetries = 5,
     retryDelay = 1000,
     logger?: ILogger,
+    toncenterV3Endpoint?: string,
 ): Promise<RetryableContractOpener>
 ```
 
@@ -254,11 +256,13 @@ Creates a default RetryableContractOpener with multiple fallback providers:
 - **`maxRetries`** *(optional)*: Maximum number of retry attempts. Default is *5*.
 - **`retryDelay`** *(optional)*: Base delay in milliseconds between retry attempts. Default is *1000*.
 - **`logger`** *(optional)*: Logger propagated to the wrapper and nested openers.
+- **`toncenterV3Endpoint`** *(optional)*: Toncenter v3 indexed endpoint. When provided, the default opener tries `ToncenterV3Opener` first.
 
 Returns a RetryableContractOpener configured with:
-1. TonClient by TAC (primary)
-2. orbsOpener (first fallback on non-DEV networks)
-3. orbsOpener4 (second fallback on non-DEV networks)
+1. ToncenterV3Opener (when `toncenterV3Endpoint` is provided)
+2. TonClient by TAC
+3. orbsOpener (fallback on non-DEV networks)
+4. orbsOpener4 (fallback on non-DEV networks)
 
 Each configured opener also receives SDK defaults for exponential backoff:
 - **`maxRetryDelay`**: `DEFAULT_RETRY_MAX_DELAY_MS`
@@ -316,7 +320,21 @@ export type ToncenterV3IndexedTransaction = {
     account: string;
     hash: string;
     traceId?: string;
+    description?: {
+        type?: string;
+        aborted?: boolean;
+        computePh?: {
+            skipped?: boolean;
+            success?: boolean;
+            exitCode?: number;
+        } | null;
+        action?: {
+            success?: boolean;
+            resultCode?: number;
+        } | null;
+    } | null;
     inMsg?: {
+        hash?: string | null;
         source?: string | null;
         destination?: string | null;
         opcode?: string | null;
@@ -325,6 +343,7 @@ export type ToncenterV3IndexedTransaction = {
         } | null;
     } | null;
     outMsgs: Array<{
+        hash?: string | null;
         destination?: string | null;
         messageContent?: {
             body?: string | null;
@@ -333,19 +352,36 @@ export type ToncenterV3IndexedTransaction = {
 };
 ```
 
-Indexed transaction returned by Toncenter v3 `/transactions` and `/adjacentTransactions` endpoints.
+Indexed transaction returned by Toncenter v3 `/transactions`, `/transactionsByMessage`, and `/adjacentTransactions` endpoints.
 
 - **`account`**: Account address where the transaction was indexed.
 - **`hash`**: Indexed TON transaction hash returned by Toncenter v3.
 - **`traceId`** *(optional)*: Trace identifier when present in the indexed response.
+- **`description`** *(optional)*: Transaction phase data returned by Toncenter v3 and used by indexed transaction tree validation.
 - **`inMsg`** *(optional)*: Incoming message data used to detect whether the transaction matches the same TVM event rules as the sequencer collector.
+  - **`hash`** *(optional)*: Indexed incoming message hash.
   - **`source`** *(optional)*: Incoming message source address.
   - **`destination`** *(optional)*: Incoming message destination address.
   - **`opcode`** *(optional)*: Opcode reported by Toncenter v3 for the incoming message.
   - **`messageContent.body`** *(optional)*: Incoming message body as a base64 BOC.
 - **`outMsgs`**: Outgoing messages of the transaction.
+  - **`hash`** *(optional)*: Indexed outgoing message hash.
   - **`destination`** *(optional)*: Destination address. `null` means the message is an external outbound log message.
   - **`messageContent.body`** *(optional)*: Outgoing message body as a base64 BOC.
+
+### `ToncenterV3TraversalParams (Type)`
+
+```typescript
+export type ToncenterV3TraversalParams = {
+    maxDepth?: number;
+    maxScannedTransactions?: number;
+};
+```
+
+Traversal settings for indexed search through a linked TON transaction chain in Toncenter v3.
+
+- **`maxDepth`** *(optional)*: Maximum traversal depth from the starting transaction in the linked TON transaction chain.
+- **`maxScannedTransactions`** *(optional)*: Maximum number of unique indexed transactions to inspect.
 
 
 ### `EvmProxyMsg (Type)`
@@ -749,6 +785,8 @@ export type TrackTransactionTreeParams = {
     limit?: number;
     maxDepth?: number;
     maxScannedTransactions?: number;
+    archival?: boolean;
+    rootLt?: string;
     ignoreOpcodeList?: number[];
     direction?: TransactionTreeDirection;
     retryOnNotFound?: boolean;
@@ -762,6 +800,8 @@ Parameters for tracking and validating transaction trees.
 - **`limit`** *(optional)*: Maximum number of transactions to fetch per pagination request. Default: 100.
 - **`maxDepth`** *(optional)*: Maximum depth to traverse in the transaction tree, inclusive (depth 0 is the root). Default: 10.
 - **`maxScannedTransactions`** *(optional)*: Maximum number of transactions to scan while searching by hash in account history. Default: 100.
+- **`archival`** *(optional)*: Whether to search archival nodes for historical data when supported by the provider.
+- **`rootLt`** *(optional)*: Logical time of the root transaction. Use with a root transaction hash to avoid scanning from latest history.
 - **`ignoreOpcodeList`** *(optional)*: List of operation codes (opcodes) that mark transactions as skippable for extra checks. Phase validation is still applied. Default: `[0xd53276db]` (excess message).
 - **`direction`** *(optional)*: Direction to search the transaction tree from the [`TransactionTreeDirection`](#transactiontreedirection-enum) enum. Default: `FORWARD`.
 - **`retryOnNotFound`** *(optional)*: Retry transaction lookup when `not_found` error occurs. Default: true.
@@ -800,6 +840,7 @@ Details about a transaction validation error.
 ```typescript
 export type TrackTransactionTreeResult = {
     success: boolean;
+    checkedCount?: number;
     error?: TransactionValidationError;
 };
 ```
@@ -807,6 +848,7 @@ export type TrackTransactionTreeResult = {
 Result of transaction tree tracking and validation.
 
 - **`success`**: Whether all transactions in the tree passed validation.
+- **`checkedCount`** *(optional)*: Count of unique transactions checked during traversal.
 - **`error`** *(optional)*: Details about the first validation error encountered (if any).
 
 ### `TONAsset`
