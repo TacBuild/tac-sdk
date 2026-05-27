@@ -1,6 +1,7 @@
 import { TonClient } from '@ton/ton';
 
-import { AxiosHttpClient, TonClientOpener } from '../../../src';
+import { testnet } from '../../../artifacts';
+import { AxiosHttpClient, createDefaultRetryableOpener, Network, TonClientOpener } from '../../../src';
 
 type ToncenterV3Transaction = {
     account: string;
@@ -42,7 +43,8 @@ const DEFAULT_LOOKBACK_DAYS = 1;
 const DEFAULT_DATE_WINDOW_DAYS = 1;
 const DEFAULT_TEST_TIMEOUT_MS = 120000;
 const DEFAULT_TONCENTER_V2_ENDPOINT = 'https://toncenter-spb.tac.build/api/v2/jsonRPC';
-const DEFAULT_TONCENTER_V3_ENDPOINT = 'https://toncenter-spb.tac.build/api/v3/';
+const DEFAULT_TON_RPC_ENDPOINT_BY_TAC = testnet.TON_RPC_ENDPOINT_BY_TAC;
+const DEFAULT_TONCENTER_V3_ENDPOINT = testnet.TONCENTER_V3_INDEXER_ENDPOINT;
 const DEFAULT_ACCOUNT = 'EQAVGclLM4b0fb4pYRbS-OUUJiXlaTk8C0D1IueAzx6XgGo0';
 
 function numberFromEnv(name: string, fallback: number): number {
@@ -190,6 +192,49 @@ describe('Toncenter v2 configurable transaction tree', () => {
 
             throw new Error(
                 `Toncenter v2 failed to track any selected transaction tree endpoint=${v2Endpoint} account=${account} candidates=${transactions.length} archival=${archival ?? 'omitted'} ${lastError ? summarizeError(lastError) : ''}`,
+            );
+        },
+        numberFromEnv('TONCENTER_V2_TREE_TEST_TIMEOUT_MS', DEFAULT_TEST_TIMEOUT_MS),
+    );
+
+    it(
+        'tracks a historical transaction tree with default retryable opener',
+        async () => {
+            const account = process.env.TONCENTER_V2_TREE_ACCOUNT ?? DEFAULT_ACCOUNT;
+            const tonRpcEndpoint = process.env.TONCENTER_V2_TREE_TON_RPC_ENDPOINT_BY_TAC ?? DEFAULT_TON_RPC_ENDPOINT_BY_TAC;
+            const v3Endpoint = process.env.TONCENTER_V2_TREE_V3_ENDPOINT ?? DEFAULT_TONCENTER_V3_ENDPOINT;
+            const transactions = await selectHistoricalTransactions();
+            const opener = await createDefaultRetryableOpener(tonRpcEndpoint, Network.TESTNET, 0, 0, undefined, v3Endpoint);
+            const baseParams = {
+                maxDepth: numberFromEnv('TONCENTER_V2_TREE_MAX_DEPTH', 2),
+                maxScannedTransactions: numberFromEnv('TONCENTER_V2_TREE_MAX_SCANNED_TRANSACTIONS', 500),
+                retryOnNotFound: true,
+                retries: numberFromEnv('TONCENTER_V2_TREE_NOT_FOUND_RETRIES', 1),
+                retryDelayMs: numberFromEnv('TONCENTER_V2_TREE_NOT_FOUND_RETRY_DELAY_MS', 500),
+            };
+
+            let lastError: unknown;
+            for (const transaction of transactions) {
+                try {
+                    const result = await opener.trackTransactionTreeWithResult(account, transaction.hash, {
+                        ...baseParams,
+                        rootLt: transaction.lt,
+                    });
+
+                    if (result.success && (result.checkedCount ?? 0) > 1) {
+                        return;
+                    }
+
+                    lastError = new Error(
+                        `unsuccessful retryable tree result for hash=${transaction.hash} lt=${transaction.lt} now=${new Date(transaction.now * 1000).toISOString()} result=${JSON.stringify(result)}`,
+                    );
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            throw new Error(
+                `Default retryable opener failed to track any selected transaction tree endpoint=${tonRpcEndpoint} v3Endpoint=${v3Endpoint} account=${account} candidates=${transactions.length} ${lastError ? summarizeError(lastError) : ''}`,
             );
         },
         numberFromEnv('TONCENTER_V2_TREE_TEST_TIMEOUT_MS', DEFAULT_TEST_TIMEOUT_MS),

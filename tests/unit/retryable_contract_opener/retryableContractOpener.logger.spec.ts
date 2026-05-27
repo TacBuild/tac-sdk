@@ -3,6 +3,7 @@ import { Address } from '@ton/ton';
 import { createDefaultRetryableOpener, RetryableContractOpener } from '../../../src';
 import { ContractOpener, ILogger } from '../../../src';
 import { Network } from '../../../src';
+import { ToncenterV3Opener } from '../../../src/adapters/ToncenterV3Opener';
 import * as TonClient4OpenerModule from '../../../src/adapters/TonClient4Opener';
 import * as TonClientOpenerModule from '../../../src/adapters/TonClientOpener';
 
@@ -48,6 +49,37 @@ describe('createDefaultRetryableOpener logger', () => {
         expect(tonClientOpenerSpy).toHaveBeenCalledWith(expect.anything(), logger);
         expect(orbsOpenerSpy).toHaveBeenCalledWith(Network.TESTNET, logger);
         expect(orbsOpener4Spy).toHaveBeenCalledWith(Network.TESTNET, expect.any(Number), logger);
+    });
+
+    it('uses Toncenter v3 opener first when v3 endpoint is configured', async () => {
+        const tonClientLikeOpener = createMockOpener({
+            trackTransactionTreeWithResult: jest.fn().mockResolvedValue({ success: true, checkedCount: 2 }),
+        }) as unknown as TonClientOpenerModule.TonClientOpener;
+        jest.spyOn(TonClientOpenerModule, 'tonClientOpener').mockReturnValue(tonClientLikeOpener);
+        jest.spyOn(TonClientOpenerModule, 'orbsOpener').mockResolvedValue(tonClientLikeOpener);
+        jest.spyOn(TonClient4OpenerModule, 'orbsOpener4').mockRejectedValue(new Error('skip'));
+
+        const v3TrackSpy = jest
+            .spyOn(ToncenterV3Opener.prototype, 'trackTransactionTreeWithResult')
+            .mockResolvedValue({ success: true, checkedCount: 1 });
+
+        const retryableOpener = await createDefaultRetryableOpener(
+            'https://example.com',
+            Network.TESTNET,
+            0,
+            1,
+            undefined,
+            'https://example.com/api/v3/',
+        );
+
+        const result = await retryableOpener.trackTransactionTreeWithResult(
+            'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c',
+            'hash',
+        );
+
+        expect(result).toEqual({ success: true, checkedCount: 1 });
+        expect(v3TrackSpy).toHaveBeenCalledTimes(1);
+        expect(tonClientLikeOpener.trackTransactionTreeWithResult).not.toHaveBeenCalled();
     });
 
     it('writes a single failure log for contract execution errors', async () => {

@@ -100,6 +100,7 @@ export class Configuration implements IConfiguration {
                     DEFAULT_RETRY_MAX_COUNT,
                     delay,
                     passLoggerToOpeners ? logger : undefined,
+                    artifacts.TONCENTER_V3_INDEXER_ENDPOINT,
                 ));
             settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
         }

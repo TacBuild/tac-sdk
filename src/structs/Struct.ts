@@ -237,8 +237,24 @@ export type ToncenterV3IndexedTransaction = {
     hash: string;
     /** Optional trace identifier returned by Toncenter v3. */
     traceId?: string;
+    /** Transaction phase data returned by Toncenter v3. */
+    description?: {
+        type?: string;
+        aborted?: boolean;
+        computePh?: {
+            skipped?: boolean;
+            success?: boolean;
+            exitCode?: number;
+        } | null;
+        action?: {
+            success?: boolean;
+            resultCode?: number;
+        } | null;
+    } | null;
     /** Incoming message of the indexed transaction, when present in the response. */
     inMsg?: {
+        /** Indexed message hash. */
+        hash?: string | null;
         /** Message source address. */
         source?: string | null;
         /** Message destination address. */
@@ -253,6 +269,8 @@ export type ToncenterV3IndexedTransaction = {
     } | null;
     /** Outgoing messages of the indexed transaction. */
     outMsgs: Array<{
+        /** Indexed message hash. */
+        hash?: string | null;
         /** Message destination address. `null` means external outbound log message. */
         destination?: string | null;
         /** Raw message content returned by Toncenter v3. */
