@@ -795,6 +795,17 @@ export type TrackTransactionTreeParams = {
     maxScannedTransactions?: number;
 
     /**
+     * Whether to search archival nodes for historical data.
+     * Omitted by default; set true for old transactions when the provider has archival nodes.
+     */
+    archival?: boolean;
+
+    /**
+     * Logical time of the root transaction. Use with a root transaction hash to avoid scanning from latest history.
+     */
+    rootLt?: string;
+
+    /**
      * List of operation codes (opcodes) to skip for extra checks.
      * Core phase validation is still applied.
      * @default [ 0xd53276db ] // Excess

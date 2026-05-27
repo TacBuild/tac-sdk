@@ -84,4 +84,29 @@ describe('createDefaultRetryableOpener logger', () => {
             1,
         );
     });
+
+    it('falls back on Toncenter HTTP 542 while tracking a transaction tree', async () => {
+        const providerError = Object.assign(new Error('Request failed with status code 542'), {
+            response: { status: 542 },
+        });
+        const opener1 = createMockOpener({
+            trackTransactionTreeWithResult: jest.fn().mockRejectedValue(providerError),
+        });
+        const opener2 = createMockOpener({
+            trackTransactionTreeWithResult: jest.fn().mockResolvedValue({ success: true, checkedCount: 1 }),
+        });
+        const retryable = new RetryableContractOpener([
+            { opener: opener1, retries: 0, retryDelay: 1 },
+            { opener: opener2, retries: 0, retryDelay: 1 },
+        ]);
+
+        const result = await retryable.trackTransactionTreeWithResult(
+            'EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c',
+            'hash',
+        );
+
+        expect(result).toEqual({ success: true, checkedCount: 1 });
+        expect(opener1.trackTransactionTreeWithResult).toHaveBeenCalledTimes(1);
+        expect(opener2.trackTransactionTreeWithResult).toHaveBeenCalledTimes(1);
+    });
 });

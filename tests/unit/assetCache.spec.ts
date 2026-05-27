@@ -1,5 +1,5 @@
 import type { Asset } from '../../src';
-import { AssetType, Origin } from '../../src';
+import { AssetFeeMode, AssetType, Origin } from '../../src';
 import { AssetCache } from '../../src/assets/AssetCache';
 
 // Minimal mock Asset implementation for cache tests
@@ -8,6 +8,7 @@ const mockAsset = (address: string): Asset => ({
     type: AssetType.FT,
     rawAmount: 0n,
     clone: {} as unknown as Asset, // not used by AssetCache
+    feeMode: AssetFeeMode.LEGACY,
     withAmount: () => {
         throw new Error('not implemented');
     },

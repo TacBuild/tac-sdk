@@ -61,7 +61,6 @@ export const DEFAULT_WAIT_DELAY_MS = 10000; // 10 seconds
 
 export const DEFAULT_FIND_TX_LIMIT = 100;
 export const DEFAULT_MAX_SCANNED_TRANSACTIONS = 100;
-export const DEFAULT_FIND_TX_ARCHIVAL = true;
 export const DEFAULT_FIND_TX_MAX_DEPTH = 10;
 export const DEFAULT_RETRY_ON_NOT_FOUND = true;
 export const DEFAULT_RETRY_ON_NOT_FOUND_RETRIES = 10;
