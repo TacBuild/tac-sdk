@@ -1,11 +1,18 @@
+import { dev, mainnet, testnet } from '../../artifacts';
 import { ContractOpener, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
+import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
 import { ExecutionStages, Network, OperationType, TransactionLinkerWithOperationId } from '../structs/Struct';
+import { Configuration } from './Configuration';
 import { DEFAULT_FIND_TX_MAX_DEPTH, MAX_ITERATION_COUNT } from './Consts';
 import { NoopLogger } from './Logger';
 import { OperationTracker } from './OperationTracker';
 import { sleep } from './Utils';
 
+/**
+ * @deprecated Use `TacSdk.sendCrossChainTransaction(...)` instead. It already waits for operation ID
+ * and full cross-chain finalization by default via `waitOperationId` and `waitFinalization` options.
+ */
 export async function startTracking(
     transactionLinker: TransactionLinkerWithOperationId,
     network: Network,
@@ -33,7 +40,24 @@ export async function startTracking(
         cclAddress,
     } = options || {};
 
-    const tracker = new OperationTracker(network, customLiteSequencerEndpoints, logger);
+    const artifacts = network === Network.MAINNET ? mainnet : network === Network.TESTNET ? testnet : dev;
+    const liteSequencerEndpoints =
+        customLiteSequencerEndpoints && customLiteSequencerEndpoints.length !== 0
+            ? customLiteSequencerEndpoints
+            : artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
+    if (network === Network.DEV && liteSequencerEndpoints.length === 0) {
+        throw new Error('For DEV network, custom lite sequencer endpoints must be provided');
+    }
+
+    const trackerConfig = new Configuration(
+        network,
+        artifacts,
+        {} as InternalTONParams,
+        {} as InternalTACParams,
+        liteSequencerEndpoints,
+        logger,
+    );
+    const tracker = new OperationTracker(trackerConfig, logger);
 
     logger.debug(
         `Start tracking operation\n` +
@@ -136,6 +160,10 @@ export async function startTracking(
     }
 }
 
+/**
+ * @deprecated Use `TacSdk.sendCrossChainTransaction(...)` for new single-transaction flows. It already waits
+ * for operation ID and full cross-chain finalization by default via `waitOperationId` and `waitFinalization` options.
+ */
 export async function startTrackingMultiple(
     transactionLinkers: TransactionLinkerWithOperationId[],
     network: Network,

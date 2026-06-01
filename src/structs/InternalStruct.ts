@@ -2,7 +2,7 @@ import type { Address, Cell, Message } from '@ton/ton';
 import { AbstractProvider, ethers } from 'ethers';
 
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
-import { ContractOpener } from '../interfaces';
+import { ContractOpener, IToncenterV3Indexer } from '../interfaces';
 import {
     CurrencyType,
     ExecutionStagesByOperationId,
@@ -59,6 +59,7 @@ export type RandomNumberByTimestamp = {
 
 export type InternalTONParams = {
     contractOpener: ContractOpener;
+    tonIndexer?: IToncenterV3Indexer;
     jettonProxyAddress: string;
     nftProxyAddress: string;
     crossChainLayerAddress: string;

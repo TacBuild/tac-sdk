@@ -1,7 +1,14 @@
-import { mainnet, testnet } from '../../artifacts';
-import { allEndpointsFailedError } from '../errors';
+import { Address, Cell, loadMessage } from '@ton/ton';
+
+import { allEndpointsFailedError, externalInMessageRequiredError, invalidTonExternalMessageBocError } from '../errors';
 import { convertCurrencyNegativeOrZeroValueError } from '../errors/instances';
-import { ILiteSequencerClient, ILiteSequencerClientFactory, ILogger, IOperationTracker } from '../interfaces';
+import {
+    IConfiguration,
+    ILiteSequencerClient,
+    ILiteSequencerClientFactory,
+    ILogger,
+    IOperationTracker,
+} from '../interfaces';
 import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,
@@ -10,7 +17,6 @@ import {
     ExecutionStagesV2,
     ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
-    Network,
     OperationIdsByShardsKey,
     OperationIdWithLogIndex,
     OperationType,
@@ -26,7 +32,7 @@ import {
 } from '../structs/Struct';
 import { LiteSequencerClient } from './LiteSequencerClient';
 import { NoopLogger } from './Logger';
-import { formatObjectForLogging, waitUntilSuccess } from './Utils';
+import { formatObjectForLogging, getNormalizedExtMessageHash, normalizeHashToHex, waitUntilSuccess } from './Utils';
 import { Validator } from './Validator';
 
 export class DefaultLiteSequencerClientFactory implements ILiteSequencerClientFactory {
@@ -38,28 +44,16 @@ export class DefaultLiteSequencerClientFactory implements ILiteSequencerClientFa
 export class OperationTracker implements IOperationTracker {
     private readonly clients: ILiteSequencerClient[];
     private readonly logger: ILogger;
+    private readonly config: IConfiguration;
 
     constructor(
-        network: Network,
-        customLiteSequencerEndpoints?: string[],
+        config: IConfiguration,
         logger: ILogger = new NoopLogger(),
         clientFactory: ILiteSequencerClientFactory = new DefaultLiteSequencerClientFactory(),
     ) {
-        let endpoints: string[];
-        if (network === Network.DEV) {
-            if (!customLiteSequencerEndpoints || customLiteSequencerEndpoints.length === 0) {
-                throw new Error('For DEV network, custom lite sequencer endpoints must be provided');
-            }
-            endpoints = customLiteSequencerEndpoints;
-        } else {
-            const artifacts = network === Network.MAINNET ? mainnet : testnet;
-            endpoints =
-                customLiteSequencerEndpoints && customLiteSequencerEndpoints.length !== 0
-                    ? customLiteSequencerEndpoints
-                    : artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
-        }
-        this.clients = clientFactory.createClients(endpoints);
+        this.clients = clientFactory.createClients(config.liteSequencerEndpoints);
         this.logger = logger;
+        this.config = config;
     }
 
     async getOperationIdByTransactionHash(
@@ -115,6 +109,51 @@ export class OperationTracker implements IOperationTracker {
     }
 
     async getOperationIdByTonTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string> {
+        let eventTxHash = transactionHash;
+        const tonIndexer = this.config.TONParams.tonIndexer;
+        if (tonIndexer) {
+            const cclTransaction = await tonIndexer.findCollectibleCrossChainLayerTransaction(
+                transactionHash,
+                this.config.TONParams.crossChainLayerAddress,
+            );
+            if (!cclTransaction) {
+                return '';
+            }
+
+            eventTxHash = `0x${normalizeHashToHex(cclTransaction.hash)}`;
+        }
+
+        return this.getOperationIdByEventTonTransactionHash(eventTxHash, waitOptions);
+    }
+
+    async getOperationIdByTonTransactionBoc(boc: string, waitOptions?: WaitOptions<string> | null): Promise<string> {
+        let message;
+        try {
+            message = loadMessage(Cell.fromBase64(boc).beginParse());
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : undefined;
+            throw invalidTonExternalMessageBocError(reason);
+        }
+
+        if (message.info.type !== 'external-in') {
+            throw externalInMessageRequiredError(message.info.type);
+        }
+
+        const transaction = await this.config.TONParams.contractOpener.getTransactionByHash(
+            Address.parse(message.info.dest.toString()),
+            getNormalizedExtMessageHash(message),
+        );
+        if (!transaction) {
+            return '';
+        }
+
+        return this.getOperationIdByTonTransactionHash(transaction.hash().toString('base64'), waitOptions);
+    }
+
+    private async getOperationIdByEventTonTransactionHash(
         transactionHash: string,
         waitOptions?: WaitOptions<string> | null,
     ): Promise<string> {

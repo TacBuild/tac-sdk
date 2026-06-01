@@ -3,39 +3,40 @@
 ## Table of Contents
 
 - [OperationTracker Class](#operationtracker-class)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [How Tracking Works](#how-tracking-works)
-  - [Getting Started](#getting-started)
-    - [Constructor](#constructor)
-    - [Example Usage](#example-usage)
-  - [Architecture](#architecture)
-    - [Key Components](#key-components)
-      - [`ILiteSequencerClientFactory`](#ilitesequencerclientfactory)
-      - [`ILiteSequencerClient`](#ilitesequencerclient)
-    - [Failover Strategy](#failover-strategy)
-  - [Waiting for Results](#waiting-for-results)
-  - [Tracking by Transaction Link](#tracking-by-transaction-link)
-    - [`getOperationId`](#getoperationid)
-    - [`getOperationIdByTacTransactionHash`](#getoperationidbytactransactionhash)
-    - [`getOperationIdByTransactionHash`](#getoperationidbytransactionhash)
-    - [`getOperationIdByTonTransactionHash`](#getoperationidbytontransactionhash)
-    - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
-  - [Detailed Operation Info](#detailed-operation-info)
-    - [`getOperationStatus`](#getoperationstatus)
-    - [`getOperationStatuses`](#getoperationstatuses)
-  - [Execution Profiling](#execution-profiling)
-    - [`getStageProfiling`](#getstageprofiling)
-    - [`getStageProfilings`](#getstageprofilings)
-    - [`getStageProfilingV2`](#getstageprofilingv2)
-    - [`getStageProfilingsV2`](#getstageprofilingsv2)
-  - [Other Metadata](#other-metadata)
-    - [`getOperationType`](#getoperationtype)
-    - [`getOperationTypeV2`](#getoperationtypev2)
-    - [`getOperationIdsByShardsKeys`](#getoperationidsbyshardskeys)
-    - [`convertCurrency`](#convertcurrency)
-    - [`simulateTACMessage`](#simulatetacmessage)
-    - [`getTVMExecutorFee`](#gettvmexecutorfee)
+    - [Table of Contents](#table-of-contents)
+    - [Overview](#overview)
+    - [How Tracking Works](#how-tracking-works)
+    - [Getting Started](#getting-started)
+        - [Constructor](#constructor)
+        - [Example Usage](#example-usage)
+    - [Architecture](#architecture)
+        - [Key Components](#key-components)
+            - [`ILiteSequencerClientFactory`](#ilitesequencerclientfactory)
+            - [`ILiteSequencerClient`](#ilitesequencerclient)
+        - [Failover Strategy](#failover-strategy)
+    - [Waiting for Results](#waiting-for-results)
+    - [Tracking by Transaction Link](#tracking-by-transaction-link)
+        - [`getOperationId`](#getoperationid)
+        - [`getOperationIdByTacTransactionHash`](#getoperationidbytactransactionhash)
+        - [`getOperationIdByTransactionHash`](#getoperationidbytransactionhash)
+        - [`getOperationIdByTonTransactionHash`](#getoperationidbytontransactionhash)
+        - [`getOperationIdByTonTransactionBoc`](#getoperationidbytontransactionboc)
+        - [`getSimplifiedOperationStatus`](#getsimplifiedoperationstatus)
+    - [Detailed Operation Info](#detailed-operation-info)
+        - [`getOperationStatus`](#getoperationstatus)
+        - [`getOperationStatuses`](#getoperationstatuses)
+    - [Execution Profiling](#execution-profiling)
+        - [`getStageProfiling`](#getstageprofiling)
+        - [`getStageProfilings`](#getstageprofilings)
+        - [`getStageProfilingV2`](#getstageprofilingv2)
+        - [`getStageProfilingsV2`](#getstageprofilingsv2)
+    - [Other Metadata](#other-metadata)
+        - [`getOperationType`](#getoperationtype)
+        - [`getOperationTypeV2`](#getoperationtypev2)
+        - [`getOperationIdsByShardsKeys`](#getoperationidsbyshardskeys)
+        - [`convertCurrency`](#convertcurrency)
+        - [`simulateTACMessage`](#simulatetacmessage)
+        - [`getTVMExecutorFee`](#gettvmexecutorfee)
 
 ---
 
@@ -55,7 +56,7 @@ This linker allows tracking status of the operation through these steps:
 2. Use `getOperationStatus(...)` or `getSimplifiedOperationStatus(...)` to get the current state.
 3. For debugging or performance profiling, use `getStageProfiling(...)`.
 
-> For automated polling, use [`startTracking()`](./utilities.md#starttracking) which handles all the above and prints status updates.
+> `startTracking()` is deprecated. For new TON -> TAC flows, use `TacSdk.sendCrossChainTransaction(...)`; it already waits for `operationId` and full cross-chain finalization by default through `waitOperationId` and `waitFinalization` options.
 
 ---
 
@@ -65,8 +66,7 @@ This linker allows tracking status of the operation through these steps:
 
 ```ts
 new OperationTracker(
-  network: Network,
-  customLiteSequencerEndpoints?: string[],
+  config: IConfiguration,
   logger?: ILogger,
   clientFactory?: ILiteSequencerClientFactory
 )
@@ -75,27 +75,21 @@ new OperationTracker(
 Creates a new OperationTracker instance.
 
 **Parameters:**
-- `network`: Network type (TESTNET or MAINNET)
-- `customLiteSequencerEndpoints` *(optional)*: Custom sequencer endpoints. If not provided, uses default endpoints for the network
-- `logger` *(optional)*: Logger implementation (defaults to `NoopLogger`)
-- `clientFactory` *(optional)*: Factory for creating sequencer clients (defaults to `DefaultLiteSequencerClientFactory`)
+
+- `config`: SDK configuration. `OperationTracker` uses `config.network`, `config.liteSequencerEndpoints`, and TON dependencies from `config.TONParams`.
+- `logger` _(optional)_: Logger implementation (defaults to `NoopLogger`)
+- `clientFactory` _(optional)_: Factory for creating sequencer clients (defaults to `DefaultLiteSequencerClientFactory`)
 
 ### Example Usage
 
 ```ts
-import { OperationTracker, Network } from "@tonappchain/sdk";
-import { ConsoleLogger } from "@tonappchain/sdk";
+import { OperationTracker, TacSdk, Network } from '@tonappchain/sdk';
+import { ConsoleLogger } from '@tonappchain/sdk';
 
-// Basic usage with defaults
-const tracker = new OperationTracker(Network.TESTNET);
+const sdk = await TacSdk.create({ network: Network.TESTNET });
 
-// With custom endpoints and logging
-const trackerWithOptions = new OperationTracker(
-  Network.TESTNET,
-  ["https://your-sequencer.com"], // customLiteSequencerEndpoints
-  new ConsoleLogger(), // logger
-  // clientFactory (optional)
-);
+const tracker = new OperationTracker(sdk.config);
+const trackerWithLogger = new OperationTracker(sdk.config, new ConsoleLogger());
 ```
 
 ---
@@ -107,10 +101,13 @@ const trackerWithOptions = new OperationTracker(
 ### Key Components
 
 #### `ILiteSequencerClientFactory`
+
 Factory interface for creating sequencer clients. The default implementation (`DefaultLiteSequencerClientFactory`) creates `LiteSequencerClient` instances.
 
 #### `ILiteSequencerClient`
+
 Interface that defines the operations supported by sequencer clients:
+
 - `getOperationType(operationId: string): Promise<OperationType>`
 - `getOperationTypeV2(operationId: string): Promise<OperationTypeV2Info>`
 - `getOperationId(transactionLinker: TransactionLinker): Promise<string>`
@@ -129,6 +126,7 @@ Interface that defines the operations supported by sequencer clients:
 3. If all clients fail, an `AllEndpointsFailedError` is thrown
 
 This architecture provides:
+
 - **High Availability**: Automatic failover if an endpoint is down
 - **Load Distribution**: Requests spread across multiple endpoints
 - **Testability**: Interface-based design allows for easy mocking and testing
@@ -191,6 +189,7 @@ interface WaitOptions<T = unknown, TContext = unknown> {
 
 **When `waitOptions` is not specified (undefined):**
 All `OperationTracker` methods automatically use default retry settings:
+
 - `timeout`: 300000ms (5 minutes) - from `DEFAULT_WAIT_TIMEOUT_MS`
 - `maxAttempts`: 30 - from `DEFAULT_WAIT_MAX_ATTEMPTS`
 - `delay`: 10000ms (10 seconds) - from `DEFAULT_WAIT_DELAY_MS`
@@ -216,7 +215,7 @@ await tracker.getOperationId(linker, null);
 await tracker.getOperationId(linker, {
     maxAttempts: 5,
     delay: 2000,
-    timeout: 60000
+    timeout: 60000,
 });
 ```
 
@@ -240,11 +239,12 @@ getOperationId(
 Fetches the cross-chain `operationId` based on a transaction linker. Tries each endpoint in sequence until successful.
 
 **Parameters:**
+
 - `transactionLinker`: Transaction linker object containing sharding information
-- `waitOptions` *(optional)*:
-  - `undefined` (default): Uses default retry settings (30 attempts, 10s delay, 5min timeout)
-  - `null`: Single attempt, no retries
-  - `WaitOptions` object: Custom retry configuration
+- `waitOptions` _(optional)_:
+    - `undefined` (default): Uses default retry settings (30 attempts, 10s delay, 5min timeout)
+    - `null`: Single attempt, no retries
+    - `WaitOptions` object: Custom retry configuration
 
 **Returns:** Operation ID string (empty string if not found)
 
@@ -264,8 +264,9 @@ getOperationIdByTacTransactionHash(
 Fetches TAC-side cross-chain operation IDs by a TAC transaction hash using the explicit TAC sequencer route.
 
 **Parameters:**
+
 - `transactionHash`: TAC transaction hash
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** [`OperationIdWithLogIndex[]`](./../models/structs.md#operationidwithlogindex-type)
 
@@ -285,8 +286,9 @@ getOperationIdByTransactionHash(
 Fetches the cross-chain `operationId` by a transaction hash. The hash can be either an ETH-style hash (`0x...` 32 bytes) or a TON hash. The tracker automatically routes the request to the correct underlying API.
 
 **Parameters:**
+
 - `transactionHash`: TAC (EVM) or TON transaction hash
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** Operation ID string (empty string if not found)
 
@@ -303,15 +305,40 @@ getOperationIdByTonTransactionHash(
 ): Promise<string>
 ```
 
-Fetches the cross-chain `operationId` by an exact TON transaction hash that already belongs to the `crossChainLayer` route.
+Fetches the cross-chain `operationId` by a TON transaction hash.
+
+When the tracker is configured with `IConfiguration` that includes `TONParams.tonIndexer`, this method accepts any TON transaction hash from the same linked TON transaction chain. It uses the configured `IToncenterV3Indexer` to find the `crossChainLayer` transaction that matches the sequencer collector rules, then queries the sequencer with that exact transaction hash.
+
+When `config.TONParams.tonIndexer` is not configured, the method preserves the low-level behavior and sends the provided hash directly to the sequencer TON route.
 
 **Parameters:**
-- `transactionHash`: exact TON transaction hash to send to the sequencer TON route
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+
+- `transactionHash`: TON transaction hash. With indexed lookup configured, this may be any hash from the relevant linked TON transaction chain.
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** Operation ID string (empty string if not found)
 
-**Note:** This method does not resolve arbitrary TON hashes from a transaction chain. For that flow, use [`TacSdk.getOperationIdByTonTransactionHash(...)`](./tac_sdk.md#getoperationidbytontransactionhash).
+---
+
+### `getOperationIdByTonTransactionBoc`
+
+```ts
+getOperationIdByTonTransactionBoc(
+    boc: string,
+    waitOptions?: WaitOptions<string> | null
+): Promise<string>
+```
+
+Fetches the cross-chain `operationId` by the BOC of an external TON message that was sent to the blockchain.
+
+The tracker parses the external message, derives the normalized external-in message hash, finds the root TON transaction that processed that message through the configured `ContractOpener`, and then reuses `getOperationIdByTonTransactionHash(...)`.
+
+**Parameters:**
+
+- `boc`: BOC of the external TON message that was sent to the blockchain
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+
+**Returns:** Operation ID string (empty string if the root or sequencer-collected `crossChainLayer` transaction is not found)
 
 ---
 
@@ -324,17 +351,20 @@ getSimplifiedOperationStatus(transactionLinker: TransactionLinker): Promise<Simp
 Gets a simplified status for an operation based on its transaction linker. This method combines multiple queries internally to determine the overall operation state.
 
 **Parameters:**
+
 - `transactionLinker`: Transaction linker object containing sharding information
 
 **Returns:** [`SimplifiedStatuses`](./../models/enums.md#simplifiedstatuses)
 
 **Status Logic:**
+
 - `OPERATION_ID_NOT_FOUND`: Operation ID not yet assigned
 - `PENDING`: Operation is not yet finalized
 - `FAILED`: Operation has reached a terminal failed state or rollback path
 - `SUCCESSFUL`: Operation has reached a terminal successful state
 
 **Internal Process:**
+
 1. Fetches operation ID using the transaction linker
 2. If no operation ID, returns `OPERATION_ID_NOT_FOUND`
 3. Resolves tracker metadata for the operation
@@ -356,13 +386,13 @@ getOperationStatus(
 Retrieves detailed status information for a single operation.
 
 **Parameters:**
+
 - `operationId`: The operation ID to query
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** [`StatusInfo`](./../models/structs.md#statusinfo)
 
-**Note:** This method internally calls `getOperationStatuses` with a single operation ID and extracts the result.
----
+## **Note:** This method internally calls `getOperationStatuses` with a single operation ID and extracts the result.
 
 ### `getOperationStatuses`
 
@@ -377,9 +407,10 @@ getOperationStatuses(
 Retrieves status information for multiple operations in a single call. Processes requests in chunks for better performance.
 
 **Parameters:**
+
 - `operationIds`: Array of operation IDs to query
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
-- `chunkSize` *(optional)*: Number of items to process per request (default: 100)
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `chunkSize` _(optional)_: Number of items to process per request (default: 100)
 
 **Returns:** [`StatusInfosByOperationId`](./../models/structs.md#statusinfosbyoperationId)
 
@@ -399,8 +430,9 @@ getStageProfiling(
 Retrieves detailed execution stage information for a single operation. Useful for debugging or understanding delays in cross-chain flow.
 
 **Parameters:**
+
 - `operationId`: The operation ID to query
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** [`ExecutionStages`](./../models/structs.md#executionstages)
 
@@ -421,9 +453,10 @@ getStageProfilings(
 Retrieves execution stage profiling information for multiple operations. Processes requests in chunks for better performance.
 
 **Parameters:**
+
 - `operationIds`: Array of operation IDs to query
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying  
-- `chunkSize` *(optional)*: Number of items to process per request (default: 100)
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `chunkSize` _(optional)_: Number of items to process per request (default: 100)
 
 **Returns:** [`ExecutionStagesByOperationId`](./../models/structs.md#executionstagesbyoperationid)
 
@@ -441,8 +474,9 @@ getStageProfilingV2(
 Retrieves detailed execution stage information for a single operation.
 
 **Parameters:**
+
 - `operationId`: The operation ID to query
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** [`ExecutionStagesV2`](./../models/structs.md#executionstagesv2)
 
@@ -463,9 +497,10 @@ getStageProfilingsV2(
 Retrieves execution stage profiling information for multiple operations. Processes requests in chunks for better performance.
 
 **Parameters:**
+
 - `operationIds`: Array of operation IDs to query
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
-- `chunkSize` *(optional)*: Number of items to process per request (default: 100)
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `chunkSize` _(optional)_: Number of items to process per request (default: 100)
 
 **Returns:** [`ExecutionStagesV2ByOperationId`](./../models/structs.md#executionstagesv2byoperationid)
 
@@ -485,8 +520,9 @@ getOperationType(
 Retrieves the operation type classification for a given operation ID.
 
 **Parameters:**
+
 - `operationId`: The operation ID to query
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** [`OperationType`](./../models/enums.md#operationtype)
 
@@ -504,8 +540,9 @@ getOperationTypeV2(
 Retrieves the operation type and finalization state for a given operation ID.
 
 **Parameters:**
+
 - `operationId`: The operation ID to query
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** [`OperationTypeV2Info`](./../models/structs.md#operationtypev2info)
 
@@ -527,10 +564,11 @@ getOperationIdsByShardsKeys(
 Maps TON shard keys (with caller address) to operation IDs. Processes requests in chunks for better performance.
 
 **Parameters:**
+
 - `shardsKeys`: Array of shard keys to query
 - `caller`: Caller's address
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
-- `chunkSize` *(optional)*: Number of items to process per request (default: 100)
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `chunkSize` _(optional)_: Number of items to process per request (default: 100)
 
 **Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey-type)
 
@@ -548,8 +586,9 @@ convertCurrency(
 Converts currency amount using the tracker service with automatic failover across multiple sequencer endpoints.
 
 **Parameters:**
+
 - `params`: [`ConvertCurrencyParams`](./../models/structs.md#convertcurrencyparams) - Parameters for currency conversion
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** [`ConvertedCurrencyResult`](./../models/structs.md#convertedcurrencyresult)
 
@@ -567,8 +606,9 @@ simulateTACMessage(
 Simulates TAC message execution without broadcasting it on-chain. Useful for estimating fees and validating transaction inputs before sending real transactions.
 
 **Parameters:**
+
 - `params`: [`TACSimulationParams`](./../models/structs.md#tacsimulationparams) - Simulation request with encoded message and context
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)
 
@@ -586,7 +626,8 @@ getTVMExecutorFee(
 Calculates suggested TVM executor fee for cross-chain operations with automatic failover across multiple sequencer endpoints.
 
 **Parameters:**
+
 - `params`: [`GetTVMExecutorFeeParams`](./../models/structs.md#gettvmexecutorfeeparams) - Parameters for fee calculation
-- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `waitOptions` _(optional)_: Wait configuration for automatic retrying
 
 **Returns:** [`SuggestedTVMExecutorFee`](./../models/structs.md#suggestedtvmexecutorfee)

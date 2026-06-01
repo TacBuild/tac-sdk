@@ -321,16 +321,11 @@ export class TONTransactionManager implements ITONTransactionManager {
         waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);
         waitOptions.logger = waitOptions.logger ?? this.logger;
 
-        const operationId = await this.operationTracker
-            .getOperationId(transactionLinker, waitOptions)
-            .catch((error) => {
-                this.logger.error(`Error while waiting for operation ID: ${error}`);
-                return undefined;
-            });
+        const operationId = await this.resolveOperationId(sendTransactionResult.boc, transactionLinker, waitOptions);
 
         const shouldWaitForFinalization = tx.options?.waitFinalization ?? true;
         if (!shouldWaitForFinalization) {
-            return { sendTransactionResult, ...transactionLinker };
+            return { sendTransactionResult, operationId, ...transactionLinker };
         }
 
         if (!operationId) {
@@ -363,6 +358,29 @@ export class TONTransactionManager implements ITONTransactionManager {
         await this.operationTracker.getStageProfiling(operationId, finalizationWaitOptions);
 
         return { sendTransactionResult, operationId, ...transactionLinker };
+    }
+
+    private async resolveOperationId(
+        boc: string,
+        transactionLinker: TransactionLinker,
+        waitOptions: WaitOptions<string>,
+    ): Promise<string | undefined> {
+        const operationId = await this.operationTracker
+            .getOperationIdByTonTransactionBoc(boc, waitOptions)
+            .catch((error) => {
+                this.logger.error(`Error while waiting for operation ID by TON transaction BOC: ${error}`);
+                return undefined;
+            });
+        if (operationId) {
+            return operationId;
+        }
+
+        this.logger.debug('Operation ID by TON transaction BOC not found; trying transaction linker');
+
+        return this.operationTracker.getOperationId(transactionLinker, waitOptions).catch((error) => {
+            this.logger.error(`Error while waiting for operation ID by transaction linker: ${error}`);
+            return undefined;
+        });
     }
 
     async sendCrossChainTransactions(

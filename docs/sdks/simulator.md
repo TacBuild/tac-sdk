@@ -82,7 +82,7 @@ const config = await Configuration.create(
 );
 
 // Create operation tracker
-const operationTracker = new OperationTracker(Network.TESTNET, config.liteSequencerEndpoints);
+const operationTracker = new OperationTracker(config);
 
 // Create logger (optional)
 const logger = new ConsoleLogger();

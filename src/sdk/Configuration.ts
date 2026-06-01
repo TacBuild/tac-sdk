@@ -3,7 +3,7 @@ import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
 import { dev, mainnet, testnet } from '../../artifacts';
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
-import { createDefaultRetryableOpener } from '../adapters';
+import { createDefaultRetryableOpener, ToncenterV3Indexer } from '../adapters';
 import { ContractOpener, IConfiguration, ILogger } from '../interfaces';
 import { ContractFeeUsageParams, InternalTACParams, InternalTONParams, TONFeesParams } from '../structs/InternalStruct';
 import { Network, TACParams, TONParams } from '../structs/Struct';
@@ -105,6 +105,12 @@ export class Configuration implements IConfiguration {
             settingsAddress = TONParams?.settingsAddress ?? artifacts.TON_SETTINGS_ADDRESS;
         }
 
+        const tonIndexer =
+            TONParams?.tonIndexer ??
+            (artifacts.TONCENTER_V3_INDEXER_ENDPOINT
+                ? new ToncenterV3Indexer(artifacts.TONCENTER_V3_INDEXER_ENDPOINT)
+                : undefined);
+
         if (passLoggerToOpeners) {
             contractOpener.setLogger(logger);
         }
@@ -136,6 +142,7 @@ export class Configuration implements IConfiguration {
 
         return {
             contractOpener,
+            tonIndexer,
             jettonProxyAddress,
             crossChainLayerAddress,
             jettonMinterCode,

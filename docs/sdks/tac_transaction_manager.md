@@ -202,7 +202,7 @@ import {
 
 // Create dependencies
 const config = await Configuration.create(Network.TESTNET);
-const operationTracker = new OperationTracker(Network.TESTNET);
+const operationTracker = new OperationTracker(config);
 const logger = new ConsoleLogger();
 
 // Create TAC Transaction Manager for TAC -> TON operations

@@ -1,9 +1,14 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { Address, beginCell, external, storeMessage } from '@ton/ton';
 
+import { testnet } from '../../artifacts';
 import {
+    Configuration,
+    ContractOpener,
     FetchError,
     ILiteSequencerClient,
     ILiteSequencerClientFactory,
+    IToncenterV3Indexer,
     OperationTracker,
 } from '../../src';
 import {
@@ -32,6 +37,8 @@ import {
     WaitOptions,
 } from '../../src';
 import { convertCurrencyNegativeOrZeroValueError } from '../../src/errors/instances';
+import * as Utils from '../../src/sdk/Utils';
+import { InternalTACParams, InternalTONParams } from '../../src/structs/InternalStruct';
 
 // Mock implementations
 class MockLogger implements ILogger {
@@ -84,16 +91,21 @@ describe('OperationTracker', () => {
         shardsKey: '12345',
         timestamp: Date.now(),
     };
+    const liteSequencerEndpoints = ['http://localhost:3000', 'http://localhost:3001'];
+    const createTrackerConfig = (TONParams: Partial<InternalTONParams> = {}) =>
+        new Configuration(
+            Network.TESTNET,
+            testnet,
+            TONParams as InternalTONParams,
+            {} as InternalTACParams,
+            liteSequencerEndpoints,
+            mockLogger,
+        );
 
     beforeEach(() => {
         mockLogger = new MockLogger();
         mockClientFactory = new MockLiteSequencerClientFactory();
-        operationTracker = new OperationTracker(
-            Network.TESTNET,
-            ['http://localhost:3000', 'http://localhost:3001'],
-            mockLogger,
-            mockClientFactory,
-        );
+        operationTracker = new OperationTracker(createTrackerConfig(), mockLogger, mockClientFactory);
 
         mockClients = mockClientFactory.getClients();
     });
@@ -679,14 +691,18 @@ describe('OperationTracker', () => {
                 currency: CurrencyType.TON,
             };
 
-            await expect(operationTracker.convertCurrency(params)).rejects.toThrow(convertCurrencyNegativeOrZeroValueError);
+            await expect(operationTracker.convertCurrency(params)).rejects.toThrow(
+                convertCurrencyNegativeOrZeroValueError,
+            );
 
             params = {
                 value: -2n,
                 currency: CurrencyType.TON,
             };
 
-            await expect(operationTracker.convertCurrency(params)).rejects.toThrow(convertCurrencyNegativeOrZeroValueError);
+            await expect(operationTracker.convertCurrency(params)).rejects.toThrow(
+                convertCurrencyNegativeOrZeroValueError,
+            );
         });
 
         it('should successfully convert currency using first client', async () => {
@@ -936,6 +952,45 @@ describe('OperationTracker', () => {
     });
 
     describe('getOperationIdByTonTransactionHash', () => {
+        const crossChainLayerAddress = '0:C8BA7D20AB6D96F4DD7F9574C9C4ED11A6DAC7EB6E48BAD58373052124978EB3';
+        const cclTransactionHash = '+ux6QOo4uZtXAUcvXQDoTKZjPDiz6+4oJv9pODRAY1I=';
+        const sequencerCclTransactionHash = '0xfaec7a40ea38b99b5701472f5d00e84ca6633c38b3ebee2826ff693834406352';
+
+        const createIndexedTracker = () => {
+            const clientFactory = new MockLiteSequencerClientFactory();
+            const contractOpener = {
+                open: ((src) => src as never) as ContractOpener['open'],
+                getContractState: jest.fn<ContractOpener['getContractState']>(),
+                closeConnections: jest.fn<NonNullable<ContractOpener['closeConnections']>>(),
+                getTransactions: jest.fn<ContractOpener['getTransactions']>(),
+                getTransactionByHash: jest.fn<ContractOpener['getTransactionByHash']>(),
+                getTransactionByTxHash: jest.fn<ContractOpener['getTransactionByTxHash']>(),
+                getTransactionByInMsgHash: jest.fn<ContractOpener['getTransactionByInMsgHash']>(),
+                getTransactionByOutMsgHash: jest.fn<ContractOpener['getTransactionByOutMsgHash']>(),
+                getAdjacentTransactions: jest.fn<ContractOpener['getAdjacentTransactions']>(),
+                getAddressInformation: jest.fn<ContractOpener['getAddressInformation']>(),
+                getConfig: jest.fn<ContractOpener['getConfig']>(),
+                trackTransactionTree: jest.fn<ContractOpener['trackTransactionTree']>(),
+                trackTransactionTreeWithResult: jest.fn<ContractOpener['trackTransactionTreeWithResult']>(),
+                setLogger: jest.fn<ContractOpener['setLogger']>(),
+            } satisfies ContractOpener;
+            const tonIndexer = {
+                endpoint: 'https://testnet.toncenter.com/api/v3/',
+                getTransactionByHash: jest.fn(),
+                getTransactionsByMessageHash: jest.fn(),
+                getAdjacentTransactions: jest.fn(),
+                findCollectibleCrossChainLayerTransaction: jest.fn(),
+            } as jest.Mocked<IToncenterV3Indexer>;
+            const config = createTrackerConfig({
+                contractOpener,
+                tonIndexer,
+                crossChainLayerAddress,
+            });
+            const tracker = new OperationTracker(config, mockLogger, clientFactory);
+
+            return { tracker, clients: clientFactory.getClients(), contractOpener, tonIndexer };
+        };
+
         it('should get operation ID via explicit TON sequencer route', async () => {
             const transactionHash = '0xfaec7a40ea38b99b5701472f5d00e84ca6633c38b3ebee2826ff693834406352';
             const expectedId = 'op-ton-123';
@@ -972,6 +1027,78 @@ describe('OperationTracker', () => {
             expect(result).toBe(expectedId);
             expect(mockClients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledTimes(1);
             expect(mockClients[1].getOperationIdByTonTransactionHash).toHaveBeenCalledTimes(1);
+        });
+
+        it('should resolve operation ID by any TON transaction hash through indexed CCL transaction', async () => {
+            const { tracker, clients, tonIndexer } = createIndexedTracker();
+            const inputHash = '0xa41ac40e63cb9aa683fe4702d2fc358afa896877cb21582cc841db7a6d0556b2';
+            tonIndexer.findCollectibleCrossChainLayerTransaction.mockResolvedValue({
+                account: crossChainLayerAddress,
+                hash: cclTransactionHash,
+                outMsgs: [],
+            });
+            clients[0].getOperationIdByTonTransactionHash.mockResolvedValue('op-1');
+
+            const result = await tracker.getOperationIdByTonTransactionHash(inputHash, null);
+
+            expect(result).toBe('op-1');
+            expect(tonIndexer.findCollectibleCrossChainLayerTransaction).toHaveBeenCalledWith(
+                inputHash,
+                crossChainLayerAddress,
+            );
+            expect(clients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledWith(sequencerCclTransactionHash);
+        });
+
+        it('should return empty string when indexed CCL transaction is not found', async () => {
+            const { tracker, clients, tonIndexer } = createIndexedTracker();
+            tonIndexer.findCollectibleCrossChainLayerTransaction.mockResolvedValue(null);
+
+            const result = await tracker.getOperationIdByTonTransactionHash('tx-hash', null);
+
+            expect(result).toBe('');
+            expect(clients[0].getOperationIdByTonTransactionHash).not.toHaveBeenCalled();
+        });
+
+        it('should resolve operation ID by external TON message BOC', async () => {
+            const { tracker, clients, contractOpener, tonIndexer } = createIndexedTracker();
+            const rootTransactionHash = 'pBrEDmPLmqaD/kcC0vw1ivqJaHfLIVgsyEHbem0FVrI=';
+            const ext = external({
+                to: Address.parse('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'),
+                body: beginCell().storeUint(1, 32).endCell(),
+            });
+            const boc = beginCell().store(storeMessage(ext)).endCell().toBoc().toString('base64');
+            const expectedInMessageHash = Utils.getNormalizedExtMessageHash(ext);
+
+            contractOpener.getTransactionByHash.mockResolvedValue({
+                hash: () => Buffer.from(rootTransactionHash, 'base64'),
+            } as never);
+            tonIndexer.findCollectibleCrossChainLayerTransaction.mockResolvedValue({
+                account: crossChainLayerAddress,
+                hash: cclTransactionHash,
+                outMsgs: [],
+            });
+            clients[0].getOperationIdByTonTransactionHash.mockResolvedValue('op-2');
+
+            const result = await tracker.getOperationIdByTonTransactionBoc(boc, null);
+
+            expect(result).toBe('op-2');
+            const [actualAddress, actualInMessageHash] = contractOpener.getTransactionByHash.mock.calls[0];
+            expect(actualAddress.equals(Address.parse('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'))).toBe(true);
+            expect(actualInMessageHash).toBe(expectedInMessageHash);
+            expect(tonIndexer.findCollectibleCrossChainLayerTransaction).toHaveBeenCalledWith(
+                rootTransactionHash,
+                crossChainLayerAddress,
+            );
+            expect(clients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledWith(sequencerCclTransactionHash);
+        });
+
+        it('should throw SDK format error for invalid external TON message BOC', async () => {
+            const { tracker } = createIndexedTracker();
+
+            await expect(tracker.getOperationIdByTonTransactionBoc('not-a-boc', null)).rejects.toMatchObject({
+                name: 'FormatError',
+                errorCode: 141,
+            });
         });
     });
 
@@ -1132,14 +1259,14 @@ describe('OperationTracker', () => {
                     'failed to fetch simulate tac msg: request POST http://localhost:8090/tac/simulator/simulate-message failed to complete request',
                 ),
                 {
-                name: 'AxiosError',
-                response: {
-                    status: 422,
-                    data: {
-                        errorCode: 9001,
-                        message: 'Bad TAC payload',
+                    name: 'AxiosError',
+                    response: {
+                        status: 422,
+                        data: {
+                            errorCode: 9001,
+                            message: 'Bad TAC payload',
+                        },
                     },
-                },
                 },
             );
 

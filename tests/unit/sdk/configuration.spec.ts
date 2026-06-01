@@ -103,6 +103,7 @@ describe('Configuration', () => {
             expect(config).toBeInstanceOf(Configuration);
             expect(config.network).toBe(Network.TESTNET);
             expect(config.nativeTONAddress).toBeTruthy();
+            expect(config.TONParams.tonIndexer?.endpoint).toBe(testnet.TONCENTER_V3_INDEXER_ENDPOINT);
         }, 100000);
 
         it('creates configuration for mainnet network', async () => {
@@ -114,10 +115,17 @@ describe('Configuration', () => {
         }, 100000);
 
         it('creates configuration with custom TON and TAC params', async () => {
-            const config = await Configuration.create(Network.TESTNET, testnet, mockTONParams, mockTACParams);
+            const tonIndexer = { endpoint: 'https://custom-indexer.test/api/v3' } as never;
+            const config = await Configuration.create(
+                Network.TESTNET,
+                testnet,
+                { ...mockTONParams, tonIndexer },
+                mockTACParams,
+            );
 
             expect(config).toBeInstanceOf(Configuration);
             expect(config.network).toBe(Network.TESTNET);
+            expect(config.TONParams.tonIndexer).toBe(tonIndexer);
         }, 100000);
 
         it('creates configuration with custom lite sequencer endpoints', async () => {

@@ -138,7 +138,7 @@ const sdk = await TacSdk.create({
   },
 });
 
-const operationId = await sdk.getOperationIdByTonTransactionHash(
+const operationId = await sdk.getOperationTracker().getOperationIdByTonTransactionHash(
   '0xa41ac40e63cb9aa683fe4702d2fc358afa896877cb21582cc841db7a6d0556b2',
 );
 ```

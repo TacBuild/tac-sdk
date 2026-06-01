@@ -1,5 +1,7 @@
 ### `startTracking`
 
+> **Deprecated:** Prefer `TacSdk.sendCrossChainTransaction(...)` for new code. It already waits for `operationId` and full cross-chain finalization by default through `waitOperationId` and `waitFinalization` options.
+
 ```ts
 startTracking(
   transactionLinker: TransactionLinkerWithOperationId,
@@ -17,7 +19,7 @@ startTracking(
 ): Promise<void | ExecutionStages>
 ```
 
-Tracks a crosschain operation end-to-end by polling the status using the transaction linker.  
+Deprecated utility that tracks a crosschain operation end-to-end by polling the status using the transaction linker.  
 It will continue until a final state (success or failure) is reached.
 
 If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` and `cclAddress` are provided, the finalizer will be used to verify the final TON transaction(s) for success.
@@ -61,6 +63,8 @@ await startTracking(transactionLinker, Network.TESTNET, {
 
 ### `startTrackingMultiple`
 
+> **Deprecated:** Prefer `TacSdk.sendCrossChainTransaction(...)` for new single-transaction flows. It already waits for `operationId` and full cross-chain finalization by default through `waitOperationId` and `waitFinalization` options.
+
 ```ts
 startTrackingMultiple(
   transactionLinkers: TransactionLinkerWithOperationId[],
@@ -77,7 +81,7 @@ startTrackingMultiple(
 ): Promise<void | ExecutionStages[]>
 ```
 
-Tracks multiple crosschain operations in parallel by polling their statuses using transaction linkers.  
+Deprecated utility that tracks multiple crosschain operations in parallel by polling their statuses using transaction linkers.  
 Each operation will be tracked until it reaches a final state (success or failure).
 
 If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` is provided, the finalizer will be used to verify the final TON transaction(s) for success.

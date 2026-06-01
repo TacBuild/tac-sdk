@@ -100,6 +100,8 @@ Returns an object containing:
 - `operationId` *(optional)*: Operation ID if waiting was enabled
 - Transaction linker properties for tracking
 
+When operation ID waiting is enabled, the manager first resolves the operation ID through `OperationTracker.getOperationIdByTonTransactionBoc(...)` using the BOC returned by the sender. If that lookup does not resolve an ID, it falls back to the legacy `OperationTracker.getOperationId(transactionLinker, ...)` lookup.
+
 ### **Possible exceptions**
 
 - **`InsufficientBalanceError`**: Thrown when sender has insufficient TON balance
@@ -260,7 +262,7 @@ import {
 // Create dependencies
 const config = await Configuration.create(Network.TESTNET);
 const simulator = new Simulator(config);
-const operationTracker = new OperationTracker(Network.TESTNET);
+const operationTracker = new OperationTracker(config);
 const logger = new ConsoleLogger();
 
 // Create TON Transaction Manager for TON -> TAC operations

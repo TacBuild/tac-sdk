@@ -1,11 +1,8 @@
-import { Address, Cell, loadMessage } from '@ton/ton';
 import { Wallet } from 'ethers';
 
 import { dev, mainnet, testnet } from '../../artifacts';
 import { JettonMinterData, NFTItemData } from '../../artifacts/tonTypes';
-import { ToncenterV3Indexer } from '../adapters';
 import { AssetFactory, FT, NFT, TAC, TON } from '../assets';
-import { externalInMessageRequiredError, invalidTonExternalMessageBocError } from '../errors';
 import {
     Asset,
     ContractOpener,
@@ -16,7 +13,6 @@ import {
     ITacExplorerClient,
     ITacSDK,
     ITACTransactionManager,
-    IToncenterV3Indexer,
     ITONTransactionManager,
 } from '../interfaces';
 import type { SenderAbstraction } from '../sender';
@@ -44,11 +40,9 @@ import {
     TacGasPrice,
     TACSimulationParams,
     TACSimulationResult,
-    ToncenterV3IndexedTransaction,
     TransactionLinkerWithOperationId,
     TVMAddress,
     UserWalletBalanceExtended,
-    WaitOptions,
 } from '../structs/Struct';
 import { Configuration } from './Configuration';
 import { DEFAULT_DELAY } from './Consts';
@@ -58,7 +52,7 @@ import { Simulator } from './Simulator';
 import { TacExplorerClient } from './TacExplorerClient';
 import { TACTransactionManager } from './TACTransactionManager';
 import { TONTransactionManager } from './TONTransactionManager';
-import { getBouncedAddress, getNormalizedExtMessageHash, mapAssetsToTonAssets, normalizeAssets, normalizeHashToHex } from './Utils';
+import { getBouncedAddress, mapAssetsToTonAssets, normalizeAssets } from './Utils';
 
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
@@ -68,7 +62,6 @@ export class TacSdk implements ITacSDK {
     private readonly simulator: ISimulator;
     private readonly tonTransactionManager: ITONTransactionManager;
     private readonly tacTransactionManager: ITACTransactionManager;
-    private readonly tonIndexer: IToncenterV3Indexer;
 
     private constructor(
         config: IConfiguration,
@@ -77,7 +70,6 @@ export class TacSdk implements ITacSDK {
         tacTransactionManager: ITACTransactionManager,
         operationTracker: IOperationTracker,
         explorerClient: ITacExplorerClient,
-        tonIndexer: IToncenterV3Indexer,
     ) {
         this.config = config;
         this.contactOpener = config.TONParams.contractOpener;
@@ -86,7 +78,6 @@ export class TacSdk implements ITacSDK {
         this.tacTransactionManager = tacTransactionManager;
         this.operationTracker = operationTracker;
         this.explorerClient = explorerClient;
-        this.tonIndexer = tonIndexer;
     }
 
     static async create(sdkParams: SDKParams, logger: ILogger = new NoopLogger()): Promise<TacSdk> {
@@ -120,12 +111,11 @@ export class TacSdk implements ITacSDK {
             passLoggerToOpeners,
         );
 
-        const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints, logger);
+        const operationTracker = new OperationTracker(config, logger);
         const explorerClient = new TacExplorerClient(artifacts.TAC_EXPLORER_API_ENDPOINT);
         const simulator = new Simulator(config, operationTracker, logger);
         const tonTransactionManager = new TONTransactionManager(config, simulator, operationTracker, logger);
         const tacTransactionManager = new TACTransactionManager(config, operationTracker, logger);
-        const tonIndexer = sdkParams.TONParams?.tonIndexer ?? new ToncenterV3Indexer(artifacts.TONCENTER_V3_INDEXER_ENDPOINT);
 
         return new TacSdk(
             config,
@@ -134,7 +124,6 @@ export class TacSdk implements ITacSDK {
             tacTransactionManager,
             operationTracker,
             explorerClient,
-            tonIndexer,
         );
     }
 
@@ -226,51 +215,6 @@ export class TacSdk implements ITacSDK {
             })),
         );
         return this.tonTransactionManager.sendCrossChainTransactions(sender, normalizedTxs, options);
-    }
-
-    async getOperationIdByTonTransactionHash(
-        transactionHash: string,
-        waitOptions?: WaitOptions<string> | null,
-    ): Promise<string> {
-        const cclTransaction = await this.tonIndexer.findCollectibleCrossChainLayerTransaction(
-            transactionHash,
-            this.config.TONParams.crossChainLayerAddress,
-        );
-        if (!cclTransaction) {
-            return '';
-        }
-        return this.operationTracker.getOperationIdByTonTransactionHash(
-            this.toSequencerTonTransactionHash(cclTransaction),
-            waitOptions,
-        );
-    }
-
-    async getOperationIdByTonTransactionBoc(
-        boc: string,
-        waitOptions?: WaitOptions<string> | null,
-    ): Promise<string> {
-        let message;
-        try {
-            message = loadMessage(Cell.fromBase64(boc).beginParse());
-        } catch (error) {
-            const reason = error instanceof Error ? error.message : undefined;
-            throw invalidTonExternalMessageBocError(reason);
-        }
-
-        if (message.info.type !== 'external-in') {
-            throw externalInMessageRequiredError(message.info.type);
-        }
-
-        const destination = message.info.dest;
-        const transaction = await this.contactOpener.getTransactionByHash(
-            Address.parse(destination.toString()),
-            getNormalizedExtMessageHash(message),
-        );
-        if (!transaction) {
-            return '';
-        }
-
-        return this.getOperationIdByTonTransactionHash(transaction.hash().toString('base64'), waitOptions);
     }
 
     async bridgeTokensToTON(
@@ -426,9 +370,5 @@ export class TacSdk implements ITacSDK {
 
     getTonContractOpener(): ContractOpener {
         return this.contactOpener;
-    }
-
-    private toSequencerTonTransactionHash(transaction: ToncenterV3IndexedTransaction): string {
-        return `0x${normalizeHashToHex(transaction.hash)}`;
     }
 }
