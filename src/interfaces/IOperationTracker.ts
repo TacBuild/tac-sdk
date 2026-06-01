@@ -62,6 +62,7 @@ export interface IOperationTracker {
      * When OperationTracker config includes TONParams.tonIndexer, the hash may belong to any transaction in the linked
      * TON transaction chain; the tracker resolves the sequencer-collected crossChainLayer transaction before querying
      * the sequencer.
+     * Retries cover both the indexed crossChainLayer lookup and the sequencer request.
      * @param transactionHash TON transaction hash.
      * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
      */
@@ -71,8 +72,9 @@ export interface IOperationTracker {
     ): Promise<string>;
     /**
      * Resolves an operation id by the BOC of an external TON message that was sent to the blockchain.
-     * The tracker resolves the root TON transaction that processed the external message, then reuses
-     * `getOperationIdByTonTransactionHash(...)`.
+     * The tracker resolves the root TON transaction that processed the external message, then resolves the
+     * sequencer-collected crossChainLayer transaction before querying the sequencer. Retries cover that whole lookup.
+     * Requires OperationTracker config to include TONParams.tonIndexer.
      * @param boc BOC of the external TON message that was sent to the blockchain.
      * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
      */

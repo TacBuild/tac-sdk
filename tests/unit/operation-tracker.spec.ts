@@ -1059,6 +1059,41 @@ describe('OperationTracker', () => {
             expect(clients[0].getOperationIdByTonTransactionHash).not.toHaveBeenCalled();
         });
 
+        it('should retry indexed CCL lookup for TON transaction hash', async () => {
+            const { tracker, clients, tonIndexer } = createIndexedTracker();
+            const inputHash = '0xa41ac40e63cb9aa683fe4702d2fc358afa896877cb21582cc841db7a6d0556b2';
+            tonIndexer.findCollectibleCrossChainLayerTransaction.mockResolvedValueOnce(null).mockResolvedValue({
+                account: crossChainLayerAddress,
+                hash: cclTransactionHash,
+                outMsgs: [],
+            });
+            clients[0].getOperationIdByTonTransactionHash.mockResolvedValue('op-2');
+
+            const result = await tracker.getOperationIdByTonTransactionHash(inputHash, {
+                timeout: 1000,
+                maxAttempts: 2,
+                delay: 1,
+                successCheck: (id) => !!id,
+            });
+
+            expect(result).toBe('op-2');
+            expect(tonIndexer.findCollectibleCrossChainLayerTransaction).toHaveBeenCalledTimes(2);
+            expect(clients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledWith(sequencerCclTransactionHash);
+        });
+
+        it('should throw when resolving operation ID by external TON message BOC without TON indexer', async () => {
+            const ext = external({
+                to: Address.parse('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'),
+                body: beginCell().storeUint(1, 32).endCell(),
+            });
+            const boc = beginCell().store(storeMessage(ext)).endCell().toBoc().toString('base64');
+
+            await expect(operationTracker.getOperationIdByTonTransactionBoc(boc, null)).rejects.toMatchObject({
+                name: 'SettingError',
+                errorCode: 143,
+            });
+        });
+
         it('should resolve operation ID by external TON message BOC', async () => {
             const { tracker, clients, contractOpener, tonIndexer } = createIndexedTracker();
             const rootTransactionHash = 'pBrEDmPLmqaD/kcC0vw1ivqJaHfLIVgsyEHbem0FVrI=';
@@ -1089,6 +1124,40 @@ describe('OperationTracker', () => {
                 rootTransactionHash,
                 crossChainLayerAddress,
             );
+            expect(clients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledWith(sequencerCclTransactionHash);
+        });
+
+        it('should retry full external TON message BOC flow until operation ID is resolved', async () => {
+            const { tracker, clients, contractOpener, tonIndexer } = createIndexedTracker();
+            const rootTransactionHash = 'pBrEDmPLmqaD/kcC0vw1ivqJaHfLIVgsyEHbem0FVrI=';
+            const ext = external({
+                to: Address.parse('EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c'),
+                body: beginCell().storeUint(1, 32).endCell(),
+            });
+            const boc = beginCell().store(storeMessage(ext)).endCell().toBoc().toString('base64');
+            const rootTransaction = {
+                hash: () => Buffer.from(rootTransactionHash, 'base64'),
+            } as never;
+
+            contractOpener.getTransactionByHash.mockResolvedValueOnce(null).mockResolvedValue(rootTransaction);
+            tonIndexer.findCollectibleCrossChainLayerTransaction.mockResolvedValueOnce(null).mockResolvedValue({
+                account: crossChainLayerAddress,
+                hash: cclTransactionHash,
+                outMsgs: [],
+            });
+            clients[0].getOperationIdByTonTransactionHash.mockResolvedValueOnce('').mockResolvedValue('op-3');
+
+            const result = await tracker.getOperationIdByTonTransactionBoc(boc, {
+                timeout: 1000,
+                maxAttempts: 4,
+                delay: 1,
+                successCheck: (id) => !!id,
+            });
+
+            expect(result).toBe('op-3');
+            expect(contractOpener.getTransactionByHash).toHaveBeenCalledTimes(4);
+            expect(tonIndexer.findCollectibleCrossChainLayerTransaction).toHaveBeenCalledTimes(3);
+            expect(clients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledTimes(2);
             expect(clients[0].getOperationIdByTonTransactionHash).toHaveBeenCalledWith(sequencerCclTransactionHash);
         });
 

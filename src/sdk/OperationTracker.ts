@@ -1,6 +1,11 @@
 import { Address, Cell, loadMessage } from '@ton/ton';
 
-import { allEndpointsFailedError, externalInMessageRequiredError, invalidTonExternalMessageBocError } from '../errors';
+import {
+    allEndpointsFailedError,
+    externalInMessageRequiredError,
+    invalidTonExternalMessageBocError,
+    tonIndexerRequiredForTonTransactionBocError,
+} from '../errors';
 import { convertCurrencyNegativeOrZeroValueError } from '../errors/instances';
 import {
     IConfiguration,
@@ -112,24 +117,18 @@ export class OperationTracker implements IOperationTracker {
         transactionHash: string,
         waitOptions?: WaitOptions<string> | null,
     ): Promise<string> {
-        let eventTxHash = transactionHash;
-        const tonIndexer = this.config.TONParams.tonIndexer;
-        if (tonIndexer) {
-            const cclTransaction = await tonIndexer.findCollectibleCrossChainLayerTransaction(
-                transactionHash,
-                this.config.TONParams.crossChainLayerAddress,
-            );
-            if (!cclTransaction) {
-                return '';
-            }
-
-            eventTxHash = `0x${normalizeHashToHex(cclTransaction.hash)}`;
-        }
-
-        return this.getOperationIdByEventTonTransactionHash(eventTxHash, waitOptions);
+        return this.getOperationIdByTonTransaction(
+            async () => transactionHash,
+            `OperationTracker: Getting operation ID by TON transaction hash ${formatObjectForLogging(transactionHash)}`,
+            waitOptions,
+        );
     }
 
     async getOperationIdByTonTransactionBoc(boc: string, waitOptions?: WaitOptions<string> | null): Promise<string> {
+        if (!this.config.TONParams.tonIndexer) {
+            throw tonIndexerRequiredForTonTransactionBocError;
+        }
+
         let message;
         try {
             message = loadMessage(Cell.fromBase64(boc).beginParse());
@@ -142,26 +141,51 @@ export class OperationTracker implements IOperationTracker {
             throw externalInMessageRequiredError(message.info.type);
         }
 
-        const transaction = await this.config.TONParams.contractOpener.getTransactionByHash(
-            Address.parse(message.info.dest.toString()),
-            getNormalizedExtMessageHash(message),
-        );
-        if (!transaction) {
-            return '';
-        }
+        const destination = Address.parse(message.info.dest.toString());
+        const messageHash = getNormalizedExtMessageHash(message);
 
-        return this.getOperationIdByTonTransactionHash(transaction.hash().toString('base64'), waitOptions);
+        return this.getOperationIdByTonTransaction(
+            async () => {
+                const transaction = await this.config.TONParams.contractOpener.getTransactionByHash(
+                    destination,
+                    messageHash,
+                );
+                return transaction?.hash().toString('base64') ?? '';
+            },
+            'OperationTracker: Getting operation ID by TON transaction BOC',
+            waitOptions,
+        );
     }
 
-    private async getOperationIdByEventTonTransactionHash(
-        transactionHash: string,
+    private async getOperationIdByTonTransaction(
+        resolveTransactionHash: () => Promise<string>,
+        operationDescription: string,
         waitOptions?: WaitOptions<string> | null,
     ): Promise<string> {
         const requestFn = async (): Promise<string> => {
+            const transactionHash = await resolveTransactionHash();
+            if (!transactionHash) {
+                return '';
+            }
+
+            let eventTxHash = transactionHash;
+            const tonIndexer = this.config.TONParams.tonIndexer;
+            if (tonIndexer) {
+                const cclTransaction = await tonIndexer.findCollectibleCrossChainLayerTransaction(
+                    transactionHash,
+                    this.config.TONParams.crossChainLayerAddress,
+                );
+                if (!cclTransaction) {
+                    return '';
+                }
+
+                eventTxHash = `0x${normalizeHashToHex(cclTransaction.hash)}`;
+            }
+
             let lastError: unknown;
             for (const client of this.clients) {
                 try {
-                    const id = await client.getOperationIdByTonTransactionHash(transactionHash);
+                    const id = await client.getOperationIdByTonTransactionHash(eventTxHash);
                     return id;
                 } catch (error) {
                     lastError = error;
@@ -172,11 +196,7 @@ export class OperationTracker implements IOperationTracker {
 
         return waitOptions === null
             ? await requestFn()
-            : await waitUntilSuccess(
-                  { logger: this.logger, ...waitOptions },
-                  requestFn,
-                  `OperationTracker: Getting operation ID by TON transaction hash ${formatObjectForLogging(transactionHash)}`,
-              );
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, operationDescription);
     }
 
     async getOperationType(

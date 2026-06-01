@@ -311,6 +311,8 @@ When the tracker is configured with `IConfiguration` that includes `TONParams.to
 
 When `config.TONParams.tonIndexer` is not configured, the method preserves the low-level behavior and sends the provided hash directly to the sequencer TON route.
 
+When `waitOptions` are enabled, one retry attempt covers both the indexed `crossChainLayer` transaction lookup and the sequencer request. Use `successCheck: (id) => !!id` to keep polling while the lookup returns an empty operation ID.
+
 **Parameters:**
 
 - `transactionHash`: TON transaction hash. With indexed lookup configured, this may be any hash from the relevant linked TON transaction chain.
@@ -331,7 +333,11 @@ getOperationIdByTonTransactionBoc(
 
 Fetches the cross-chain `operationId` by the BOC of an external TON message that was sent to the blockchain.
 
-The tracker parses the external message, derives the normalized external-in message hash, finds the root TON transaction that processed that message through the configured `ContractOpener`, and then reuses `getOperationIdByTonTransactionHash(...)`.
+The tracker parses the external message, derives the normalized external-in message hash, finds the root TON transaction that processed that message through the configured `ContractOpener`, and then applies the same TON transaction hash lookup flow.
+
+This method requires `config.TONParams.tonIndexer`; without an indexer it throws `SettingError`.
+
+When `waitOptions` are enabled, one retry attempt covers the root TON transaction lookup from the BOC, the indexed `crossChainLayer` lookup, and the sequencer request. Invalid BOC parsing is validated before polling starts.
 
 **Parameters:**
 
