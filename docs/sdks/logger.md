@@ -107,11 +107,10 @@ This implementation is useful for:
 ## Example Usage
 
 ```ts
-import { ConsoleLogger, NoopLogger, Simulator, Configuration, Network } from "@tonappchain/sdk";
-import { testnet } from "@tonappchain/artifacts";
+import { ConsoleLogger, NoopLogger, Simulator, Configuration, getArtifacts, Network } from "@tonappchain/sdk";
 
 // Create configuration
-const config = await Configuration.create(Network.TESTNET, testnet);
+const config = await Configuration.create(Network.TESTNET, getArtifacts(Network.TESTNET));
 
 // Use ConsoleLogger for development/debugging
 const debugLogger = new ConsoleLogger();
@@ -179,4 +178,4 @@ const silentSimulator = new Simulator(config, new NoopLogger());
 1. **Development**: Use `ConsoleLogger` for detailed debugging and development
 2. **Production**: Use `NoopLogger` or custom logger that writes to files/external services
 3. **Testing**: Use `NoopLogger` to avoid cluttering test output
-4. **Custom Logging**: Implement `ILogger` interface for integration with existing logging systems 
+4. **Custom Logging**: Implement `ILogger` interface for integration with existing logging systems

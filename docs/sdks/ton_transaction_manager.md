@@ -164,7 +164,7 @@ Prepares the transaction payloads required for a cross-chain operation without s
 
 ### **Returns** `Promise<CrossChainPayloadResult[]>`
 
-Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschainpayloadresult) objects, each containing:
+Returns an array of [`CrossChainPayloadResult`](./../models/structs.md#crosschainpayloadresult-type) objects, each containing:
 - **`body`**: The serialized message payload as a TON Cell, containing all transaction data and parameters
 - **`destinationAddress`**: Target contract address for this message (e.g., jetton wallet, NFT item, cross-chain layer)
 - **`tonAmount`**: Amount of TON to send with this message in nanotons (for asset transfer or contract interaction)
@@ -256,11 +256,12 @@ import {
   Simulator, 
   OperationTracker, 
   ConsoleLogger, 
+  getArtifacts,
   Network 
 } from "@tonappchain/sdk";
 
 // Create dependencies
-const config = await Configuration.create(Network.TESTNET);
+const config = await Configuration.create(Network.TESTNET, getArtifacts(Network.TESTNET));
 const simulator = new Simulator(config);
 const operationTracker = new OperationTracker(config);
 const logger = new ConsoleLogger();

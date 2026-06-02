@@ -197,11 +197,12 @@ import {
   Configuration, 
   OperationTracker, 
   ConsoleLogger, 
+  getArtifacts,
   Network 
 } from "@tonappchain/sdk";
 
 // Create dependencies
-const config = await Configuration.create(Network.TESTNET);
+const config = await Configuration.create(Network.TESTNET, getArtifacts(Network.TESTNET));
 const operationTracker = new OperationTracker(config);
 const logger = new ConsoleLogger();
 

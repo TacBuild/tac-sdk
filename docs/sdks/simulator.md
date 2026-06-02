@@ -66,6 +66,7 @@ import {
     Configuration, 
     OperationTracker, 
     ConsoleLogger,
+    getArtifacts,
     Network 
 } from "@tonappchain/sdk";
 import { TonApiClient } from '@ton-api/client';
@@ -74,7 +75,7 @@ import { getHttpV4Endpoint } from '@orbs-network/ton-access';
 // Create configuration
 const config = await Configuration.create(
     Network.TESTNET,
-    artifacts, // Network artifacts
+    getArtifacts(Network.TESTNET), // Network artifacts
     tonParams, // TON parameters
     tacParams, // TAC parameters
     customEndpoints, // Optional custom endpoints

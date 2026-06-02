@@ -1,8 +1,8 @@
-import { dev, mainnet, testnet } from '../../artifacts';
 import { ContractOpener, ILogger } from '../interfaces';
 import { ITxFinalizer } from '../interfaces/ITxFinalizer';
 import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
 import { ExecutionStages, Network, OperationType, TransactionLinkerWithOperationId } from '../structs/Struct';
+import { getArtifacts } from './Artifacts';
 import { Configuration } from './Configuration';
 import { DEFAULT_FIND_TX_MAX_DEPTH, MAX_ITERATION_COUNT } from './Consts';
 import { NoopLogger } from './Logger';
@@ -40,7 +40,7 @@ export async function startTracking(
         cclAddress,
     } = options || {};
 
-    const artifacts = network === Network.MAINNET ? mainnet : network === Network.TESTNET ? testnet : dev;
+    const artifacts = getArtifacts(network);
     const liteSequencerEndpoints =
         customLiteSequencerEndpoints && customLiteSequencerEndpoints.length !== 0
             ? customLiteSequencerEndpoints

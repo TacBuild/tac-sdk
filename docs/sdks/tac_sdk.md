@@ -78,11 +78,11 @@
       - [**Purpose**](#purpose-5)
       - [**Returns**](#returns-6)
     - [`getTonContractOpener`](#gettoncontractopener)
+      - [**Purpose**](#purpose-6)
+      - [**Returns**](#returns-7)
+    - [`getTACGasPrice`](#gettacgasprice)
       - [**Purpose**](#purpose-7)
       - [**Returns**](#returns-8)
-    - [`getTACGasPrice`](#gettacgasprice)
-      - [**Purpose**](#purpose-9)
-      - [**Returns**](#returns-10)
     - [`closeConnections`](#closeconnections)
 
 ---
@@ -103,7 +103,7 @@ Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](
 
 If `sdkParams.passLoggerToOpeners` is set to `false`, the SDK logger is not passed to TON contract opener(s). Default is `true`.
 
-By default, the SDK builds a [`RetryableContractOpener`](./contract_opener.md#retryablecontractopener) from network artifacts. When `TONCENTER_V3_INDEXER_ENDPOINT` is configured, indexed Toncenter v3 transaction tree validation is tried before the regular TonClient and Orbs-based openers.
+By default, the SDK resolves network artifacts through [`getArtifacts`](./utilities.md#getartifacts) and builds a [`RetryableContractOpener`](./contract_opener.md#retryablecontractopener) from them. When `TONCENTER_V3_INDEXER_ENDPOINT` is configured, indexed Toncenter v3 transaction tree validation is tried before the regular TonClient and Orbs-based openers.
 
 ---
 

@@ -1,3 +1,32 @@
+### `getArtifacts`
+
+```ts
+getArtifacts(network: Network): NetworkArtifacts
+```
+
+Returns the artifacts bundle for the selected SDK network. `TacSdk.create(...)` and tracking utilities use this helper internally, and it is useful when you create `Configuration` manually.
+
+#### Parameters:
+- `network`: `Network.MAINNET`, `Network.TESTNET`, or `Network.DEV`
+
+#### Returns:
+- `NetworkArtifacts`: network-specific contract addresses, endpoints, TON wrappers, and TAC compilation artifacts
+
+#### Possible exceptions:
+- `Error`: if an unsupported network value is provided
+
+#### Example:
+```ts
+import { Configuration, getArtifacts, Network } from '@tonappchain/sdk';
+
+const artifacts = getArtifacts(Network.TESTNET);
+const config = await Configuration.create(Network.TESTNET, artifacts);
+
+console.log(artifacts.TAC_EXPLORER_API_ENDPOINT);
+```
+
+---
+
 ### `startTracking`
 
 > **Deprecated:** Prefer `TacSdk.sendCrossChainTransaction(...)` for new code. It already waits for `operationId` and full cross-chain finalization by default through `waitOperationId` and `waitFinalization` options.
@@ -26,7 +55,7 @@ If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 
 #### Parameters:
 - `transactionLinker`: Result of `sendCrossChainTransaction(...)`. If `operationId` is already set, `startTracking` will use it and skip `getOperationId(...)` request.
-- `network`: `Network.TESTNET` or `Network.MAINNET`
+- `network`: `Network.MAINNET`, `Network.TESTNET`, or `Network.DEV`
 - `options` *(optional)*:
   - `customLiteSequencerEndpoints`: override default sequencer URL
   - `delay`: polling interval in seconds (default: 10)
@@ -88,7 +117,7 @@ If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txF
 
 #### Parameters:
 - `transactionLinkers`: Array of results from `sendCrossChainTransaction(...)`. If an item already has `operationId`, it will be used directly.
-- `network`: `Network.TESTNET` or `Network.MAINNET`
+- `network`: `Network.MAINNET`, `Network.TESTNET`, or `Network.DEV`
 - `options` *(optional)*:
   - `customLiteSequencerEndpoints`: override default sequencer URL
   - `delay`: polling interval in seconds (default: 10)

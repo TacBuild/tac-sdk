@@ -4,6 +4,7 @@ export * as AgnosticStructs from './agnosticSdk/AgnosticStructs';
 export * from './assets';
 export * from './errors';
 export * from './interfaces';
+export { getArtifacts } from './sdk/Artifacts';
 export { AxiosHttpClient } from './sdk/AxiosHttpClient';
 export { Configuration } from './sdk/Configuration';
 export { LiteSequencerClient } from './sdk/LiteSequencerClient';

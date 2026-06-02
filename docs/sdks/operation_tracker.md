@@ -77,8 +77,8 @@ Creates a new OperationTracker instance.
 **Parameters:**
 
 - `config`: SDK configuration. `OperationTracker` uses `config.network`, `config.liteSequencerEndpoints`, and TON dependencies from `config.TONParams`.
-- `logger` _(optional)_: Logger implementation (defaults to `NoopLogger`)
-- `clientFactory` _(optional)_: Factory for creating sequencer clients (defaults to `DefaultLiteSequencerClientFactory`)
+- `logger` *(optional)*: Logger implementation (defaults to `NoopLogger`)
+- `clientFactory` *(optional)*: Factory for creating sequencer clients (defaults to `DefaultLiteSequencerClientFactory`)
 
 ### Example Usage
 
@@ -241,7 +241,7 @@ Fetches the cross-chain `operationId` based on a transaction linker. Tries each 
 **Parameters:**
 
 - `transactionLinker`: Transaction linker object containing sharding information
-- `waitOptions` _(optional)_:
+- `waitOptions` *(optional)*:
     - `undefined` (default): Uses default retry settings (30 attempts, 10s delay, 5min timeout)
     - `null`: Single attempt, no retries
     - `WaitOptions` object: Custom retry configuration
@@ -266,7 +266,7 @@ Fetches TAC-side cross-chain operation IDs by a TAC transaction hash using the e
 **Parameters:**
 
 - `transactionHash`: TAC transaction hash
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`OperationIdWithLogIndex[]`](./../models/structs.md#operationidwithlogindex-type)
 
@@ -288,7 +288,7 @@ Fetches the cross-chain `operationId` by a transaction hash. The hash can be eit
 **Parameters:**
 
 - `transactionHash`: TAC (EVM) or TON transaction hash
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** Operation ID string (empty string if not found)
 
@@ -316,7 +316,7 @@ When `waitOptions` are enabled, one retry attempt covers both the indexed `cross
 **Parameters:**
 
 - `transactionHash`: TON transaction hash. With indexed lookup configured, this may be any hash from the relevant linked TON transaction chain.
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** Operation ID string (empty string if not found)
 
@@ -342,7 +342,7 @@ When `waitOptions` are enabled, one retry attempt covers the root TON transactio
 **Parameters:**
 
 - `boc`: BOC of the external TON message that was sent to the blockchain
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** Operation ID string (empty string if the root or sequencer-collected `crossChainLayer` transaction is not found)
 
@@ -394,7 +394,7 @@ Retrieves detailed status information for a single operation.
 **Parameters:**
 
 - `operationId`: The operation ID to query
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`StatusInfo`](./../models/structs.md#statusinfo)
 
@@ -415,8 +415,8 @@ Retrieves status information for multiple operations in a single call. Processes
 **Parameters:**
 
 - `operationIds`: Array of operation IDs to query
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
-- `chunkSize` _(optional)_: Number of items to process per request (default: 100)
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `chunkSize` *(optional)*: Number of items to process per request (default: 100)
 
 **Returns:** [`StatusInfosByOperationId`](./../models/structs.md#statusinfosbyoperationId)
 
@@ -438,7 +438,7 @@ Retrieves detailed execution stage information for a single operation. Useful fo
 **Parameters:**
 
 - `operationId`: The operation ID to query
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`ExecutionStages`](./../models/structs.md#executionstages)
 
@@ -461,8 +461,8 @@ Retrieves execution stage profiling information for multiple operations. Process
 **Parameters:**
 
 - `operationIds`: Array of operation IDs to query
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
-- `chunkSize` _(optional)_: Number of items to process per request (default: 100)
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `chunkSize` *(optional)*: Number of items to process per request (default: 100)
 
 **Returns:** [`ExecutionStagesByOperationId`](./../models/structs.md#executionstagesbyoperationid)
 
@@ -482,7 +482,7 @@ Retrieves detailed execution stage information for a single operation.
 **Parameters:**
 
 - `operationId`: The operation ID to query
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`ExecutionStagesV2`](./../models/structs.md#executionstagesv2)
 
@@ -505,8 +505,8 @@ Retrieves execution stage profiling information for multiple operations. Process
 **Parameters:**
 
 - `operationIds`: Array of operation IDs to query
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
-- `chunkSize` _(optional)_: Number of items to process per request (default: 100)
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `chunkSize` *(optional)*: Number of items to process per request (default: 100)
 
 **Returns:** [`ExecutionStagesV2ByOperationId`](./../models/structs.md#executionstagesv2byoperationid)
 
@@ -528,7 +528,7 @@ Retrieves the operation type classification for a given operation ID.
 **Parameters:**
 
 - `operationId`: The operation ID to query
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`OperationType`](./../models/enums.md#operationtype)
 
@@ -548,7 +548,7 @@ Retrieves the operation type and finalization state for a given operation ID.
 **Parameters:**
 
 - `operationId`: The operation ID to query
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`OperationTypeV2Info`](./../models/structs.md#operationtypev2info)
 
@@ -573,8 +573,8 @@ Maps TON shard keys (with caller address) to operation IDs. Processes requests i
 
 - `shardsKeys`: Array of shard keys to query
 - `caller`: Caller's address
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
-- `chunkSize` _(optional)_: Number of items to process per request (default: 100)
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
+- `chunkSize` *(optional)*: Number of items to process per request (default: 100)
 
 **Returns:** [`OperationIdsByShardsKey`](./../models/structs.md#operationidsbyshardskey-type)
 
@@ -594,7 +594,7 @@ Converts currency amount using the tracker service with automatic failover acros
 **Parameters:**
 
 - `params`: [`ConvertCurrencyParams`](./../models/structs.md#convertcurrencyparams) - Parameters for currency conversion
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`ConvertedCurrencyResult`](./../models/structs.md#convertedcurrencyresult)
 
@@ -614,7 +614,7 @@ Simulates TAC message execution without broadcasting it on-chain. Useful for est
 **Parameters:**
 
 - `params`: [`TACSimulationParams`](./../models/structs.md#tacsimulationparams) - Simulation request with encoded message and context
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`TACSimulationResult`](./../models/structs.md#tacsimulationresult)
 
@@ -634,6 +634,6 @@ Calculates suggested TVM executor fee for cross-chain operations with automatic 
 **Parameters:**
 
 - `params`: [`GetTVMExecutorFeeParams`](./../models/structs.md#gettvmexecutorfeeparams) - Parameters for fee calculation
-- `waitOptions` _(optional)_: Wait configuration for automatic retrying
+- `waitOptions` *(optional)*: Wait configuration for automatic retrying
 
 **Returns:** [`SuggestedTVMExecutorFee`](./../models/structs.md#suggestedtvmexecutorfee)

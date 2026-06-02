@@ -1,12 +1,13 @@
 import { Address, Dictionary, loadConfigParamsAsSlice, parseFullConfig } from '@ton/ton';
 import { ethers, keccak256, toUtf8Bytes } from 'ethers';
 
-import { dev, mainnet, testnet } from '../../artifacts';
+import type { NetworkArtifacts } from '../../artifacts';
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
 import { createDefaultRetryableOpener, ToncenterV3Indexer } from '../adapters';
 import { ContractOpener, IConfiguration, ILogger } from '../interfaces';
 import { ContractFeeUsageParams, InternalTACParams, InternalTONParams, TONFeesParams } from '../structs/InternalStruct';
 import { Network, TACParams, TONParams } from '../structs/Struct';
+import { getArtifacts } from './Artifacts';
 import { DEFAULT_RETRY_MAX_COUNT } from './Consts';
 import { DEFAULT_CONTRACT_FEE_USAGE_PARAMS } from './Fees';
 import { NoopLogger } from './Logger';
@@ -15,7 +16,7 @@ import { Validator } from './Validator';
 
 export class Configuration implements IConfiguration {
     readonly network: Network;
-    readonly artifacts: typeof testnet | typeof mainnet | typeof dev;
+    readonly artifacts: NetworkArtifacts;
     readonly TONParams: InternalTONParams;
     readonly TACParams: InternalTACParams;
     readonly liteSequencerEndpoints: string[];
@@ -23,7 +24,7 @@ export class Configuration implements IConfiguration {
 
     constructor(
         network: Network,
-        artifacts: typeof testnet | typeof mainnet | typeof dev,
+        artifacts: NetworkArtifacts,
         TONParams: InternalTONParams,
         TACParams: InternalTACParams,
         liteSequencerEndpoints: string[],
@@ -39,7 +40,7 @@ export class Configuration implements IConfiguration {
 
     static async create(
         network: Network,
-        artifacts: typeof testnet | typeof mainnet | typeof dev,
+        artifacts: NetworkArtifacts,
         TONParams?: TONParams,
         TACParams?: TACParams,
         customLiteSequencerEndpoints?: string[],
@@ -74,7 +75,7 @@ export class Configuration implements IConfiguration {
 
     private static async prepareTONParams(
         network: Network,
-        artifacts: typeof testnet | typeof mainnet | typeof dev,
+        artifacts: NetworkArtifacts,
         TONParams?: TONParams,
         delay?: number,
         logger: ILogger = new NoopLogger(),
@@ -156,7 +157,7 @@ export class Configuration implements IConfiguration {
     }
 
     private static async prepareTACParams(network: Network, TACParams?: TACParams): Promise<InternalTACParams> {
-        const artifacts = network === Network.MAINNET ? mainnet : network === Network.TESTNET ? testnet : dev;
+        const artifacts = getArtifacts(network);
         let provider: ethers.AbstractProvider;
         let settingsAddress: string;
         let saFactoryAddress: string;
@@ -243,7 +244,7 @@ export class Configuration implements IConfiguration {
             return null;
         }
 
-        const artifacts = network === Network.MAINNET ? mainnet : testnet;
+        const artifacts = getArtifacts(network);
         const multicallAddress = artifacts.MULTICALL_3_ADDRESS;
         const multicallAbi = artifacts.tac.multicall.MULTICALL_ABI_ETHERS;
         try {

@@ -1,6 +1,5 @@
 import { Wallet } from 'ethers';
 
-import { dev, mainnet, testnet } from '../../artifacts';
 import { JettonMinterData, NFTItemData } from '../../artifacts/tonTypes';
 import { AssetFactory, FT, NFT, TAC, TON } from '../assets';
 import {
@@ -32,7 +31,6 @@ import {
     EVMAddress,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
-    Network,
     NFTAddressType,
     SDKParams,
     SuggestedTVMExecutorFee,
@@ -44,6 +42,7 @@ import {
     TVMAddress,
     UserWalletBalanceExtended,
 } from '../structs/Struct';
+import { getArtifacts } from './Artifacts';
 import { Configuration } from './Configuration';
 import { DEFAULT_DELAY } from './Consts';
 import { NoopLogger } from './Logger';
@@ -85,20 +84,7 @@ export class TacSdk implements ITacSDK {
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
         const passLoggerToOpeners = sdkParams.passLoggerToOpeners ?? true;
 
-        let artifacts;
-        switch (network) {
-            case Network.MAINNET:
-                artifacts = mainnet;
-                break;
-            case Network.TESTNET:
-                artifacts = testnet;
-                break;
-            case Network.DEV:
-                artifacts = dev;
-                break;
-            default:
-                throw new Error(`Unsupported network: ${network}`);
-        }
+        const artifacts = getArtifacts(network);
 
         const config = await Configuration.create(
             network,
