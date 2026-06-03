@@ -69,7 +69,6 @@ export const IGNORE_MSG_VALUE_1_NANO = 1n;
 export const CROSS_CHAIN_MESSAGE_VERSION_V1 = 1n;
 export const NFT_BRIDGE_AMOUNT = 1n;
 export const DEFAULT_EIP1559_PRIORITY_FEE = 0n;
-export const SHARDS_KEY_RANDOM_RANGE = 1e18;
 export const IGNORE_OPCODE = [
     0xd53276db, // Excess
 ];
