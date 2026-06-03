@@ -6,6 +6,7 @@ import { AxiosHttpClient } from '../sdk/AxiosHttpClient';
 import {
     DEFAULT_FIND_TX_LIMIT,
     DEFAULT_FIND_TX_MAX_DEPTH,
+    DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
     DEFAULT_MAX_SCANNED_TRANSACTIONS,
     HTTP_NOT_FOUND_STATUS_CODE,
 } from '../sdk/Consts';
@@ -21,7 +22,10 @@ export class ToncenterV3Indexer implements IToncenterV3Indexer {
     readonly endpoint: string;
     private readonly httpClient: IHttpClient;
 
-    constructor(endpoint: string, httpClient: IHttpClient = new AxiosHttpClient()) {
+    constructor(
+        endpoint: string,
+        httpClient: IHttpClient = new AxiosHttpClient({ timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS }),
+    ) {
         this.endpoint = endpoint;
         this.httpClient = httpClient;
     }
