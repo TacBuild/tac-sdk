@@ -338,7 +338,7 @@ describe('TACTransactionManager', () => {
             'EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N',
             [nativeTacAsset, wrappedFtAsset] as never,
             {
-                waitOptions: { maxAttempts: 1, delay: 5 },
+                waitOperationIdOptions: { maxAttempts: 1, delay: 5 },
                 finalizationWaitOptions: {
                     maxAttempts: 2,
                     delay: 10,

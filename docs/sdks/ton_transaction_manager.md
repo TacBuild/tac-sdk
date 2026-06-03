@@ -89,7 +89,7 @@ Sends a single cross-chain transaction from TON to TAC. This method prepares the
 - **`tx`**: [`CrosschainTx`](./../models/structs.md#crosschaintx) cross-chain transaction data to bridge, including:
   - **`options.waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending
   - **`options.ensureTxExecuted`** *(optional, default: true)*: Whether to validate TON transaction execution before waiting for operation ID
-  - **`options.waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for operation tracking customization
+  - **`options.waitOperationIdOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for operation ID tracking customization
   - **`options.waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID
   - **`options.finalizationWaitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for final operation type polling, profiling fetch, and optional TON transaction tree validation
 
@@ -129,10 +129,10 @@ Sends multiple cross-chain transactions in a batch from TON to TAC. This method 
 
 - **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the transaction sender
 - **`txs`**: Array of [`BatchCrossChainTx`](./../models/structs.md#batchcrosschaintx) objects, each defining a single cross-chain transaction
-  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId`, `waitOptions`, or `ensureTxExecuted` in their options as these are controlled at the batch level.
+  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId`, `waitOperationIdOptions`, or `ensureTxExecuted` in their options as these are controlled at the batch level.
 - **`options`** *(optional)*: [`CrossChainTransactionsOptions`](./../models/structs.md#crosschaintransactionsoptions) controlling batch-level behavior:
   - **`waitOperationIds`** *(optional, default: true)*: Whether to wait for operation IDs for all transactions in the batch
-  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for customizing operation IDs waiting behavior
+  - **`waitOperationIdOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for customizing operation IDs waiting behavior
 
 ### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
 
@@ -222,15 +222,19 @@ const sdk = await TacSdk.create({
   network: Network.TESTNET 
 }, new ConsoleLogger());
 
+const waitOperationIdOptions = {
+  timeout: 300000,
+  maxAttempts: 30
+};
+
 // TON -> TAC transactions (uses TONTransactionManager internally)
 const result = await sdk.sendCrossChainTransaction(
   evmProxyMsg,
   sender,
   assets,
-  options,
   {
-    timeout: 300000,
-    maxAttempts: 30
+    ...options,
+    waitOperationIdOptions
   }
 );
 
@@ -241,7 +245,7 @@ const results = await sdk.sendCrossChainTransactions(
     { evmProxyMsg: msg1, assets: [asset1] },
     { evmProxyMsg: msg2, assets: [asset2] }
   ],
-  waitOptions
+  { waitOperationIdOptions }
 );
 ```
 
@@ -271,8 +275,7 @@ const tonManager = new TONTransactionManager(
   config,
   simulator,
   operationTracker,
-  logger,
-  txFinalizer // optional, defaults to TonTxFinalizer
+  logger
 );
 
 // Send TON -> TAC transaction
@@ -281,15 +284,17 @@ const tx: CrosschainTx = {
   evmProxyMsg,
   options: {
     tvmExecutorFee: BigInt("50000000"),
-    evmExecutorFee: BigInt("1000000000000000")
+    evmExecutorFee: BigInt("1000000000000000"),
+    waitOperationIdOptions: {
+      timeout: 30000
+    }
   }
 };
 
 const result = await tonManager.sendCrossChainTransaction(
   evmProxyMsg,
   sender,
-  tx,
-  { timeout: 30000 }
+  tx
 );
 ```
 
@@ -302,8 +307,13 @@ try {
   const result = await tonManager.sendCrossChainTransaction(
     evmProxyMsg,
     sender,
-    tx,
-    waitOptions
+    {
+      ...tx,
+      options: {
+        ...tx.options,
+        waitOperationIdOptions
+      }
+    }
   );
   console.log('Transaction successful:', result.operationId);
 } catch (error) {

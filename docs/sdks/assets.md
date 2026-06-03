@@ -1053,7 +1053,12 @@ const tx: CrosschainTx = {
 const result = await tonManager.sendCrossChainTransaction(
   evmProxyMsg,
   sender,
-  tx,
-  waitOptions
+  {
+    ...tx,
+    options: {
+      ...tx.options,
+      waitOperationIdOptions
+    }
+  }
 );
 ```

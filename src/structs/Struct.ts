@@ -540,7 +540,7 @@ export type CrossChainTransactionOptions = {
      * Retry policy used while resolving the operation ID.
      * Use this to control timeout, attempts, delay, logger, callbacks, and success criteria.
      */
-    waitOptions?: WaitOptions<string>;
+    waitOperationIdOptions?: WaitOptions<string>;
     /**
      * If true, waits for full cross-chain finalization after the operation ID is known:
      * the SDK waits for a final operation type, fetches stage profiling, and validates
@@ -564,12 +564,12 @@ export type CrossChainTransactionOptions = {
 
 export type BatchCrossChainTransactionOptions = Omit<
     CrossChainTransactionOptions,
-    'waitOperationId' | 'waitOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'
+    'waitOperationId' | 'waitOperationIdOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'
 >;
 
 export type CrossChainTransactionsOptions = {
     waitOperationIds?: boolean;
-    waitOptions?: WaitOptions<OperationIdsByShardsKey>;
+    waitOperationIdOptions?: WaitOptions<OperationIdsByShardsKey>;
 };
 
 export type CrossChainTransactionToTONOptions = {
@@ -600,7 +600,7 @@ export type CrossChainTransactionToTONOptions = {
      * Retry policy used while resolving the operation ID.
      * Use this to control timeout, attempts, delay, logger, callbacks, and success criteria.
      */
-    waitOptions?: WaitOptions<string>;
+    waitOperationIdOptions?: WaitOptions<string>;
     /**
      * Wait options used to finalize the cross-chain operation after operationId resolution.
      * Use this to configure retries, delay, logger, successCheck, and onSuccess callback

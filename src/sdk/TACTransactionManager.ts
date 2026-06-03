@@ -303,12 +303,12 @@ export class TACTransactionManager implements ITACTransactionManager {
             return { txHash: tx.hash };
         }
 
-        const waitOptions = options?.waitOptions ?? {};
-        waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);
-        waitOptions.logger = waitOptions.logger ?? this.logger;
+        const waitOperationIdOptions = options?.waitOperationIdOptions ?? {};
+        waitOperationIdOptions.successCheck = waitOperationIdOptions.successCheck ?? ((id: string) => !!id);
+        waitOperationIdOptions.logger = waitOperationIdOptions.logger ?? this.logger;
 
         const operationId = await this.operationTracker
-            .getOperationIdByTransactionHash(tx.hash, waitOptions)
+            .getOperationIdByTransactionHash(tx.hash, waitOperationIdOptions)
             .catch((error) => {
                 this.logger.error(`Error while waiting for operation ID by transaction hash: ${error}`);
                 return undefined;

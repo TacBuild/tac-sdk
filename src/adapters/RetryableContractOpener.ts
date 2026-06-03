@@ -261,7 +261,12 @@ export class RetryableContractOpener implements ContractOpener {
             this.logger?.debug(`[RetryableContractOpener] ${operationName}: trying ${openerLabel}`);
 
             const result = useRetries
-                ? await this.tryWithRetries(() => operation(config), config, `${operationName} ${openerLabel}`)
+                ? await this.tryWithRetries(
+                      () => operation(config),
+                      config,
+                      `${operationName} ${openerLabel}`,
+                      shouldFallbackOnError,
+                  )
                 : await this.trySingleAttempt(() => operation(config));
 
             if (result.success) {
@@ -313,6 +318,7 @@ export class RetryableContractOpener implements ContractOpener {
         operation: () => Promise<T>,
         config: OpenerConfig,
         operationContext = 'operation',
+        shouldRetryError?: (error: Error) => boolean,
     ): Promise<RetryableOperationResult<T>> {
         let lastError: Error | undefined;
 
@@ -323,6 +329,9 @@ export class RetryableContractOpener implements ContractOpener {
             } catch (error) {
                 lastError = error as Error;
                 if (lastError instanceof TransactionError || this.isContractExecutionError(lastError)) {
+                    return { success: false, lastError };
+                }
+                if (shouldRetryError && !shouldRetryError(lastError)) {
                     return { success: false, lastError };
                 }
                 if (attempt < config.retries) {

@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - `sendCrossChainTransaction()` and `sendCrossChainTransactionToTON()` now support full-operation finalization waiting by default: final profiling fetch plus TON transaction tree validation for `executedInTON` transactions when present.
+- Transaction-level operation ID wait settings are now named `waitOperationIdOptions` instead of `waitOptions`.
 - `sendCrossChainTransaction()` now resolves `operationId` from the TON external message BOC returned by the sender first, with fallback to transaction-linker lookup.
 - `bridgeTokensToTON()` stays a low-level send-only TAC -> TON method; production-oriented gas / balance prechecks and operation finalization live in `sendCrossChainTransactionToTON()`.
 - Asset factory logic now recognizes native TAC as a dedicated asset type, while `getFT()` remains FT-only.

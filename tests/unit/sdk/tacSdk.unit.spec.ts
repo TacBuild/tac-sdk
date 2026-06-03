@@ -116,7 +116,7 @@ describe('TacSdk factory and delegation', () => {
             tvmExecutorFee: 1n,
             tvmValidExecutors: ['exec'],
             waitOperationId: false,
-            waitOptions: { maxAttempts: 1 },
+            waitOperationIdOptions: { maxAttempts: 1 },
             finalizationWaitOptions: { maxAttempts: 3 },
         };
 

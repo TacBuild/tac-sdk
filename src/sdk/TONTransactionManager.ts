@@ -317,11 +317,15 @@ export class TONTransactionManager implements ITONTransactionManager {
             this.logger.info(`Transaction tree successful`);
         }
 
-        const waitOptions = tx.options?.waitOptions ?? {};
-        waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);
-        waitOptions.logger = waitOptions.logger ?? this.logger;
+        const waitOperationIdOptions = tx.options?.waitOperationIdOptions ?? {};
+        waitOperationIdOptions.successCheck = waitOperationIdOptions.successCheck ?? ((id: string) => !!id);
+        waitOperationIdOptions.logger = waitOperationIdOptions.logger ?? this.logger;
 
-        const operationId = await this.resolveOperationId(sendTransactionResult.boc, transactionLinker, waitOptions);
+        const operationId = await this.resolveOperationId(
+            sendTransactionResult.boc,
+            transactionLinker,
+            waitOperationIdOptions,
+        );
 
         const shouldWaitForFinalization = tx.options?.waitFinalization ?? true;
         if (!shouldWaitForFinalization) {
@@ -363,11 +367,11 @@ export class TONTransactionManager implements ITONTransactionManager {
     private async resolveOperationId(
         boc: string,
         transactionLinker: TransactionLinker,
-        waitOptions: WaitOptions<string>,
+        waitOperationIdOptions: WaitOptions<string>,
     ): Promise<string | undefined> {
         if (this.config.TONParams.tonIndexer) {
             const operationId = await this.operationTracker
-                .getOperationIdByTonTransactionBoc(boc, waitOptions)
+                .getOperationIdByTonTransactionBoc(boc, waitOperationIdOptions)
                 .catch((error) => {
                     this.logger.error(`Error while waiting for operation ID by TON transaction BOC: ${error}`);
                     return undefined;
@@ -378,7 +382,7 @@ export class TONTransactionManager implements ITONTransactionManager {
 
             this.logger.debug('Operation ID by TON transaction BOC not found; trying transaction linker');
         }
-        return this.operationTracker.getOperationId(transactionLinker, waitOptions).catch((error) => {
+        return this.operationTracker.getOperationId(transactionLinker, waitOperationIdOptions).catch((error) => {
             this.logger.error(`Error while waiting for operation ID by transaction linker: ${error}`);
             return undefined;
         });
@@ -411,7 +415,7 @@ export class TONTransactionManager implements ITONTransactionManager {
 
         const shouldWaitForOperationIds = options?.waitOperationIds ?? true;
         return shouldWaitForOperationIds
-            ? await this.waitForOperationIds(transactionLinkers, caller, options?.waitOptions ?? {})
+            ? await this.waitForOperationIds(transactionLinkers, caller, options?.waitOperationIdOptions ?? {})
             : transactionLinkers;
     }
 
@@ -448,21 +452,21 @@ export class TONTransactionManager implements ITONTransactionManager {
     private async waitForOperationIds(
         transactionLinkers: TransactionLinker[],
         caller: string,
-        waitOptions: WaitOptions<OperationIdsByShardsKey>,
+        waitOperationIdOptions: WaitOptions<OperationIdsByShardsKey>,
     ): Promise<TransactionLinkerWithOperationId[]> {
         this.logger.debug(`Waiting for operation IDs`);
         try {
-            waitOptions.successCheck =
-                waitOptions.successCheck ??
+            waitOperationIdOptions.successCheck =
+                waitOperationIdOptions.successCheck ??
                 ((operationIds: OperationIdsByShardsKey) =>
                     Object.keys(operationIds).length == transactionLinkers.length &&
                     Object.values(operationIds).every((ids) => ids.operationIds.length > 0));
-            waitOptions.logger = waitOptions.logger ?? this.logger;
+            waitOperationIdOptions.logger = waitOperationIdOptions.logger ?? this.logger;
 
             const operationIds = await this.operationTracker.getOperationIdsByShardsKeys(
                 transactionLinkers.map((linker) => linker.shardsKey),
                 caller,
-                waitOptions,
+                waitOperationIdOptions,
             );
 
             this.logger.debug(`Operation IDs: ${formatObjectForLogging(operationIds)}`);

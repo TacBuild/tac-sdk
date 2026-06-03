@@ -142,7 +142,7 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 - **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) struct. This includes:
   - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the transaction
   - **`ensureTxExecuted`** *(optional, default: true)*: Whether to validate TON transaction execution before waiting for operation ID
-  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation ID waiting behavior
+  - **`waitOperationIdOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation ID waiting behavior
   - **`waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID
   - **`finalizationWaitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for final operation type polling, profiling fetch, and optional TON transaction tree validation
 
@@ -203,10 +203,10 @@ Sends multiple cross-chain transactions in a batch. This is useful for scenarios
 
 - **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the user's wallet.
 - **`txs`**: An array of [`BatchCrossChainTxWithAssetLike`](./../models/structs.md#batchcrosschaintxwithassetlike) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`. 
-  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId`, `waitOptions`, or `ensureTxExecuted` in their options as these are controlled at the batch level.
+  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId`, `waitOperationIdOptions`, or `ensureTxExecuted` in their options as these are controlled at the batch level.
 - **`options`** *(optional)*: [`CrossChainTransactionsOptions`](./../models/structs.md#crosschaintransactionsoptions) struct controlling batch-level behavior:
   - **`waitOperationIds`** *(optional, default: true)*: Whether to wait for operation IDs for all transactions in the batch
-  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation IDs waiting behavior
+  - **`waitOperationIdOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation IDs waiting behavior
 
 #### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
   - An array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.
@@ -550,7 +550,7 @@ The sender must still keep additional TAC balance for TAC gas and bridge fees on
   - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
   - **`validateAssetsBalance`** *(optional, default: true)*: Whether to validate balances or ownership of non-native TAC assets before approvals and sending.
   - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the TAC -> TON transaction.
-  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) used for operation ID resolution by transaction hash.
+  - **`waitOperationIdOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) used for operation ID resolution by transaction hash.
   - **`waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID.
   - **`finalizationWaitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for profiling fetch and TON transaction tree validation during finalization.
 

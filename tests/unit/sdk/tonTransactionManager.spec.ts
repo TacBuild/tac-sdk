@@ -219,6 +219,7 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
         TONParams: {
             contractOpener,
             crossChainLayerAddress: 'EQCrossChainLayer',
+            tonIndexer: {},
         },
     };
 
@@ -314,6 +315,7 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
             {
                 options: {
                     ensureTxExecuted: false,
+                    waitOperationIdOptions: { maxAttempts: 1, delay: 5 },
                     finalizationWaitOptions: {
                         maxAttempts: 2,
                         delay: 10,
@@ -329,7 +331,7 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
         expect(checkBalanceSpy).toHaveBeenCalled();
         expect(operationTracker.getOperationIdByTonTransactionBoc).toHaveBeenCalledWith(
             externalMessageBoc,
-            expect.objectContaining({ logger }),
+            expect.objectContaining({ logger, maxAttempts: 1, delay: 5 }),
         );
         expect(operationTracker.getOperationId).not.toHaveBeenCalled();
         expect(operationTracker.getOperationType).not.toHaveBeenCalled();

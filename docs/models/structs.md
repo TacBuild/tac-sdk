@@ -420,7 +420,7 @@ export type CrossChainTransactionOptions = {
     withoutSimulation?: boolean;
     validateAssetsBalance?: boolean;
     waitOperationId?: boolean;
-    waitOptions?: WaitOptions<string>;
+    waitOperationIdOptions?: WaitOptions<string>;
     waitFinalization?: boolean;
     finalizationWaitOptions?: WaitOptions<ExecutionStages>;
     evmDataBuilder?: evmDataBuilder;
@@ -474,7 +474,7 @@ export type CrossChainTransactionOptions = {
   If true, waits until the sequencer exposes the operation ID after the TON transaction is sent. Disable it when you only need the raw send result and do not want tracker polling.  
   **Default**: true
 
-- **waitOptions** *(optional)*:  
+- **waitOperationIdOptions** *(optional)*:  
   Custom waiting configuration for operation ID resolution. See [`WaitOptions`](#waitoptions-interface) for available options.  
   **Default**: `{}`
 
@@ -493,10 +493,10 @@ export type CrossChainTransactionOptions = {
 A restricted version of CrossChainTransactionOptions for use in batch operations.
 
 ```ts
-export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'>;
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOperationIdOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'>;
 ```
 
-This type excludes `waitOperationId`, `waitOptions`, `ensureTxExecuted`, `waitFinalization`, and `finalizationWaitOptions` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
+This type excludes `waitOperationId`, `waitOperationIdOptions`, `ensureTxExecuted`, `waitFinalization`, and `finalizationWaitOptions` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
 
 ### `CrossChainTransactionsOptions`
 Configuration options for batch cross-chain transaction operations.
@@ -504,7 +504,7 @@ Configuration options for batch cross-chain transaction operations.
 ```ts
 export type CrossChainTransactionsOptions = {
     waitOperationIds?: boolean;
-    waitOptions?: WaitOptions<OperationIdsByShardsKey>;
+    waitOperationIdOptions?: WaitOptions<OperationIdsByShardsKey>;
 };
 ```
 
@@ -512,7 +512,7 @@ export type CrossChainTransactionsOptions = {
   If true, waits for operation IDs for all transactions in the batch. When false, transactions are sent without waiting for operation tracking information.  
   **Default**: true
 
-- **waitOptions** *(optional)*:  
+- **waitOperationIdOptions** *(optional)*:  
   Custom waiting configuration for operation IDs resolution in batch operations. See [`WaitOptions`](#waitoptions-interface) for available options.  
   **Default**: `{}`
 
@@ -525,7 +525,7 @@ export type CrossChainTransactionToTONOptions = {
     tvmValidExecutors?: string[];
     validateAssetsBalance?: boolean;
     waitOperationId?: boolean;
-    waitOptions?: WaitOptions<string>;
+    waitOperationIdOptions?: WaitOptions<string>;
     waitFinalization?: boolean;
     finalizationWaitOptions?: WaitOptions<ExecutionStages>;
 };
@@ -545,8 +545,8 @@ export type CrossChainTransactionToTONOptions = {
   If true, waits for operation ID after sending the TAC -> TON transaction. When false, tracking is skipped unless full finalization is enabled.  
   **Default**: true
 
-- **waitOptions** *(optional)*:  
-  Shared waiting configuration for internal tracker calls in `sendCrossChainTransactionToTON`. Retry settings are reused for operation ID resolution by transaction hash. Callbacks and `successCheck` apply only to operation ID resolution.
+- **waitOperationIdOptions** *(optional)*:  
+  Waiting configuration for operation ID resolution by TAC transaction hash. Callbacks and `successCheck` apply only to operation ID resolution.
 
 - **waitFinalization** *(optional)*:  
   If true, waits for full operation finalization similarly to `startTracking`: resolves profiling and validates the TON transaction tree for `EXECUTED_IN_TON` transactions when they exist. Used by `sendCrossChainTransactionToTON` only.  
@@ -585,7 +585,7 @@ export type BatchCrossChainTx = {
 Represents a crosschain transaction for use in batch operations.
 - **`evmProxyMsg`**: The message to be sent to the TAC proxy.
 - **`assets`** *(optional)*: An array of assets involved in the transaction.
-- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId`, `waitOptions`, and `ensureTxExecuted` which are controlled at batch level).
+- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId`, `waitOperationIdOptions`, and `ensureTxExecuted` which are controlled at batch level).
 
 ### `AssetLike`
 
