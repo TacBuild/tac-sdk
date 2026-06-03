@@ -22,8 +22,19 @@ describe('Utils', () => {
         it.each([
             { amount: 0.1234, decimals: 18, expected: 1234n * 10n ** 14n },
             { amount: 1234, decimals: 18, expected: 1234n * 10n ** 18n },
+            { amount: 0.0000001, decimals: 9, expected: 100n },
         ])('should convert to raw format', async ({ amount, decimals, expected }) => {
             expect(calculateRawAmount(amount, decimals)).toBe(expected);
+        });
+
+        it('should reject amounts with more fractional digits than token decimals', async () => {
+            expect(() => calculateRawAmount(1.0000000005, 9)).toThrow(
+                'Amount has more fractional digits than token decimals',
+            );
+        });
+
+        it('should reject negative amounts', async () => {
+            expect(() => calculateRawAmount(-1, 9)).toThrow('Amount must be non-negative');
         });
 
         it.each([

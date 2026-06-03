@@ -26,6 +26,7 @@ export {
     indexRequiredError,
     insufficientBalanceError,
     insufficientFeeParamsError,
+    invalidAmountError,
     invalidMethodNameError,
     invalidTonExternalMessageBocError,
     missingDecimals,

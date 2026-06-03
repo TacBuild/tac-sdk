@@ -232,3 +232,5 @@ export const tonIndexerRequiredForTonTransactionBocError = new SettingError(
     'TON indexer is required to resolve operation ID by TON transaction BOC',
     143,
 );
+
+export const invalidAmountError = (reason: string) => new FormatError(`Invalid amount: ${reason}`, 144);
