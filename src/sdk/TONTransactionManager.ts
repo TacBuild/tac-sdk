@@ -365,18 +365,19 @@ export class TONTransactionManager implements ITONTransactionManager {
         transactionLinker: TransactionLinker,
         waitOptions: WaitOptions<string>,
     ): Promise<string | undefined> {
-        const operationId = await this.operationTracker
-            .getOperationIdByTonTransactionBoc(boc, waitOptions)
-            .catch((error) => {
-                this.logger.error(`Error while waiting for operation ID by TON transaction BOC: ${error}`);
-                return undefined;
-            });
-        if (operationId) {
-            return operationId;
+        if (this.config.TONParams.tonIndexer) {
+            const operationId = await this.operationTracker
+                .getOperationIdByTonTransactionBoc(boc, waitOptions)
+                .catch((error) => {
+                    this.logger.error(`Error while waiting for operation ID by TON transaction BOC: ${error}`);
+                    return undefined;
+                });
+            if (operationId) {
+                return operationId;
+            }
+
+            this.logger.debug('Operation ID by TON transaction BOC not found; trying transaction linker');
         }
-
-        this.logger.debug('Operation ID by TON transaction BOC not found; trying transaction linker');
-
         return this.operationTracker.getOperationId(transactionLinker, waitOptions).catch((error) => {
             this.logger.error(`Error while waiting for operation ID by transaction linker: ${error}`);
             return undefined;
