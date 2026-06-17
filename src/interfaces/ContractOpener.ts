@@ -26,7 +26,7 @@ export interface ContractOpener {
     getContractState(address: Address): Promise<ContractState>;
 
     /**
-     * Closes any underlying connections if supported by the implementation.
+     * Closes TON lite client connections. Use only with LiteClientOpener.
      */
     closeConnections?: () => unknown;
 

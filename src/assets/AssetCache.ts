@@ -1,32 +1,37 @@
-import { Asset } from '../interfaces';
+import type { Asset, IConfiguration } from '../interfaces';
 
 type AssetKey = string;
 type AssetCacheToken = { address: string; index?: bigint; tokenType?: string };
 
 export class AssetCache {
-    private static readonly cache = new Map<AssetKey, Asset>();
+    private static cache = new WeakMap<IConfiguration, Map<AssetKey, Asset>>();
 
     /**
      * Get asset from cache
      */
-    static get(token: AssetCacheToken): Asset | undefined {
+    static get(configuration: IConfiguration, token: AssetCacheToken): Asset | undefined {
         const key = this.generateKey(token);
-        return this.cache.get(key);
+        return this.cache.get(configuration)?.get(key);
     }
 
     /**
      * Set asset in cache
      */
-    static set(token: AssetCacheToken, asset: Asset): void {
+    static set(configuration: IConfiguration, token: AssetCacheToken, asset: Asset): void {
         const key = this.generateKey(token);
-        this.cache.set(key, asset);
+        let scopedCache = this.cache.get(configuration);
+        if (!scopedCache) {
+            scopedCache = new Map<AssetKey, Asset>();
+            this.cache.set(configuration, scopedCache);
+        }
+        scopedCache.set(key, asset);
     }
 
     /**
      * Clear the cache
      */
     static clear(): void {
-        this.cache.clear();
+        this.cache = new WeakMap<IConfiguration, Map<AssetKey, Asset>>();
     }
 
     private static generateKey(token: AssetCacheToken): AssetKey {

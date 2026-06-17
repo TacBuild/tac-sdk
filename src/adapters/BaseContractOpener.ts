@@ -1,10 +1,18 @@
 import { SandboxContract } from '@ton/sandbox';
-import { Address, beginCell, Contract, ExternalAddress, OpenedContract, storeMessage, Transaction } from '@ton/ton';
+import type { Message } from '@ton/ton';
+import {
+    Address,
+    beginCell,
+    Contract,
+    ExternalAddress,
+    OpenedContract,
+    storeMessage,
+    Transaction,
+} from '@ton/ton';
 
 import { txFinalizationError } from '../errors';
 import { ContractOpener, ILogger } from '../interfaces';
 import {
-    DEFAULT_FIND_TX_ARCHIVAL,
     DEFAULT_FIND_TX_LIMIT,
     DEFAULT_FIND_TX_MAX_DEPTH,
     DEFAULT_MAX_SCANNED_TRANSACTIONS,
@@ -15,12 +23,13 @@ import {
     IGNORE_OPCODE,
 } from '../sdk/Consts';
 import { getNormalizedExtMessageHash, normalizeHashToBase64, sleep } from '../sdk/Utils';
-import { TransactionDepth } from '../structs/InternalStruct';
+import type { TransactionQueueItem } from '../structs/InternalStruct';
 import { AddressInformation, GetTransactionsOptions } from '../structs/Struct';
 import {
     ContractState,
     TrackTransactionTreeParams,
     TrackTransactionTreeResult,
+    TransactionTreeDirection,
     TransactionValidationError,
 } from '../structs/Struct';
 
@@ -61,25 +70,36 @@ export abstract class BaseContractOpener implements ContractOpener {
         predicate: (tx: Transaction) => boolean,
     ): Promise<Transaction | null> {
         const limit = opts?.limit ?? DEFAULT_FIND_TX_LIMIT;
-        const inclusive = opts?.inclusive ?? true;
+        const toLtInclusive = opts?.inclusive ?? true;
         const toLt = opts?.to_lt ? BigInt(opts.to_lt) : undefined;
         let currentLt: string | undefined = opts?.lt;
         let currentHash: string | undefined = opts?.hash ? normalizeHashToBase64(opts.hash) : undefined;
-        const seenCursors = new Set<string>();
+        let requestInclusive = toLtInclusive;
+        const seenRequests = new Set<string>();
         let scannedTransactions = 0;
         const maxScannedTransactions = opts?.maxScannedTransactions ?? DEFAULT_MAX_SCANNED_TRANSACTIONS;
 
         while (true) {
-            const list = await this.getTransactions(addr, {
+            const requestKey = `${currentLt ?? ''}:${currentHash ?? ''}:${requestInclusive}`;
+            if (seenRequests.has(requestKey)) {
+                break;
+            }
+            seenRequests.add(requestKey);
+
+            const requestOpts: GetTransactionsOptions = {
                 limit,
                 lt: currentLt,
                 hash: currentHash,
                 to_lt: opts?.to_lt,
-                inclusive,
-                archival: opts?.archival ?? DEFAULT_FIND_TX_ARCHIVAL,
+                inclusive: requestInclusive,
                 timeoutMs: opts?.timeoutMs,
                 retryDelayMs: opts?.retryDelayMs,
-            });
+            };
+            if (opts?.archival !== undefined) {
+                requestOpts.archival = opts.archival;
+            }
+
+            const list = await this.getTransactions(addr, requestOpts);
 
             if (list.length === 0) {
                 break;
@@ -93,7 +113,7 @@ export abstract class BaseContractOpener implements ContractOpener {
                 firstTx.lt.toString() === currentLt &&
                 firstTx.hash().toString('base64') === currentHash;
 
-            if (firstTxMatchesCursor) {
+            if (firstTxMatchesCursor && !requestInclusive) {
                 startIndex = 1;
                 if (list.length === 1) {
                     if (firstTx.prevTransactionLt === 0n) {
@@ -107,13 +127,9 @@ export abstract class BaseContractOpener implements ContractOpener {
                     if (currentLt && BigInt(nextLt) >= BigInt(currentLt)) {
                         break;
                     }
-                    const cursorKey = `${nextLt}:${nextHash}`;
-                    if (seenCursors.has(cursorKey)) {
-                        break;
-                    }
-                    seenCursors.add(cursorKey);
                     currentLt = nextLt;
                     currentHash = nextHash;
+                    requestInclusive = true;
                     continue;
                 }
             }
@@ -135,21 +151,17 @@ export abstract class BaseContractOpener implements ContractOpener {
             const oldestTx = list[list.length - 1];
             if (oldestTx.prevTransactionLt === 0n) break;
             if (toLt !== undefined) {
-                if (inclusive ? oldestTx.lt <= toLt : oldestTx.lt < toLt) break;
+                if (toLtInclusive ? oldestTx.lt <= toLt : oldestTx.lt < toLt) break;
             }
 
             const nextLt = oldestTx.lt.toString();
             const nextHash = oldestTx.hash().toString('base64');
-            if (currentLt && BigInt(nextLt) >= BigInt(currentLt)) {
+            if (currentLt && currentHash && nextLt === currentLt && nextHash === currentHash && !requestInclusive) {
                 break;
             }
-            const cursorKey = `${nextLt}:${nextHash}`;
-            if (seenCursors.has(cursorKey)) {
-                break;
-            }
-            seenCursors.add(cursorKey);
             currentLt = nextLt;
             currentHash = nextHash;
+            requestInclusive = false;
         }
 
         return null;
@@ -322,7 +334,7 @@ export abstract class BaseContractOpener implements ContractOpener {
     /**
      * Validate transaction phases and return error details
      */
-    private validateTransactionWithResult(
+    protected validateTransactionWithResult(
         tx: Transaction,
         ignoreOpcodeList: number[],
     ): TransactionValidationError | null {
@@ -368,50 +380,46 @@ export abstract class BaseContractOpener implements ContractOpener {
     /**
      * Find transaction by hash type
      */
-    private async findTransactionByHashType(
+    protected async findTransactionByHashType(
         address: Address,
         hash: string,
         hashType: 'unknown' | 'in' | 'out' | undefined,
         opts: GetTransactionsOptions,
+        message?: Message,
     ): Promise<Transaction | null> {
-        const searchOpts: GetTransactionsOptions = { archival: true, ...opts };
+        const targetHash = message ? beginCell().store(storeMessage(message)).endCell().hash().toString('base64') : hash;
 
         if (hashType === 'in') {
-            return this.getTransactionByInMsgHash(address, hash, searchOpts);
+            return this.getTransactionByInMsgHash(address, targetHash, opts);
         } else if (hashType === 'out') {
-            return this.getTransactionByOutMsgHash(address, hash, searchOpts);
+            return this.getTransactionByOutMsgHash(address, targetHash, opts);
         } else {
-            return this.getTransactionByHash(address, hash, searchOpts);
+            return this.getTransactionByHash(address, targetHash, opts);
         }
     }
 
     /**
      * Find transaction with retry logic
      */
-    private async findTransactionWithRetry(
+    protected async findTransactionWithRetry(
         address: Address,
         hash: string,
         hashType: 'unknown' | 'in' | 'out' | undefined,
         opts: GetTransactionsOptions,
         depth: number,
+        message?: Message,
     ): Promise<Transaction | null> {
         const retryDelayMs = opts.retryDelayMs ?? DEFAULT_RETRY_ON_NOT_FOUND_DELAY_MS;
         const maxRetries = opts.retries ?? DEFAULT_RETRY_ON_NOT_FOUND_RETRIES;
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            let errorMsg: string | undefined;
-
-            try {
-                const tx = await this.findTransactionByHashType(address, hash, hashType, opts);
-                if (tx) {
-                    return tx;
-                }
-            } catch (error) {
-                errorMsg = error instanceof Error ? error.message : String(error);
+            const tx = await this.findTransactionByHashType(address, hash, hashType, opts, message);
+            if (tx) {
+                return tx;
             }
 
             const isLastAttempt = attempt >= maxRetries;
-            const reason = errorMsg ?? 'not found';
+            const reason = 'not found';
             const retryInfo = isLastAttempt ? '' : `, retrying in ${retryDelayMs}ms`;
             this.logger?.debug(
                 `Transaction not found at depth ${depth} (attempt ${attempt + 1}/${maxRetries + 1}): ${reason}${retryInfo}`,
@@ -437,7 +445,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
             ignoreOpcodeList: IGNORE_OPCODE,
             limit: DEFAULT_FIND_TX_LIMIT,
-            direction: 'both',
+            direction: TransactionTreeDirection.FORWARD,
             retryOnNotFound: DEFAULT_RETRY_ON_NOT_FOUND,
         },
     ): Promise<void> {
@@ -469,7 +477,7 @@ export abstract class BaseContractOpener implements ContractOpener {
             maxDepth: DEFAULT_FIND_TX_MAX_DEPTH,
             ignoreOpcodeList: IGNORE_OPCODE,
             limit: DEFAULT_FIND_TX_LIMIT,
-            direction: 'both',
+            direction: TransactionTreeDirection.FORWARD,
             retryOnNotFound: DEFAULT_RETRY_ON_NOT_FOUND,
         },
     ): Promise<TrackTransactionTreeResult> {
@@ -478,7 +486,9 @@ export abstract class BaseContractOpener implements ContractOpener {
             ignoreOpcodeList = IGNORE_OPCODE,
             limit = DEFAULT_FIND_TX_LIMIT,
             maxScannedTransactions = DEFAULT_MAX_SCANNED_TRANSACTIONS,
-            direction = 'both',
+            archival,
+            rootLt,
+            direction = TransactionTreeDirection.FORWARD,
             retryOnNotFound = DEFAULT_RETRY_ON_NOT_FOUND,
             retryDelayMs,
             retries,
@@ -490,29 +500,55 @@ export abstract class BaseContractOpener implements ContractOpener {
         let checkedCount = 0;
         const searchOpts: GetTransactionsOptions = {
             limit,
-            archival: true,
             maxScannedTransactions,
             retryDelayMs,
             retries,
         };
-        const queue: TransactionDepth[] = [
+        if (archival !== undefined) {
+            searchOpts.archival = archival;
+        }
+
+        const queue: TransactionQueueItem[] = [
             { address: parsedAddress, hash: normalizedRootHash, depth: 0, hashType: 'unknown' },
         ];
 
         while (queue.length > 0) {
-            const { hash: currentHash, depth: currentDepth, address: currentAddress, hashType } = queue.shift()!;
+            const {
+                hash: currentHash,
+                depth: currentDepth,
+                address: currentAddress,
+                hashType,
+                message,
+            } = queue.shift()!;
 
-            const visitedKey = `${currentAddress!.toString()}:${currentHash}:${hashType}`;
+            const visitedKey = `${currentAddress.toString()}:${currentHash}:${hashType}`;
             if (visitedSearchKeys.has(visitedKey)) continue;
             visitedSearchKeys.add(visitedKey);
 
+            const currentSearchOpts =
+                currentDepth === 0 && hashType === 'unknown' && rootLt
+                    ? { ...searchOpts, lt: rootLt, hash: currentHash, inclusive: true }
+                    : searchOpts;
             const tx = retryOnNotFound
-                ? await this.findTransactionWithRetry(currentAddress!, currentHash, hashType, searchOpts, currentDepth)
-                : await this.findTransactionByHashType(currentAddress!, currentHash, hashType, searchOpts);
+                ? await this.findTransactionWithRetry(
+                      currentAddress,
+                      currentHash,
+                      hashType,
+                      currentSearchOpts,
+                      currentDepth,
+                      message,
+                  )
+                : await this.findTransactionByHashType(
+                      currentAddress,
+                      currentHash,
+                      hashType,
+                      currentSearchOpts,
+                      message,
+                  );
 
             if (!tx) {
                 this.logger?.debug(
-                    `Transaction not found for hash: ${currentHash} (address=${currentAddress?.toString()}, hashType=${hashType ?? 'unknown'})`,
+                    `Transaction not found for hash: ${currentHash} (address=${currentAddress.toString()}, hashType=${hashType})`,
                 );
                 return {
                     success: false,
@@ -522,8 +558,8 @@ export abstract class BaseContractOpener implements ContractOpener {
                         exitCode: 'N/A',
                         resultCode: 'N/A',
                         reason: 'not_found',
-                        address: currentAddress?.toString(),
-                        hashType: hashType ?? 'unknown',
+                        address: currentAddress.toString(),
+                        hashType,
                     },
                 };
             }
@@ -544,7 +580,10 @@ export abstract class BaseContractOpener implements ContractOpener {
 
             // Add adjacent transactions to queue
             if (currentDepth < maxDepth) {
-                if ((direction === 'forward' || direction === 'both') && tx.outMessages.size > 0) {
+                if (
+                    (direction === TransactionTreeDirection.FORWARD || direction === TransactionTreeDirection.BOTH) &&
+                    tx.outMessages.size > 0
+                ) {
                     for (const msg of tx.outMessages.values()) {
                         const dst = msg.info.dest;
                         if (!dst || dst instanceof ExternalAddress) continue;
@@ -554,17 +593,22 @@ export abstract class BaseContractOpener implements ContractOpener {
                             address: dst,
                             depth: currentDepth + 1,
                             hashType: 'in',
+                            message: msg,
                         });
                     }
                 }
 
                 // Backward: add parent (incoming message source)
-                if ((direction === 'backward' || direction === 'both') && tx.inMessage?.info.type === 'internal') {
+                if (
+                    (direction === TransactionTreeDirection.BACKWARD || direction === TransactionTreeDirection.BOTH) &&
+                    tx.inMessage?.info.type === 'internal'
+                ) {
                     queue.push({
                         hash: beginCell().store(storeMessage(tx.inMessage)).endCell().hash().toString('base64'),
                         address: tx.inMessage.info.src,
                         depth: currentDepth + 1,
                         hashType: 'out',
+                        message: tx.inMessage,
                     });
                 }
             }

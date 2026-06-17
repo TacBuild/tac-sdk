@@ -3,9 +3,13 @@ import {
     ConvertedCurrencyResult,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2,
+    ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
+    OperationTypeV2Info,
     SimplifiedStatuses,
     StatusInfo,
     StatusInfosByOperationId,
@@ -24,17 +28,57 @@ export interface IOperationTracker {
      */
     getOperationType(operationId: string, waitOptions?: WaitOptions<OperationType> | null): Promise<OperationType>;
     /**
+     * Returns the v2 operation route and finalized flag for the given id.
+     * @param operationId Operation identifier.
+     * @param waitOptions Optional waiting and polling settings. Pass `null` to disable retries and use a single attempt.
+     */
+    getOperationTypeV2(
+        operationId: string,
+        waitOptions?: WaitOptions<OperationTypeV2Info> | null,
+    ): Promise<OperationTypeV2Info>;
+    /**
      * Resolves an operation id for the given transaction linker, optionally waiting until available.
      * @param transactionLinker Reference to originating transaction across chains.
      * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
      */
     getOperationId(transactionLinker: TransactionLinker, waitOptions?: WaitOptions<string> | null): Promise<string>;
     /**
+     * Resolves TAC operation ids with log indexes by TAC transaction hash, optionally waiting until available.
+     * @param transactionHash Hash of the originating TAC transaction.
+     * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
+     */
+    getOperationIdByTacTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<OperationIdWithLogIndex[]> | null,
+    ): Promise<OperationIdWithLogIndex[]>;
+    /**
      * Resolves an operation id by a transaction hash, optionally waiting until available.
      * @param transactionHash Hash of the originating transaction.
      * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
      */
     getOperationIdByTransactionHash(transactionHash: string, waitOptions?: WaitOptions<string> | null): Promise<string>;
+    /**
+     * Resolves an operation id by a TON transaction hash, optionally waiting until available.
+     * When OperationTracker config includes TONParams.tonIndexer, the hash may belong to any transaction in the linked
+     * TON transaction chain; the tracker resolves the sequencer-collected crossChainLayer transaction before querying
+     * the sequencer.
+     * Retries cover both the indexed crossChainLayer lookup and the sequencer request.
+     * @param transactionHash TON transaction hash.
+     * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
+     */
+    getOperationIdByTonTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string>;
+    /**
+     * Resolves an operation id by the BOC of an external TON message that was sent to the blockchain.
+     * The tracker resolves the root TON transaction that processed the external message, then resolves the
+     * sequencer-collected crossChainLayer transaction before querying the sequencer. Retries cover that whole lookup.
+     * Requires OperationTracker config to include TONParams.tonIndexer.
+     * @param boc BOC of the external TON message that was sent to the blockchain.
+     * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
+     */
+    getOperationIdByTonTransactionBoc(boc: string, waitOptions?: WaitOptions<string> | null): Promise<string>;
     /**
      * Resolves operation ids by shard keys for a particular caller, with optional batching and waiting.
      * @param shardsKeys List of shard keys.
@@ -65,6 +109,26 @@ export interface IOperationTracker {
         waitOptions?: WaitOptions<ExecutionStagesByOperationId> | null,
         chunkSize?: number,
     ): Promise<ExecutionStagesByOperationId>;
+    /**
+     * Gets detailed v2 stage profiling for a single operation, including finalized/status/rollback fields.
+     * @param operationId Operation identifier.
+     * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
+     */
+    getStageProfilingV2(
+        operationId: string,
+        waitOptions?: WaitOptions<ExecutionStagesV2> | null,
+    ): Promise<ExecutionStagesV2>;
+    /**
+     * Gets v2 stage profiling for multiple operations in bulk.
+     * @param operationIds Operation identifiers.
+     * @param waitOptions Optional waiting settings. Pass `null` to disable retries and use a single attempt.
+     * @param chunkSize Optional batching size for requests.
+     */
+    getStageProfilingsV2(
+        operationIds: string[],
+        waitOptions?: WaitOptions<ExecutionStagesV2ByOperationId> | null,
+        chunkSize?: number,
+    ): Promise<ExecutionStagesV2ByOperationId>;
     /**
      * Gets statuses for multiple operations.
      * @param operationIds Operation identifiers.

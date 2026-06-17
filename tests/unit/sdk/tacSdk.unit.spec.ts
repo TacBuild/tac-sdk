@@ -1,11 +1,18 @@
 import { testnet } from '../../../artifacts';
-import { Configuration, Network, NoopLogger, TacSdk } from '../../../src';
+import { Configuration, ContractOpener, Network, NoopLogger, TacSdk } from '../../../src';
 import * as Utils from '../../../src/sdk/Utils';
+
+const contractOpenerMock = {
+    getTransactionByHash: jest.fn(),
+} as jest.Mocked<Pick<ContractOpener, 'getTransactionByHash'>>;
 
 const configMock = {
     network: Network.TESTNET,
     artifacts: testnet,
-    TONParams: {} as never,
+    TONParams: {
+        contractOpener: contractOpenerMock,
+        crossChainLayerAddress: '0:C8BA7D20AB6D96F4DD7F9574C9C4ED11A6DAC7EB6E48BAD58373052124978EB3',
+    } as never,
     TACParams: {} as never,
     liteSequencerEndpoints: ['https://sequencer.tac'],
     nativeTONAddress: 'EQNative',
@@ -34,6 +41,7 @@ const tonManagerInstance = {
 
 const tacManagerInstance = {
     bridgeTokensToTON: jest.fn().mockResolvedValue('0xbridge'),
+    sendCrossChainTransactionToTON: jest.fn().mockResolvedValue({ txHash: '0xbridge', operationId: 'op-1' }),
 };
 
 jest.mock('../../../src/sdk/Configuration', () => ({
@@ -75,7 +83,16 @@ describe('TacSdk factory and delegation', () => {
     it('creates SDK with correct configuration for selected network', async () => {
         const sdk = await TacSdk.create({ network: Network.TESTNET, delay: 5 });
 
-        expect(mockConfigCreate).toHaveBeenCalledWith(Network.TESTNET, testnet, undefined, undefined, undefined, 5, new NoopLogger());
+        expect(mockConfigCreate).toHaveBeenCalledWith(
+            Network.TESTNET,
+            testnet,
+            undefined,
+            undefined,
+            undefined,
+            5,
+            new NoopLogger(),
+            true,
+        );
         expect(sdk.nativeTONAddress).toBe('EQNative');
     });
 
@@ -90,6 +107,29 @@ describe('TacSdk factory and delegation', () => {
             'exec',
         ]);
         expect(result).toBe('0xbridge');
+    });
+
+    it('normalizes assets before sendCrossChainTransactionToTON and delegates to TAC manager', async () => {
+        const sdk = await TacSdk.create({ network: Network.TESTNET });
+        const signer = { address: '0xSigner' } as never;
+        const options = {
+            tvmExecutorFee: 1n,
+            tvmValidExecutors: ['exec'],
+            waitOperationId: false,
+            waitOperationIdOptions: { maxAttempts: 1 },
+            finalizationWaitOptions: { maxAttempts: 3 },
+        };
+
+        const result = await sdk.sendCrossChainTransactionToTON(signer, 'EQTarget', ['rawAsset'] as never, options);
+
+        expect(normalizeAssetsSpy).toHaveBeenCalledWith(configMock, ['rawAsset']);
+        expect(tacManagerInstance.sendCrossChainTransactionToTON).toHaveBeenCalledWith(
+            signer,
+            'EQTarget',
+            ['normalized'],
+            options,
+        );
+        expect(result).toEqual({ txHash: '0xbridge', operationId: 'op-1' });
     });
 
     it('normalizes assets before sending a cross-chain transaction batch', async () => {

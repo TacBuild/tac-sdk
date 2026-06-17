@@ -1,8 +1,7 @@
 import { Wallet } from 'ethers';
 
-import { dev, mainnet, testnet } from '../../artifacts';
 import { JettonMinterData, NFTItemData } from '../../artifacts/tonTypes';
-import { AssetFactory, FT, NFT } from '../assets';
+import { AssetFactory, FT, NFT, TAC, TON } from '../assets';
 import {
     Asset,
     ContractOpener,
@@ -27,14 +26,15 @@ import {
     CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
+    CrossChainTransactionToTONOptions,
     CrosschainTx,
     EVMAddress,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
-    Network,
     NFTAddressType,
     SDKParams,
     SuggestedTVMExecutorFee,
+    TACCrossChainTransactionResult,
     TacGasPrice,
     TACSimulationParams,
     TACSimulationResult,
@@ -42,6 +42,7 @@ import {
     TVMAddress,
     UserWalletBalanceExtended,
 } from '../structs/Struct';
+import { getArtifacts } from './Artifacts';
 import { Configuration } from './Configuration';
 import { DEFAULT_DELAY } from './Consts';
 import { NoopLogger } from './Logger';
@@ -51,6 +52,7 @@ import { TacExplorerClient } from './TacExplorerClient';
 import { TACTransactionManager } from './TACTransactionManager';
 import { TONTransactionManager } from './TONTransactionManager';
 import { getBouncedAddress, mapAssetsToTonAssets, normalizeAssets } from './Utils';
+
 export class TacSdk implements ITacSDK {
     readonly config: IConfiguration;
     readonly contactOpener: ContractOpener;
@@ -82,20 +84,7 @@ export class TacSdk implements ITacSDK {
         const delay = sdkParams.delay ?? DEFAULT_DELAY;
         const passLoggerToOpeners = sdkParams.passLoggerToOpeners ?? true;
 
-        let artifacts;
-        switch (network) {
-            case Network.MAINNET:
-                artifacts = mainnet;
-                break;
-            case Network.TESTNET:
-                artifacts = testnet;
-                break;
-            case Network.DEV:
-                artifacts = dev;
-                break;
-            default:
-                throw new Error(`Unsupported network: ${network}`);
-        }
+        const artifacts = getArtifacts(network);
 
         const config = await Configuration.create(
             network,
@@ -108,7 +97,7 @@ export class TacSdk implements ITacSDK {
             passLoggerToOpeners,
         );
 
-        const operationTracker = new OperationTracker(network, config.liteSequencerEndpoints, logger);
+        const operationTracker = new OperationTracker(config, logger);
         const explorerClient = new TacExplorerClient(artifacts.TAC_EXPLORER_API_ENDPOINT);
         const simulator = new Simulator(config, operationTracker, logger);
         const tonTransactionManager = new TONTransactionManager(config, simulator, operationTracker, logger);
@@ -188,6 +177,17 @@ export class TacSdk implements ITacSDK {
         return this.tonTransactionManager.sendCrossChainTransaction(evmProxyMsg, sender, tx);
     }
 
+    async sendCrossChainTransactionToTON(
+        signer: Wallet,
+        tonTarget: string,
+        assets?: AssetLike[],
+        options?: CrossChainTransactionToTONOptions,
+    ): Promise<TACCrossChainTransactionResult> {
+        const normalizedAssets = await normalizeAssets(this.config, assets);
+
+        return this.tacTransactionManager.sendCrossChainTransactionToTON(signer, tonTarget, normalizedAssets, options);
+    }
+
     async sendCrossChainTransactions(
         sender: SenderAbstraction,
         txs: BatchCrossChainTxWithAssetLike[],
@@ -238,7 +238,7 @@ export class TacSdk implements ITacSDK {
     }
 
     // Asset methods
-    async getAsset(args: AssetFromFTArg): Promise<FT>;
+    async getAsset(args: AssetFromFTArg): Promise<FT | TAC | TON>;
     async getAsset(args: AssetFromNFTCollectionArg): Promise<NFT>;
     async getAsset(args: AssetFromNFTItemArg): Promise<NFT>;
     async getAsset(args: AssetFromFTArg | AssetFromNFTCollectionArg | AssetFromNFTItemArg): Promise<Asset> {

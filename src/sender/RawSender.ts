@@ -3,7 +3,7 @@ import { MessageRelaxed, SendMode } from '@ton/ton';
 
 import type { Asset, ContractOpener } from '../interfaces';
 import { SenderAbstraction, WalletInstanse } from '../interfaces';
-import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
+import type { SendBatchTransferResult, SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
 export class RawSender implements SenderAbstraction {
@@ -93,7 +93,7 @@ export class RawSender implements SenderAbstraction {
     private async sendBatch(
         messages: MessageRelaxed[],
         contractOpener: ContractOpener,
-    ): Promise<string | void | { result: string | void }> {
+    ): Promise<SendBatchTransferResult> {
         const walletContract = contractOpener.open(this.wallet);
         const seqno = await walletContract.getSeqno();
 

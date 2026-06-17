@@ -1,5 +1,15 @@
 import { getHttpEndpoint, Network as TonNetwork } from '@orbs-network/ton-access';
-import { Address, Contract, OpenedContract, TonClient, TonClient4, Transaction } from '@ton/ton';
+import type { Message } from '@ton/ton';
+import {
+    Address,
+    beginCell,
+    Contract,
+    OpenedContract,
+    storeMessage,
+    TonClient,
+    TonClient4,
+    Transaction,
+} from '@ton/ton';
 
 import { ILogger } from '../interfaces';
 import { AxiosHttpClient } from '../sdk/AxiosHttpClient';
@@ -48,8 +58,9 @@ export class TonClientOpener extends BaseContractOpener {
             hash: opts.hash ? normalizeHashToBase64(opts.hash) : undefined,
             to_lt: opts.to_lt,
             inclusive: opts.inclusive,
-            archival: opts.archival,
+            ...(opts.archival === undefined ? {} : { archival: opts.archival }),
         };
+
         return this.client.getTransactions(address, clientOpts);
     }
 
@@ -61,6 +72,52 @@ export class TonClientOpener extends BaseContractOpener {
                 hash: state.lastTransaction?.hash ?? '',
             },
         };
+    }
+
+    protected async findTransactionByHashType(
+        address: Address,
+        hash: string,
+        hashType: 'unknown' | 'in' | 'out' | undefined,
+        opts: GetTransactionsOptions,
+        message?: Message,
+    ): Promise<Transaction | null> {
+        if (opts.archival === true && message?.info.type === 'internal') {
+            const { src, dest, createdLt } = message.info;
+            const targetHash = normalizeHashToBase64(hash);
+
+            if (hashType === 'in') {
+                try {
+                    const tx = await this.client.tryLocateResultTx(src, dest, createdLt.toString());
+
+                    if (
+                        tx.inMessage &&
+                        beginCell().store(storeMessage(tx.inMessage)).endCell().hash().toString('base64') ===
+                            targetHash
+                    ) {
+                        return tx;
+                    }
+                } catch {
+                    // Keep the regular hash scan semantics when Toncenter cannot locate a delivered result.
+                }
+            } else if (hashType === 'out') {
+                try {
+                    const tx = await this.client.tryLocateSourceTx(src, dest, createdLt.toString());
+
+                    for (const outMessage of tx.outMessages.values()) {
+                        if (
+                            beginCell().store(storeMessage(outMessage)).endCell().hash().toString('base64') ===
+                            targetHash
+                        ) {
+                            return tx;
+                        }
+                    }
+                } catch {
+                    // Keep the regular hash scan semantics when Toncenter cannot locate the source.
+                }
+            }
+        }
+
+        return super.findTransactionByHashType(address, hash, hashType, opts, message);
     }
 
     async getConfig(): Promise<string> {

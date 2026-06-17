@@ -2,7 +2,7 @@ import { Address, beginCell } from '@ton/ton';
 import { ethers } from 'ethers';
 
 import type { Asset } from '../../../src';
-import { AssetType, Origin, ValidExecutors } from '../../../src';
+import { AssetFeeMode, AssetType, BlockchainType, Origin, ValidExecutors } from '../../../src';
 import * as Utils from '../../../src/sdk/Utils';
 
 // Mock the generateRandomNumberByTimestamp function
@@ -50,6 +50,7 @@ class FakeFTAsset implements Asset {
     }
     type: AssetType;
     clone: Asset;
+    feeMode = AssetFeeMode.LEGACY;
     withAmount(): Asset {
         return new FakeFTAsset(this.address, this.rawAmount, this.origin);
     }
@@ -74,7 +75,8 @@ class FakeFTAsset implements Asset {
     async checkCanBeTransferredBy(): Promise<void> {
         return;
     }
-    async getBalanceOf(): Promise<bigint> {
+    async getBalanceOf(_userAddress: string, _blockchainType: BlockchainType = BlockchainType.TON): Promise<bigint> {
+        void _blockchainType;
         return this.rawAmount;
     }
 }

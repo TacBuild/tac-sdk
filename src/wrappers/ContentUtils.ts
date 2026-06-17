@@ -1,209 +1,369 @@
 import { Sha256 } from '@aws-crypto/sha256-js';
 import { beginCell, Builder, Cell, Dictionary, Slice } from '@ton/ton';
 import axios from 'axios';
-import BN from 'bn.js';
 
 import { notMultiplyOf8Error, prefixError, unsupportedFormatError, unsupportedKeyError } from '../errors';
+import { MetadataPersistenceType, OffchainMetadataResult, ReadMetadataResult } from '../structs/InternalStruct';
 
 export const ONCHAIN_CONTENT_PREFIX = 0x00;
 export const OFFCHAIN_CONTENT_PREFIX = 0x01;
 
-const SNAKE_PREFIX = 0x00;
+const SNAKE_CONTENT_PREFIX = 0x00;
+const CHUNKED_CONTENT_PREFIX = 0x01;
+const CELL_MAX_BITS = 1023;
 
-export interface JettonMetadata {
+type MetadataEncoding = 'utf8' | 'ascii';
+
+export type JsonMetadataValue =
+    | string
+    | number
+    | boolean
+    | null
+    | JsonMetadataValue[]
+    | { [key: string]: JsonMetadataValue };
+
+export type MetadataRecord<TKey extends string = string> = Partial<Record<TKey, JsonMetadataValue>> & {
+    [key: string]: JsonMetadataValue | undefined;
+};
+
+export type CommonMetadataKeys = 'uri' | 'name' | 'description' | 'image' | 'image_data';
+
+export type JettonMetaDataKeys = CommonMetadataKeys | 'symbol' | 'decimals' | 'amount_style' | 'render_type';
+
+export type NFTMetadataKeys = CommonMetadataKeys;
+
+export interface JettonMetadata extends MetadataRecord<JettonMetaDataKeys> {
     uri?: string;
-    name: string;
-    description: string;
+    name?: string;
+    description?: string;
     image?: string;
     image_data?: string;
-    symbol: string;
-    decimals?: string;
+    symbol?: string;
+    decimals?: string | number;
+    amount_style?: string;
+    render_type?: string;
 }
 
-export type JettonExtendedMetadata = {
-    persistenceType: persistenceType;
-    metadata: { [s in JettonMetaDataKeys]?: string };
-    isJettonDeployerFaultyOnChainData?: boolean;
+export interface NFTMetadata extends MetadataRecord<NFTMetadataKeys> {
+    uri?: string;
+    name?: string;
+    description?: string;
+    image?: string;
+    image_data?: string;
+}
+
+type ExtendedMetadata<TKey extends string> = {
+    persistenceType: MetadataPersistenceType;
+    metadata: MetadataRecord<TKey> | null;
     contentUri?: string;
 };
 
-export function buildJettonOffChainMetadata(contentUri: string) {
-    return beginCell().storeInt(OFFCHAIN_CONTENT_PREFIX, 8).storeBuffer(Buffer.from(contentUri, 'ascii')).endCell();
-}
+export type JettonExtendedMetadata = ExtendedMetadata<JettonMetaDataKeys> & {
+    isJettonDeployerFaultyOnChainData?: boolean;
+};
 
-export type JettonMetaDataKeys = 'uri' | 'name' | 'description' | 'image' | 'symbol' | 'image_data' | 'decimals';
+export type NFTExtendedMetadata = ExtendedMetadata<NFTMetadataKeys>;
 
-const jettonOnChainMetadataSpec: {
-    [key in JettonMetaDataKeys]: 'utf8' | 'ascii' | undefined;
-} = {
+type MetadataSpec<TKey extends string> = Record<TKey, MetadataEncoding | undefined>;
+
+const commonMetadataSpec: Record<CommonMetadataKeys, MetadataEncoding> = {
     uri: 'ascii',
     name: 'utf8',
     description: 'utf8',
     image: 'ascii',
     image_data: 'ascii',
-    symbol: 'utf8',
-    decimals: 'utf8',
 };
 
-const sha256 = (str: string) => {
+const jettonOnChainMetadataSpec: MetadataSpec<JettonMetaDataKeys> = {
+    ...commonMetadataSpec,
+    symbol: 'utf8',
+    decimals: 'utf8',
+    amount_style: 'utf8',
+    render_type: 'utf8',
+};
+
+const nftOnChainMetadataSpec: MetadataSpec<NFTMetadataKeys> = {
+    ...commonMetadataSpec,
+};
+
+const sha256 = (value: string) => {
     const sha = new Sha256();
-    sha.update(str);
+    sha.update(value);
     return Buffer.from(sha.digestSync());
 };
 
-function storeSnakeContent(content: Buffer, isFirst: boolean): Cell {
-    const CELL_MAX_SIZE_BYTES = Math.floor((1023 - 8) / 8);
+function getAvailableBytes(withPrefix: boolean) {
+    return Math.floor((CELL_MAX_BITS - (withPrefix ? 8 : 0)) / 8);
+}
+
+function buildSnakeCell(content: Buffer, withPrefix: boolean): Cell {
     const cell = new Builder();
-    if (isFirst) {
-        cell.storeUint(SNAKE_PREFIX, 8);
+    if (withPrefix) {
+        cell.storeUint(SNAKE_CONTENT_PREFIX, 8);
     }
-    cell.storeBuffer(content.subarray(0, CELL_MAX_SIZE_BYTES));
-    const remainingContent = content.subarray(CELL_MAX_SIZE_BYTES);
+
+    const bytesToStore = getAvailableBytes(withPrefix);
+    cell.storeBuffer(content.subarray(0, bytesToStore));
+
+    const remainingContent = content.subarray(bytesToStore);
     if (remainingContent.length > 0) {
-        cell.storeRef(storeSnakeContent(remainingContent, false));
+        cell.storeRef(buildSnakeCell(remainingContent, false));
     }
+
     return cell.endCell();
 }
 
-export function buildJettonOnchainMetadata(data: JettonMetadata) {
-    const dict = Dictionary.empty();
+function buildOffchainContent(contentUri: string) {
+    const content = Buffer.from(contentUri, 'ascii');
+    const root = beginCell().storeUint(OFFCHAIN_CONTENT_PREFIX, 8);
+    const bytesToStore = getAvailableBytes(true);
 
-    Object.entries(data).forEach(([k, v]: [string, string | undefined]) => {
-        if (!jettonOnChainMetadataSpec[k as JettonMetaDataKeys]) {
-            throw unsupportedKeyError(k);
-        }
-        if (!v || v == '' || v == null) {
-            return;
-        }
+    root.storeBuffer(content.subarray(0, bytesToStore));
 
-        const bufferToStore = Buffer.from(v, jettonOnChainMetadataSpec[k as JettonMetaDataKeys]);
-
-        dict.set(sha256(k), storeSnakeContent(bufferToStore, true));
-    });
-
-    return beginCell()
-        .storeInt(ONCHAIN_CONTENT_PREFIX, 8)
-        .storeDict(dict, Dictionary.Keys.Buffer(32), Dictionary.Values.Cell())
-        .endCell();
-}
-
-function readSnakeContent(slice: Slice, isFirst: boolean): Buffer {
-    if (isFirst && slice.loadUint(8) !== SNAKE_PREFIX) {
-        throw unsupportedFormatError;
+    const remainingContent = content.subarray(bytesToStore);
+    if (remainingContent.length > 0) {
+        root.storeRef(buildSnakeCell(remainingContent, false));
     }
 
+    return root.endCell();
+}
+
+function ensureByteAligned(slice: Slice) {
     if (slice.remainingBits % 8 !== 0) {
         throw notMultiplyOf8Error;
     }
-
-    let remainingBytes: Buffer<ArrayBufferLike> = Buffer.from('');
-
-    if (slice.remainingBits != 0) {
-        remainingBytes = slice.loadBuffer(slice.remainingBits / 8);
-    }
-
-    if (slice.remainingRefs != 0) {
-        const newCell = slice.loadRef();
-        remainingBytes = Buffer.concat([remainingBytes, readSnakeContent(newCell.beginParse(), false)]);
-    }
-    return remainingBytes;
 }
 
-function parseJettonOnchainMetadata(contentSlice: Slice): {
-    metadata: { [s in JettonMetaDataKeys]?: string };
-    isJettonDeployerFaultyOnChainData: boolean;
-} {
-    // Note that this relies on what is (perhaps) an internal implementation detail:
-    // "sdk" library dict parser converts: key (provided as buffer) => BN(base10)
-    // and upon parsing, it reads it back to a BN(base10)
-    // tl;dr if we want to read the map back to a JSON with string keys, we have to convert BN(10) back to hex
-    const toKey = (str: string) => BigInt(new BN(str, 'hex').toString(10));
-
-    const isJettonDeployerFaultyOnChainData = false;
-
-    const cellDict = contentSlice.loadDict(Dictionary.Keys.BigUint(256), Dictionary.Values.Cell());
-
-    const dict = new Map<bigint, Buffer>();
-
-    cellDict.values().forEach((item, index) => {
-        dict.set(cellDict.keys()[index], readSnakeContent(item.beginParse(), true));
-    });
-
-    const res: { [s in JettonMetaDataKeys]?: string } = {};
-
-    Object.keys(jettonOnChainMetadataSpec).forEach((k) => {
-        const val = dict
-            .get(toKey(sha256(k).toString('hex')))
-            ?.toString(jettonOnChainMetadataSpec[k as JettonMetaDataKeys]);
-        if (val) {
-            res[k as JettonMetaDataKeys] = val;
+function readSnakeData(slice: Slice, withPrefix: boolean): Buffer {
+    if (withPrefix) {
+        if (slice.loadUint(8) !== SNAKE_CONTENT_PREFIX) {
+            throw unsupportedFormatError;
         }
-    });
+    }
 
-    return {
-        metadata: res,
-        isJettonDeployerFaultyOnChainData,
-    };
+    ensureByteAligned(slice);
+
+    const current = slice.remainingBits > 0 ? slice.loadBuffer(slice.remainingBits / 8) : Buffer.alloc(0);
+    if (slice.remainingRefs === 0) {
+        return current;
+    }
+    if (slice.remainingRefs > 1) {
+        throw unsupportedFormatError;
+    }
+
+    return Buffer.concat([current, readSnakeData(slice.loadRef().beginParse(), false)]);
 }
 
-async function parseJettonOffchainMetadata(contentSlice: Slice): Promise<{
-    metadata: { [s in JettonMetaDataKeys]?: string };
-    isIpfs: boolean | null;
-    contentUri: string;
-}> {
-    const remainingBits = contentSlice.remainingBits;
+function readChunkedData(slice: Slice): Buffer {
+    const dict = slice.loadDict(Dictionary.Keys.Uint(32), Dictionary.Values.Cell());
+    const chunks = dict.keys().sort((a, b) => a - b);
 
-    if (remainingBits % 8 !== 0) {
-        throw notMultiplyOf8Error;
+    return Buffer.concat(
+        chunks.map((chunkIndex) => {
+            const chunk = dict.get(chunkIndex);
+            if (!chunk) {
+                return Buffer.alloc(0);
+            }
+
+            return readSnakeData(chunk.beginParse(), true);
+        }),
+    );
+}
+
+function readContentData(cell: Cell): Buffer {
+    const slice = cell.beginParse();
+    const prefix = slice.loadUint(8);
+
+    if (prefix === SNAKE_CONTENT_PREFIX) {
+        return readSnakeData(slice, false);
+    }
+    if (prefix === CHUNKED_CONTENT_PREFIX) {
+        return readChunkedData(slice);
     }
 
-    const jsonURI = contentSlice
-        .loadBuffer(remainingBits / 8)
-        .toString('ascii')
-        .replace('ipfs://', 'https://ipfs.io/ipfs/');
+    throw unsupportedFormatError;
+}
 
-    let metadata = null;
-    let isIpfs = null;
-    try {
-        metadata = (await axios.get(jsonURI)).data;
-        isIpfs = /(^|\/)ipfs[.:]/.test(jsonURI);
-    } catch {
-        // nothing
+function parseOnchainMetadata<TKey extends string>(
+    contentSlice: Slice,
+    metadataSpec: MetadataSpec<TKey>,
+): { metadata: MetadataRecord<TKey>; isJettonDeployerFaultyOnChainData: boolean } {
+    const dict = contentSlice.loadDict(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
+    const metadata: MetadataRecord<TKey> = {};
+
+    for (const key of Object.keys(metadataSpec) as TKey[]) {
+        const encoding = metadataSpec[key];
+        if (!encoding) {
+            continue;
+        }
+
+        const cell = dict.get(sha256(key));
+        if (!cell) {
+            continue;
+        }
+
+        const value = readContentData(cell).toString(encoding);
+        if (value) {
+            metadata[key] = value as MetadataRecord<TKey>[TKey];
+        }
     }
+
     return {
         metadata,
-        isIpfs,
-        contentUri: jsonURI,
+        isJettonDeployerFaultyOnChainData: false,
     };
 }
 
-export type persistenceType = 'none' | 'onchain' | 'offchain_private_domain' | 'offchain_ipfs';
+function normalizeContentUri(contentUri: string) {
+    if (contentUri.startsWith('ipfs://')) {
+        const ipfsPath = contentUri.slice('ipfs://'.length).replace(/^ipfs\//, '');
+        return {
+            contentUri: `https://ipfs.io/ipfs/${ipfsPath}`,
+            isIpfs: true,
+        };
+    }
 
-export async function readJettonMetadata(contentCell: Cell): Promise<JettonExtendedMetadata> {
+    return {
+        contentUri,
+        isIpfs: /(^|\/)ipfs[.:/]/i.test(contentUri),
+    };
+}
+
+async function fetchOffchainMetadata(contentUri: string): Promise<OffchainMetadataResult<MetadataRecord>> {
+    const normalized = normalizeContentUri(contentUri);
+
+    try {
+        const response = await axios.get(normalized.contentUri);
+        const metadata =
+            response.data && typeof response.data === 'object' && !Array.isArray(response.data)
+                ? (response.data as MetadataRecord)
+                : null;
+
+        return {
+            metadata,
+            isIpfs: normalized.isIpfs,
+            contentUri: normalized.contentUri,
+        };
+    } catch {
+        return {
+            metadata: null,
+            isIpfs: normalized.isIpfs,
+            contentUri: normalized.contentUri,
+        };
+    }
+}
+
+async function parseOffchainMetadata(contentSlice: Slice): Promise<OffchainMetadataResult<MetadataRecord>> {
+    const contentUri = readSnakeData(contentSlice, false).toString('ascii');
+    return fetchOffchainMetadata(contentUri);
+}
+
+async function readMetadata<TKey extends string>(
+    contentCell: Cell,
+    metadataSpec: MetadataSpec<TKey>,
+): Promise<ReadMetadataResult<MetadataRecord<TKey>>> {
     if (contentCell.bits.length <= 0) {
         return {
             contentUri: undefined,
-            isJettonDeployerFaultyOnChainData: false,
             metadata: {},
             persistenceType: 'none',
         };
     }
+
     const contentSlice = contentCell.beginParse();
-    switch (contentSlice.loadUint(8)) {
-        case ONCHAIN_CONTENT_PREFIX:
+    const prefix = contentSlice.loadUint(8);
+
+    if (prefix === ONCHAIN_CONTENT_PREFIX) {
+        const { metadata: onchainMetadata, isJettonDeployerFaultyOnChainData } = parseOnchainMetadata(
+            contentSlice,
+            metadataSpec,
+        );
+
+        const uri = onchainMetadata.uri;
+        if (typeof uri === 'string' && uri.length > 0) {
+            const { metadata: offchainMetadata, isIpfs, contentUri } = await fetchOffchainMetadata(uri);
             return {
-                persistenceType: 'onchain',
-                ...parseJettonOnchainMetadata(contentSlice),
-            };
-        case OFFCHAIN_CONTENT_PREFIX: {
-            const { metadata, isIpfs, contentUri } = await parseJettonOffchainMetadata(contentSlice);
-            return {
-                persistenceType: isIpfs ? 'offchain_ipfs' : 'offchain_private_domain',
                 contentUri,
-                metadata,
+                isJettonDeployerFaultyOnChainData,
+                metadata: {
+                    ...(offchainMetadata ?? {}),
+                    ...onchainMetadata,
+                },
+                persistenceType: isIpfs ? 'semichain_ipfs' : 'semichain_private_domain',
             };
         }
-        default:
-            throw prefixError;
+
+        return {
+            isJettonDeployerFaultyOnChainData,
+            metadata: onchainMetadata,
+            persistenceType: 'onchain',
+        };
     }
+
+    if (prefix === OFFCHAIN_CONTENT_PREFIX) {
+        const { metadata, isIpfs, contentUri } = await parseOffchainMetadata(contentSlice);
+        return {
+            contentUri,
+            metadata,
+            persistenceType: isIpfs ? 'offchain_ipfs' : 'offchain_private_domain',
+        };
+    }
+
+    throw prefixError;
+}
+
+function buildOnchainMetadata<TKey extends string>(data: MetadataRecord<TKey>, metadataSpec: MetadataSpec<TKey>) {
+    const dict = Dictionary.empty(Dictionary.Keys.Buffer(32), Dictionary.Values.Cell());
+
+    for (const [key, value] of Object.entries(data)) {
+        const encoding = metadataSpec[key as TKey];
+        if (!encoding) {
+            throw unsupportedKeyError(key);
+        }
+        if (value === '' || value == null) {
+            continue;
+        }
+
+        dict.set(sha256(key), buildSnakeCell(Buffer.from(String(value), encoding), true));
+    }
+
+    return beginCell()
+        .storeUint(ONCHAIN_CONTENT_PREFIX, 8)
+        .storeDict(dict, Dictionary.Keys.Buffer(32), Dictionary.Values.Cell())
+        .endCell();
+}
+
+export function buildJettonOffChainMetadata(contentUri: string) {
+    return buildOffchainContent(contentUri);
+}
+
+export function buildNFTOffChainMetadata(contentUri: string) {
+    return buildOffchainContent(contentUri);
+}
+
+export function buildJettonOnchainMetadata(data: JettonMetadata) {
+    return buildOnchainMetadata(data, jettonOnChainMetadataSpec);
+}
+
+export function buildNFTOnchainMetadata(data: NFTMetadata) {
+    return buildOnchainMetadata(data, nftOnChainMetadataSpec);
+}
+
+export type persistenceType = MetadataPersistenceType;
+
+export async function readJettonMetadata(contentCell: Cell): Promise<JettonExtendedMetadata> {
+    const metadata = await readMetadata(contentCell, jettonOnChainMetadataSpec);
+    return {
+        ...metadata,
+        isJettonDeployerFaultyOnChainData: metadata.isJettonDeployerFaultyOnChainData ?? false,
+    };
+}
+
+export async function readNFTMetadata(contentCell: Cell): Promise<NFTExtendedMetadata> {
+    const metadata = await readMetadata(contentCell, nftOnChainMetadataSpec);
+    return {
+        contentUri: metadata.contentUri,
+        metadata: metadata.metadata,
+        persistenceType: metadata.persistenceType,
+    };
 }

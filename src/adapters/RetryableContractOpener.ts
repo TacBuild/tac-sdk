@@ -4,7 +4,14 @@ import { Address, Contract, OpenedContract, TonClient, Transaction } from '@ton/
 import { TransactionError } from '../errors';
 import { allContractOpenerFailedError } from '../errors/instances';
 import { ContractOpener, ILogger } from '../interfaces';
-import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS, DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT } from '../sdk/Consts';
+import {
+    DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
+    DEFAULT_RETRY_BACKOFF_MULTIPLIER,
+    DEFAULT_RETRY_DELAY_MS,
+    DEFAULT_RETRY_MAX_COUNT,
+    DEFAULT_RETRY_MAX_DELAY_MS,
+} from '../sdk/Consts';
+import { RetryableOperationResult } from '../structs/InternalStruct';
 import {
     AddressInformation,
     ContractState,
@@ -13,6 +20,8 @@ import {
     TrackTransactionTreeParams,
     TrackTransactionTreeResult,
 } from '../structs/Struct';
+import { ToncenterV3Indexer } from './ToncenterV3Indexer';
+import { ToncenterV3Opener } from './ToncenterV3Opener';
 import { orbsOpener4 } from './TonClient4Opener';
 import { orbsOpener, tonClientOpener } from './TonClientOpener';
 
@@ -23,8 +32,12 @@ export interface OpenerConfig {
     opener: ContractOpener;
     /** Number of retry attempts before falling back to the next opener. */
     retries: number;
-    /** Delay in milliseconds between retries for this opener. */
+    /** Base delay in milliseconds between retries for this opener. */
     retryDelay: number;
+    /** Upper bound for exponential backoff delay in milliseconds. */
+    maxRetryDelay?: number;
+    /** Exponential backoff multiplier applied after each failed retry. */
+    retryBackoffMultiplier?: number;
 }
 
 interface ExecuteWithFallbackOptions {
@@ -49,9 +62,7 @@ export class RetryableContractOpener implements ContractOpener {
     }
 
     setLogger(logger: ILogger): void {
-        if (!this.logger) {
-            this.logger = logger;
-        }
+        this.logger = logger;
         this.applyLoggerToOpeners(logger);
     }
 
@@ -240,7 +251,7 @@ export class RetryableContractOpener implements ContractOpener {
     private async executeWithFallback<T>(
         operation: (config: OpenerConfig) => Promise<T>,
         options: ExecuteWithFallbackOptions = {},
-    ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+    ): Promise<RetryableOperationResult<T>> {
         const { useRetries = true, shouldFallbackOnError, operationName = 'operation' } = options;
         let lastError: Error | undefined;
 
@@ -250,7 +261,12 @@ export class RetryableContractOpener implements ContractOpener {
             this.logger?.debug(`[RetryableContractOpener] ${operationName}: trying ${openerLabel}`);
 
             const result = useRetries
-                ? await this.tryWithRetries(() => operation(config), config, `${operationName} ${openerLabel}`)
+                ? await this.tryWithRetries(
+                      () => operation(config),
+                      config,
+                      `${operationName} ${openerLabel}`,
+                      shouldFallbackOnError,
+                  )
                 : await this.trySingleAttempt(() => operation(config));
 
             if (result.success) {
@@ -289,9 +305,7 @@ export class RetryableContractOpener implements ContractOpener {
         return { success: false, lastError };
     }
 
-    private async trySingleAttempt<T>(
-        operation: () => Promise<T>,
-    ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+    private async trySingleAttempt<T>(operation: () => Promise<T>): Promise<RetryableOperationResult<T>> {
         try {
             const data = await operation();
             return { success: true, data };
@@ -304,7 +318,8 @@ export class RetryableContractOpener implements ContractOpener {
         operation: () => Promise<T>,
         config: OpenerConfig,
         operationContext = 'operation',
-    ): Promise<{ success: boolean; data?: T; lastError?: Error }> {
+        shouldRetryError?: (error: Error) => boolean,
+    ): Promise<RetryableOperationResult<T>> {
         let lastError: Error | undefined;
 
         for (let attempt = 0; attempt <= config.retries; attempt++) {
@@ -316,16 +331,33 @@ export class RetryableContractOpener implements ContractOpener {
                 if (lastError instanceof TransactionError || this.isContractExecutionError(lastError)) {
                     return { success: false, lastError };
                 }
+                if (shouldRetryError && !shouldRetryError(lastError)) {
+                    return { success: false, lastError };
+                }
                 if (attempt < config.retries) {
+                    const retryDelay = this.getRetryDelay(config, attempt);
                     this.logger?.debug(
-                        `[RetryableContractOpener] ${operationContext}: attempt ${attempt + 1}/${config.retries + 1} failed (${lastError.message}), retrying in ${config.retryDelay}ms`,
+                        `[RetryableContractOpener] ${operationContext}: attempt ${attempt + 1}/${config.retries + 1} failed (${lastError.message}), retrying in ${retryDelay}ms`,
                     );
-                    await sleep(config.retryDelay);
+                    await sleep(retryDelay);
                 }
             }
         }
 
         return { success: false, lastError };
+    }
+
+    private getRetryDelay(config: OpenerConfig, attempt: number): number {
+        const baseDelay = config.retryDelay ?? DEFAULT_RETRY_DELAY_MS;
+        const maxRetryDelay = config.maxRetryDelay ?? DEFAULT_RETRY_MAX_DELAY_MS;
+        const backoffMultiplier = config.retryBackoffMultiplier ?? DEFAULT_RETRY_BACKOFF_MULTIPLIER;
+
+        if (baseDelay === 0 || maxRetryDelay === 0) {
+            return 0;
+        }
+
+        const calculatedDelay = baseDelay * backoffMultiplier ** attempt;
+        return Math.min(Math.round(calculatedDelay), maxRetryDelay);
     }
 
     private isContractExecutionError(error: Error): boolean {
@@ -419,6 +451,7 @@ export async function createDefaultRetryableOpener(
     maxRetries = DEFAULT_RETRY_MAX_COUNT,
     retryDelay = DEFAULT_RETRY_DELAY_MS,
     logger?: ILogger,
+    toncenterV3Endpoint?: string,
 ): Promise<RetryableContractOpener> {
     const openers: OpenerConfig[] = [];
 
@@ -426,21 +459,50 @@ export async function createDefaultRetryableOpener(
         endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString(),
         timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
     });
+
+    if (toncenterV3Endpoint) {
+        openers.push({
+            opener: new ToncenterV3Opener(new ToncenterV3Indexer(toncenterV3Endpoint), tonClient, logger),
+            retries: maxRetries,
+            retryDelay,
+            maxRetryDelay: DEFAULT_RETRY_MAX_DELAY_MS,
+            retryBackoffMultiplier: DEFAULT_RETRY_BACKOFF_MULTIPLIER,
+        });
+    }
+
     const opener = tonClientOpener(tonClient, logger);
 
-    openers.push({ opener, retries: maxRetries, retryDelay });
+    openers.push({
+        opener,
+        retries: maxRetries,
+        retryDelay,
+        maxRetryDelay: DEFAULT_RETRY_MAX_DELAY_MS,
+        retryBackoffMultiplier: DEFAULT_RETRY_BACKOFF_MULTIPLIER,
+    });
 
     if (networkType !== Network.DEV) {
         try {
             const opener = await orbsOpener(networkType, logger);
-            openers.push({ opener: opener, retries: maxRetries, retryDelay });
+            openers.push({
+                opener: opener,
+                retries: maxRetries,
+                retryDelay,
+                maxRetryDelay: DEFAULT_RETRY_MAX_DELAY_MS,
+                retryBackoffMultiplier: DEFAULT_RETRY_BACKOFF_MULTIPLIER,
+            });
         } catch {
             // skip opener in case of failure
         }
 
         try {
             const opener4 = await orbsOpener4(networkType, DEFAULT_HTTP_CLIENT_TIMEOUT_MS, logger);
-            openers.push({ opener: opener4, retries: maxRetries, retryDelay });
+            openers.push({
+                opener: opener4,
+                retries: maxRetries,
+                retryDelay,
+                maxRetryDelay: DEFAULT_RETRY_MAX_DELAY_MS,
+                retryBackoffMultiplier: DEFAULT_RETRY_BACKOFF_MULTIPLIER,
+            });
         } catch {
             // skip opener in case of failure
         }

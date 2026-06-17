@@ -1,17 +1,15 @@
 import { ContractFeeUsageParams, TransactionFeeCalculationStep } from '../structs/InternalStruct';
 import { ONE_YEAR_SECONDS } from './Consts';
 
-export const FIXED_POINT_SHIFT = 2 ** 16;
-
 /**
  * Default contract fee usage parameters used as fallback.
  */
 export const DEFAULT_CONTRACT_FEE_USAGE_PARAMS: ContractFeeUsageParams = {
     crossChainLayer: {
-        accountBits: 43514,
-        accountCells: 100,
+        accountBits: 51611,
+        accountCells: 105,
         gas: {
-            tvmMsgToEvm: 14619,
+            tvmMsgToEvm: 15505,
         },
     },
     jettonWallet: {
@@ -33,7 +31,6 @@ export const DEFAULT_CONTRACT_FEE_USAGE_PARAMS: ContractFeeUsageParams = {
         accountBits: 7760,
         accountCells: 16,
         gas: {
-            ownershipAssigned: 8515,
             transferNotification: 8515,
             errorNotification: 5556,
         },
@@ -49,6 +46,8 @@ export const DEFAULT_CONTRACT_FEE_USAGE_PARAMS: ContractFeeUsageParams = {
     nftItem: {
         accountBits: 1422,
         accountCells: 5,
+        estimatedAccountBits: 9877,
+        estimatedAccountCells: 25,
         gas: {
             send: 11722,
             burn: 11552,
@@ -56,7 +55,7 @@ export const DEFAULT_CONTRACT_FEE_USAGE_PARAMS: ContractFeeUsageParams = {
         },
     },
     nftProxy: {
-        accountBits: 7512,
+        accountBits: 7680,
         accountCells: 15,
         gas: {
             ownershipAssigned: 7688,
@@ -117,14 +116,14 @@ export const createJettonWalletBurnStep = (
     timeDelta: ONE_YEAR_SECONDS,
 });
 
-export const createJettonProxyOwnershipAssignedStep = (
+export const createJettonProxyTransferNotificationStep = (
     params: ContractFeeUsageParams,
     msgBits: number,
     msgCells: number,
 ): TransactionFeeCalculationStep => ({
     accountBits: 0,
     accountCells: 0,
-    gasUsed: params.jettonProxy.gas.ownershipAssigned,
+    gasUsed: params.jettonProxy.gas.transferNotification,
     msgBits,
     msgCells,
     timeDelta: ONE_YEAR_SECONDS,

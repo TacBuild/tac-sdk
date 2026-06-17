@@ -126,14 +126,14 @@ The explorer API endpoints vary by network. These endpoints are automatically co
 **Accessing Network-Specific Endpoints:**
 
 ```ts
-import { mainnet, testnet } from "@tonappchain/sdk";
+import { getArtifacts, Network } from "@tonappchain/sdk";
 
 // Mainnet endpoint
-console.log(mainnet.TAC_EXPLORER_API_ENDPOINT);
+console.log(getArtifacts(Network.MAINNET).TAC_EXPLORER_API_ENDPOINT);
 // Output: https://explorer.tac.build/api/v2/
 
 // Testnet endpoint
-console.log(testnet.TAC_EXPLORER_API_ENDPOINT);
+console.log(getArtifacts(Network.TESTNET).TAC_EXPLORER_API_ENDPOINT);
 // Output: https://spb.explorer.tac.build/api/v2/
 ```
 

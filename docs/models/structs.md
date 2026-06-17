@@ -16,6 +16,8 @@ This file documents the primary data structures (types and interfaces often refe
 - [`RetryableContractOpener`](#retryablecontractopener-class)
 - [`GetTransactionsOptions`](#gettransactionsoptions-type)
 - [`AddressInformation`](#addressinformation-type)
+- [`ToncenterV3IndexedTransaction`](#toncenterv3indexedtransaction-type)
+- [`ToncenterV3TraversalParams`](#toncenterv3traversalparams-type)
 
 ### Crosschain Transaction
 - [`EvmProxyMsg`](#evmproxymsg-type)
@@ -26,7 +28,9 @@ This file documents the primary data structures (types and interfaces often refe
 ### Transaction Tracking
 - [`TransactionLinker`](#transactionlinker-type)
 - [`TransactionLinkerWithOperationId`](#transactionlinkerwithoperationid-type)
+- [`TACCrossChainTransactionResult`](#taccrosschaintransactionresult-type)
 - [`OperationIds`](#operationids-type)
+- [`OperationIdWithLogIndex`](#operationidwithlogindex-type)
 - [`OperationIdsByShardsKey`](#operationidsbyshardskey-type)
 - [`TrackTransactionTreeParams`](#tracktransactiontreeparams-type)
 - [`TransactionValidationError`](#transactionvalidationerror-type)
@@ -47,8 +51,11 @@ This file documents the primary data structures (types and interfaces often refe
 - [`StageData`](#stagedata)
 - [`StatusInfo`](#statusinfo)
 - [`ProfilingStageData`](#profilingstagedata)
+- [`OperationTypeV2Info`](#operationtypev2info)
 - [`ExecutionStages`](#executionstages)
+- [`ExecutionStagesV2`](#executionstagesv2)
 - [`ExecutionStagesByOperationId`](#executionstagesbyoperationid)
+- [`ExecutionStagesV2ByOperationId`](#executionstagesv2byoperationid)
 - [`StatusInfosByOperationId`](#statusinfosbyoperationid)
 - [`WaitOptions`](#waitoptions-interface)
 
@@ -119,14 +126,14 @@ Parameters for SDK:
 ```typescript
 export type TONParams = {
     contractOpener?: ContractOpener;
+    tonIndexer?: IToncenterV3Indexer;
     settingsAddress?: string;
-    txFinalizer?: ITxFinalizer;
 }
 ```
 TON Parameters for SDK:
-- **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that combines TonClient (TAC endpoint), orbsOpener4, and orbsOpener as fallbacks. Provide your own opener primarily for tests or custom setups.
+- **`contractOpener`** (optional): Client used for TON smart contract interaction. Default is a RetryableContractOpener that uses `ToncenterV3Opener` first when the network artifact provides `TONCENTER_V3_INDEXER_ENDPOINT`, then TonClient (TAC endpoint), `orbsOpener`, and `orbsOpener4` as fallbacks on non-DEV networks, with exponential backoff between retries. Provide your own opener primarily for tests or custom setups.
+- **`tonIndexer`** (optional): Indexed TON lookup client used to resolve any TON transaction hash from a linked TON transaction chain and find the `crossChainLayer` transaction that the sequencer would collect as a TVM event. Provide your own implementation for tests or custom indexed backends.
 - **`settingsAddress`** (optional): TON settings contract address. Needed to retrieve protocol data. Set for tests only.
-- **`txFinalizer`** (optional): TxFinalizer for tracking transaction tree. Used for advanced transaction tracking and verification.
 
 ### `TACParams (Type)`
 ```typescript
@@ -201,10 +208,13 @@ export interface OpenerConfig {
     opener: ContractOpener;
     retries: number;
     retryDelay: number;
+    maxRetryDelay?: number;
+    retryBackoffMultiplier?: number;
 }
 
 export class RetryableContractOpener implements ContractOpener {
-    constructor(openerConfigs: OpenerConfig[]);
+    constructor(openerConfigs: OpenerConfig[], logger?: ILogger);
+    setLogger(logger: ILogger): void;
     open<T extends Contract>(src: T): OpenedContract<T> | SandboxContract<T>;
     getContractState(address: Address): Promise<ContractState>;
     closeConnections(): void;
@@ -217,9 +227,13 @@ A resilient implementation of ContractOpener that provides retry capabilities an
 - **`openerConfigs`**: An array of `OpenerConfig` objects, each containing:
   - **`opener`**: A ContractOpener instance.
   - **`retries`**: Number of retry attempts for failed operations.
-  - **`retryDelay`**: Delay in milliseconds between retry attempts.
+  - **`retryDelay`**: Base delay in milliseconds between retry attempts.
+  - **`maxRetryDelay`** *(optional)*: Maximum exponential backoff delay in milliseconds.
+  - **`retryBackoffMultiplier`** *(optional)*: Backoff multiplier applied after each failed retry.
+- **`logger`** *(optional)*: Logger passed to the wrapper and propagated to all wrapped openers.
 
 #### **Methods**
+- **`setLogger(logger: ILogger)`**: Updates the logger on the wrapper and all nested openers.
 - **`open<T extends Contract>(src: T)`**: Opens a contract with retry capabilities. If the primary opener fails, it will automatically retry using the configured retry policy.
 - **`getContractState(address: Address)`**: Retrieves contract state with retry capabilities. If the primary opener fails, it will try alternative openers according to the configured retry policy.
 - **`closeConnections()`**: Closes all connections across all configured openers.
@@ -227,21 +241,32 @@ A resilient implementation of ContractOpener that provides retry capabilities an
 #### **Helper Functions**
 ```typescript
 export async function createDefaultRetryableOpener(
-    artifacts: typeof testnet | typeof mainnet,
-    maxRetries = 3,
+    tonRpcEndpoint: string,
+    networkType: Network,
+    maxRetries = 5,
     retryDelay = 1000,
-): Promise<ContractOpener>
+    logger?: ILogger,
+    toncenterV3Endpoint?: string,
+): Promise<RetryableContractOpener>
 ```
 
 Creates a default RetryableContractOpener with multiple fallback providers:
-- **`artifacts`**: Network artifacts (testnet or mainnet).
-- **`maxRetries`** *(optional)*: Maximum number of retry attempts. Default is *3*.
-- **`retryDelay`** *(optional)*: Delay in milliseconds between retry attempts. Default is *1000*.
+- **`tonRpcEndpoint`**: Base TON RPC endpoint used to construct the primary `TonClientOpener`.
+- **`networkType`**: Target network (`MAINNET`, `TESTNET`, or `DEV`).
+- **`maxRetries`** *(optional)*: Maximum number of retry attempts. Default is *5*.
+- **`retryDelay`** *(optional)*: Base delay in milliseconds between retry attempts. Default is *1000*.
+- **`logger`** *(optional)*: Logger propagated to the wrapper and nested openers.
+- **`toncenterV3Endpoint`** *(optional)*: Toncenter v3 indexed endpoint. When provided, the default opener tries `ToncenterV3Opener` first.
 
 Returns a RetryableContractOpener configured with:
-1. TonClient by TAC (primary)
-2. orbsOpener4 (first fallback)
-3. orbsOpener (second fallback)
+1. ToncenterV3Opener (when `toncenterV3Endpoint` is provided)
+2. TonClient by TAC
+3. orbsOpener (fallback on non-DEV networks)
+4. orbsOpener4 (fallback on non-DEV networks)
+
+Each configured opener also receives SDK defaults for exponential backoff:
+- **`maxRetryDelay`**: `DEFAULT_RETRY_MAX_DELAY_MS`
+- **`retryBackoffMultiplier`**: `DEFAULT_RETRY_BACKOFF_MULTIPLIER`
 
 This function provides a convenient way to create a robust contract opener with sensible defaults for production use.
 
@@ -288,6 +313,76 @@ Contains information about an address on the TON blockchain.
   - **`lt`**: Logical time of the last transaction.
   - **`hash`**: Hash of the last transaction in base64 format.
 
+### `ToncenterV3IndexedTransaction (Type)`
+
+```typescript
+export type ToncenterV3IndexedTransaction = {
+    account: string;
+    hash: string;
+    traceId?: string;
+    description?: {
+        type?: string;
+        aborted?: boolean;
+        computePh?: {
+            skipped?: boolean;
+            success?: boolean;
+            exitCode?: number;
+        } | null;
+        action?: {
+            success?: boolean;
+            resultCode?: number;
+        } | null;
+    } | null;
+    inMsg?: {
+        hash?: string | null;
+        source?: string | null;
+        destination?: string | null;
+        opcode?: string | null;
+        messageContent?: {
+            body?: string | null;
+        } | null;
+    } | null;
+    outMsgs: Array<{
+        hash?: string | null;
+        destination?: string | null;
+        messageContent?: {
+            body?: string | null;
+        } | null;
+    }>;
+};
+```
+
+Indexed transaction returned by Toncenter v3 `/transactions`, `/transactionsByMessage`, and `/adjacentTransactions` endpoints.
+
+- **`account`**: Account address where the transaction was indexed.
+- **`hash`**: Indexed TON transaction hash returned by Toncenter v3.
+- **`traceId`** *(optional)*: Trace identifier when present in the indexed response.
+- **`description`** *(optional)*: Transaction phase data returned by Toncenter v3 and used by indexed transaction tree validation.
+- **`inMsg`** *(optional)*: Incoming message data used to detect whether the transaction matches the same TVM event rules as the sequencer collector.
+  - **`hash`** *(optional)*: Indexed incoming message hash.
+  - **`source`** *(optional)*: Incoming message source address.
+  - **`destination`** *(optional)*: Incoming message destination address.
+  - **`opcode`** *(optional)*: Opcode reported by Toncenter v3 for the incoming message.
+  - **`messageContent.body`** *(optional)*: Incoming message body as a base64 BOC.
+- **`outMsgs`**: Outgoing messages of the transaction.
+  - **`hash`** *(optional)*: Indexed outgoing message hash.
+  - **`destination`** *(optional)*: Destination address. `null` means the message is an external outbound log message.
+  - **`messageContent.body`** *(optional)*: Outgoing message body as a base64 BOC.
+
+### `ToncenterV3TraversalParams (Type)`
+
+```typescript
+export type ToncenterV3TraversalParams = {
+    maxDepth?: number;
+    maxScannedTransactions?: number;
+};
+```
+
+Traversal settings for indexed search through a linked TON transaction chain in Toncenter v3.
+
+- **`maxDepth`** *(optional)*: Maximum traversal depth from the starting transaction in the linked TON transaction chain.
+- **`maxScannedTransactions`** *(optional)*: Maximum number of unique indexed transactions to inspect.
+
 
 ### `EvmProxyMsg (Type)`
 ```typescript
@@ -325,74 +420,83 @@ export type CrossChainTransactionOptions = {
     withoutSimulation?: boolean;
     validateAssetsBalance?: boolean;
     waitOperationId?: boolean;
-    waitOptions?: WaitOptions<string>;
+    waitOperationIdOptions?: WaitOptions<string>;
+    waitFinalization?: boolean;
+    finalizationWaitOptions?: WaitOptions<ExecutionStages>;
     evmDataBuilder?: evmDataBuilder;
 };
 ```
 
 - **allowSimulationError** *(optional)*:  
-  If true, transaction simulation phase is skipped.  
+  If true, the SDK does not abort when TAC simulation returns an unsuccessful result. Instead it returns partial fee data together with the failed simulation result, so the caller can inspect it and decide whether to proceed.  
   **Default**: false
 
 - **ensureTxExecuted** *(optional)*:  
-  If true, validates TON transaction execution before waiting for operation ID.  
+  If true, the SDK validates the initial TON transaction tree immediately after sending the external message and before waiting for operation ID. Use this to fail early when the outgoing TON transaction itself did not execute successfully.  
   **Default**: true
 
 - **shouldValidateFees** *(optional)*:  
-  If true, validates explicitly provided fee params against suggested values.  
+  If true, explicitly provided fee values are checked against the simulated suggestion. Disable this only when you intentionally want to send with custom fees that may be lower than the recommended values.  
   **Default**: true
 
 - **isRoundTrip** *(optional)*:  
-  Indicates whether the transaction involves a round-trip execution (e.g., a return message from TAC to TON).  
+  Forces the SDK to treat the operation as round-trip TON -> TAC -> TON. If omitted, the SDK derives this automatically from attached assets and simulation output.  
   **Default**: will be determined by simulation. 
 
 - **protocolFee** *(optional)*:  
-  An optional override for the protocol fee in bigint. If not specified, the SDK calculates this automatically based on network parameters.
+  Explicit override for the protocol fee in `bigint`. Usually you do not need to set this manually; it is filled from simulation or chain configuration.
 
 - **evmValidExecutors** *(optional)*:  
-  A list of EVM executor addresses that are allowed to execute this transaction on the TAC.
+  Whitelist of TAC-side executor addresses allowed to execute the TAC part of the operation. If omitted, the SDK uses trusted executors from configuration.
 
 - **evmExecutorFee** *(optional)*:  
-  Fee in bigint to be paid (in TON token) to the executor on the EVM side for executing the transaction.
+  Explicit fee paid to the TAC-side executor. Usually this comes from simulation; set it manually only when you intentionally override fee estimation.
 
 - **tvmValidExecutors** *(optional)*:  
-  A list of TVM (TON) executor addresses that are authorized to execute the message on the TON network.
+  Whitelist of TON-side executor addresses allowed to execute the TON part of the operation. If omitted, the SDK uses trusted executors from configuration.
 
 - **tvmExecutorFee** *(optional)*:  
-  Fee in bigint to be paid (in TON token) to the executor on the TON side.
+  Explicit fee paid to the TON-side executor for round-trip operations. In manual mode this must be provided when `withoutSimulation` is true and `isRoundTrip` is true.
 
 - **calculateRollbackFee** *(optional)*:  
-  Whether to calculate rollback fee during simulation.  
-  **Default**: false
+  Controls whether rollback fee is included during TAC simulation. Leave enabled unless you deliberately want estimation without rollback costs.  
+  **Default**: true
 
 - **withoutSimulation** *(optional)*:  
-  If true, skips the simulation phase entirely.  
+  If true, skips simulation entirely and uses only manually provided fee values. In this mode you must provide `protocolFee`, `evmExecutorFee`, and `evmProxyMsg.gasLimit`; if `isRoundTrip` is true, `tvmExecutorFee` must also be provided.  
   **Default**: false
 
 - **validateAssetsBalance** *(optional)*:  
-  If true, validates that the sender has sufficient balance for the specified assets before sending the transaction.  
+  If true, checks that the sender owns or holds enough assets before building and sending the transaction. Disable only if you already validated balances externally or want to skip this extra check.  
   **Default**: true
 
 - **waitOperationId** *(optional)*:  
-  If true, waits for operation ID after sending the transaction. When false, the transaction is sent without waiting for operation tracking information.  
+  If true, waits until the sequencer exposes the operation ID after the TON transaction is sent. Disable it when you only need the raw send result and do not want tracker polling.  
   **Default**: true
 
-- **waitOptions** *(optional)*:  
+- **waitOperationIdOptions** *(optional)*:  
   Custom waiting configuration for operation ID resolution. See [`WaitOptions`](#waitoptions-interface) for available options.  
   **Default**: `{}`
 
+- **waitFinalization** *(optional)*:  
+  If true, continues after operation ID resolution and waits for the operation to reach a final type, then fetches profiling and validates the TON transaction tree for `executedInTON` transactions when they exist.  
+  **Default**: true
+
+- **finalizationWaitOptions** *(optional)*:  
+  Waiting configuration for the finalization stage after operation ID resolution. This controls retries, delay, logger, `successCheck`, `onSuccess`, and profiling post-processing.
+
 - **evmDataBuilder** *(optional)*:  
-  Custom function to build the EVM data cell.
+  Custom function that builds the EVM data cell embedded into the TON message. Override it only for advanced integrations that need non-standard TAC header encoding.
   **Default**: `buildEvmDataCell`
 
 ### `BatchCrossChainTransactionOptions`
 A restricted version of CrossChainTransactionOptions for use in batch operations.
 
 ```ts
-export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOptions' | 'ensureTxExecuted'>;
+export type BatchCrossChainTransactionOptions = Omit<CrossChainTransactionOptions, 'waitOperationId' | 'waitOperationIdOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'>;
 ```
 
-This type excludes `waitOperationId`, `waitOptions`, and `ensureTxExecuted` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
+This type excludes `waitOperationId`, `waitOperationIdOptions`, `ensureTxExecuted`, `waitFinalization`, and `finalizationWaitOptions` from individual transactions in batch operations, as these options are controlled at the batch level through `CrossChainTransactionsOptions`. All other options from `CrossChainTransactionOptions` are available for individual transactions within a batch.
 
 ### `CrossChainTransactionsOptions`
 Configuration options for batch cross-chain transaction operations.
@@ -400,7 +504,7 @@ Configuration options for batch cross-chain transaction operations.
 ```ts
 export type CrossChainTransactionsOptions = {
     waitOperationIds?: boolean;
-    waitOptions?: WaitOptions<OperationIdsByShardsKey>;
+    waitOperationIdOptions?: WaitOptions<OperationIdsByShardsKey>;
 };
 ```
 
@@ -408,9 +512,50 @@ export type CrossChainTransactionsOptions = {
   If true, waits for operation IDs for all transactions in the batch. When false, transactions are sent without waiting for operation tracking information.  
   **Default**: true
 
-- **waitOptions** *(optional)*:  
+- **waitOperationIdOptions** *(optional)*:  
   Custom waiting configuration for operation IDs resolution in batch operations. See [`WaitOptions`](#waitoptions-interface) for available options.  
   **Default**: `{}`
+
+### `CrossChainTransactionToTONOptions`
+Configuration options for TAC -> TON bridge operations initiated from the EVM side.
+
+```ts
+export type CrossChainTransactionToTONOptions = {
+    tvmExecutorFee?: bigint;
+    tvmValidExecutors?: string[];
+    validateAssetsBalance?: boolean;
+    waitOperationId?: boolean;
+    waitOperationIdOptions?: WaitOptions<string>;
+    waitFinalization?: boolean;
+    finalizationWaitOptions?: WaitOptions<ExecutionStages>;
+};
+```
+
+- **tvmExecutorFee** *(optional)*:  
+  Explicit TON-side executor fee. If omitted, the SDK requests a suggestion from `OperationTracker.getTVMExecutorFee()`.
+
+- **tvmValidExecutors** *(optional)*:  
+  Optional whitelist of allowed TVM executors. Used both for fee estimation and in the outgoing TAC -> TON message.
+
+- **validateAssetsBalance** *(optional)*:  
+  If true, validates balances or ownership of non-native TAC assets before approvals and sending. Native `TAC` amount is still covered separately by the overall TAC balance sufficiency check.  
+  **Default**: true
+
+- **waitOperationId** *(optional)*:  
+  If true, waits for operation ID after sending the TAC -> TON transaction. When false, tracking is skipped unless full finalization is enabled.  
+  **Default**: true
+
+- **waitOperationIdOptions** *(optional)*:  
+  Waiting configuration for operation ID resolution by TAC transaction hash. Callbacks and `successCheck` apply only to operation ID resolution.
+
+- **waitFinalization** *(optional)*:  
+  If true, waits for full operation finalization similarly to `startTracking`: resolves profiling and validates the TON transaction tree for `EXECUTED_IN_TON` transactions when they exist. Used by `sendCrossChainTransactionToTON` only.  
+  **Default**: true
+
+- **finalizationWaitOptions** *(optional)*:  
+  Waiting configuration for the finalization stage after operation ID resolution. Used by `sendCrossChainTransactionToTON` only.
+
+`sendCrossChainTransactionToTON` still requires additional TAC balance outside the bridged native `TAC` asset amount so the signer can pay TAC gas and bridge fees. For this high-level flow the SDK requires TAC provider EIP-1559 fee data, can validate balances or ownership of non-native TAC assets, takes provider gas estimates as-is, validates them against the latest TAC block gas limit, first estimates approval gas and checks TAC balance for approvals, then submits approvals, estimates the bridge message, and checks the remaining TAC balance before sending it.
 
 ### `CrosschainTx`
 
@@ -440,7 +585,7 @@ export type BatchCrossChainTx = {
 Represents a crosschain transaction for use in batch operations.
 - **`evmProxyMsg`**: The message to be sent to the TAC proxy.
 - **`assets`** *(optional)*: An array of assets involved in the transaction.
-- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId`, `waitOptions`, and `ensureTxExecuted` which are controlled at batch level).
+- **`options`** *(optional)*: Additional options for the transaction (excludes `waitOperationId`, `waitOperationIdOptions`, and `ensureTxExecuted` which are controlled at batch level).
 
 ### `AssetLike`
 
@@ -569,6 +714,20 @@ export type TransactionLinkerWithOperationId = TransactionLinker & {
 
 This structure is extended version of `TransactionLinker` with `operationId` field that is retrieved automatically by `TacSDK` when sending crosschain transaction.
 
+### `TACCrossChainTransactionResult (Type)`
+
+```typescript
+export type TACCrossChainTransactionResult = {
+    txHash: string;
+    operationId?: string;
+};
+```
+
+Result of `sendCrossChainTransactionToTON`.
+
+- **`txHash`**: TAC transaction hash submitted to `CrossChainLayer`.
+- **`operationId`** *(optional)*: Resolved cross-chain operation id when waiting was enabled and succeeded.
+
 ### `OperationIds (Type)`
 
 ```typescript
@@ -581,6 +740,20 @@ Contains a collection of operation identifiers for tracking multiple operations.
 
 - **`operationIds`**: Array of operation ID strings for tracking crosschain operations.
 
+### `OperationIdWithLogIndex (Type)`
+
+```typescript
+export type OperationIdWithLogIndex = {
+    operationId: string;
+    logIndex: number;
+};
+```
+
+Describes a TAC sequencer lookup result for a single emitted log.
+
+- **`operationId`**: Cross-chain operation ID associated with the TAC transaction log.
+- **`logIndex`**: Log index of the event inside the TAC transaction receipt.
+
 ### `OperationIdsByShardsKey (Type)`
 
 ```typescript
@@ -589,6 +762,22 @@ export type OperationIdsByShardsKey = Record<string, OperationIds>;
 
 Maps shard keys to their corresponding operation IDs, allowing efficient lookup of operations by shard identifier.
 
+### `TransactionTreeDirection (Enum)`
+
+```typescript
+export enum TransactionTreeDirection {
+    FORWARD = 'forward',
+    BACKWARD = 'backward',
+    BOTH = 'both',
+}
+```
+
+Defines the direction to search the transaction tree.
+
+- **`FORWARD`**: Only search children (outgoing messages) (default).
+- **`BACKWARD`**: Only search parents (incoming messages).
+- **`BOTH`**: Search in both directions.
+
 ### `TrackTransactionTreeParams (Type)`
 
 ```typescript
@@ -596,8 +785,13 @@ export type TrackTransactionTreeParams = {
     limit?: number;
     maxDepth?: number;
     maxScannedTransactions?: number;
+    archival?: boolean;
+    rootLt?: string;
     ignoreOpcodeList?: number[];
-    direction?: 'forward' | 'backward' | 'both';
+    direction?: TransactionTreeDirection;
+    retryOnNotFound?: boolean;
+    retryDelayMs?: number;
+    retries?: number;
 };
 ```
 
@@ -606,11 +800,13 @@ Parameters for tracking and validating transaction trees.
 - **`limit`** *(optional)*: Maximum number of transactions to fetch per pagination request. Default: 100.
 - **`maxDepth`** *(optional)*: Maximum depth to traverse in the transaction tree, inclusive (depth 0 is the root). Default: 10.
 - **`maxScannedTransactions`** *(optional)*: Maximum number of transactions to scan while searching by hash in account history. Default: 100.
+- **`archival`** *(optional)*: Whether to search archival nodes for historical data when supported by the provider.
+- **`rootLt`** *(optional)*: Logical time of the root transaction. Use with a root transaction hash to avoid scanning from latest history.
 - **`ignoreOpcodeList`** *(optional)*: List of operation codes (opcodes) that mark transactions as skippable for extra checks. Phase validation is still applied. Default: `[0xd53276db]` (excess message).
-- **`direction`** *(optional)*: Direction to search the transaction tree:
-  - `'forward'`: only search children (outgoing messages)
-  - `'backward'`: only search parents (incoming messages)
-  - `'both'`: search in both directions (default)
+- **`direction`** *(optional)*: Direction to search the transaction tree from the [`TransactionTreeDirection`](#transactiontreedirection-enum) enum. Default: `FORWARD`.
+- **`retryOnNotFound`** *(optional)*: Retry transaction lookup when `not_found` error occurs. Default: true.
+- **`retryDelayMs`** *(optional)*: Delay in milliseconds between retry attempts for transaction lookup. Default: 5000.
+- **`retries`** *(optional)*: Number of retry attempts for transaction lookup. Default: 10.
 
 ### `TransactionValidationError (Type)`
 
@@ -644,6 +840,7 @@ Details about a transaction validation error.
 ```typescript
 export type TrackTransactionTreeResult = {
     success: boolean;
+    checkedCount?: number;
     error?: TransactionValidationError;
 };
 ```
@@ -651,6 +848,7 @@ export type TrackTransactionTreeResult = {
 Result of transaction tree tracking and validation.
 
 - **`success`**: Whether all transactions in the tree passed validation.
+- **`checkedCount`** *(optional)*: Count of unique transactions checked during traversal.
 - **`error`** *(optional)*: Details about the first validation error encountered (if any).
 
 ### `TONAsset`
@@ -1016,6 +1214,20 @@ Provides profiling information for a specific stage.
 - **`exists`**: Indicates whether profiling data exists for the stage.
 - **`stageData`** *(optional)*: Detailed data of the stage. `null` if none.
 
+### `OperationTypeV2Info`
+
+```typescript
+export type OperationTypeV2Info = {
+    operationType: OperationTypeV2;
+    finalized: boolean;
+};
+```
+
+Represents the response from `GET /v2/operation-type`.
+
+- **`operationType`**: Route-only operation type (`TON-TAC`, `TAC-TON`, or `TON-TAC-TON`).
+- **`finalized`**: Whether the operation has reached a terminal state.
+
 
 ### `ExecutionStages`
 
@@ -1031,6 +1243,27 @@ Represents the profiling data for all execution stages within an operation.
 - [`StageName`](./enums.md#stagename)
 - [`OperationType`](./enums.md#operationtype)
 
+### `ExecutionStagesV2`
+
+```typescript
+export type ExecutionStagesV2 = {
+  operationType: OperationTypeV2;
+  metaInfo: MetaInfo;
+  finalized: boolean;
+  status: OperationExecutionStatus;
+  rollback: boolean;
+} & Record<StageName, ProfilingStageData>;
+```
+
+Represents the profiling data for all execution stages within an operation.
+
+- **`operationType`**: Route-only operation type.
+- **`metaInfo`**: Metadata associated with the operation.
+- **`finalized`**: Whether the operation has reached a terminal state.
+- **`status`**: High-level status derived from stage outcomes.
+- **`rollback`**: Whether the operation is or has been processed through the rollback branch.
+- **Stage fields**: Per-stage profiling entries such as `collectedInTAC`, `includedInTACConsensus`, `executedInTAC`, `collectedInTON`, `includedInTONConsensus`, and `executedInTON`.
+
 ### `ExecutionStagesByOperationId`
 
 ```typescript
@@ -1038,6 +1271,14 @@ export type ExecutionStagesByOperationId = Record<string, ExecutionStages>;
 ```
 
 Maps each `operationId` to its respective `executionStages`.
+
+### `ExecutionStagesV2ByOperationId`
+
+```typescript
+export type ExecutionStagesV2ByOperationId = Record<string, ExecutionStagesV2>;
+```
+
+Maps each `operationId` to its respective execution stages.
 
 
 ### `StatusInfosByOperationId`

@@ -205,3 +205,32 @@ export const insufficientFeeParamsError = (feeName: string, provided: bigint, re
         `Provided ${feeName} (${provided}) is lower than required (${required}). Set shouldValidateFees: false to bypass.`,
         136,
     );
+
+export const operationIdRequiredForFinalizationError = new TransactionError(
+    'Operation ID is required to wait for operation finalization',
+    137,
+);
+
+export const executedInTONStageFailedError = new TransactionError('executedInTON stage failed', 138);
+
+export const blockGasLimitFetchError = (msg: string, inner?: unknown) =>
+    new FetchError(`Failed to fetch latest block gas limit: ${msg}`, 139, inner);
+
+export const estimatedGasExceedsBlockGasLimitError = (txName: string, estimatedGas: bigint, blockGasLimit: bigint) =>
+    new TransactionError(
+        `Estimated gas for ${txName} (${estimatedGas}) exceeds current TAC block gas limit (${blockGasLimit})`,
+        140,
+    );
+
+export const invalidTonExternalMessageBocError = (reason?: string) =>
+    new FormatError(`Invalid external TON message BOC${reason ? `: ${reason}` : ''}`, 141);
+
+export const externalInMessageRequiredError = (actualType: string) =>
+    new FormatError(`Expected external-in TON message, got ${actualType}`, 142);
+
+export const tonIndexerRequiredForTonTransactionBocError = new SettingError(
+    'TON indexer is required to resolve operation ID by TON transaction BOC',
+    143,
+);
+
+export const invalidAmountError = (reason: string) => new FormatError(`Invalid amount: ${reason}`, 144);

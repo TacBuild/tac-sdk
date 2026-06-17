@@ -4,7 +4,13 @@ import { sha256_sync } from 'ton-crypto';
 
 import type { FT, NFT, TON } from '../assets';
 import { AssetFactory } from '../assets';
-import { invalidMethodNameError, TokenError, zeroRawAmountError } from '../errors';
+import {
+    externalInMessageRequiredError,
+    invalidAmountError,
+    invalidMethodNameError,
+    TokenError,
+    zeroRawAmountError,
+} from '../errors';
 import { Asset, IConfiguration } from '../interfaces';
 import { RandomNumberByTimestamp } from '../structs/InternalStruct';
 import {
@@ -15,8 +21,10 @@ import {
     AssetType,
     defaultWaitOptions,
     EvmProxyMsg,
+    ExecutionStages,
     FeeParams,
     NFTAddressType,
+    OperationType,
     TONAsset,
     TransactionLinker,
     ValidExecutors,
@@ -125,13 +133,49 @@ export const convertKeysToCamelCase = <T>(data: T): T => {
     return data;
 };
 
+function formatFiniteNumber(amount: number): string {
+    const amountString = amount.toString();
+    if (!amountString.includes('e')) {
+        return amountString;
+    }
+
+    const [coefficient, exponentString] = amountString.split('e');
+    const exponent = Number(exponentString);
+    const [integerPart, fractionalPart = ''] = coefficient.split('.');
+    const digits = integerPart + fractionalPart;
+    const decimalIndex = integerPart.length + exponent;
+
+    let expanded: string;
+    if (decimalIndex <= 0) {
+        expanded = `0.${'0'.repeat(-decimalIndex)}${digits}`;
+    } else if (decimalIndex >= digits.length) {
+        expanded = `${digits}${'0'.repeat(decimalIndex - digits.length)}`;
+    } else {
+        expanded = `${digits.slice(0, decimalIndex)}.${digits.slice(decimalIndex)}`;
+    }
+
+    return expanded;
+}
+
 export const calculateRawAmount = (amount: number, decimals: number): bigint => {
-    const [integerPart, fractionalPart = ''] = amount.toString().split('.');
+    if (!Number.isFinite(amount)) {
+        throw invalidAmountError('Amount must be finite');
+    }
+    if (amount < 0) {
+        throw invalidAmountError('Amount must be non-negative');
+    }
+    if (!Number.isInteger(decimals) || decimals < 0) {
+        throw invalidAmountError('Token decimals must be a non-negative integer');
+    }
 
-    // Ensure the fractional part has enough digits
-    const paddedFraction = fractionalPart.padEnd(decimals, '0').slice(0, decimals);
+    const amountString = formatFiniteNumber(amount);
+    const [integerPart, fractionalPart = ''] = amountString.split('.');
 
-    return BigInt(integerPart + paddedFraction);
+    if (fractionalPart.length > decimals) {
+        throw invalidAmountError('Amount has more fractional digits than token decimals');
+    }
+
+    return BigInt(integerPart + fractionalPart.padEnd(decimals, '0'));
 };
 
 export const calculateAmount = (rawAmount: bigint, decimals: number): number => {
@@ -493,7 +537,7 @@ function decodeBase64Like(input: string): Buffer | null {
 
 export function getNormalizedExtMessageHash(message: Message): string {
     if (message.info.type !== 'external-in') {
-        throw new Error(`Message must be "external-in", got ${message.info.type}`);
+        throw externalInMessageRequiredError(message.info.type);
     }
 
     const info = {
@@ -539,4 +583,10 @@ export function recurisivelyCollectCellStats(cell: Cell): { bits: number; cells:
         cells += stats.cells;
     }
     return { bits, cells };
+}
+
+export function isFinalProfiling(profilingData: ExecutionStages): boolean {
+    return (
+        profilingData.operationType !== OperationType.PENDING && profilingData.operationType !== OperationType.UNKNOWN
+    );
 }

@@ -51,27 +51,51 @@ describe('BaseContractOpener root retry strategy', () => {
 
     const setFindByHashType = (
         opener: RootRetryTestOpener,
-        mock: (address: Address, hash: string, hashType: 'unknown' | 'in' | 'out' | undefined, opts: GetTransactionsOptions) => Promise<Transaction | null>,
+        mock: (
+            address: Address,
+            hash: string,
+            hashType: 'unknown' | 'in' | 'out' | undefined,
+            opts: GetTransactionsOptions,
+        ) => Promise<Transaction | null>,
     ) => {
         Reflect.set(opener as object, 'findTransactionByHashType', mock);
     };
 
-    const invokeFindRoot = async (
-        opener: RootRetryTestOpener,
-        hash: string,
-    ): Promise<Transaction | null> => {
+    const invokeFindRoot = async (opener: RootRetryTestOpener, hash: string): Promise<Transaction | null> => {
         const fn = Reflect.get(opener as object, 'findTransactionWithRetry') as (
             address: Address,
             hash: string,
             hashType: 'unknown' | 'in' | 'out' | undefined,
-            limit: number,
-            maxScannedTransactions: number,
-            retryOnNotFound: boolean,
+            opts: GetTransactionsOptions,
             depth: number,
         ) => Promise<Transaction | null>;
 
-        return fn.call(opener, address, hash, 'unknown', 10, 100, true, 0);
+        return fn.call(opener, address, hash, 'unknown', { limit: 10, maxScannedTransactions: 100 }, 0);
     };
+
+    const successfulTransaction = (
+        hash = Buffer.alloc(32, 7),
+        outMessages = new Map<number, unknown>(),
+        inMessage?: unknown,
+    ): Transaction =>
+        ({
+            hash: () => hash,
+            description: {
+                type: 'generic',
+                aborted: false,
+                computePhase: {
+                    type: 'vm',
+                    success: true,
+                    exitCode: 0,
+                },
+                actionPhase: {
+                    success: true,
+                    resultCode: 0,
+                },
+            },
+            inMessage,
+            outMessages,
+        }) as unknown as Transaction;
 
     it('captures baseline then searches immediately on first attempt', async () => {
         const opener = new RootRetryTestOpener();
@@ -83,7 +107,7 @@ describe('BaseContractOpener root retry strategy', () => {
 
         expect(result).toBe(tx);
         expect(searchMock).toHaveBeenCalledTimes(1);
-        expect(opener.addressInfoImpl).toHaveBeenCalledTimes(1);
+        expect(opener.addressInfoImpl).not.toHaveBeenCalled();
     });
 
     it('does not run extra searches when lt does not change', async () => {
@@ -97,8 +121,8 @@ describe('BaseContractOpener root retry strategy', () => {
         const result = await invokeFindRoot(opener, 'hash');
 
         expect(result).toBeNull();
-        expect(searchMock).toHaveBeenCalledTimes(1);
-        expect(opener.addressInfoImpl).toHaveBeenCalledTimes(60);
+        expect(searchMock).toHaveBeenCalledTimes(11);
+        expect(opener.addressInfoImpl).not.toHaveBeenCalled();
     });
 
     it('resumes searching when lt changes and finds transaction', async () => {
@@ -106,20 +130,6 @@ describe('BaseContractOpener root retry strategy', () => {
         const tx = {} as Transaction;
         const searchMock = jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(tx);
         setFindByHashType(opener, searchMock);
-
-        opener.addressInfoImpl
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '100', hash: Buffer.alloc(32, 1).toString('base64') },
-            })
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '100', hash: Buffer.alloc(32, 1).toString('base64') },
-            })
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '100', hash: Buffer.alloc(32, 1).toString('base64') },
-            })
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '101', hash: Buffer.alloc(32, 2).toString('base64') },
-            });
 
         const result = await invokeFindRoot(opener, 'hash');
 
@@ -133,17 +143,75 @@ describe('BaseContractOpener root retry strategy', () => {
         const searchMock = jest.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(tx);
         setFindByHashType(opener, searchMock);
 
-        opener.addressInfoImpl
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '100', hash: Buffer.alloc(32, 1).toString('base64') },
-            })
-            .mockResolvedValueOnce({
-                lastTransaction: { lt: '101', hash: Buffer.alloc(32, 2).toString('base64') },
-            });
-
         const result = await invokeFindRoot(opener, 'hash');
 
         expect(result).toBe(tx);
         expect(searchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('propagates provider errors instead of converting them to not_found', async () => {
+        const opener = new RootRetryTestOpener();
+        const providerError = Object.assign(new Error('Request failed with status code 542'), {
+            response: { status: 542 },
+        });
+        const searchMock = jest.fn().mockRejectedValue(providerError);
+        setFindByHashType(opener, searchMock);
+
+        await expect(invokeFindRoot(opener, 'hash')).rejects.toBe(providerError);
+        expect(searchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not send archival option by default while tracking a transaction tree', async () => {
+        const opener = new RootRetryTestOpener();
+        const tx = successfulTransaction();
+        const searchMock = jest.fn().mockResolvedValue(tx);
+        setFindByHashType(opener, searchMock);
+
+        const result = await opener.trackTransactionTreeWithResult(address.toString(), tx.hash().toString('base64'), {
+            retryOnNotFound: false,
+        });
+
+        expect(result.success).toBe(true);
+        expect(searchMock).toHaveBeenCalledTimes(1);
+        expect(searchMock.mock.calls[0][3]).not.toHaveProperty('archival');
+    });
+
+    it('uses archival lookup when transaction tree params request it', async () => {
+        const opener = new RootRetryTestOpener();
+        const tx = successfulTransaction();
+        const searchMock = jest.fn().mockResolvedValue(tx);
+        setFindByHashType(opener, searchMock);
+
+        const result = await opener.trackTransactionTreeWithResult(address.toString(), tx.hash().toString('base64'), {
+            archival: true,
+            retryOnNotFound: false,
+        });
+
+        expect(result.success).toBe(true);
+        expect(searchMock).toHaveBeenCalledTimes(1);
+        expect(searchMock.mock.calls[0][3].archival).toBe(true);
+    });
+
+    it('starts root transaction lookup from provided logical time', async () => {
+        const opener = new RootRetryTestOpener();
+        const tx = successfulTransaction();
+        const txHash = tx.hash().toString('base64');
+        const searchMock = jest.fn().mockResolvedValue(tx);
+        setFindByHashType(opener, searchMock);
+
+        const result = await opener.trackTransactionTreeWithResult(address.toString(), txHash, {
+            rootLt: '123',
+            retryOnNotFound: false,
+        });
+
+        expect(result.success).toBe(true);
+        expect(searchMock).toHaveBeenCalledTimes(1);
+        expect(searchMock.mock.calls[0][3]).toEqual(
+            expect.objectContaining({
+                lt: '123',
+                hash: txHash,
+                inclusive: true,
+            }),
+        );
     });
 });
