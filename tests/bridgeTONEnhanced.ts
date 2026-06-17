@@ -110,7 +110,7 @@ const bridgeTonSawSender = async (amount: number) => {
         evmProxyMsg,
         sender,
         assets,
-        { allowSimulationError: true, calculateRollbackFee: false, waitOptions: manualTrackingOptions },
+        { allowSimulationError: true, calculateRollbackFee: false, waitOperationIdOptions: manualTrackingOptions },
     );
 
     tacSdk.closeConnections();

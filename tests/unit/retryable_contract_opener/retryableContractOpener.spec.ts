@@ -34,7 +34,7 @@ describe('RetryableContractOpener with Sandbox', () => {
     });
 
     describe('multiple method calls with fallback', () => {
-        it('should handle multiple sequential method calls correctly and wait retryDelay', async () => {
+        it('should handle multiple sequential method calls correctly and wait exponential retryDelay', async () => {
             const unstableOpener1 = new UnstableContractOpener('RPC1', blockchain, 10);
             const unstableOpener2 = new UnstableContractOpener('RPC2', blockchain, 3);
             const stableOpener = new UnstableContractOpener('RPC3', blockchain, 0);
@@ -50,13 +50,13 @@ describe('RetryableContractOpener with Sandbox', () => {
             await contract.getJettonBalance();
             const endTime = Date.now();
 
-            // 2 retries (2s) in unstableOpener1 + 2 retries (2s) in unstableOpener2
-            expect(endTime - startTime).toBeGreaterThanOrEqual(4000);
+            // 2 retries with exponential backoff (1s + 2s) in unstableOpener1 + unstableOpener2.
+            expect(endTime - startTime).toBeGreaterThanOrEqual(6000);
 
             expect(unstableOpener1.callCounts.get('RPC1-getJettonBalance')).toBe(3);
             expect(unstableOpener2.callCounts.get('RPC2-getJettonBalance')).toBe(3);
             expect(stableOpener.callCounts.get('RPC3-getJettonBalance')).toBe(0);
-        });
+        }, 10000);
 
         it('should demonstrate each method call starts from first opener', async () => {
             const unstableOpener1 = new UnstableContractOpener('RPC1', blockchain, 10);
@@ -105,6 +105,28 @@ describe('RetryableContractOpener with Sandbox', () => {
             expect(failingOpener1.callCounts.get('RPC1-getJettonBalance')).toBe(4);
             expect(failingOpener2.callCounts.get('RPC2-getJettonBalance')).toBe(4);
             expect(failingOpener3.callCounts.get('RPC2-getJettonBalance')).toBe(4);
+        });
+
+        it('should cap exponential backoff by maxRetryDelay', async () => {
+            const failingOpener = new UnstableContractOpener('RPC1', blockchain, 10);
+            const retryableOpener = new RetryableContractOpener([
+                {
+                    opener: failingOpener,
+                    retries: 4,
+                    retryDelay: 50,
+                    maxRetryDelay: 100,
+                },
+            ]);
+            const contract = retryableOpener.open(jettonWallet);
+
+            const startTime = Date.now();
+            await expect(contract.getJettonBalance()).rejects.toThrow();
+            const endTime = Date.now();
+
+            // 50ms + 100ms + 100ms + 100ms
+            expect(endTime - startTime).toBeGreaterThanOrEqual(350);
+            expect(endTime - startTime).toBeLessThan(1000);
+            expect(failingOpener.callCounts.get('RPC1-getJettonBalance')).toBe(5);
         });
     });
 });

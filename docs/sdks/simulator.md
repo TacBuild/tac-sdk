@@ -66,6 +66,7 @@ import {
     Configuration, 
     OperationTracker, 
     ConsoleLogger,
+    getArtifacts,
     Network 
 } from "@tonappchain/sdk";
 import { TonApiClient } from '@ton-api/client';
@@ -74,7 +75,7 @@ import { getHttpV4Endpoint } from '@orbs-network/ton-access';
 // Create configuration
 const config = await Configuration.create(
     Network.TESTNET,
-    artifacts, // Network artifacts
+    getArtifacts(Network.TESTNET), // Network artifacts
     tonParams, // TON parameters
     tacParams, // TAC parameters
     customEndpoints, // Optional custom endpoints
@@ -82,7 +83,7 @@ const config = await Configuration.create(
 );
 
 // Create operation tracker
-const operationTracker = new OperationTracker(Network.TESTNET, config.liteSequencerEndpoints);
+const operationTracker = new OperationTracker(config);
 
 // Create logger (optional)
 const logger = new ConsoleLogger();
@@ -152,6 +153,8 @@ estimateTONFee(asset: Asset, params: GeneratePayloadParams): bigint
 #### **Purpose**
 
 Estimates the TVM transaction fee required for processing a single asset in cross-chain operations. This method calculates fees for the complete transaction pipeline for one asset, including wallet interactions, token transfers/burns, proxy contracts, and cross-chain layer.
+
+For TON-origin assets with `asset.feeMode === AssetFeeMode.LEGACY`, the estimator also applies the original TON token-contract hardcoded transfer threshold and returns the larger value between the legacy-safe threshold and the dynamic pipeline estimate. Native TON, dynamic Jettons, and TAC-origin NFTs use the dynamic/TAC calculation path.
 
 #### **Parameters**
 

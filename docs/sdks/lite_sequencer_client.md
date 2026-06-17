@@ -8,10 +8,12 @@
   - [Getting Started](#getting-started)
   - [API Reference](#api-reference)
     - [Operation Type](#operation-type)
+    - [Operation Type V2](#operation-type-v2)
     - [Operation ID](#operation-id)
     - [Operation ID by Transaction Hash](#operation-id-by-transaction-hash)
     - [Operation IDs by Shards Keys](#operation-ids-by-shards-keys)
     - [Stage Profiling](#stage-profiling)
+    - [Stage Profiling V2](#stage-profiling-v2)
     - [Operation Statuses](#operation-statuses)
     - [Currency Conversion](#currency-conversion)
     - [TVM Executor Fee](#tvm-executor-fee)
@@ -49,9 +51,21 @@ const client = new LiteSequencerClient(
 getOperationType(operationId: string): Promise<OperationType>
 ```
 
-Fetches the type of an operation by its ID.
+Fetches the operation type of an operation by its ID.
 
 **Returns:** [`OperationType`](./../models/enums.md#operationtype)
+
+---
+
+### Operation Type V2
+
+```ts
+getOperationTypeV2(operationId: string): Promise<OperationTypeV2Info>
+```
+
+Fetches the operation type and finalization state of an operation by its ID.
+
+**Returns:** [`OperationTypeV2Info`](./../models/structs.md#operationtypev2info)
 
 ---
 
@@ -76,6 +90,18 @@ getOperationIdByTransactionHash(transactionHash: string): Promise<string>
 Fetches the crosschain operation ID based on a transaction hash. The client automatically routes to the appropriate API depending on whether the hash is an ETH hash (`0x...` 32 bytes) or a TON hash.
 
 **Returns:** `string` - The operation ID, or empty string if not found (404)
+
+---
+
+### Operation IDs by TAC Transaction Hash
+
+```ts
+getOperationIdByTacTransactionHash(transactionHash: string): Promise<OperationIdWithLogIndex[]>
+```
+
+Fetches TAC crosschain operation IDs for a TAC transaction hash from the explicit TAC sequencer route.
+
+**Returns:** [`OperationIdWithLogIndex[]`](./../models/structs.md#operationidwithlogindex-type) - Array of operation IDs with log indexes, or an empty array if not found (404)
 
 ---
 
@@ -107,6 +133,21 @@ getStageProfilings(
 Fetches detailed execution stage information for multiple operations. Handles request chunking automatically.
 
 **Returns:** [`ExecutionStagesByOperationId`](./../models/structs.md#executionstagesbyoperationid)
+
+---
+
+### Stage Profiling V2
+
+```ts
+getStageProfilingsV2(
+  operationIds: string[],
+  chunkSize?: number
+): Promise<ExecutionStagesV2ByOperationId>
+```
+
+Fetches execution stage information for multiple operations, including top-level `finalized`, `status`, and `rollback` fields for each operation.
+
+**Returns:** [`ExecutionStagesV2ByOperationId`](./../models/structs.md#executionstagesv2byoperationid)
 
 ---
 

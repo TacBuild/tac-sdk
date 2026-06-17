@@ -1,16 +1,31 @@
-import { mainnet, testnet } from '../../artifacts';
-import { allEndpointsFailedError } from '../errors';
+import { Address, Cell, loadMessage } from '@ton/ton';
+
+import {
+    allEndpointsFailedError,
+    externalInMessageRequiredError,
+    invalidTonExternalMessageBocError,
+    tonIndexerRequiredForTonTransactionBocError,
+} from '../errors';
 import { convertCurrencyNegativeOrZeroValueError } from '../errors/instances';
-import { ILiteSequencerClient, ILiteSequencerClientFactory, ILogger, IOperationTracker } from '../interfaces';
+import {
+    IConfiguration,
+    ILiteSequencerClient,
+    ILiteSequencerClientFactory,
+    ILogger,
+    IOperationTracker,
+} from '../interfaces';
 import {
     ConvertCurrencyParams,
     ConvertedCurrencyResult,
     ExecutionStages,
     ExecutionStagesByOperationId,
+    ExecutionStagesV2,
+    ExecutionStagesV2ByOperationId,
     GetTVMExecutorFeeParams,
-    Network,
     OperationIdsByShardsKey,
+    OperationIdWithLogIndex,
     OperationType,
+    OperationTypeV2Info,
     SimplifiedStatuses,
     StatusInfo,
     StatusInfosByOperationId,
@@ -22,7 +37,7 @@ import {
 } from '../structs/Struct';
 import { LiteSequencerClient } from './LiteSequencerClient';
 import { NoopLogger } from './Logger';
-import { formatObjectForLogging, waitUntilSuccess } from './Utils';
+import { formatObjectForLogging, getNormalizedExtMessageHash, normalizeHashToHex, waitUntilSuccess } from './Utils';
 import { Validator } from './Validator';
 
 export class DefaultLiteSequencerClientFactory implements ILiteSequencerClientFactory {
@@ -34,28 +49,16 @@ export class DefaultLiteSequencerClientFactory implements ILiteSequencerClientFa
 export class OperationTracker implements IOperationTracker {
     private readonly clients: ILiteSequencerClient[];
     private readonly logger: ILogger;
+    private readonly config: IConfiguration;
 
     constructor(
-        network: Network,
-        customLiteSequencerEndpoints?: string[],
+        config: IConfiguration,
         logger: ILogger = new NoopLogger(),
         clientFactory: ILiteSequencerClientFactory = new DefaultLiteSequencerClientFactory(),
     ) {
-        let endpoints: string[];
-        if (network === Network.DEV) {
-            if (!customLiteSequencerEndpoints || customLiteSequencerEndpoints.length === 0) {
-                throw new Error('For DEV network, custom lite sequencer endpoints must be provided');
-            }
-            endpoints = customLiteSequencerEndpoints;
-        } else {
-            const artifacts = network === Network.MAINNET ? mainnet : testnet;
-            endpoints =
-                customLiteSequencerEndpoints && customLiteSequencerEndpoints.length !== 0
-                    ? customLiteSequencerEndpoints
-                    : artifacts.PUBLIC_LITE_SEQUENCER_ENDPOINTS;
-        }
-        this.clients = clientFactory.createClients(endpoints);
+        this.clients = clientFactory.createClients(config.liteSequencerEndpoints);
         this.logger = logger;
+        this.config = config;
     }
 
     async getOperationIdByTransactionHash(
@@ -84,6 +87,118 @@ export class OperationTracker implements IOperationTracker {
               );
     }
 
+    async getOperationIdByTacTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<OperationIdWithLogIndex[]> | null,
+    ): Promise<OperationIdWithLogIndex[]> {
+        const requestFn = async (): Promise<OperationIdWithLogIndex[]> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const ids = await client.getOperationIdByTacTransactionHash(transactionHash);
+                    return ids;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation IDs by TAC transaction hash ${formatObjectForLogging(transactionHash)}`,
+              );
+    }
+
+    async getOperationIdByTonTransactionHash(
+        transactionHash: string,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string> {
+        return this.getOperationIdByTonTransaction(
+            async () => transactionHash,
+            `OperationTracker: Getting operation ID by TON transaction hash ${formatObjectForLogging(transactionHash)}`,
+            waitOptions,
+        );
+    }
+
+    async getOperationIdByTonTransactionBoc(boc: string, waitOptions?: WaitOptions<string> | null): Promise<string> {
+        if (!this.config.TONParams.tonIndexer) {
+            throw tonIndexerRequiredForTonTransactionBocError;
+        }
+
+        let message;
+        try {
+            message = loadMessage(Cell.fromBase64(boc).beginParse());
+        } catch (error) {
+            const reason = error instanceof Error ? error.message : undefined;
+            throw invalidTonExternalMessageBocError(reason);
+        }
+
+        if (message.info.type !== 'external-in') {
+            throw externalInMessageRequiredError(message.info.type);
+        }
+
+        const destination = Address.parse(message.info.dest.toString());
+        const messageHash = getNormalizedExtMessageHash(message);
+
+        return this.getOperationIdByTonTransaction(
+            async () => {
+                const transaction = await this.config.TONParams.contractOpener.getTransactionByHash(
+                    destination,
+                    messageHash,
+                );
+                return transaction?.hash().toString('base64') ?? '';
+            },
+            'OperationTracker: Getting operation ID by TON transaction BOC',
+            waitOptions,
+        );
+    }
+
+    private async getOperationIdByTonTransaction(
+        resolveTransactionHash: () => Promise<string>,
+        operationDescription: string,
+        waitOptions?: WaitOptions<string> | null,
+    ): Promise<string> {
+        const requestFn = async (): Promise<string> => {
+            const transactionHash = await resolveTransactionHash();
+            if (!transactionHash) {
+                return '';
+            }
+
+            let eventTxHash = transactionHash;
+            const tonIndexer = this.config.TONParams.tonIndexer;
+            if (tonIndexer) {
+                const cclTransaction = await tonIndexer.findCollectibleCrossChainLayerTransaction(
+                    transactionHash,
+                    this.config.TONParams.crossChainLayerAddress,
+                );
+                if (!cclTransaction) {
+                    return '';
+                }
+
+                eventTxHash = `0x${normalizeHashToHex(cclTransaction.hash)}`;
+            }
+
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const id = await client.getOperationIdByTonTransactionHash(eventTxHash);
+                    return id;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess({ logger: this.logger, ...waitOptions }, requestFn, operationDescription);
+    }
+
     async getOperationType(
         operationId: string,
         waitOptions?: WaitOptions<OperationType> | null,
@@ -107,6 +222,32 @@ export class OperationTracker implements IOperationTracker {
                   { logger: this.logger, ...waitOptions },
                   requestFn,
                   `OperationTracker: Getting operation type for ${formatObjectForLogging(operationId)}`,
+              );
+    }
+
+    async getOperationTypeV2(
+        operationId: string,
+        waitOptions?: WaitOptions<OperationTypeV2Info> | null,
+    ): Promise<OperationTypeV2Info> {
+        const requestFn = async (): Promise<OperationTypeV2Info> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const type = await client.getOperationTypeV2(operationId);
+                    return type;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting operation type v2 for ${formatObjectForLogging(operationId)}`,
               );
     }
 
@@ -220,6 +361,64 @@ export class OperationTracker implements IOperationTracker {
                   { logger: this.logger, ...waitOptions },
                   requestFn,
                   `OperationTracker: Getting stage profilings for operations: ${operationIds.join(', ')} chunkSize=${chunkSize}`,
+              );
+    }
+
+    async getStageProfilingV2(
+        operationId: string,
+        waitOptions?: WaitOptions<ExecutionStagesV2> | null,
+    ): Promise<ExecutionStagesV2> {
+        const requestFn = async (): Promise<ExecutionStagesV2> => {
+            let lastError: unknown;
+
+            for (const client of this.clients) {
+                try {
+                    const map = await client.getStageProfilingsV2([operationId]);
+                    const result = map[operationId];
+                    if (!result) {
+                        throw new Error(`No stageProfiling v2 data for operationId=${operationId}`);
+                    }
+                    return result;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting stage profiling v2 for operation ${operationId}`,
+              );
+    }
+
+    async getStageProfilingsV2(
+        operationIds: string[],
+        waitOptions?: WaitOptions<ExecutionStagesV2ByOperationId> | null,
+        chunkSize: number = 100,
+    ): Promise<ExecutionStagesV2ByOperationId> {
+        const requestFn = async (): Promise<ExecutionStagesV2ByOperationId> => {
+            let lastError: unknown;
+            for (const client of this.clients) {
+                try {
+                    const result = await client.getStageProfilingsV2(operationIds, chunkSize);
+                    return result;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw allEndpointsFailedError(lastError, waitOptions?.includeErrorTrace ?? false);
+        };
+
+        return waitOptions === null
+            ? await requestFn()
+            : await waitUntilSuccess(
+                  { logger: this.logger, ...waitOptions },
+                  requestFn,
+                  `OperationTracker: Getting stage profilings v2 for operations: ${operationIds.join(', ')} chunkSize=${chunkSize}`,
               );
     }
 

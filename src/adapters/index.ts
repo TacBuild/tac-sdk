@@ -3,5 +3,7 @@ export * from './LiteClientOpener';
 export * from './OpenerUtils';
 export * from './RetryableContractOpener';
 export * from './SandboxOpener';
+export * from './ToncenterV3Indexer';
+export * from './ToncenterV3Opener';
 export * from './TonClient4Opener';
 export * from './TonClientOpener';

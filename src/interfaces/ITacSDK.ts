@@ -1,7 +1,7 @@
 import { Wallet } from 'ethers';
 
 import { JettonMinterData, NFTItemData } from '../../artifacts/tonTypes';
-import { FT, NFT } from '../assets';
+import { FT, NFT, TAC, TON } from '../assets';
 import type { SenderAbstraction } from '../sender';
 import {
     AssetFromFTArg,
@@ -12,19 +12,20 @@ import {
     CrossChainPayloadResult,
     CrossChainTransactionOptions,
     CrossChainTransactionsOptions,
+    CrossChainTransactionToTONOptions,
     CrosschainTx,
     EVMAddress,
     EvmProxyMsg,
     ExecutionFeeEstimationResult,
     NFTAddressType,
     SuggestedTVMExecutorFee,
+    TACCrossChainTransactionResult,
     TacGasPrice,
     TACSimulationParams,
     TACSimulationResult,
     TransactionLinkerWithOperationId,
     TVMAddress,
     UserWalletBalanceExtended,
-    WaitOptions,
 } from '../structs/Struct';
 import { Asset } from './Asset';
 import { ContractOpener } from './ContractOpener';
@@ -57,26 +58,27 @@ export interface ITacSDK {
 
     // Connection management
     /**
-     * Closes any underlying network connections, clients, or subscriptions established by the SDK.
-     * Implementations should be idempotent and safe to call multiple times.
+     * Closes TON liteclient connections.
+     * Use only with LiteClientOpener.
      */
     closeConnections(): unknown;
 
     // Asset methods
     /**
      * Creates a typed asset wrapper instance based on provided arguments.
-     * Pass FT, NFT collection or NFT item parameters; the returned type will match the input.
+     * Pass FT, NFT collection or NFT item parameters.
+     * FT inputs may resolve to FT, TON, or TAC for native assets.
      * @param args Parameters that describe the asset to wrap (FT/NFT collection/NFT item).
      * @returns Promise resolving to a generic Asset. Use overloads for stronger typing.
      */
     getAsset(args: AssetFromFTArg | AssetFromNFTCollectionArg | AssetFromNFTItemArg): Promise<Asset>;
-    getAsset(args: AssetFromFTArg): Promise<FT>;
+    getAsset(args: AssetFromFTArg): Promise<FT | TAC | TON>;
     getAsset(args: AssetFromNFTCollectionArg): Promise<NFT>;
     getAsset(args: AssetFromNFTItemArg): Promise<NFT>;
 
     // Special asset methods
     /**
-     * Returns a fungible token (Jetton) asset wrapper by its TVM or EVM address.
+     * Returns a fungible asset wrapper by its TVM or EVM address.
      * @param address TVM or EVM token address.
      * @returns Promise resolving to an FT wrapper.
      */
@@ -137,7 +139,9 @@ export interface ITacSDK {
      * @param sender Sender abstraction responsible for signing/sending TVM messages.
      * @param assets Optional list of assets to attach to the cross-chain message.
      * @param options Optional cross-chain options (fees, executors, extra data, etc.).
-     * @param waitOptions Optional waiting policy for operation id resolution.
+     * Includes operationId wait options and full-operation finalization controls.
+     * Finalization waiting is enabled by default and performs profiling resolution plus
+     * TON transaction tree validation for EXECUTED_IN_TON transactions when they exist.
      * @returns Promise with a TransactionLinkerWithOperationId to track the operation across chains.
      */
     sendCrossChainTransaction(
@@ -145,8 +149,28 @@ export interface ITacSDK {
         sender: SenderAbstraction,
         assets?: AssetLike[],
         options?: CrossChainTransactionOptions,
-        waitOptions?: WaitOptions<string>,
     ): Promise<TransactionLinkerWithOperationId>;
+    /**
+     * Sends a single TAC -> TON cross-chain transaction and optionally waits for operation tracking information.
+     * Native TAC should be passed as a TAC asset in `assets`; there is no separate `value` argument.
+     * The sender must still have enough extra TAC balance to pay bridge fees and TAC gas on top of
+     * the bridged native TAC amount. The SDK requires EIP-1559 fee data from the TAC provider, can
+     * validate balances / ownership of non-native TAC assets, uses provider gas estimates as-is,
+     * validates those estimates against the latest TAC block gas limit,
+     * first estimates approval gas and checks TAC balance for approvals, submits approvals,
+     * then estimates the bridge message and checks the remaining TAC balance before sending it.
+     * @param signer Ethers Wallet used to sign EVM transaction on TAC side.
+     * @param tonTarget Recipient TVM address on TON.
+     * @param assets Optional list of TAC assets to include in the bridge transaction.
+     * @param options Optional TAC -> TON bridge configuration.
+     * @returns Promise with TAC transaction hash and optional operationId.
+     */
+    sendCrossChainTransactionToTON(
+        signer: Wallet,
+        tonTarget: string,
+        assets?: AssetLike[],
+        options?: CrossChainTransactionToTONOptions,
+    ): Promise<TACCrossChainTransactionResult>;
     /**
      * Sends multiple cross-chain transactions in one batch and optionally waits for tracking info.
      * @param sender Sender abstraction for signing/sending TVM messages.
@@ -163,13 +187,16 @@ export interface ITacSDK {
     // Bridge methods
     /**
      * Bridges tokens/value from EVM to TON chain via the executor.
+     * This is a low-level send-only method. It prepares the TAC -> TON message, performs approvals,
+     * submits the TAC transaction and returns its hash. It does not run the provider-backed TAC
+     * fee / gas-limit checks and balance prechecks performed by sendCrossChainTransactionToTON.
      * @param signer Ethers Wallet used to sign the EVM-side transaction.
      * @param value Amount of native EVM currency to bridge (in wei as bigint).
      * @param tonTarget Recipient TVM address on TON.
      * @param assets Optional list of TAC assets to include for the bridge.
      * @param tvmExecutorFee Optional explicit TON-side executor fee.
      * @param tvmValidExecutors Optional whitelist of allowed TVM executors.
-     * @returns Promise resolving to the EVM transaction hash or bridge identifier.
+     * @returns Promise resolving to the EVM transaction hash.
      */
     bridgeTokensToTON(
         signer: Wallet,

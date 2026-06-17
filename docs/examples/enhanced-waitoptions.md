@@ -228,8 +228,7 @@ async function sendTransactionWithManualTracking() {
             evmProxyMsg,
             sender, 
             assets,
-            { allowSimulationError: true },
-            manualTrackingOptions
+            { allowSimulationError: true, waitOperationIdOptions: manualTrackingOptions },
         );
         
         console.log('\n🎉 Transaction and finalization tracking completed!');

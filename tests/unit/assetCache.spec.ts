@@ -1,5 +1,5 @@
-import type { Asset } from '../../src';
-import { AssetType, Origin } from '../../src';
+import type { Asset, AssetFromFTArg, IConfiguration } from '../../src';
+import { AssetFactory, AssetFeeMode, AssetType, Network, Origin } from '../../src';
 import { AssetCache } from '../../src/assets/AssetCache';
 
 // Minimal mock Asset implementation for cache tests
@@ -8,6 +8,7 @@ const mockAsset = (address: string): Asset => ({
     type: AssetType.FT,
     rawAmount: 0n,
     clone: {} as unknown as Asset, // not used by AssetCache
+    feeMode: AssetFeeMode.LEGACY,
     withAmount: () => {
         throw new Error('not implemented');
     },
@@ -38,18 +39,34 @@ const mockAsset = (address: string): Asset => ({
     origin: Origin.TON,
 });
 
+function mockCachedAsset(address: string): Asset {
+    const asset = mockAsset(address);
+    const clone: Asset = {
+        ...mockAsset(`${address}:clone`),
+        withRawAmount: () => clone,
+    };
+    asset.clone = clone;
+    return asset;
+}
+
 describe('AssetCache', () => {
+    const config = {} as IConfiguration;
+
     beforeEach(() => {
         AssetCache.clear();
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
     });
 
     it('stores and retrieves assets by address', () => {
         const token = { address: 'EQTestAddress' };
         const asset = mockAsset(token.address);
 
-        expect(AssetCache.get(token)).toBeUndefined();
-        AssetCache.set(token, asset);
-        expect(AssetCache.get(token)).toBe(asset);
+        expect(AssetCache.get(config, token)).toBeUndefined();
+        AssetCache.set(config, token, asset);
+        expect(AssetCache.get(config, token)).toBe(asset);
     });
 
     it('uses case-insensitive keys for address', () => {
@@ -57,9 +74,9 @@ describe('AssetCache', () => {
         const lower = { address: 'aabbccdd' };
         const asset = mockAsset(upper.address);
 
-        AssetCache.set(upper, asset);
-        expect(AssetCache.get(lower)).toBe(asset);
-        expect(AssetCache.get(upper)).toBe(asset);
+        AssetCache.set(config, upper, asset);
+        expect(AssetCache.get(config, lower)).toBe(asset);
+        expect(AssetCache.get(config, upper)).toBe(asset);
     });
 
     it('distinguishes entries by index when provided', () => {
@@ -71,21 +88,59 @@ describe('AssetCache', () => {
         const asset0 = mockAsset('item0');
         const asset1 = mockAsset('item1');
 
-        AssetCache.set(tokenIndex0, asset0);
-        AssetCache.set(tokenIndex1, asset1);
+        AssetCache.set(config, tokenIndex0, asset0);
+        AssetCache.set(config, tokenIndex1, asset1);
 
-        expect(AssetCache.get(tokenNoIndex)).toBeUndefined();
-        expect(AssetCache.get(tokenIndex0)).toBe(asset0);
-        expect(AssetCache.get(tokenIndex1)).toBe(asset1);
+        expect(AssetCache.get(config, tokenNoIndex)).toBeUndefined();
+        expect(AssetCache.get(config, tokenIndex0)).toBe(asset0);
+        expect(AssetCache.get(config, tokenIndex1)).toBe(asset1);
+    });
+
+    it('keeps entries scoped to each configuration', () => {
+        const firstConfig = {} as IConfiguration;
+        const secondConfig = {} as IConfiguration;
+        const token = { address: 'EQSameAddress', tokenType: AssetType.FT };
+        const firstAsset = mockAsset('first');
+        const secondAsset = mockAsset('second');
+
+        AssetCache.set(firstConfig, token, firstAsset);
+        AssetCache.set(secondConfig, token, secondAsset);
+
+        expect(AssetCache.get(firstConfig, token)).toBe(firstAsset);
+        expect(AssetCache.get(secondConfig, token)).toBe(secondAsset);
     });
 
     it('clear() empties the cache', () => {
         const token = { address: 'EQAnotherAddress' };
         const asset = mockAsset(token.address);
-        AssetCache.set(token, asset);
+        AssetCache.set(config, token, asset);
 
-        expect(AssetCache.get(token)).toBe(asset);
+        expect(AssetCache.get(config, token)).toBe(asset);
         AssetCache.clear();
-        expect(AssetCache.get(token)).toBeUndefined();
+        expect(AssetCache.get(config, token)).toBeUndefined();
+    });
+
+    it('does not reuse AssetFactory cache entries across configurations', async () => {
+        const token: AssetFromFTArg = { address: 'EQSharedAddress', tokenType: AssetType.FT };
+        const mainnetConfig = {
+            network: Network.MAINNET,
+            nativeTONAddress: 'EQMainnetNative',
+        } as IConfiguration;
+        const testnetConfig = {
+            network: Network.TESTNET,
+            nativeTONAddress: 'EQTestnetNative',
+        } as IConfiguration;
+        const mainnetAsset = mockCachedAsset('mainnet') as Awaited<ReturnType<typeof AssetFactory.createFTAsset>>;
+        const testnetAsset = mockCachedAsset('testnet') as Awaited<ReturnType<typeof AssetFactory.createFTAsset>>;
+
+        const createFTAsset = jest
+            .spyOn(AssetFactory, 'createFTAsset')
+            .mockImplementation(async (configuration) =>
+                configuration === mainnetConfig ? mainnetAsset : testnetAsset,
+            );
+
+        await expect(AssetFactory.from(mainnetConfig, token)).resolves.toBe(mainnetAsset);
+        await expect(AssetFactory.from(testnetConfig, token)).resolves.toBe(testnetAsset);
+        expect(createFTAsset).toHaveBeenCalledTimes(2);
     });
 });

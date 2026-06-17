@@ -1,4 +1,4 @@
-import { AssetType, CurrencyType, liteClientOpener, Network, TacSdk } from '../../src';
+import { AssetType, CurrencyType, FT, liteClientOpener, Network, TacSdk } from '../../src';
 
 async function main() {
     const sdk = await TacSdk.create({
@@ -12,7 +12,7 @@ async function main() {
     const token2 = await sdk.getAsset({
         address: tokenAddress,
         tokenType: AssetType.FT,
-    });
+    }) as FT;
 
     console.log(await token1.getJettonData());
     console.log(await token2.getJettonData());

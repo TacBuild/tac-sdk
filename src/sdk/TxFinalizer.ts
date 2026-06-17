@@ -11,6 +11,7 @@ import { TrackTransactionTreeParams } from '../structs/Struct';
 import { AxiosHttpClient } from './AxiosHttpClient';
 import {
     DEFAULT_FIND_TX_MAX_DEPTH,
+    DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
     DEFAULT_RETRY_DELAY_MS,
     DEFAULT_RETRY_MAX_COUNT,
     IGNORE_MSG_VALUE_1_NANO,
@@ -27,7 +28,7 @@ export class TonTxFinalizer implements ITxFinalizer {
     constructor(
         apiConfig: TxFinalizerConfig,
         logger: ILogger = new NoopLogger(),
-        httpClient: IHttpClient = new AxiosHttpClient(),
+        httpClient: IHttpClient = new AxiosHttpClient({ timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS }),
     ) {
         this.apiConfig = apiConfig;
         this.logger = logger;
