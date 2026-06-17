@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.8.0] - 2026-06-17
 
 ### Added
 - Native `TAC` asset wrapper plus TAC-aware balance/transfer checks: `Asset.getBalanceOf(user, blockchainType)` and `checkCanBeTransferredBy(user, blockchainType)`.
