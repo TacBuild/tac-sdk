@@ -69,6 +69,60 @@ describe('BaseContractOpener scan pagination', () => {
         expect(Buffer.from(secondCallHash!, 'base64').toString('hex')).toBe('01'.repeat(32));
     });
 
+    it('checks the first cursor transaction when the first request is inclusive', async () => {
+        const tx = makeTx(1, 100n, 0n, 'aa'.repeat(32));
+        const txHash = tx.hash().toString('base64');
+        const opener = new PaginationTestOpener([[tx]]);
+
+        const result = await opener.getTransactionByTxHash(address, txHash, {
+            limit: 1,
+            lt: tx.lt.toString(),
+            hash: txHash,
+            inclusive: true,
+        });
+
+        expect(result).toBe(tx);
+        expect(opener.calls).toHaveLength(1);
+    });
+
+    it('continues after an inclusive first cursor page when the cursor transaction does not match', async () => {
+        const firstTx = makeTx(1, 100n, 99n, '02'.repeat(32));
+        const secondTx = makeTx(2, 99n, 0n, 'aa'.repeat(32));
+        const firstHash = firstTx.hash().toString('base64');
+        const opener = new PaginationTestOpener([[firstTx], [secondTx]]);
+
+        const result = await opener.getTransactionByTxHash(address, secondTx.hash().toString('base64'), {
+            limit: 1,
+            lt: firstTx.lt.toString(),
+            hash: firstHash,
+            inclusive: true,
+        });
+
+        expect(result).toBe(secondTx);
+        expect(opener.calls).toHaveLength(2);
+        expect(opener.calls[0]).toEqual(expect.objectContaining({ lt: '100', hash: firstHash, inclusive: true }));
+        expect(opener.calls[1]).toEqual(expect.objectContaining({ lt: '100', hash: firstHash, inclusive: false }));
+    });
+
+    it('uses previous transaction id when a provider ignores exclusive cursor pagination', async () => {
+        const firstTx = makeTx(1, 100n, 99n, '02'.repeat(32));
+        const secondTx = makeTx(2, 99n, 0n, 'aa'.repeat(32));
+        const firstHash = firstTx.hash().toString('base64');
+        const secondHash = secondTx.hash().toString('base64');
+        const opener = new PaginationTestOpener([[firstTx], [firstTx], [secondTx]]);
+
+        const result = await opener.getTransactionByTxHash(address, secondHash, {
+            limit: 1,
+            lt: firstTx.lt.toString(),
+            hash: firstHash,
+            inclusive: true,
+        });
+
+        expect(result).toBe(secondTx);
+        expect(opener.calls).toHaveLength(3);
+        expect(opener.calls[2]).toEqual(expect.objectContaining({ lt: '99', hash: secondHash, inclusive: true }));
+    });
+
     it('stops scanning after 100 transactions', async () => {
         const txs: Transaction[] = [];
         for (let i = 0; i < 101; i++) {

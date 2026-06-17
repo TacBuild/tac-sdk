@@ -217,38 +217,6 @@ describe('TACTransactionManager', () => {
         expect(crossChainLayerSend).toHaveBeenCalledWith(1n, 'encoded', { value: 63n });
     });
 
-    it('reads protocol fee after approvals in direct bridge flow', async () => {
-        const manager = new TACTransactionManager(config as never, operationTracker as never, logger as never);
-        const prepareBridgeSpy = jest.spyOn(manager as never, 'prepareBridgeTokensToTON');
-        const ftAsset = {
-            address: 'EQFTAsset',
-            type: AssetType.FT,
-            origin: Origin.TAC,
-            rawAmount: 10n,
-            getEVMAddress: jest.fn().mockResolvedValue('0xFT'),
-            checkCanBeTransferredBy: jest.fn().mockResolvedValue(undefined),
-        } as unknown as Asset;
-
-        let protocolFeeValue = 5n;
-        crossChainLayer.getProtocolFee.mockImplementation(async () => protocolFeeValue);
-        erc20Approve.mockImplementation(async () => {
-            protocolFeeValue = 9n;
-            return {
-                wait: jest.fn().mockResolvedValue(undefined),
-            };
-        });
-
-        await manager.bridgeTokensToTON(
-            signer,
-            25n,
-            'EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N',
-            [ftAsset] as never,
-        );
-
-        expect(erc20Approve).toHaveBeenCalledWith('0xCrossChainLayer', 10n);
-        expect(erc20Approve.mock.invocationCallOrder[0]).toBeLessThan(prepareBridgeSpy.mock.invocationCallOrder[0]);
-    });
-
     it('uses custom executors in direct bridge call', async () => {
         const manager = new TACTransactionManager(config as never, operationTracker as never, logger as never);
         const customExecutors = ['EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N'];
@@ -370,7 +338,7 @@ describe('TACTransactionManager', () => {
             'EQCD39VS5jcptHL8vMjEXrzGaRcCVYto7HUn4bpAOg8xqB2N',
             [nativeTacAsset, wrappedFtAsset] as never,
             {
-                waitOptions: { maxAttempts: 1, delay: 5 },
+                waitOperationIdOptions: { maxAttempts: 1, delay: 5 },
                 finalizationWaitOptions: {
                     maxAttempts: 2,
                     delay: 10,

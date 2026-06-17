@@ -1,4 +1,35 @@
+### `getArtifacts`
+
+```ts
+getArtifacts(network: Network): NetworkArtifacts
+```
+
+Returns the artifacts bundle for the selected SDK network. `TacSdk.create(...)` and tracking utilities use this helper internally, and it is useful when you create `Configuration` manually.
+
+#### Parameters:
+- `network`: `Network.MAINNET`, `Network.TESTNET`, or `Network.DEV`
+
+#### Returns:
+- `NetworkArtifacts`: network-specific contract addresses, endpoints, TON wrappers, and TAC compilation artifacts
+
+#### Possible exceptions:
+- `Error`: if an unsupported network value is provided
+
+#### Example:
+```ts
+import { Configuration, getArtifacts, Network } from '@tonappchain/sdk';
+
+const artifacts = getArtifacts(Network.TESTNET);
+const config = await Configuration.create(Network.TESTNET, artifacts);
+
+console.log(artifacts.TAC_EXPLORER_API_ENDPOINT);
+```
+
+---
+
 ### `startTracking`
+
+> **Deprecated:** Prefer `TacSdk.sendCrossChainTransaction(...)` for new code. It already waits for `operationId` and full cross-chain finalization by default through `waitOperationId` and `waitFinalization` options.
 
 ```ts
 startTracking(
@@ -17,14 +48,14 @@ startTracking(
 ): Promise<void | ExecutionStages>
 ```
 
-Tracks a crosschain operation end-to-end by polling the status using the transaction linker.  
+Deprecated utility that tracks a crosschain operation end-to-end by polling the status using the transaction linker.  
 It will continue until a final state (success or failure) is reached.
 
 If the operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` and `cclAddress` are provided, the finalizer will be used to verify the final TON transaction(s) for success.
 
 #### Parameters:
 - `transactionLinker`: Result of `sendCrossChainTransaction(...)`. If `operationId` is already set, `startTracking` will use it and skip `getOperationId(...)` request.
-- `network`: `Network.TESTNET` or `Network.MAINNET`
+- `network`: `Network.MAINNET`, `Network.TESTNET`, or `Network.DEV`
 - `options` *(optional)*:
   - `customLiteSequencerEndpoints`: override default sequencer URL
   - `delay`: polling interval in seconds (default: 10)
@@ -61,6 +92,8 @@ await startTracking(transactionLinker, Network.TESTNET, {
 
 ### `startTrackingMultiple`
 
+> **Deprecated:** Prefer `TacSdk.sendCrossChainTransaction(...)` for new single-transaction flows. It already waits for `operationId` and full cross-chain finalization by default through `waitOperationId` and `waitFinalization` options.
+
 ```ts
 startTrackingMultiple(
   transactionLinkers: TransactionLinkerWithOperationId[],
@@ -77,14 +110,14 @@ startTrackingMultiple(
 ): Promise<void | ExecutionStages[]>
 ```
 
-Tracks multiple crosschain operations in parallel by polling their statuses using transaction linkers.  
+Deprecated utility that tracks multiple crosschain operations in parallel by polling their statuses using transaction linkers.  
 Each operation will be tracked until it reaches a final state (success or failure).
 
 If any operation includes a TON-side execution (EXECUTED_IN_TON stage), and `txFinalizer` is provided, the finalizer will be used to verify the final TON transaction(s) for success.
 
 #### Parameters:
 - `transactionLinkers`: Array of results from `sendCrossChainTransaction(...)`. If an item already has `operationId`, it will be used directly.
-- `network`: `Network.TESTNET` or `Network.MAINNET`
+- `network`: `Network.MAINNET`, `Network.TESTNET`, or `Network.DEV`
 - `options` *(optional)*:
   - `customLiteSequencerEndpoints`: override default sequencer URL
   - `delay`: polling interval in seconds (default: 10)

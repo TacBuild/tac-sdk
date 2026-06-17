@@ -1,6 +1,6 @@
 {
     "name": "@tonappchain/sdk",
-    "version": "0.7.3-rc1",
+    "version": "0.7.3",
     "repository": "https://github.com/TacBuild/tac-sdk.git",
     "author": "TAC. <developers@tac>",
     "license": "MIT",
@@ -61,6 +61,8 @@
         "build:artifacts:tac:all": "npm run build:artifacts:tac:dev && npm run build:artifacts:tac:testnet && npm run build:artifacts:tac:mainnet",
         "build:artifacts": "npm run build:artifacts:ton:all && npm run build:artifacts:tac:all",
         "test": "jest --verbose --runInBand",
+        "test:ton-providers": "RUN_TON_PROVIDER_TESTS=1 jest --verbose --runInBand tests/ton_providers",
+        "test:toncenter-v2-tree": "RUN_TON_PROVIDER_TESTS=1 jest --verbose --runInBand tests/ton_providers/contractOpeners/toncenterV2HistoricalTree.spec.ts",
         "release": "npm run build && npx release-it",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix",

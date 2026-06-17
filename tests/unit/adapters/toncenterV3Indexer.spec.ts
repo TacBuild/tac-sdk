@@ -3,6 +3,7 @@ import { beginCell } from '@ton/ton';
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 
 import { IHttpClient, ToncenterV3Indexer } from '../../../src';
+import { DEFAULT_FIND_TX_LIMIT } from '../../../src/sdk/Consts';
 
 class MockHttpClient implements IHttpClient {
     readonly getMock = jest.fn<(url: string, config?: AxiosRequestConfig) => Promise<AxiosResponse<unknown>>>();
@@ -102,7 +103,42 @@ describe('ToncenterV3Indexer', () => {
         expect(httpClient.getMock).toHaveBeenCalledWith(transactionsEndpoint, {
             params: {
                 hash: '0xa41ac40e63cb9aa683fe4702d2fc358afa896877cb21582cc841db7a6d0556b2',
-                limit: 1,
+                limit: DEFAULT_FIND_TX_LIMIT,
+            },
+            transformResponse: [expect.any(Function)],
+        });
+    });
+
+    it('loads indexed transactions from transactionsByMessage endpoint', async () => {
+        httpClient.getMock.mockResolvedValue(
+            createResponse({
+                transactions: [
+                    {
+                        account: '0:CF3A00EE92F2BBFA6DBB94CA323C5CF43C9F1B09CAE6E0352F18DD88949A3A13',
+                        hash: 'f+8Z+1Y3tD5fHIZin4HxlVnJBdR+UzO/G0QJ+iaKm1A=',
+                        outMsgs: [],
+                    },
+                ],
+            }),
+        );
+
+        const result = await indexer.getTransactionsByMessageHash(
+            '2jgA4GAQZXcA7ZlrdQ7IA+EhY8KHg8ccLRqKpzA/T2A=',
+            'in',
+        );
+
+        expect(result).toEqual([
+            {
+                account: '0:CF3A00EE92F2BBFA6DBB94CA323C5CF43C9F1B09CAE6E0352F18DD88949A3A13',
+                hash: 'f+8Z+1Y3tD5fHIZin4HxlVnJBdR+UzO/G0QJ+iaKm1A=',
+                outMsgs: [],
+            },
+        ]);
+        expect(httpClient.getMock).toHaveBeenCalledWith('https://toncenter-spb.tac.build/api/v3/transactionsByMessage', {
+            params: {
+                msg_hash: '2jgA4GAQZXcA7ZlrdQ7IA+EhY8KHg8ccLRqKpzA/T2A=',
+                direction: 'in',
+                limit: DEFAULT_FIND_TX_LIMIT,
             },
             transformResponse: [expect.any(Function)],
         });

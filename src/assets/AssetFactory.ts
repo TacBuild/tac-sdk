@@ -31,7 +31,7 @@ export class AssetFactory {
             return TON.create(configuration);
         }
 
-        const cachedAsset = AssetCache.get(token);
+        const cachedAsset = AssetCache.get(configuration, token);
         if (cachedAsset) {
             return cachedAsset.clone.withRawAmount(0n);
         }
@@ -46,7 +46,7 @@ export class AssetFactory {
                       token.addressType === NFTAddressType.COLLECTION ? token.index : undefined,
                   );
 
-        AssetCache.set(token, asset);
+        AssetCache.set(configuration, token, asset);
         return asset;
     }
 

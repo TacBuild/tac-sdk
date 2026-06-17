@@ -237,8 +237,24 @@ export type ToncenterV3IndexedTransaction = {
     hash: string;
     /** Optional trace identifier returned by Toncenter v3. */
     traceId?: string;
+    /** Transaction phase data returned by Toncenter v3. */
+    description?: {
+        type?: string;
+        aborted?: boolean;
+        computePh?: {
+            skipped?: boolean;
+            success?: boolean;
+            exitCode?: number;
+        } | null;
+        action?: {
+            success?: boolean;
+            resultCode?: number;
+        } | null;
+    } | null;
     /** Incoming message of the indexed transaction, when present in the response. */
     inMsg?: {
+        /** Indexed message hash. */
+        hash?: string | null;
         /** Message source address. */
         source?: string | null;
         /** Message destination address. */
@@ -253,6 +269,8 @@ export type ToncenterV3IndexedTransaction = {
     } | null;
     /** Outgoing messages of the indexed transaction. */
     outMsgs: Array<{
+        /** Indexed message hash. */
+        hash?: string | null;
         /** Message destination address. `null` means external outbound log message. */
         destination?: string | null;
         /** Raw message content returned by Toncenter v3. */
@@ -522,7 +540,7 @@ export type CrossChainTransactionOptions = {
      * Retry policy used while resolving the operation ID.
      * Use this to control timeout, attempts, delay, logger, callbacks, and success criteria.
      */
-    waitOptions?: WaitOptions<string>;
+    waitOperationIdOptions?: WaitOptions<string>;
     /**
      * If true, waits for full cross-chain finalization after the operation ID is known:
      * the SDK waits for a final operation type, fetches stage profiling, and validates
@@ -546,12 +564,12 @@ export type CrossChainTransactionOptions = {
 
 export type BatchCrossChainTransactionOptions = Omit<
     CrossChainTransactionOptions,
-    'waitOperationId' | 'waitOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'
+    'waitOperationId' | 'waitOperationIdOptions' | 'ensureTxExecuted' | 'waitFinalization' | 'finalizationWaitOptions'
 >;
 
 export type CrossChainTransactionsOptions = {
     waitOperationIds?: boolean;
-    waitOptions?: WaitOptions<OperationIdsByShardsKey>;
+    waitOperationIdOptions?: WaitOptions<OperationIdsByShardsKey>;
 };
 
 export type CrossChainTransactionToTONOptions = {
@@ -582,7 +600,7 @@ export type CrossChainTransactionToTONOptions = {
      * Retry policy used while resolving the operation ID.
      * Use this to control timeout, attempts, delay, logger, callbacks, and success criteria.
      */
-    waitOptions?: WaitOptions<string>;
+    waitOperationIdOptions?: WaitOptions<string>;
     /**
      * Wait options used to finalize the cross-chain operation after operationId resolution.
      * Use this to configure retries, delay, logger, successCheck, and onSuccess callback
@@ -793,6 +811,17 @@ export type TrackTransactionTreeParams = {
      * @default 100
      */
     maxScannedTransactions?: number;
+
+    /**
+     * Whether to search archival nodes for historical data.
+     * Omitted by default; set true for old transactions when the provider has archival nodes.
+     */
+    archival?: boolean;
+
+    /**
+     * Logical time of the root transaction. Use with a root transaction hash to avoid scanning from latest history.
+     */
+    rootLt?: string;
 
     /**
      * List of operation codes (opcodes) to skip for extra checks.

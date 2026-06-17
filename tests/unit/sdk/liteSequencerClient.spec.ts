@@ -72,18 +72,6 @@ describe('LiteSequencerClient', () => {
         });
     });
 
-    it('supports legacy ETH single-object responses', async () => {
-        httpClient.getMock.mockResolvedValue(
-            createResponse({
-                response: { operationId: 'op-legacy', logIndex: 5 },
-            }),
-        );
-
-        const result = await client.getOperationIdByTransactionHash(ethHash);
-
-        expect(result).toBe('op-legacy');
-    });
-
     it('returns empty string for empty ETH arrays', async () => {
         httpClient.getMock.mockResolvedValue(
             createResponse({

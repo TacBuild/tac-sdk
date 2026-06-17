@@ -223,10 +223,14 @@ export const estimatedGasExceedsBlockGasLimitError = (txName: string, estimatedG
     );
 
 export const invalidTonExternalMessageBocError = (reason?: string) =>
-    new FormatError(
-        `Invalid external TON message BOC${reason ? `: ${reason}` : ''}`,
-        141,
-    );
+    new FormatError(`Invalid external TON message BOC${reason ? `: ${reason}` : ''}`, 141);
 
 export const externalInMessageRequiredError = (actualType: string) =>
     new FormatError(`Expected external-in TON message, got ${actualType}`, 142);
+
+export const tonIndexerRequiredForTonTransactionBocError = new SettingError(
+    'TON indexer is required to resolve operation ID by TON transaction BOC',
+    143,
+);
+
+export const invalidAmountError = (reason: string) => new FormatError(`Invalid amount: ${reason}`, 144);

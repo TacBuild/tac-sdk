@@ -1,4 +1,4 @@
-import { dev, mainnet, testnet } from '../../artifacts';
+import type { NetworkArtifacts } from '../../artifacts';
 import { InternalTACParams, InternalTONParams } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
 
@@ -6,7 +6,7 @@ export interface IConfiguration {
     /** Current network the SDK is configured for (e.g., MAINNET/TESTNET). */
     readonly network: Network;
     /** Resolved artifacts bundle for the selected network (contract ABIs/addresses). */
-    readonly artifacts: typeof testnet | typeof mainnet | typeof dev;
+    readonly artifacts: NetworkArtifacts;
     /** Low-level TON client parameters and dependencies. */
     readonly TONParams: InternalTONParams;
     /** Low-level TAC (EVM-side) client parameters and dependencies. */

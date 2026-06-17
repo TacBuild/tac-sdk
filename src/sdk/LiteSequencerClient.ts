@@ -31,6 +31,7 @@ import {
     TransactionLinker,
 } from '../structs/Struct';
 import { AxiosHttpClient } from './AxiosHttpClient';
+import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS } from './Consts';
 import { toCamelCaseTransformer } from './Utils';
 
 export class LiteSequencerClient implements ILiteSequencerClient {
@@ -38,7 +39,11 @@ export class LiteSequencerClient implements ILiteSequencerClient {
     private readonly maxChunkSize: number;
     private readonly httpClient: IHttpClient;
 
-    constructor(endpoint: string, maxChunkSize: number = 100, httpClient: IHttpClient = new AxiosHttpClient()) {
+    constructor(
+        endpoint: string,
+        maxChunkSize: number = 100,
+        httpClient: IHttpClient = new AxiosHttpClient({ timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS }),
+    ) {
         this.endpoint = endpoint;
         this.maxChunkSize = maxChunkSize;
         this.httpClient = httpClient;

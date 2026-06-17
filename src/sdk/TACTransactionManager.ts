@@ -24,11 +24,10 @@ import {
     CROSS_CHAIN_MESSAGE_VERSION_V1,
     DEFAULT_EIP1559_PRIORITY_FEE,
     NFT_BRIDGE_AMOUNT,
-    SHARDS_KEY_RANDOM_RANGE,
     TAC_SYMBOL,
 } from './Consts';
 import { NoopLogger } from './Logger';
-import { formatObjectForLogging, isFinalProfiling, mapAssetsToTonAssets } from './Utils';
+import { formatObjectForLogging, generateRandomNumberByTimestamp, isFinalProfiling, mapAssetsToTonAssets } from './Utils';
 import { Validator } from './Validator';
 
 export class TACTransactionManager implements ITACTransactionManager {
@@ -75,7 +74,7 @@ export class TACTransactionManager implements ITACTransactionManager {
         }
 
         const protocolFee = await this.config.TACParams.crossChainLayer.getProtocolFee();
-        const shardsKey = BigInt(Math.round(Math.random() * SHARDS_KEY_RANDOM_RANGE));
+        const shardsKey = BigInt(generateRandomNumberByTimestamp().randomNumber);
 
         this.logger.debug(`Shards key: ${shardsKey}, Protocol fee: ${protocolFee}`);
 
@@ -303,12 +302,12 @@ export class TACTransactionManager implements ITACTransactionManager {
             return { txHash: tx.hash };
         }
 
-        const waitOptions = options?.waitOptions ?? {};
-        waitOptions.successCheck = waitOptions.successCheck ?? ((id: string) => !!id);
-        waitOptions.logger = waitOptions.logger ?? this.logger;
+        const waitOperationIdOptions = options?.waitOperationIdOptions ?? {};
+        waitOperationIdOptions.successCheck = waitOperationIdOptions.successCheck ?? ((id: string) => !!id);
+        waitOperationIdOptions.logger = waitOperationIdOptions.logger ?? this.logger;
 
         const operationId = await this.operationTracker
-            .getOperationIdByTransactionHash(tx.hash, waitOptions)
+            .getOperationIdByTransactionHash(tx.hash, waitOperationIdOptions)
             .catch((error) => {
                 this.logger.error(`Error while waiting for operation ID by transaction hash: ${error}`);
                 return undefined;

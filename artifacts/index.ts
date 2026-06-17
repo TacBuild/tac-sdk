@@ -1,3 +1,6 @@
-export * as dev from "./dev";
-export * as mainnet from "./mainnet";
-export * as testnet from "./testnet";
+import * as dev from "./dev";
+import * as mainnet from "./mainnet";
+import * as testnet from "./testnet";
+
+export { dev, mainnet, testnet };
+export type NetworkArtifacts = typeof mainnet | typeof testnet | typeof dev;

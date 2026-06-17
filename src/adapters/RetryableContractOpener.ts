@@ -20,6 +20,8 @@ import {
     TrackTransactionTreeParams,
     TrackTransactionTreeResult,
 } from '../structs/Struct';
+import { ToncenterV3Indexer } from './ToncenterV3Indexer';
+import { ToncenterV3Opener } from './ToncenterV3Opener';
 import { orbsOpener4 } from './TonClient4Opener';
 import { orbsOpener, tonClientOpener } from './TonClientOpener';
 
@@ -259,7 +261,12 @@ export class RetryableContractOpener implements ContractOpener {
             this.logger?.debug(`[RetryableContractOpener] ${operationName}: trying ${openerLabel}`);
 
             const result = useRetries
-                ? await this.tryWithRetries(() => operation(config), config, `${operationName} ${openerLabel}`)
+                ? await this.tryWithRetries(
+                      () => operation(config),
+                      config,
+                      `${operationName} ${openerLabel}`,
+                      shouldFallbackOnError,
+                  )
                 : await this.trySingleAttempt(() => operation(config));
 
             if (result.success) {
@@ -311,6 +318,7 @@ export class RetryableContractOpener implements ContractOpener {
         operation: () => Promise<T>,
         config: OpenerConfig,
         operationContext = 'operation',
+        shouldRetryError?: (error: Error) => boolean,
     ): Promise<RetryableOperationResult<T>> {
         let lastError: Error | undefined;
 
@@ -321,6 +329,9 @@ export class RetryableContractOpener implements ContractOpener {
             } catch (error) {
                 lastError = error as Error;
                 if (lastError instanceof TransactionError || this.isContractExecutionError(lastError)) {
+                    return { success: false, lastError };
+                }
+                if (shouldRetryError && !shouldRetryError(lastError)) {
                     return { success: false, lastError };
                 }
                 if (attempt < config.retries) {
@@ -440,6 +451,7 @@ export async function createDefaultRetryableOpener(
     maxRetries = DEFAULT_RETRY_MAX_COUNT,
     retryDelay = DEFAULT_RETRY_DELAY_MS,
     logger?: ILogger,
+    toncenterV3Endpoint?: string,
 ): Promise<RetryableContractOpener> {
     const openers: OpenerConfig[] = [];
 
@@ -447,6 +459,17 @@ export async function createDefaultRetryableOpener(
         endpoint: new URL('api/v2/jsonRPC', tonRpcEndpoint).toString(),
         timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
     });
+
+    if (toncenterV3Endpoint) {
+        openers.push({
+            opener: new ToncenterV3Opener(new ToncenterV3Indexer(toncenterV3Endpoint), tonClient, logger),
+            retries: maxRetries,
+            retryDelay,
+            maxRetryDelay: DEFAULT_RETRY_MAX_DELAY_MS,
+            retryBackoffMultiplier: DEFAULT_RETRY_BACKOFF_MULTIPLIER,
+        });
+    }
+
     const opener = tonClientOpener(tonClient, logger);
 
     openers.push({

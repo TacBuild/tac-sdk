@@ -18,6 +18,11 @@ export interface IToncenterV3Indexer {
      */
     getTransactionByHash(transactionHash: string): Promise<ToncenterV3IndexedTransaction | null>;
 
+    getTransactionsByMessageHash(
+        messageHash: string,
+        direction: 'in' | 'out',
+    ): Promise<ToncenterV3IndexedTransaction[]>;
+
     /**
      * Resolves adjacent indexed transactions for the provided hash from the same linked chain of TON transactions.
      * The result may contain both parent and child transactions.

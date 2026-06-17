@@ -3,8 +3,14 @@ import { Address } from '@ton/ton';
 import { operationFetchError } from '../errors';
 import { IHttpClient, IToncenterV3Indexer } from '../interfaces';
 import { AxiosHttpClient } from '../sdk/AxiosHttpClient';
-import { DEFAULT_FIND_TX_MAX_DEPTH, DEFAULT_MAX_SCANNED_TRANSACTIONS } from '../sdk/Consts';
-import { normalizeHashToHex, toCamelCaseTransformer } from '../sdk/Utils';
+import {
+    DEFAULT_FIND_TX_LIMIT,
+    DEFAULT_FIND_TX_MAX_DEPTH,
+    DEFAULT_HTTP_CLIENT_TIMEOUT_MS,
+    DEFAULT_MAX_SCANNED_TRANSACTIONS,
+    HTTP_NOT_FOUND_STATUS_CODE,
+} from '../sdk/Consts';
+import { toCamelCaseTransformer } from '../sdk/Utils';
 import { TonAdjacentTransactionsResponse, ToncenterV3TransactionsResponse } from '../structs/InternalStruct';
 import { ToncenterV3IndexedTransaction, ToncenterV3TraversalParams } from '../structs/Struct';
 
@@ -16,7 +22,10 @@ export class ToncenterV3Indexer implements IToncenterV3Indexer {
     readonly endpoint: string;
     private readonly httpClient: IHttpClient;
 
-    constructor(endpoint: string, httpClient: IHttpClient = new AxiosHttpClient()) {
+    constructor(
+        endpoint: string,
+        httpClient: IHttpClient = new AxiosHttpClient({ timeout: DEFAULT_HTTP_CLIENT_TIMEOUT_MS }),
+    ) {
         this.endpoint = endpoint;
         this.httpClient = httpClient;
     }
@@ -34,17 +43,42 @@ export class ToncenterV3Indexer implements IToncenterV3Indexer {
             const response = await this.httpClient.get<ToncenterV3TransactionsResponse>(endpoint, {
                 params: {
                     hash: transactionHash,
-                    limit: 1,
+                    limit: DEFAULT_FIND_TX_LIMIT,
                 },
                 transformResponse: [toCamelCaseTransformer],
             });
             return response.data.transactions?.[0] ?? null;
         } catch (error) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if ((error as any)?.response?.status === 404) {
+            if ((error as { response?: { status?: number } }).response?.status === HTTP_NOT_FOUND_STATUS_CODE) {
                 return null;
             }
             throw operationFetchError(`request ${requestLabel} failed to resolve TON indexed transaction`, error);
+        }
+    }
+
+    async getTransactionsByMessageHash(
+        messageHash: string,
+        direction: 'in' | 'out',
+    ): Promise<ToncenterV3IndexedTransaction[]> {
+        const endpoint = this.endpoint.endsWith('/')
+            ? `${this.endpoint}transactionsByMessage`
+            : `${this.endpoint}/transactionsByMessage`;
+
+        try {
+            const { data } = await this.httpClient.get<ToncenterV3TransactionsResponse>(endpoint, {
+                params: {
+                    msg_hash: messageHash,
+                    direction,
+                    limit: DEFAULT_FIND_TX_LIMIT,
+                },
+                transformResponse: [toCamelCaseTransformer],
+            });
+            return data.transactions ?? [];
+        } catch (error) {
+            if ((error as { response?: { status?: number } }).response?.status === HTTP_NOT_FOUND_STATUS_CODE) {
+                return [];
+            }
+            throw operationFetchError(`request GET ${endpoint} failed to resolve TON indexed transactions by message`, error);
         }
     }
 
@@ -66,8 +100,7 @@ export class ToncenterV3Indexer implements IToncenterV3Indexer {
             });
             return response.data.transactions ?? [];
         } catch (error) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if ((error as any)?.response?.status === 404) {
+            if ((error as { response?: { status?: number } }).response?.status === HTTP_NOT_FOUND_STATUS_CODE) {
                 return [];
             }
             throw operationFetchError(`request ${requestLabel} failed to resolve adjacent TON indexed transactions`, error);
@@ -101,23 +134,22 @@ export class ToncenterV3Indexer implements IToncenterV3Indexer {
             return rootTransaction;
         }
 
-        const queue: Array<{ hash: string; depth: number }> = [{ hash: rootTransaction.hash, depth: 0 }];
-        const visitedHashes = new Set<string>([normalizeHashToHex(rootTransaction.hash)]);
+        const queue = [{ hash: rootTransaction.hash, depth: 0 }];
+        const visitedHashes = new Set<string>([rootTransaction.hash]);
         let scannedTransactions = 0;
 
-        while (queue.length > 0) {
-            const { hash: currentHash, depth } = queue.shift()!;
+        for (let i = 0; i < queue.length; i++) {
+            const { hash: currentHash, depth } = queue[i];
             if (depth >= maxDepth || scannedTransactions >= maxScannedTransactions) {
                 continue;
             }
 
             const adjacentTransactions = await this.getAdjacentTransactions(currentHash);
             for (const transaction of adjacentTransactions) {
-                const normalizedHash = normalizeHashToHex(transaction.hash);
-                if (visitedHashes.has(normalizedHash)) {
+                if (visitedHashes.has(transaction.hash)) {
                     continue;
                 }
-                visitedHashes.add(normalizedHash);
+                visitedHashes.add(transaction.hash);
                 scannedTransactions += 1;
 
                 if (this.isCollectibleEventTransactionOnAccount(transaction, crossChainLayer)) {

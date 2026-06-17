@@ -930,11 +930,10 @@ This method validates the user address according to the selected blockchain.
 ## Example Usage
 
 ```ts
-import { AssetFactory, FT, NFT, TAC, TON, Configuration, Network, AssetType, NFTAddressType, BlockchainType } from "@tonappchain/sdk";
-import { testnet } from "@tonappchain/artifacts";
+import { AssetFactory, FT, NFT, TAC, TON, Configuration, getArtifacts, Network, AssetType, NFTAddressType, BlockchainType } from "@tonappchain/sdk";
 
 // Create configuration
-const config = await Configuration.create(Network.TESTNET, testnet);
+const config = await Configuration.create(Network.TESTNET, getArtifacts(Network.TESTNET));
 
 // Create tokens using AssetFactory
 const jetton = await AssetFactory.from(
@@ -1054,7 +1053,12 @@ const tx: CrosschainTx = {
 const result = await tonManager.sendCrossChainTransaction(
   evmProxyMsg,
   sender,
-  tx,
-  waitOptions
+  {
+    ...tx,
+    options: {
+      ...tx.options,
+      waitOperationIdOptions
+    }
+  }
 );
 ```

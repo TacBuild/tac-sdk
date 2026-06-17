@@ -66,6 +66,7 @@ import {
     Configuration, 
     OperationTracker, 
     ConsoleLogger,
+    getArtifacts,
     Network 
 } from "@tonappchain/sdk";
 import { TonApiClient } from '@ton-api/client';
@@ -74,7 +75,7 @@ import { getHttpV4Endpoint } from '@orbs-network/ton-access';
 // Create configuration
 const config = await Configuration.create(
     Network.TESTNET,
-    artifacts, // Network artifacts
+    getArtifacts(Network.TESTNET), // Network artifacts
     tonParams, // TON parameters
     tacParams, // TAC parameters
     customEndpoints, // Optional custom endpoints
@@ -82,7 +83,7 @@ const config = await Configuration.create(
 );
 
 // Create operation tracker
-const operationTracker = new OperationTracker(Network.TESTNET, config.liteSequencerEndpoints);
+const operationTracker = new OperationTracker(config);
 
 // Create logger (optional)
 const logger = new ConsoleLogger();

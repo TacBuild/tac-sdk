@@ -77,7 +77,7 @@ The signer must still hold extra TAC balance for TAC gas and bridge fees on top 
   - **`tvmValidExecutors`** *(optional)*: Whitelist of allowed TVM executors
   - **`validateAssetsBalance`** *(optional, default: true)*: Whether to validate balances or ownership of non-native TAC assets before approvals and sending
   - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the TAC -> TON transaction
-  - **`waitOptions`** *(optional)*: Retry configuration for operation ID resolution by transaction hash
+  - **`waitOperationIdOptions`** *(optional)*: Retry configuration for operation ID resolution by transaction hash
   - **`waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID
   - **`finalizationWaitOptions`** *(optional)*: Waiting configuration for profiling fetch and TON transaction tree validation
 
@@ -197,12 +197,13 @@ import {
   Configuration, 
   OperationTracker, 
   ConsoleLogger, 
+  getArtifacts,
   Network 
 } from "@tonappchain/sdk";
 
 // Create dependencies
-const config = await Configuration.create(Network.TESTNET);
-const operationTracker = new OperationTracker(Network.TESTNET);
+const config = await Configuration.create(Network.TESTNET, getArtifacts(Network.TESTNET));
+const operationTracker = new OperationTracker(config);
 const logger = new ConsoleLogger();
 
 // Create TAC Transaction Manager for TAC -> TON operations

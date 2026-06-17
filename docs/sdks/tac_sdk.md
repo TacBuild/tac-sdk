@@ -71,8 +71,6 @@
       - [**Parameters**](#parameters-8)
       - [**Returns**](#returns-4)
       - [**Possible exceptions**](#possible-exceptions-1)
-    - [`getOperationIdByTonTransactionHash`](#getoperationidbytontransactionhash)
-    - [`getOperationIdByTonTransactionBoc`](#getoperationidbytontransactionboc)
     - [`getOperationTracker`](#getoperationtracker)
       - [**Purpose**](#purpose-4)
       - [**Returns**](#returns-5)
@@ -80,11 +78,11 @@
       - [**Purpose**](#purpose-5)
       - [**Returns**](#returns-6)
     - [`getTonContractOpener`](#gettoncontractopener)
+      - [**Purpose**](#purpose-6)
+      - [**Returns**](#returns-7)
+    - [`getTACGasPrice`](#gettacgasprice)
       - [**Purpose**](#purpose-7)
       - [**Returns**](#returns-8)
-    - [`getTACGasPrice`](#gettacgasprice)
-      - [**Purpose**](#purpose-9)
-      - [**Returns**](#returns-10)
     - [`closeConnections`](#closeconnections)
 
 ---
@@ -104,6 +102,8 @@ TacSdk.create(sdkParams: SDKParams, logger?: ILogger): Promise<TacSdk>
 Creates an SDK instance. You can customize TON and TAC params via [`TONParams`](./../models/structs.md#tonparams-type) and [`TACParams`](./../models/structs.md#tacparams-type). The optional `logger` parameter allows you to provide a custom logger instance; if not provided, a no-op logger is used by default.
 
 If `sdkParams.passLoggerToOpeners` is set to `false`, the SDK logger is not passed to TON contract opener(s). Default is `true`.
+
+By default, the SDK resolves network artifacts through [`getArtifacts`](./utilities.md#getartifacts) and builds a [`RetryableContractOpener`](./contract_opener.md#retryablecontractopener) from them. When `TONCENTER_V3_INDEXER_ENDPOINT` is configured, indexed Toncenter v3 transaction tree validation is tried before the regular TonClient and Orbs-based openers.
 
 ---
 
@@ -142,7 +142,7 @@ The `sendCrossChainTransaction` method is the core functionality of the `TacSdk`
 - **`options`** *(optional)*: [`CrossChainTransactionOptions`](./../models/structs.md#crosschaintransactionoptions) struct. This includes:
   - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the transaction
   - **`ensureTxExecuted`** *(optional, default: true)*: Whether to validate TON transaction execution before waiting for operation ID
-  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation ID waiting behavior
+  - **`waitOperationIdOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation ID waiting behavior
   - **`waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID
   - **`finalizationWaitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for final operation type polling, profiling fetch, and optional TON transaction tree validation
 
@@ -203,10 +203,10 @@ Sends multiple cross-chain transactions in a batch. This is useful for scenarios
 
 - **`sender`**: A [`SenderAbstraction`](./sender.md) instance representing the user's wallet.
 - **`txs`**: An array of [`BatchCrossChainTxWithAssetLike`](./../models/structs.md#batchcrosschaintxwithassetlike) objects, each defining a single cross-chain transaction with its `evmProxyMsg`, optional `assets`, and optional `options`. 
-  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId`, `waitOptions`, or `ensureTxExecuted` in their options as these are controlled at the batch level.
+  > **Note:** Individual transactions in batch operations cannot specify `waitOperationId`, `waitOperationIdOptions`, or `ensureTxExecuted` in their options as these are controlled at the batch level.
 - **`options`** *(optional)*: [`CrossChainTransactionsOptions`](./../models/structs.md#crosschaintransactionsoptions) struct controlling batch-level behavior:
   - **`waitOperationIds`** *(optional, default: true)*: Whether to wait for operation IDs for all transactions in the batch
-  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation IDs waiting behavior
+  - **`waitOperationIdOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) struct for customizing operation IDs waiting behavior
 
 #### **Returns** `Promise<TransactionLinkerWithOperationId[]>`
   - An array of [`TransactionLinkerWithOperationId`](./../models/structs.md#transactionlinkerwithoperationid-type) objects, one for each transaction sent.
@@ -550,7 +550,7 @@ The sender must still keep additional TAC balance for TAC gas and bridge fees on
   - **`tvmValidExecutors`** *(optional)*: Array of trusted TON executor addresses to restrict the set of executors used for estimation and execution on TVM.
   - **`validateAssetsBalance`** *(optional, default: true)*: Whether to validate balances or ownership of non-native TAC assets before approvals and sending.
   - **`waitOperationId`** *(optional, default: true)*: Whether to wait for operation ID after sending the TAC -> TON transaction.
-  - **`waitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) used for operation ID resolution by transaction hash.
+  - **`waitOperationIdOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) used for operation ID resolution by transaction hash.
   - **`waitFinalization`** *(optional, default: true)*: Whether to continue with full operation finalization after resolving the operation ID.
   - **`finalizationWaitOptions`** *(optional)*: [`WaitOptions`](./operation_tracker.md#waiting-for-results) for profiling fetch and TON transaction tree validation during finalization.
 
@@ -627,79 +627,6 @@ Retrieves NFT data from the TVM chain for a given NFT item address.
 
 ---
 
-### `getOperationIdByTonTransactionHash`
-
-```ts
-getOperationIdByTonTransactionHash(
-  transactionHash: string,
-  waitOptions?: WaitOptions<string> | null,
-): Promise<string>
-```
-
-#### **Purpose**
-Resolves an `operationId` by any TON transaction hash from the same linked chain of TON transactions.
-
-The SDK:
-
-1. uses `ToncenterV3Indexer` to resolve indexed TON transaction context by hash
-2. uses `ToncenterV3Indexer` again to traverse adjacent indexed TON transactions in both directions through the same linked chain of TON transactions
-3. finds the `crossChainLayer` transaction that matches the same TVM event rules as the sequencer collector
-4. sends that exact TON transaction hash to the sequencer
-
-#### **Parameters**
-- **`transactionHash`**: Any TON transaction hash from the relevant linked chain of TON transactions.
-- **`waitOptions`** *(optional)*: Wait configuration for the final sequencer request. Pass `null` for a single attempt without retries.
-
-#### **Returns**
-`Promise<string>`
-- Returns the resolved operation id, or an empty string if the indexed transaction or `crossChainLayer` transaction was not found.
-
-#### **Example**
-
-```ts
-const operationId = await sdk.getOperationIdByTonTransactionHash(
-  '0xa41ac40e63cb9aa683fe4702d2fc358afa896877cb21582cc841db7a6d0556b2',
-  null,
-);
-```
-
----
-
-### `getOperationIdByTonTransactionBoc`
-
-```ts
-getOperationIdByTonTransactionBoc(
-  boc: string,
-  waitOptions?: WaitOptions<string> | null,
-): Promise<string>
-```
-
-#### **Purpose**
-Resolves an `operationId` by the BOC of an external TON message that was sent to the blockchain.
-
-The SDK:
-
-1. parses the external message from the provided BOC
-2. derives the normalized external-in message hash from that BOC
-3. finds the TON transaction that processed that external message through the configured `contractOpener`
-4. reuses [`getOperationIdByTonTransactionHash(...)`](#getoperationidbytontransactionhash)
-
-#### **Parameters**
-- **`boc`**: BOC of the external TON message that was sent to the blockchain.
-- **`waitOptions`** *(optional)*: Wait configuration for the final sequencer request. Pass `null` for a single attempt without retries.
-
-#### **Returns**
-`Promise<string>`
-- Returns the resolved operation id, or an empty string if the sequencer-collected `crossChainLayer` transaction was not found.
-
-#### **Example**
-
-```ts
-const operationId = await sdk.getOperationIdByTonTransactionBoc(externalMessageBoc, null);
-```
-
----
-
 ### `getOperationTracker`
 
 ```ts
@@ -739,9 +666,11 @@ This method provides direct access to the explorer client if you need to use it 
 ```
 
 #### **Purpose**
-Returns the TON contract opener client instance used for querying blockchain data from contracts..
+Returns the TON contract opener client instance used for querying blockchain data from contracts.
 
 This method provides direct access to the contract opener if you need to use it independently or for advanced use cases.
+
+For default SDK configuration this is a [`RetryableContractOpener`](./contract_opener.md#retryablecontractopener). When the selected network artifacts include `TONCENTER_V3_INDEXER_ENDPOINT`, its first opener is the indexed [`ToncenterV3Opener`](./contract_opener.md#toncenterv3opener).
 
 #### **Returns**
 [`ContractOpener`](./contract_opener.md)

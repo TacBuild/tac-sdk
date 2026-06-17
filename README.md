@@ -67,9 +67,6 @@ The TAC SDK enables you to create frontends that:
   - [`TonConnectSender`](./docs/sdks/sender.md#tonconnectsender): Implements sending via TonConnect UI.
   - [`RawSender`](./docs/sdks/sender.md#rawsender): Implements sending using a raw private key.
 
-- **[`Utilities`](./docs/sdks/utilities.md)**: Helper functions and interfaces.
-  - [`startTracking`](./docs/sdks/utilities.md#starttracking): Utility function to poll and log operation status to the console.
-
 - **[`AgnosticSdk`](./docs/sdks/agnostic_proxy_sdk.md)**: Agnostic SDK for cross-chain interactions.
 
 - **[`Simulator`](./docs/sdks/simulator.md)**: Transaction simulation capabilities.

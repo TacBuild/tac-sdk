@@ -61,7 +61,6 @@ export const DEFAULT_WAIT_DELAY_MS = 10000; // 10 seconds
 
 export const DEFAULT_FIND_TX_LIMIT = 100;
 export const DEFAULT_MAX_SCANNED_TRANSACTIONS = 100;
-export const DEFAULT_FIND_TX_ARCHIVAL = true;
 export const DEFAULT_FIND_TX_MAX_DEPTH = 10;
 export const DEFAULT_RETRY_ON_NOT_FOUND = true;
 export const DEFAULT_RETRY_ON_NOT_FOUND_RETRIES = 10;
@@ -70,7 +69,7 @@ export const IGNORE_MSG_VALUE_1_NANO = 1n;
 export const CROSS_CHAIN_MESSAGE_VERSION_V1 = 1n;
 export const NFT_BRIDGE_AMOUNT = 1n;
 export const DEFAULT_EIP1559_PRIORITY_FEE = 0n;
-export const SHARDS_KEY_RANDOM_RANGE = 1e18;
 export const IGNORE_OPCODE = [
     0xd53276db, // Excess
 ];
+export const HTTP_NOT_FOUND_STATUS_CODE = 404;

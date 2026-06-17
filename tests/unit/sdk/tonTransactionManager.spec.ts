@@ -205,6 +205,7 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
 
     const operationTracker = {
         getOperationId: jest.fn(),
+        getOperationIdByTonTransactionBoc: jest.fn(),
         getOperationType: jest.fn(),
         getStageProfiling: jest.fn(),
     };
@@ -218,6 +219,7 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
         TONParams: {
             contractOpener,
             crossChainLayerAddress: 'EQCrossChainLayer',
+            tonIndexer: {},
         },
     };
 
@@ -228,11 +230,13 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
         error: jest.fn(),
     };
 
+    const externalMessageBoc = 'external-message-boc';
+
     const sender = {
         getSenderAddress: jest.fn().mockReturnValue('EQSender'),
         sendShardTransaction: jest.fn().mockResolvedValue({
             success: true,
-            boc: '',
+            boc: externalMessageBoc,
         }),
     };
 
@@ -265,6 +269,8 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
                 return stageProfilingResult;
             },
         );
+        operationTracker.getOperationIdByTonTransactionBoc.mockResolvedValue('op-1');
+        operationTracker.getOperationId.mockResolvedValue('op-linker');
     });
 
     afterAll(() => {
@@ -288,7 +294,6 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
             },
             transactionLinker,
         } as never);
-        operationTracker.getOperationId.mockResolvedValue('op-1');
         operationTracker.getOperationType.mockResolvedValue(OperationType.TON_TAC_TON);
         stageProfilingResult = {
             operationType: OperationType.TON_TAC_TON,
@@ -310,6 +315,7 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
             {
                 options: {
                     ensureTxExecuted: false,
+                    waitOperationIdOptions: { maxAttempts: 1, delay: 5 },
                     finalizationWaitOptions: {
                         maxAttempts: 2,
                         delay: 10,
@@ -323,10 +329,11 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
 
         expect(result.operationId).toBe('op-1');
         expect(checkBalanceSpy).toHaveBeenCalled();
-        expect(operationTracker.getOperationId).toHaveBeenCalledWith(
-            transactionLinker,
-            expect.objectContaining({ logger }),
+        expect(operationTracker.getOperationIdByTonTransactionBoc).toHaveBeenCalledWith(
+            externalMessageBoc,
+            expect.objectContaining({ logger, maxAttempts: 1, delay: 5 }),
         );
+        expect(operationTracker.getOperationId).not.toHaveBeenCalled();
         expect(operationTracker.getOperationType).not.toHaveBeenCalled();
         expect(operationTracker.getStageProfiling).toHaveBeenCalledWith(
             'op-1',
@@ -357,7 +364,6 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
                 timestamp: 456,
             },
         } as never);
-        operationTracker.getOperationId.mockResolvedValue('op-1');
         await manager.sendCrossChainTransaction(
             { evmTargetAddress: '0xTarget' } as never,
             sender as never,
@@ -370,6 +376,10 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
         );
 
         expect(operationTracker.getOperationType).not.toHaveBeenCalled();
+        expect(operationTracker.getOperationIdByTonTransactionBoc).toHaveBeenCalledWith(
+            externalMessageBoc,
+            expect.objectContaining({ logger }),
+        );
         expect(operationTracker.getStageProfiling).toHaveBeenCalledWith(
             'op-1',
             expect.objectContaining({
@@ -394,9 +404,7 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
                 timestamp: 456,
             },
         } as never);
-        operationTracker.getOperationId.mockResolvedValue('op-1');
-
-        await manager.sendCrossChainTransaction(
+        const result = await manager.sendCrossChainTransaction(
             { evmTargetAddress: '0xTarget' } as never,
             sender as never,
             {
@@ -407,9 +415,53 @@ describe('TONTransactionManager.sendCrossChainTransaction', () => {
             } as never,
         );
 
-        expect(operationTracker.getOperationId).toHaveBeenCalled();
+        expect(result.operationId).toBe('op-1');
+        expect(operationTracker.getOperationIdByTonTransactionBoc).toHaveBeenCalledWith(
+            externalMessageBoc,
+            expect.objectContaining({ logger }),
+        );
         expect(operationTracker.getOperationType).not.toHaveBeenCalled();
         expect(operationTracker.getStageProfiling).not.toHaveBeenCalled();
         expect(contractOpener.trackTransactionTree).not.toHaveBeenCalled();
+    });
+
+    it('falls back to transaction linker when BOC lookup does not resolve operation id', async () => {
+        const transactionLinker = {
+            caller: 'EQSender',
+            shardCount: 1,
+            shardsKey: '123',
+            timestamp: 456,
+        };
+        prepareCrossChainTransactionSpy.mockResolvedValue({
+            transaction: {
+                validUntil: 1,
+                messages: [],
+                network: 'testnet',
+            },
+            transactionLinker,
+        } as never);
+        operationTracker.getOperationIdByTonTransactionBoc.mockResolvedValue('');
+
+        const result = await manager.sendCrossChainTransaction(
+            { evmTargetAddress: '0xTarget' } as never,
+            sender as never,
+            {
+                options: {
+                    ensureTxExecuted: false,
+                    waitFinalization: false,
+                },
+            } as never,
+        );
+
+        expect(result.operationId).toBe('op-linker');
+        expect(operationTracker.getOperationIdByTonTransactionBoc).toHaveBeenCalledWith(
+            externalMessageBoc,
+            expect.objectContaining({ logger }),
+        );
+        expect(operationTracker.getOperationId).toHaveBeenCalledWith(
+            transactionLinker,
+            expect.objectContaining({ logger }),
+        );
+        expect(operationTracker.getStageProfiling).not.toHaveBeenCalled();
     });
 });
