@@ -1,6 +1,6 @@
 {
     "name": "@tonappchain/sdk",
-    "version": "0.8.0",
+    "version": "0.8.1-rc1",
     "repository": "https://github.com/TacBuild/tac-sdk.git",
     "author": "TAC. <developers@tac>",
     "license": "MIT",
@@ -78,9 +78,14 @@
     },
     "peerDependencies": {
         "@ton/ton": ">=15",
-        "@tonconnect/ui": ">=2",
+        "@tonconnect/ui": ">=3",
         "ethers": ">=6",
         "ton-crypto": ">=3"
+    },
+    "peerDependenciesMeta": {
+        "@tonconnect/ui": {
+            "optional": true
+        }
     },
     "keywords": [],
     "description": "",
@@ -91,7 +96,7 @@
         "@ton/sandbox": "^0.27.1",
         "@ton/test-utils": "^0.5.0",
         "@ton/ton": "16.2.2",
-        "@tonconnect/ui": "^2.0.11",
+        "@tonconnect/ui": "^3.0.0",
         "@types/bn.js": "^5.1.6",
         "@types/jest": "^29.5.14",
         "eslint": "^9.26.0",

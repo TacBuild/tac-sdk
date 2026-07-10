@@ -1,9 +1,7 @@
 import { address } from '@ton/ton';
-import { Base64 } from '@tonconnect/protocol';
-import type { SendTransactionRequest } from '@tonconnect/ui';
-import { CHAIN, TonConnectUI } from '@tonconnect/ui';
 
-import { Asset, ContractOpener, SenderAbstraction } from '../interfaces';
+import { Asset, ContractOpener, ITonConnectUI, SenderAbstraction } from '../interfaces';
+import { TON_MAINNET_GLOBAL_ID, TON_TESTNET_GLOBAL_ID } from '../sdk/Consts';
 import { sleep } from '../sdk/Utils';
 import type { SendResult, ShardTransaction } from '../structs/InternalStruct';
 import { Network } from '../structs/Struct';
@@ -11,9 +9,9 @@ import { Network } from '../structs/Struct';
 const CHUNK_SIZE = 4;
 
 export class TonConnectSender implements SenderAbstraction {
-    readonly tonConnect: TonConnectUI;
+    readonly tonConnect: ITonConnectUI;
 
-    constructor(tonConnect: TonConnectUI) {
+    constructor(tonConnect: ITonConnectUI) {
         this.tonConnect = tonConnect;
     }
 
@@ -28,7 +26,7 @@ export class TonConnectSender implements SenderAbstraction {
     }
 
     private async sendChunkedMessages(
-        messages: SendTransactionRequest['messages'],
+        messages: { address: string; amount: string; payload: string }[],
         validUntil: number,
         chain: Network,
     ): Promise<SendResult[]> {
@@ -37,16 +35,19 @@ export class TonConnectSender implements SenderAbstraction {
 
         const chunkSize =
             this.tonConnect.wallet?.device.features.find(
-                (feat) => Object.prototype.hasOwnProperty.call(feat, 'maxMessages'),
-                //@ts-expect-error // 'find' checks that maxMessages is a property of the feature
+                (feature): feature is { maxMessages: number } =>
+                    typeof feature === 'object' &&
+                    feature !== null &&
+                    'maxMessages' in feature &&
+                    typeof feature.maxMessages === 'number',
             )?.maxMessages || CHUNK_SIZE;
 
         for (let i = 0; i < messages.length; i += chunkSize) {
             const chunk = messages.slice(i, i + chunkSize);
-            const transaction: SendTransactionRequest = {
+            const transaction = {
                 validUntil,
                 messages: chunk,
-                network: chain == Network.MAINNET ? CHAIN.MAINNET : CHAIN.TESTNET,
+                network: (chain === Network.MAINNET ? TON_MAINNET_GLOBAL_ID : TON_TESTNET_GLOBAL_ID).toString(),
             };
 
             try {
@@ -85,7 +86,7 @@ export class TonConnectSender implements SenderAbstraction {
                 allMessages.push({
                     address: message.address,
                     amount: message.value.toString(),
-                    payload: Base64.encode(message.payload.toBoc()).toString(),
+                    payload: message.payload.toBoc().toString('base64'),
                 });
             }
             minValidUntil = Math.min(minValidUntil, transaction.validUntil);
@@ -104,7 +105,7 @@ export class TonConnectSender implements SenderAbstraction {
             messages.push({
                 address: message.address,
                 amount: message.value.toString(),
-                payload: Base64.encode(message.payload.toBoc()).toString(),
+                payload: message.payload.toBoc().toString('base64'),
             });
         }
 

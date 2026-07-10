@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- Updated the optional TonConnect UI peer requirement to v3, so the SDK no longer installs or loads the UI package for consumers that do not use TonConnect.
+
 ## [0.8.0] - 2026-06-17
 
 ### Added
