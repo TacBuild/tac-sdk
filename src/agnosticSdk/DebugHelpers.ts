@@ -1,4 +1,4 @@
-import { ethers, Interface } from 'ethers';
+import { AbiCoder, formatEther, Interface } from 'ethers';
 
 import { Hook, HookType, NFTData, ZapCall } from './AgnosticStructs';
 
@@ -30,14 +30,14 @@ export class DebugHelpers {
         try {
             switch (hook.hookType) {
                 case HookType.Custom:
-                    return ethers.AbiCoder.defaultAbiCoder().decode(
+                    return AbiCoder.defaultAbiCoder().decode(
                         ['tuple(bool,address,uint256,bytes,bytes)'],
                         hook.hookData,
                     )[0];
                 case HookType.FullBalanceApprove:
-                    return ethers.AbiCoder.defaultAbiCoder().decode(['tuple(address,address,bool)'], hook.hookData)[0];
+                    return AbiCoder.defaultAbiCoder().decode(['tuple(address,address,bool)'], hook.hookData)[0];
                 case HookType.FullBalanceTransfer:
-                    return ethers.AbiCoder.defaultAbiCoder().decode(['tuple(address,address,bool)'], hook.hookData)[0];
+                    return AbiCoder.defaultAbiCoder().decode(['tuple(address,address,bool)'], hook.hookData)[0];
                 default:
                     throw new Error(`Unknown hook type: ${hook.hookType}`);
             }
@@ -186,7 +186,7 @@ export class DebugHelpers {
         }
 
         const perspective = isFromSA ? 'Smart Account' : 'Proxy Contract';
-        const valueStr = value > 0n ? ` (sending ${ethers.formatEther(value)} ETH)` : '';
+        const valueStr = value > 0n ? ` (sending ${formatEther(value)} ETH)` : '';
         const replacementStr = hasReplacements ? ' 🔄 [with dynamic value replacement]' : '';
 
         return `📞 Custom call to ${this._formatAddress(contractAddress)} from ${perspective}${valueStr}
@@ -314,7 +314,7 @@ export class DebugHelpers {
      * @returns The encoded zap call that can be used as calldata in tac sdk
      */
     public encodeZapCall(zapCall: ZapCall): string {
-        return ethers.AbiCoder.defaultAbiCoder().encode(
+        return AbiCoder.defaultAbiCoder().encode(
             [
                 'tuple(' +
                     'tuple(uint8,bytes)[],' + // hooks: only hookType and hookData

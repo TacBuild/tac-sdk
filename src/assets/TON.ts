@@ -1,5 +1,5 @@
 import { Address, beginCell, Cell } from '@ton/ton';
-import { ethers } from 'ethers';
+import { Contract } from 'ethers';
 
 import { IERC20WithDecimals } from '../../artifacts/tacTypes';
 import { insufficientBalanceError } from '../errors';
@@ -140,7 +140,7 @@ export class TON implements Asset {
         }
 
         Validator.validateEVMAddress(userAddress);
-        const token = new ethers.Contract(
+        const token = new Contract(
             await this.getEVMAddress(),
             this._config.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
             this._config.TACParams.provider,

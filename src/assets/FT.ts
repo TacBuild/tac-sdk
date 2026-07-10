@@ -1,6 +1,6 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, beginCell, Cell, OpenedContract } from '@ton/ton';
-import { ethers, isAddress as isEthereumAddress } from 'ethers';
+import { Contract, isAddress as isEthereumAddress } from 'ethers';
 
 import { IERC20WithDecimals } from '../../artifacts/tacTypes';
 import { JettonMinter, JettonMinterData, JettonWallet } from '../../artifacts/tonTypes';
@@ -131,7 +131,7 @@ export class FT implements Asset {
 
         if (fromTVM) {
             const cclErc20Abi = configuration.artifacts.tac.compilationArtifacts.ICrossChainLayerERC20.abi;
-            const erc20Token = new ethers.Contract(address, cclErc20Abi, configuration.TACParams.provider);
+            const erc20Token = new Contract(address, cclErc20Abi, configuration.TACParams.provider);
 
             const info = await erc20Token.getInfo();
             return info.tvmAddress;
@@ -212,7 +212,7 @@ export class FT implements Asset {
 
         // For ERC20 contracts, get decimals from contract
         const erc20TokenAbi = configuration.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi;
-        const erc20Token = new ethers.Contract(
+        const erc20Token = new Contract(
             evmAddress,
             erc20TokenAbi,
             configuration.TACParams.provider,
@@ -500,7 +500,7 @@ export class FT implements Asset {
             return this._configuration.TACParams.provider.getBalance(userAddress);
         }
 
-        const erc20Token = new ethers.Contract(
+        const erc20Token = new Contract(
             evmAddress,
             this._configuration.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
             this._configuration.TACParams.provider,

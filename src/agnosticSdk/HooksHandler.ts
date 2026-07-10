@@ -1,4 +1,4 @@
-import { ethers, Interface } from 'ethers';
+import { AbiCoder, getAddress, Interface } from 'ethers';
 
 import {
     AmountChange,
@@ -44,13 +44,13 @@ export class HooksHandler {
         if (dynamicReplacements && dynamicReplacements.length > 0) {
             // For now, support single replacement (can be extended)
             const replacement = dynamicReplacements[0]!;
-            const replacementData = ethers.AbiCoder.defaultAbiCoder().encode(
+            const replacementData = AbiCoder.defaultAbiCoder().encode(
                 ['tuple(uint16,uint16,address,address)'],
                 [[replacement.position, replacement.len, replacement.token, replacement.balanceAddress]],
             );
 
             // Encode as ReplacementType.Amount with the replacement data
-            improvedMissionInfo = ethers.AbiCoder.defaultAbiCoder().encode(
+            improvedMissionInfo = AbiCoder.defaultAbiCoder().encode(
                 ['uint8', 'bytes'],
                 [ReplacementType.Amount, replacementData],
             );
@@ -58,14 +58,14 @@ export class HooksHandler {
 
         const customHookData: CustomHookData = {
             isFromSAPerspective,
-            contractAddress: ethers.getAddress(contractAddress.toLowerCase()), // Normalize address to checksum format
+            contractAddress: getAddress(contractAddress.toLowerCase()), // Normalize address to checksum format
             value,
             data,
             improvedMissionInfo,
         };
 
         // Encode only the CustomHookData
-        const encodedHookData = ethers.AbiCoder.defaultAbiCoder().encode(
+        const encodedHookData = AbiCoder.defaultAbiCoder().encode(
             ['tuple(bool,address,uint256,bytes,bytes)'],
             [
                 [
@@ -99,7 +99,7 @@ export class HooksHandler {
         };
 
         // Encode only the ApproveHookData
-        const encodedHookData = ethers.AbiCoder.defaultAbiCoder().encode(
+        const encodedHookData = AbiCoder.defaultAbiCoder().encode(
             ['tuple(address,address,bool)'],
             [[approveHookData.token, approveHookData.to, approveHookData.isFromSAPerspective]],
         );
@@ -125,7 +125,7 @@ export class HooksHandler {
         };
 
         // Encode only the TransferHookData
-        const encodedHookData = ethers.AbiCoder.defaultAbiCoder().encode(
+        const encodedHookData = AbiCoder.defaultAbiCoder().encode(
             ['tuple(address,address,bool)'],
             [[transferHookData.token, transferHookData.to, transferHookData.isFromSAPerspective]],
         );

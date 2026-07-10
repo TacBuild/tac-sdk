@@ -1,6 +1,6 @@
 import { SandboxContract } from '@ton/sandbox';
 import { Address, address, beginCell, Cell, fromNano, OpenedContract } from '@ton/ton';
-import { ethers, isAddress as isEthereumAddress } from 'ethers';
+import { Contract, isAddress as isEthereumAddress } from 'ethers';
 
 import { ICrossChainLayerERC721, IERC721 } from '../../artifacts/tacTypes';
 import { NFTCollection, NFTCollectionData, NFTItemData } from '../../artifacts/tonTypes';
@@ -174,7 +174,7 @@ export class NFT implements Asset {
 
         if (exists) {
             const cclErc721TokenAbi = configuration.artifacts.tac.compilationArtifacts.ICrossChainLayerERC721.abi;
-            const cclErc721Token = new ethers.Contract(
+            const cclErc721Token = new Contract(
                 collectionAddress,
                 cclErc721TokenAbi,
                 configuration.TACParams.provider,
@@ -386,7 +386,7 @@ export class NFT implements Asset {
         }
 
         Validator.validateEVMAddress(userAddress);
-        const nft = new ethers.Contract(
+        const nft = new Contract(
             await this.getEVMAddress(),
             this._configuration.artifacts.tac.compilationArtifacts.IERC721.abi,
             this._configuration.TACParams.provider,

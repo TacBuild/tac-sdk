@@ -1,5 +1,5 @@
 import { Address, beginCell, Cell, Message, storeMessage, storeStateInit } from '@ton/ton';
-import { AbiCoder, ethers } from 'ethers';
+import { AbiCoder, getCreate2Address, keccak256, solidityPacked } from 'ethers';
 import { sha256_sync } from 'ton-crypto';
 
 import type { FT, NFT, TON } from '../assets';
@@ -109,13 +109,13 @@ export function calculateEVMTokenAddress(
     crossChainLayerAddress: string,
     tvmAddress: string,
 ): string {
-    const salt = ethers.keccak256(ethers.solidityPacked(['string'], [tvmAddress]));
-    const initCode = ethers.solidityPacked(
+    const salt = keccak256(solidityPacked(['string'], [tvmAddress]));
+    const initCode = solidityPacked(
         ['bytes', 'bytes'],
         [crossChainLayerTokenBytecode, abiCoder.encode(['address'], [crossChainLayerAddress])],
     );
-    const initCodeHash = ethers.keccak256(initCode);
-    return ethers.getCreate2Address(tokenUtilsAddress, salt, initCodeHash);
+    const initCodeHash = keccak256(initCode);
+    return getCreate2Address(tokenUtilsAddress, salt, initCodeHash);
 }
 
 const snakeToCamel = (str: string): string => str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
