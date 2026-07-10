@@ -34,5 +34,6 @@ run_hardhat_build "artifacts/mainnet/l2-evm"
 
 echo "Compiling TypeScript..."
 tsc --declaration
+npm run build:esm
 
 echo "Build complete!"

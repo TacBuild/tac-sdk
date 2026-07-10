@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import * as Ethers from 'ethers';
 
 import type { Asset } from '../../../src';
 import {
@@ -80,7 +80,7 @@ describe('TACTransactionManager', () => {
         nativeTACAddress: jest.fn().mockResolvedValue('0xNativeTAC'),
     };
 
-    const signer = { address: '0xSigner' } as ethers.Wallet;
+    const signer = { address: '0xSigner' } as Ethers.Wallet;
 
     const erc20Approve = Object.assign(jest.fn().mockResolvedValue({ wait: jest.fn().mockResolvedValue(undefined) }), {
         estimateGas: jest.fn().mockResolvedValue(10n),
@@ -93,8 +93,8 @@ describe('TACTransactionManager', () => {
     const erc721Contract = { connect: jest.fn().mockReturnValue({ approve: erc721Approve }) };
 
     const contractMock = jest
-        .spyOn(ethers, 'Contract')
-        .mockImplementation((target: string | ethers.Addressable) => {
+        .spyOn(Ethers, 'Contract')
+        .mockImplementation((target: string | Ethers.Addressable) => {
             const address =
                 typeof target === 'string'
                     ? target

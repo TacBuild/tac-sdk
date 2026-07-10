@@ -31,6 +31,8 @@ To use `TonConnectSender`, install TonConnect UI v3 alongside the SDK:
 npm install @tonconnect/ui@^3
 ```
 
+The package provides native ESM imports and CommonJS `require()` entry points.
+
 ## Features
 
 The TAC SDK enables you to create frontends that:
