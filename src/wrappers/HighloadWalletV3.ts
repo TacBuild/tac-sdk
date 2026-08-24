@@ -16,7 +16,7 @@ import {
 import { sign } from 'ton-crypto';
 
 import { WalletInstanse } from '../interfaces';
-import { HighloadQueryId } from './HighloadQueryId';
+import { HIGHLOAD_QUERY_ID_INVALID_BIT_NUMBER, HighloadQueryId } from './HighloadQueryId';
 
 export enum OP {
     InternalTransfer = 0xae42e5a4,
@@ -40,6 +40,8 @@ const HIGHLOAD_V3_CODE = Cell.fromBoc(
 
 export const TIMESTAMP_SIZE = 64;
 export const TIMEOUT_SIZE = 22;
+
+const QUERY_ID_PERIOD = 8388608n; // 2^23
 
 export function highloadWalletV3ConfigToCell(config: HighloadWalletV3Config): Cell {
     return beginCell()
@@ -106,7 +108,20 @@ export class HighloadWalletV3 implements WalletInstanse {
     }
 
     static generateCreatedAt(): number {
-        return Math.floor(Date.now() / 1000) - 40; // -40 is used to pass check created_at <= now() in smart contract for sure
+        // -40 is used to pass check created_at <= now() in smart contract for sure
+        return HighloadWalletV3.normalizeCreatedAt(Math.floor(Date.now() / 1000) - 40);
+    }
+
+    /**
+     * The Highload V3 contract accepts bitnumber values [0..1022]. Query IDs
+     * are derived from createdAt, so skip timestamps whose low 10 bits are the
+     * invalid value 1023.
+     */
+    static normalizeCreatedAt(createdAt: number): number {
+        const queryId = BigInt(createdAt) % QUERY_ID_PERIOD;
+        return (queryId & HIGHLOAD_QUERY_ID_INVALID_BIT_NUMBER) === HIGHLOAD_QUERY_ID_INVALID_BIT_NUMBER
+            ? createdAt + 1
+            : createdAt;
     }
 
     async sendExternalMessage(
@@ -164,6 +179,7 @@ export class HighloadWalletV3 implements WalletInstanse {
         if (createdAt == undefined) {
             createdAt = HighloadWalletV3.generateCreatedAt();
         }
+        createdAt = HighloadWalletV3.normalizeCreatedAt(createdAt);
 
         const queryId = this.getQueryIdFromCreatedAt(createdAt);
 
@@ -178,7 +194,7 @@ export class HighloadWalletV3 implements WalletInstanse {
     }
 
     getQueryIdFromCreatedAt(createdAt: number): HighloadQueryId {
-        return HighloadQueryId.fromQueryId(BigInt(createdAt) % 8388608n);
+        return HighloadQueryId.fromQueryId(BigInt(createdAt) % QUERY_ID_PERIOD);
     }
 
     getExternalMessage(
