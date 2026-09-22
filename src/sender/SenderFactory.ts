@@ -6,11 +6,11 @@ import {
     WalletContractV4,
     WalletContractV5R1,
 } from '@ton/ton';
-import { TonConnectUI } from '@tonconnect/ui';
 import { mnemonicToWalletKey } from 'ton-crypto';
 
 import { unknownWalletError } from '../errors';
-import { SenderAbstraction } from '../interfaces';
+import { ITonConnectUI, SenderAbstraction } from '../interfaces';
+import { TON_MAINNET_GLOBAL_ID, TON_TESTNET_GLOBAL_ID } from '../sdk/Consts';
 import { Network } from '../structs/Struct';
 import { DEFAULT_SUBWALLET_ID, DEFAULT_TIMEOUT, HighloadWalletV3 } from '../wrappers/HighloadWalletV3';
 import { BatchSender } from './BatchSender';
@@ -46,7 +46,7 @@ export class SenderFactory {
                       };
                   };
               }
-            | { tonConnect: TonConnectUI },
+            | { tonConnect: ITonConnectUI },
     ): Promise<SenderAbstraction> {
         if ('tonConnect' in params) {
             return new TonConnectSender(params.tonConnect);
@@ -71,7 +71,7 @@ export class SenderFactory {
         if (params.version === 'V5R1') {
             // manual setup of wallet id required to support wallet w5 both on mainnet and testnet
             config.walletId = {
-                networkGlobalId: params.network === Network.MAINNET ? -239 : -3,
+                networkGlobalId: params.network === Network.MAINNET ? TON_MAINNET_GLOBAL_ID : TON_TESTNET_GLOBAL_ID,
                 context: {
                     walletVersion: 'v5r1',
                     workchain: 0,

@@ -1,5 +1,5 @@
 import { Address, Dictionary, loadConfigParamsAsSlice, parseFullConfig } from '@ton/ton';
-import { ethers, keccak256, toUtf8Bytes } from 'ethers';
+import { AbiCoder, AbstractProvider, Contract, getDefaultProvider, id, keccak256, toUtf8Bytes } from 'ethers';
 
 import type { NetworkArtifacts } from '../../artifacts';
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
@@ -158,7 +158,7 @@ export class Configuration implements IConfiguration {
 
     private static async prepareTACParams(network: Network, TACParams?: TACParams): Promise<InternalTACParams> {
         const artifacts = getArtifacts(network);
-        let provider: ethers.AbstractProvider;
+        let provider: AbstractProvider;
         let settingsAddress: string;
         let saFactoryAddress: string;
         if (network === Network.DEV) {
@@ -177,7 +177,7 @@ export class Configuration implements IConfiguration {
             }
             saFactoryAddress = TACParams.saFactoryAddress;
         } else {
-            provider = TACParams?.provider ?? ethers.getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
+            provider = TACParams?.provider ?? getDefaultProvider(artifacts.TAC_RPC_ENDPOINT);
             settingsAddress = TACParams?.settingsAddress ?? artifacts.TAC_SETTINGS_ADDRESS;
             saFactoryAddress = TACParams?.saFactoryAddress ?? artifacts.TAC_SMART_ACCOUNT_FACTORY_ADDRESS;
         }
@@ -185,7 +185,7 @@ export class Configuration implements IConfiguration {
         Validator.validateEVMAddress(settingsAddress);
 
         const settingsAbi = artifacts.tac.compilationArtifacts.ISettings.abi;
-        const settings = new ethers.Contract(settingsAddress, settingsAbi, provider) as unknown as ISettings;
+        const settings = new Contract(settingsAddress, settingsAbi, provider) as unknown as ISettings;
 
         const loaded = await this.loadTACSettingsViaMulticall(network, provider, settingsAddress);
         let crossChainLayerAddress: string;
@@ -206,17 +206,17 @@ export class Configuration implements IConfiguration {
         }
 
         const crossChainLayerAbi = artifacts.tac.compilationArtifacts.ICrossChainLayer.abi;
-        const crossChainLayer = new ethers.Contract(
+        const crossChainLayer = new Contract(
             crossChainLayerAddress,
             crossChainLayerAbi,
             provider,
         ) as unknown as ICrossChainLayer;
 
         const tokenUtilsAbi = artifacts.tac.compilationArtifacts.ITokenUtils.abi;
-        const tokenUtils = new ethers.Contract(tokenUtilsAddress, tokenUtilsAbi, provider) as unknown as ITokenUtils;
+        const tokenUtils = new Contract(tokenUtilsAddress, tokenUtilsAbi, provider) as unknown as ITokenUtils;
 
         const TacSAFactoryAbi = artifacts.tac.compilationArtifacts.ISAFactory.abi;
-        const smartAccountFactory = new ethers.Contract(
+        const smartAccountFactory = new Contract(
             saFactoryAddress,
             TacSAFactoryAbi,
             provider,
@@ -230,13 +230,13 @@ export class Configuration implements IConfiguration {
             crossChainLayer,
             trustedTACExecutors,
             trustedTONExecutors,
-            abiCoder: new ethers.AbiCoder(),
+            abiCoder: new AbiCoder(),
         };
     }
 
     private static async loadTACSettingsViaMulticall(
         network: Network,
-        provider: ethers.AbstractProvider,
+        provider: AbstractProvider,
         settingsAddress: string,
     ) {
         if (network === Network.DEV) {
@@ -249,12 +249,12 @@ export class Configuration implements IConfiguration {
         const multicallAbi = artifacts.tac.multicall.MULTICALL_ABI_ETHERS;
         try {
             Validator.validateEVMAddress(multicallAddress);
-            const multicall = new ethers.Contract(multicallAddress, multicallAbi, provider);
-            const abiCoder = new ethers.AbiCoder();
+            const multicall = new Contract(multicallAddress, multicallAbi, provider);
+            const abiCoder = new AbiCoder();
 
-            const selectorGetAddressSetting = ethers.id('getAddressSetting(bytes32)').slice(0, 10);
-            const selectorGetTrustedEVMExecutors = ethers.id('getTrustedEVMExecutors()').slice(0, 10);
-            const selectorGetTrustedTVMExecutors = ethers.id('getTrustedTVMExecutors()').slice(0, 10);
+            const selectorGetAddressSetting = id('getAddressSetting(bytes32)').slice(0, 10);
+            const selectorGetTrustedEVMExecutors = id('getTrustedEVMExecutors()').slice(0, 10);
+            const selectorGetTrustedTVMExecutors = id('getTrustedTVMExecutors()').slice(0, 10);
 
             const crossChainLayerKey = keccak256(toUtf8Bytes('CrossChainLayerAddress'));
             const tokenUtilsKey = keccak256(toUtf8Bytes('TokenUtilsAddress'));

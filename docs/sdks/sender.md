@@ -37,7 +37,7 @@ SenderFactory.getSender(
           highloadV3?: { subwalletId?: number; timeout?: number };
         };
       }
-    | { tonConnect: TonConnectUI }
+    | { tonConnect: ITonConnectUI }
 ): Promise<SenderAbstraction>
 ```
 

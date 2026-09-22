@@ -1,5 +1,5 @@
 import { Address, beginCell, Dictionary } from '@ton/ton';
-import { ethers } from 'ethers';
+import * as Ethers from 'ethers';
 
 import { mainnet, testnet } from '../../../artifacts';
 import { Configuration, ContractOpener, Network } from '../../../src';
@@ -59,7 +59,7 @@ describe('Configuration', () => {
         contractOpener: mockContractOpener,
     };
 
-    const contractMock = jest.spyOn(ethers, 'Contract').mockImplementation((target: string | ethers.Addressable) => {
+    const contractMock = jest.spyOn(Ethers, 'Contract').mockImplementation((target: string | Ethers.Addressable) => {
         if (!target) {
             return mockSettings as never; // Default fallback for undefined target
         }
@@ -79,7 +79,7 @@ describe('Configuration', () => {
         }
     });
 
-    const getDefaultProviderMock = jest.spyOn(ethers, 'getDefaultProvider').mockReturnValue(mockProvider);
+    const getDefaultProviderMock = jest.spyOn(Ethers, 'getDefaultProvider').mockReturnValue(mockProvider);
 
     const mockTACParams = {
         provider: mockProvider,

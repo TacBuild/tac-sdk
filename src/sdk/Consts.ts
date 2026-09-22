@@ -37,6 +37,8 @@ export const MAX_MSG_DEPTH = 512;
 
 export const TON_SYMBOL = 'TON';
 export const TAC_SYMBOL = 'TAC';
+export const TON_MAINNET_GLOBAL_ID = -239;
+export const TON_TESTNET_GLOBAL_ID = -3;
 
 export const FIFTEEN_MINUTES = 15 * 60 * 1000;
 export const ONE_YEAR_SECONDS = 365 * 24 * 3600;

@@ -25,6 +25,13 @@ or
 yarn add @tonappchain/sdk
 ```
 
+To use `TonConnectSender`, install TonConnect UI v3 alongside the SDK:
+
+```bash
+npm install @tonconnect/ui@^3
+```
+
+The package provides native ESM imports and CommonJS `require()` entry points.
 
 ## Features
 
