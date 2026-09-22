@@ -28,7 +28,7 @@ export class TonConnectSender implements SenderAbstraction {
     }
 
     private async sendChunkedMessages(
-        messages: SendTransactionRequest['messages'],
+        messages: NonNullable<SendTransactionRequest['messages']>,
         validUntil: number,
         chain: Network,
     ): Promise<SendResult[]> {
