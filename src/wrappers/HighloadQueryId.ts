@@ -1,5 +1,6 @@
-const BIT_NUMBER_SIZE = 10n; // 10 bit
-const MAX_BIT_NUMBER = 1022n;
+export const HIGHLOAD_QUERY_ID_BIT_NUMBER_SIZE = 10n;
+export const HIGHLOAD_QUERY_ID_INVALID_BIT_NUMBER = (1n << HIGHLOAD_QUERY_ID_BIT_NUMBER_SIZE) - 1n;
+const MAX_BIT_NUMBER = HIGHLOAD_QUERY_ID_INVALID_BIT_NUMBER - 1n;
 const MAX_SHIFT = 8191n; // 2^13 = 8192
 
 export class HighloadQueryId {
@@ -55,12 +56,12 @@ export class HighloadQueryId {
     }
 
     getQueryId(): bigint {
-        return (this.shift << BIT_NUMBER_SIZE) + this.bitnumber;
+        return (this.shift << HIGHLOAD_QUERY_ID_BIT_NUMBER_SIZE) + this.bitnumber;
     }
 
     static fromQueryId(queryId: bigint): HighloadQueryId {
-        const shift = queryId >> BIT_NUMBER_SIZE;
-        const bitnumber = queryId & 1023n;
+        const shift = queryId >> HIGHLOAD_QUERY_ID_BIT_NUMBER_SIZE;
+        const bitnumber = queryId & HIGHLOAD_QUERY_ID_INVALID_BIT_NUMBER;
         return this.fromShiftAndBitNumber(shift, bitnumber);
     }
 
