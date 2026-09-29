@@ -1,4 +1,4 @@
-import { ethers, Wallet } from 'ethers';
+import { Contract, Overrides, Wallet } from 'ethers';
 
 import { IERC20WithDecimals, IERC721 } from '../../artifacts/tacTypes';
 import { AssetFactory, NFT } from '../assets';
@@ -119,14 +119,14 @@ export class TACTransactionManager implements ITACTransactionManager {
         asset: Asset,
         signer: Wallet,
         spenderAddress: string,
-        transactionParams: ethers.Overrides = {},
+        transactionParams: Overrides = {},
     ): Promise<void> {
         const evmAddress = await asset.getEVMAddress();
         const hasTransactionParams = Object.keys(transactionParams).length > 0;
 
         if (asset.type === AssetType.FT) {
             this.logger.debug(`Approving FT ${evmAddress} for ${spenderAddress}`);
-            const contract = new ethers.Contract(
+            const contract = new Contract(
                 evmAddress,
                 this.config.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
                 this.config.TACParams.provider,
@@ -137,7 +137,7 @@ export class TACTransactionManager implements ITACTransactionManager {
             await tx.wait();
         } else {
             this.logger.debug(`Approving NFT ${evmAddress} for ${spenderAddress}`);
-            const contract = new ethers.Contract(
+            const contract = new Contract(
                 evmAddress,
                 this.config.artifacts.tac.compilationArtifacts.IERC721.abi,
                 this.config.TACParams.provider,
@@ -157,12 +157,12 @@ export class TACTransactionManager implements ITACTransactionManager {
         asset: Asset,
         signer: Wallet,
         spenderAddress: string,
-        transactionParams: ethers.Overrides = {},
+        transactionParams: Overrides = {},
     ): Promise<bigint> {
         const evmAddress = await asset.getEVMAddress();
 
         if (asset.type === AssetType.FT) {
-            const contract = new ethers.Contract(
+            const contract = new Contract(
                 evmAddress,
                 this.config.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
                 this.config.TACParams.provider,
@@ -171,7 +171,7 @@ export class TACTransactionManager implements ITACTransactionManager {
             return contract.connect(signer).approve.estimateGas(spenderAddress, asset.rawAmount, transactionParams);
         }
 
-        const contract = new ethers.Contract(
+        const contract = new Contract(
             evmAddress,
             this.config.artifacts.tac.compilationArtifacts.IERC721.abi,
             this.config.TACParams.provider,
@@ -232,7 +232,7 @@ export class TACTransactionManager implements ITACTransactionManager {
             throw blockGasLimitFetchError('provider did not return latest block gas limit');
         }
 
-        const transactionParams: ethers.Overrides = {
+        const transactionParams: Overrides = {
             maxFeePerGas,
             maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? DEFAULT_EIP1559_PRIORITY_FEE,
         };

@@ -1,4 +1,4 @@
-import { ethers, Interface } from 'ethers';
+import { FunctionFragment, Interface, isAddress, ParamType } from 'ethers';
 
 import { AmountChange } from './AgnosticStructs';
 
@@ -113,7 +113,7 @@ export class ReplacementHelper {
         const functions = contractInterface.fragments
             .filter((fragment: { type: string }) => fragment.type === 'function')
             .map((fragment) => {
-                const func = fragment as ethers.FunctionFragment;
+                const func = fragment as FunctionFragment;
                 return {
                     name: func.name,
                     signature: func.format('full'),
@@ -236,12 +236,12 @@ export class ReplacementHelper {
             }
 
             // Check token address
-            if (!ethers.isAddress(token)) {
+            if (!isAddress(token)) {
                 validation.isValid = false;
                 validation.warnings.push(`Invalid token address: ${token}`);
             }
 
-            if (!ethers.isAddress(balanceAddress)) {
+            if (!isAddress(balanceAddress)) {
                 validation.isValid = false;
                 validation.warnings.push(`Invalid balance address: ${balanceAddress}`);
             }
@@ -261,7 +261,7 @@ export class ReplacementHelper {
      * @returns The position and length of the parameter
      */
     private _calculateParamPositionAndLength(
-        inputs: readonly ethers.ParamType[],
+        inputs: readonly ParamType[],
         targetIndex: number,
     ): { position: number; len: number } {
         // For now, we support simple types. Complex types (arrays, structs) would need more sophisticated calculation

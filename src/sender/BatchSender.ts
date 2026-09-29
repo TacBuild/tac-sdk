@@ -100,7 +100,7 @@ export class BatchSender implements SenderAbstraction {
 
             while (groupSize > 0) {
                 const group = messages.slice(left, left + groupSize);
-                const createdAt = Math.floor(Date.now() / 1000) - 40;
+                const createdAt = HighloadWalletV3.generateCreatedAt();
                 const queryId = this.wallet.getQueryIdFromCreatedAt(createdAt);
                 const externalMsg = this.wallet.getExternalMessage(group, SendMode.PAY_GAS_SEPARATELY, 0n, queryId);
 
@@ -139,6 +139,7 @@ export class BatchSender implements SenderAbstraction {
         if (createdAt <= this.lastCreatedAt) {
             createdAt = this.lastCreatedAt + 1; // to prevent error::already_executed on highload wallet
         }
+        createdAt = HighloadWalletV3.normalizeCreatedAt(createdAt);
         this.lastCreatedAt = createdAt;
 
         return walletContract.sendTransfer({
