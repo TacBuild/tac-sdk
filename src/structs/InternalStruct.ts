@@ -52,6 +52,12 @@ export enum AssetOpType {
     NFT_TRANSFER = 'NFT_TRANSFER',
 }
 
+export type DisplayMultiplier = {
+    hasDisplayMultiplier: boolean;
+    numerator: bigint;
+    denominator: bigint;
+};
+
 export type RandomNumberByTimestamp = {
     timestamp: number;
     randomNumber: number;

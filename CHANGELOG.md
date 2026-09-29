@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 - Updated the optional TonConnect UI peer requirement to v3, so the SDK no longer installs or loads the UI package for consumers that do not use TonConnect.
 - Added native ESM builds while preserving the existing CommonJS entry points.
 - Replaced runtime `ethers` namespace imports with named imports so browser bundlers can remove unused Ethers modules.
+- Fixed TEP-526 multiplier handling: RPC failures now propagate instead of silently falling back to `1/1`, preserving cached values on refresh failures.
+- Standardized getter VM errors as `ComputeError` from `@ton/ton` across built-in TON openers; custom openers must use the same error type.
 
 ## [0.8.0] - 2026-06-17
 

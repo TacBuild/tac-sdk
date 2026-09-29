@@ -3,7 +3,9 @@ import type { Message } from '@ton/ton';
 import {
     Address,
     beginCell,
+    ComputeError,
     Contract,
+    openContract,
     OpenedContract,
     storeMessage,
     TonClient,
@@ -42,7 +44,23 @@ export class TonClientOpener extends BaseContractOpener {
     }
 
     open<T extends Contract>(contract: T): OpenedContract<T> {
-        return this.client.open(contract);
+        return openContract(contract, ({ address, init }) => ({
+            ...this.client.provider(address, init),
+            open: (src) => this.open(src),
+            get: async (name, args) => {
+                if (typeof name !== 'string') {
+                    throw new Error('Method name must be a string for TonClient provider');
+                }
+                const result = await this.client.runMethodWithError(address, name, args);
+                if (result.exit_code !== 0 && result.exit_code !== 1) {
+                    throw new ComputeError(
+                        `Unable to execute get method. Got exit_code: ${result.exit_code}`,
+                        result.exit_code,
+                    );
+                }
+                return { stack: result.stack };
+            },
+        }));
     }
 
     async getContractState(address: Address): Promise<ContractState> {

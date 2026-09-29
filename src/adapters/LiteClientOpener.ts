@@ -1,4 +1,17 @@
-import { Address, beginCell, Cell, Contract, loadTransaction, OpenedContract, Transaction } from '@ton/ton';
+import {
+    Address,
+    beginCell,
+    Cell,
+    ComputeError,
+    Contract,
+    loadTransaction,
+    openContract,
+    OpenedContract,
+    parseTuple,
+    serializeTuple,
+    Transaction,
+    TupleReader,
+} from '@ton/ton';
 import { LiteClient, LiteEngine, LiteRoundRobinEngine, LiteSingleEngine } from '@tonappchain/ton-lite-client';
 
 import { mainnet, testnet } from '../../artifacts';
@@ -65,7 +78,23 @@ export class LiteClientOpener extends BaseContractOpener {
     }
 
     open<T extends Contract>(contract: T): OpenedContract<T> {
-        return this.client.open(contract);
+        return openContract(contract, ({ address, init }) => ({
+            ...this.client.provider(address, init),
+            open: (src) => this.open(src),
+            get: async (name, args) => {
+                const block = await this.client.getMasterchainInfo();
+                const result = await this.client.runMethod(
+                    address,
+                    name.toString(),
+                    serializeTuple(args).toBoc({ idx: false, crc32: false }),
+                    block.last,
+                );
+                if (result.exitCode !== 0 && result.exitCode !== 1) {
+                    throw new ComputeError(`Exit code: ${result.exitCode}`, result.exitCode);
+                }
+                return { stack: new TupleReader(result.result ? parseTuple(Cell.fromBase64(result.result)) : []) };
+            },
+        }));
     }
 
     private disableReconnect(singleEngine: LiteSingleEngine): void {
