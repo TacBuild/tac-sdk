@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.9.0] - 2026-11-03
 
 ### Added
 - Native ERC-4337 account-abstraction client (`accountAbstraction` module): drive a TAC smart account from a TON Ed25519 key — `TacAccountSdk.create({ network, mnemonic, bundlerUrl })` with built-in per-network defaults (TESTNET = SPB), and `sendUserOp` / `sendUserOpWithPermit` / `sendUserOpViaInternalBalance` / `sendUserOpViaAllowance` that build the paymaster/permit data internally.
