@@ -1,3 +1,4 @@
+export * from './accountAbstraction';
 export * from './adapters';
 export { AgnosticProxySDK } from './agnosticSdk/AgnosticSdk';
 export * as AgnosticStructs from './agnosticSdk/AgnosticStructs';

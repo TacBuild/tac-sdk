@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Native ERC-4337 account-abstraction client (`accountAbstraction` module): drive a TAC smart account from a TON Ed25519 key — `TacAccountSdk.create({ network, mnemonic, bundlerUrl })` with built-in per-network defaults (TESTNET = SPB), and `sendUserOp` / `sendUserOpWithPermit` / `sendUserOpViaInternalBalance` / `sendUserOpViaAllowance` that build the paymaster/permit data internally.
+- Lower-level AA primitives: `TacAccountAPI`, `HttpRpcClient`, `TacERC20PaymasterAPI` (+`TacPaymasterMode`), `buildSignedUserOpWithPermit`, Ed25519 signature packers, and `aaSignerFromMnemonic`.
+
+### Changed
+- Updated the optional TonConnect UI peer requirement to v3, so the SDK no longer installs or loads the UI package for consumers that do not use TonConnect.
+- Added native ESM builds while preserving the existing CommonJS entry points.
+- Replaced runtime `ethers` namespace imports with named imports so browser bundlers can remove unused Ethers modules.
+- Fixed TEP-526 multiplier handling: RPC failures now propagate instead of silently falling back to `1/1`, preserving cached values on refresh failures.
+- Standardized getter VM errors as `ComputeError` from `@ton/ton` across built-in TON openers; custom openers must use the same error type.
+
 ## [0.8.0] - 2026-06-17
 
 ### Added

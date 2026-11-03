@@ -35,7 +35,7 @@ describe('RetryableContractOpener executeWithFallback options', () => {
         expect(secondTrack).not.toHaveBeenCalled();
     });
 
-    it('fallbacks for transport errors in trackTransactionTree and skips per-opener retries', async () => {
+    it('falls back for transport errors in trackTransactionTree after exhausting per-opener retries', async () => {
         const timeoutError = Object.assign(new Error('request timed out'), { code: 'ETIMEDOUT' });
         const firstTrack = jest.fn().mockRejectedValue(timeoutError);
         const secondTrack = jest.fn().mockResolvedValue(undefined);
@@ -48,7 +48,7 @@ describe('RetryableContractOpener executeWithFallback options', () => {
         ]);
 
         await expect(retryable.trackTransactionTree('addr', 'hash')).resolves.toBeUndefined();
-        expect(firstTrack).toHaveBeenCalledTimes(1);
+        expect(firstTrack).toHaveBeenCalledTimes(4);
         expect(secondTrack).toHaveBeenCalledTimes(1);
     });
 });

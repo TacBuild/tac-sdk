@@ -1,5 +1,5 @@
 import { getHttpV4Endpoint, Network as TonNetwork } from '@orbs-network/ton-access';
-import { Address, Contract, OpenedContract, TonClient4, Transaction } from '@ton/ton';
+import { Address, ComputeError, Contract, openContract, OpenedContract, TonClient4, Transaction } from '@ton/ton';
 
 import { ILogger } from '../interfaces';
 import { DEFAULT_HTTP_CLIENT_TIMEOUT_MS, DEFAULT_RETRY_DELAY_MS, DEFAULT_RETRY_MAX_COUNT } from '../sdk/Consts';
@@ -21,7 +21,21 @@ export class TonClient4Opener extends BaseContractOpener {
     }
 
     open<T extends Contract>(contract: T): OpenedContract<T> {
-        return this.client4.open(contract);
+        return openContract(contract, ({ address, init }) => ({
+            ...this.client4.provider(address, init),
+            open: (src) => this.open(src),
+            get: async (name, args) => {
+                if (typeof name !== 'string') {
+                    throw new Error('Method name must be a string for TonClient4 provider');
+                }
+                const block = await this.client4.getLastBlock();
+                const result = await this.client4.runMethod(block.last.seqno, address, name, args);
+                if (result.exitCode !== 0 && result.exitCode !== 1) {
+                    throw new ComputeError(`Exit code: ${result.exitCode}`, result.exitCode);
+                }
+                return { stack: result.reader };
+            },
+        }));
     }
 
     async getContractState(address: Address): Promise<ContractState> {

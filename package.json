@@ -5,22 +5,34 @@
     "author": "TAC. <developers@tac>",
     "license": "MIT",
     "main": "dist/src/index.js",
+    "module": "dist/esm/src/index.mjs",
     "types": "dist/src/index.d.ts",
     "exports": {
         ".": {
             "node": {
-                "types": "./dist/src/index.d.ts",
-                "require": "./dist/src/index.js",
-                "import": "./dist/src/index.js"
+                "import": {
+                    "types": "./dist/esm/src/index.d.mts",
+                    "default": "./dist/esm/src/index.mjs"
+                },
+                "require": {
+                    "types": "./dist/src/index.d.ts",
+                    "default": "./dist/src/index.js"
+                }
             },
             "browser": {
-                "types": "./dist/src/index.d.ts",
-                "import": "./dist/src/index.js"
+                "import": {
+                    "types": "./dist/esm/src/index.d.mts",
+                    "default": "./dist/esm/src/index.mjs"
+                }
             },
-            "types": "./dist/src/index.d.ts",
-            "require": "./dist/src/index.js",
-            "import": "./dist/src/index.js",
-            "default": "./dist/src/index.js"
+            "import": {
+                "types": "./dist/esm/src/index.d.mts",
+                "default": "./dist/esm/src/index.mjs"
+            },
+            "require": {
+                "types": "./dist/src/index.d.ts",
+                "default": "./dist/src/index.js"
+            }
         },
         "./package.json": "./package.json",
         "./dist": null,
@@ -28,19 +40,34 @@
         "./src": null,
         "./src/*": null,
         "./artifacts": {
-            "types": "./dist/artifacts/index.d.ts",
-            "import": "./dist/artifacts/index.js",
-            "require": "./dist/artifacts/index.js"
+            "import": {
+                "types": "./dist/esm/artifacts/index.d.mts",
+                "default": "./dist/esm/artifacts/index.mjs"
+            },
+            "require": {
+                "types": "./dist/artifacts/index.d.ts",
+                "default": "./dist/artifacts/index.js"
+            }
         },
         "./artifacts/types/ton": {
-            "types": "./dist/artifacts/tonTypes.d.ts",
-            "import": "./dist/artifacts/tonTypes.js",
-            "require": "./dist/artifacts/tonTypes.js"
+            "import": {
+                "types": "./dist/esm/artifacts/tonTypes.d.mts",
+                "default": "./dist/esm/artifacts/tonTypes.mjs"
+            },
+            "require": {
+                "types": "./dist/artifacts/tonTypes.d.ts",
+                "default": "./dist/artifacts/tonTypes.js"
+            }
         },
         "./artifacts/types/tac": {
-            "types": "./dist/artifacts/tacTypes.d.ts",
-            "import": "./dist/artifacts/tacTypes.js",
-            "require": "./dist/artifacts/tacTypes.js"
+            "import": {
+                "types": "./dist/esm/artifacts/tacTypes.d.mts",
+                "default": "./dist/esm/artifacts/tacTypes.mjs"
+            },
+            "require": {
+                "types": "./dist/artifacts/tacTypes.d.ts",
+                "default": "./dist/artifacts/tacTypes.js"
+            }
         },
         "./artifacts/*": null,
         "./*": null
@@ -49,8 +76,9 @@
         "dist"
     ],
     "scripts": {
-        "litebuild": "rm -rf dist && tsc --declaration",
+        "litebuild": "rm -rf dist && tsc --declaration && npm run build:esm",
         "build": "bash build.sh",
+        "build:esm": "esbuild src/index.ts artifacts/index.ts artifacts/tonTypes.ts artifacts/tacTypes.ts --bundle --format=esm --platform=neutral --target=es2020 --packages=external --outdir=dist/esm --outbase=. --out-extension:.js=.mjs --splitting && cp -R esm-types/. dist/esm",
         "build:artifacts:tac:dev": "cd artifacts/dev/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",
         "build:artifacts:ton:dev": "cd artifacts/dev/l1_tvm_ton && npm i && npm run compile:ts && npm run build:all && rsync -avh --delete ./build ./wrappers ../ton/internal/",
         "build:artifacts:tac:testnet": "cd artifacts/testnet/l2-evm && npm i && npx hardhat compile && rsync -avh --delete ./artifacts ./scripts ./typechain-types ../tac/internal/",
@@ -60,7 +88,8 @@
         "build:artifacts:ton:all": "npm run build:artifacts:ton:dev && npm run build:artifacts:ton:testnet && npm run build:artifacts:ton:mainnet",
         "build:artifacts:tac:all": "npm run build:artifacts:tac:dev && npm run build:artifacts:tac:testnet && npm run build:artifacts:tac:mainnet",
         "build:artifacts": "npm run build:artifacts:ton:all && npm run build:artifacts:tac:all",
-        "test": "jest --verbose --runInBand",
+        "test": "npm run test:package && jest --verbose --runInBand",
+        "test:package": "npm run litebuild && node --test tests/package/modules.test.mjs && tsc -p tests/package/tsconfig.json && tsc -p tests/package/tsconfig.bundler.json",
         "test:ton-providers": "RUN_TON_PROVIDER_TESTS=1 jest --verbose --runInBand tests/ton_providers",
         "test:toncenter-v2-tree": "RUN_TON_PROVIDER_TESTS=1 jest --verbose --runInBand tests/ton_providers/contractOpeners/toncenterV2HistoricalTree.spec.ts",
         "release": "npm run build && npx release-it",
@@ -78,9 +107,14 @@
     },
     "peerDependencies": {
         "@ton/ton": ">=15",
-        "@tonconnect/ui": ">=2",
+        "@tonconnect/ui": ">=3",
         "ethers": ">=6",
         "ton-crypto": ">=3"
+    },
+    "peerDependenciesMeta": {
+        "@tonconnect/ui": {
+            "optional": true
+        }
     },
     "keywords": [],
     "description": "",
@@ -91,9 +125,10 @@
         "@ton/sandbox": "^0.27.1",
         "@ton/test-utils": "^0.5.0",
         "@ton/ton": "16.2.2",
-        "@tonconnect/ui": "^2.0.11",
+        "@tonconnect/ui": "^3.0.0",
         "@types/bn.js": "^5.1.6",
         "@types/jest": "^29.5.14",
+        "esbuild": "^0.28.1",
         "eslint": "^9.26.0",
         "eslint-config-prettier": "^10.0.2",
         "eslint-plugin-simple-import-sort": "^12.1.1",

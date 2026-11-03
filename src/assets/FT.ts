@@ -1,6 +1,6 @@
 import { SandboxContract } from '@ton/sandbox';
-import { Address, beginCell, Cell, OpenedContract } from '@ton/ton';
-import { ethers, isAddress as isEthereumAddress } from 'ethers';
+import { Address, beginCell, Cell, ComputeError, OpenedContract } from '@ton/ton';
+import { Contract, isAddress as isEthereumAddress } from 'ethers';
 
 import { IERC20WithDecimals } from '../../artifacts/tacTypes';
 import { JettonMinter, JettonMinterData, JettonWallet } from '../../artifacts/tonTypes';
@@ -29,11 +29,12 @@ import {
     muldivr,
 } from '../sdk/Utils';
 import { Validator } from '../sdk/Validator';
-import { AssetOpType } from '../structs/InternalStruct';
+import { AssetOpType, DisplayMultiplier } from '../structs/InternalStruct';
 import {
     AssetFeeMode,
     AssetType,
     BlockchainType,
+    ContractState,
     EVMAddress,
     FeeParams,
     FTOriginAndData,
@@ -58,6 +59,7 @@ export class FT implements Asset {
     private _evmAddress?: string;
     private _displayMultiplierNumerator: bigint = 1n;
     private _displayMultiplierDenominator: bigint = 1n;
+    private _hasDisplayMultiplier?: boolean;
     private _displayMultiplierFetchedAt: number = 0;
     private _displayMultiplierCacheDuration: number = FIVE_MINUTES;
 
@@ -82,12 +84,15 @@ export class FT implements Asset {
         return result.origin;
     }
 
-    static async getOriginAndData(configuration: IConfiguration, address: TVMAddress): Promise<FTOriginAndData> {
+    static async getOriginAndData(
+        configuration: IConfiguration,
+        address: TVMAddress,
+        contractState?: ContractState,
+    ): Promise<FTOriginAndData> {
         const { jettonMinterCode, crossChainLayerAddress, jettonWalletCode } = configuration.TONParams;
 
-        const { code: thisCodeBOC } = await configuration.TONParams.contractOpener.getContractState(
-            Address.parse(address),
-        );
+        const { code: thisCodeBOC } =
+            contractState ?? (await configuration.TONParams.contractOpener.getContractState(Address.parse(address)));
         if (!thisCodeBOC) {
             throw emptyContractError;
         }
@@ -131,7 +136,7 @@ export class FT implements Asset {
 
         if (fromTVM) {
             const cclErc20Abi = configuration.artifacts.tac.compilationArtifacts.ICrossChainLayerERC20.abi;
-            const erc20Token = new ethers.Contract(address, cclErc20Abi, configuration.TACParams.provider);
+            const erc20Token = new Contract(address, cclErc20Abi, configuration.TACParams.provider);
 
             const info = await erc20Token.getInfo();
             return info.tvmAddress;
@@ -212,7 +217,7 @@ export class FT implements Asset {
 
         // For ERC20 contracts, get decimals from contract
         const erc20TokenAbi = configuration.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi;
-        const erc20Token = new ethers.Contract(
+        const erc20Token = new Contract(
             evmAddress,
             erc20TokenAbi,
             configuration.TACParams.provider,
@@ -223,13 +228,14 @@ export class FT implements Asset {
 
     static async fromAddress(configuration: IConfiguration, address: TVMAddress | EVMAddress): Promise<FT> {
         const tvmAddress = isEthereumAddress(address) ? await this.getTVMAddress(configuration, address) : address;
+        const contractState = await configuration.TONParams.contractOpener.getContractState(Address.parse(tvmAddress));
 
         const {
             origin,
             jettonMinter,
             evmAddress: cachedEvmAddress,
             jettonData,
-        } = await this.getOriginAndData(configuration, tvmAddress).catch((e) => {
+        } = await this.getOriginAndData(configuration, tvmAddress, contractState).catch((e) => {
             if (e instanceof ContractError) {
                 const jettonMinter = configuration.TONParams.contractOpener.open(
                     configuration.artifacts.ton.wrappers.JettonMinter.createFromAddress(Address.parse(tvmAddress)),
@@ -268,7 +274,9 @@ export class FT implements Asset {
         }
 
         // Fetch and cache display multiplier for TEP-526 support
-        await token.refreshDisplayMultiplier();
+        if (contractState.state !== 'uninitialized') {
+            await token.refreshDisplayMultiplier();
+        }
 
         return token;
     }
@@ -283,6 +291,7 @@ export class FT implements Asset {
         ft._evmAddress = this._evmAddress;
         ft._displayMultiplierNumerator = this._displayMultiplierNumerator;
         ft._displayMultiplierDenominator = this._displayMultiplierDenominator;
+        ft._hasDisplayMultiplier = this._hasDisplayMultiplier;
         ft._displayMultiplierFetchedAt = this._displayMultiplierFetchedAt;
         ft._displayMultiplierCacheDuration = this._displayMultiplierCacheDuration;
         return ft;
@@ -328,17 +337,27 @@ export class FT implements Asset {
         return this._decimals;
     }
 
-    async refreshDisplayMultiplier(): Promise<void> {
+    private async getDisplayMultiplier(): Promise<DisplayMultiplier> {
         try {
             const multiplier = await this._jettonMinter.getDisplayMultiplier();
-            this._displayMultiplierNumerator = multiplier.numerator;
-            this._displayMultiplierDenominator = multiplier.denominator;
-            this._displayMultiplierFetchedAt = Date.now();
-        } catch {
-            this._displayMultiplierNumerator = 1n;
-            this._displayMultiplierDenominator = 1n;
-            this._displayMultiplierFetchedAt = Date.now();
+            return { hasDisplayMultiplier: true, ...multiplier };
+        } catch (error) {
+            if (this._hasDisplayMultiplier || !(error instanceof ComputeError) || error.exitCode !== 11) {
+                throw error;
+            }
+            return { hasDisplayMultiplier: false, numerator: 1n, denominator: 1n };
         }
+    }
+
+    async refreshDisplayMultiplier(): Promise<void> {
+        if (this._hasDisplayMultiplier === false) {
+            return;
+        }
+        const multiplier = await this.getDisplayMultiplier();
+        this._hasDisplayMultiplier = multiplier.hasDisplayMultiplier;
+        this._displayMultiplierNumerator = multiplier.numerator;
+        this._displayMultiplierDenominator = multiplier.denominator;
+        this._displayMultiplierFetchedAt = Date.now();
     }
 
     private async ensureFreshDisplayMultiplier(): Promise<void> {
@@ -450,13 +469,13 @@ export class FT implements Asset {
     }
 
     async getUserBalanceExtended(userAddress: string): Promise<UserWalletBalanceExtended> {
-        await this.ensureFreshDisplayMultiplier();
-
         const masterState = await this._configuration.TONParams.contractOpener.getContractState(this._tvmAddress);
 
         if (masterState.state !== 'active') {
             return { exists: false };
         }
+
+        await this.ensureFreshDisplayMultiplier();
 
         const wallet = await this.getWallet(userAddress);
         const rawAmount = await wallet.getJettonBalance();
@@ -500,7 +519,7 @@ export class FT implements Asset {
             return this._configuration.TACParams.provider.getBalance(userAddress);
         }
 
-        const erc20Token = new ethers.Contract(
+        const erc20Token = new Contract(
             evmAddress,
             this._configuration.artifacts.tac.compilationArtifacts.IERC20WithDecimals.abi,
             this._configuration.TACParams.provider,

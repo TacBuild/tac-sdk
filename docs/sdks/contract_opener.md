@@ -706,6 +706,8 @@ try {
 
 Create a custom opener by extending `BaseContractOpener` and implementing only the required abstract methods:
 
+Opened getters must throw `ComputeError` from `@ton/ton` for VM failures, preserving the numeric `exitCode`. Transport errors must propagate unchanged; plain errors containing an exit code in their message are not treated as an unsupported getter.
+
 ```ts
 import { BaseContractOpener } from '@tonappchain/sdk';
 import { Address, Contract, OpenedContract, Transaction } from '@ton/ton';

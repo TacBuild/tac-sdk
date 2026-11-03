@@ -13,6 +13,7 @@ import { ILogger } from './ILogger';
 export interface ContractOpener {
     /**
      * Opens a contract for interaction using the underlying client (lite client, sandbox, etc.).
+     * Getter VM failures must throw ComputeError from @ton/ton; transport errors must propagate unchanged.
      * @param src Contract source instance to open.
      * @returns Opened contract ready for method calls and sending messages.
      */

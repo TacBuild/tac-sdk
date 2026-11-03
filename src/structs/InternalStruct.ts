@@ -1,5 +1,5 @@
 import type { Address, Cell, Message } from '@ton/ton';
-import { AbstractProvider, ethers } from 'ethers';
+import { AbiCoder, AbstractProvider, BytesLike } from 'ethers';
 
 import { ICrossChainLayer, ISAFactory, ISettings, ITokenUtils } from '../../artifacts/tacTypes';
 import { ContractOpener, IToncenterV3Indexer } from '../interfaces';
@@ -41,7 +41,7 @@ export type PreparedCrossChainTransaction = {
 };
 
 export type PreparedBridgeTokensToTON = {
-    outMessagePayload: ethers.BytesLike;
+    outMessagePayload: BytesLike;
     totalValue: bigint;
 };
 
@@ -51,6 +51,12 @@ export enum AssetOpType {
     NFT_BURN = 'NFT_BURN',
     NFT_TRANSFER = 'NFT_TRANSFER',
 }
+
+export type DisplayMultiplier = {
+    hasDisplayMultiplier: boolean;
+    numerator: bigint;
+    denominator: bigint;
+};
 
 export type RandomNumberByTimestamp = {
     timestamp: number;
@@ -79,7 +85,7 @@ export type InternalTACParams = {
     smartAccountFactory: ISAFactory;
     trustedTACExecutors: string[];
     trustedTONExecutors: string[];
-    abiCoder: ethers.AbiCoder;
+    abiCoder: AbiCoder;
 };
 
 export type ResponseBase<T> = { response: T };

@@ -455,6 +455,7 @@ Manually refreshes the display multiplier from the blockchain. Use this when you
 - Fetches the latest multiplier from the jetton master contract
 - Updates the cached value and timestamp
 - Typically not needed as the cache auto-refreshes in key methods if stale
+- Support is checked during asset creation, or on a later refresh if the TAC token's TON wrapper is not yet deployed; refresh is skipped for unsupported tokens. RPC failures propagate without replacing the cached multiplier
 
 **When to use:**
 - After detecting a `display_multiplier_changed` external message
