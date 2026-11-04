@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.9.1] - 2026-11-04
 
 ### Fixed
 - Corrected the default TAC mainnet RPC endpoint to `https://rpc-public.tac.build`, fixing SDK initialization failures caused by querying mainnet contracts on the SPB testnet.
